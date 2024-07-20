@@ -4,10 +4,10 @@
 [ext_resource type="Material" uid="uid://brawu13av32pv" path="res://game/BeepCube_new_material.material" id="3"]
 
 [sub_resource type="BoxShape3D" id="1"]
-size = Vector3(0.56, 0.4, 0.916)
+size = Vector3(0.8, 0.5, 1)
 
 [sub_resource type="BoxShape3D" id="2"]
-size = Vector3(0.4, 0.4, 0.4)
+size = Vector3(0.375, 0.375, 0.375)
 
 [sub_resource type="Animation" id="Animation_tbh3g"]
 length = 0.001
@@ -60,7 +60,7 @@ tracks/2/keys = {
 "times": PackedFloat32Array(0, 0.3, 0.8),
 "transitions": PackedFloat32Array(1, 1, 1),
 "update": 0,
-"values": [Vector3(0.08, 0.08, 0.08), Vector3(0.08, 0.08, 0.08), Vector3(0.8, 0.8, 0.8)]
+"values": [Vector3(0.1, 0.1, 0.1), Vector3(0.1, 0.1, 0.1), Vector3(1, 1, 1)]
 }
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_7xfev"]
@@ -114,6 +114,7 @@ script = ExtResource("2")
 monitoring = false
 
 [node name="CollisionBig" type="CollisionShape3D" parent="BeepCube_Big"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.25)
 shape = SubResource("1")
 disabled = true
 

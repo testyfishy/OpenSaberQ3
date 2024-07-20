@@ -18,13 +18,11 @@ func on_miss() -> void:
 func spawn(info: Map.BombInfo, current_beat: float) -> void:
 	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute / 60.0
 	beat = info.beat
-	var line: float = (info.line_index - 1.5) * Constants.CUBE_DISTANCE
-	var layer: float = (info.line_layer + 1) * Constants.CUBE_DISTANCE
 	
 	var distance: float = info.beat - current_beat
 	
-	transform.origin.x = line
-	transform.origin.y = Constants.CUBE_HEIGHT_OFFSET + layer
+	transform.origin.x = Constants.LANE_X[info.line_index]
+	transform.origin.y = Constants.LAYER_Y[info.line_layer]
 	transform.origin.z = -distance * Constants.BEAT_DISTANCE
 	
 	var anim := $AnimationPlayer as AnimationPlayer

@@ -62,8 +62,11 @@ func spawn(note_info: Map.ColorNoteInfo, current_beat: float, color: Color) -> v
 	which_saber = note_info.color
 	is_dot = note_info.cut_direction == 8
 	
-	transform.origin.x = (note_info.line_index - 1.5) * Constants.CUBE_DISTANCE
-	transform.origin.y = Constants.CUBE_HEIGHT_OFFSET + ((note_info.line_layer + 1) * Constants.CUBE_DISTANCE)
+	if is_dot:
+		(collision_big.shape as BoxShape3D).size.y = 0.8
+	
+	transform.origin.x = Constants.LANE_X[note_info.line_index]
+	transform.origin.y = Constants.LAYER_Y[note_info.line_layer]
 	transform.origin.z = -(note_info.beat - current_beat) * Constants.BEAT_DISTANCE
 	
 	rotation.z = Constants.CUBE_ROTATIONS[note_info.cut_direction] + deg_to_rad(note_info.angle_offset)
@@ -97,6 +100,11 @@ func release() -> void:
 	visible = false
 	set_collision_disabled(true)
 	scene_released.emit(self)
+
+func make_chain_head() -> void:
+	_mat.set_shader_parameter(&"cutted", true)
+	_mat.set_shader_parameter(&"cut_dist_from_center", 0.1)
+	_mat.set_shader_parameter(&"cut_angle", TAU*0.25)
 
 func on_miss() -> void:
 	Scoreboard.reset_combo()
@@ -154,11 +162,11 @@ func _create_cut_rigid_body(cutplane: Plane) -> void:
 	# calculate angle and position of the cut
 	var cut_angle_abs := Vector2(cutplane.normal.x, cutplane.normal.y).angle()
 	# multiply by 1.25 to make up for the mesh being at 0.8 scale
-	var cut_dist_from_center := cutplane.distance_to(global_transform.origin) * 1.25
+	var cut_dist_from_center := cutplane.distance_to(global_transform.origin)# * 1.25
 	var cut_angle_rel := cut_angle_abs - global_rotation.z
 	
-	left_mat.set_shader_parameter(&"cut_pos", -cut_dist_from_center)
-	right_mat.set_shader_parameter(&"cut_pos", cut_dist_from_center)
+	left_mat.set_shader_parameter(&"cut_dist_from_center", -cut_dist_from_center)
+	right_mat.set_shader_parameter(&"cut_dist_from_center", cut_dist_from_center)
 	left_mat.set_shader_parameter(&"cut_angle", cut_angle_rel + PI)
 	right_mat.set_shader_parameter(&"cut_angle", cut_angle_rel)
 	piece_left.mesh.material_override = left_mat
