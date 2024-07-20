@@ -39,6 +39,11 @@ var bomb_template := load("res://game/Bomb/Bomb.tscn") as PackedScene
 var wall_template := load("res://game/Wall/Wall.tscn") as PackedScene
 var chain_link_template := load("res://game/Chain/ChainLink.tscn") as PackedScene
 const BEATS_AHEAD := 4.0
+var UNIT_VECTORS := PackedVector2Array([
+	Vector2(0, 1), Vector2(0, -1), Vector2(-1, 0), Vector2(1, 0),
+	Vector2(-0.7071, 0.7071), Vector2(0.7071, 0.7071),
+	Vector2(-0.7071, -0.7071), Vector2(0.7071, -0.7071), Vector2(0,1)
+])
 
 func _process_map(game: BeepSaber_Game) -> void:
 	if (Map.current_info == null):
@@ -90,10 +95,13 @@ func _process_map(game: BeepSaber_Game) -> void:
 			):
 				cube_refs[i].make_chain_head()
 			i += 1
+		var head_pos := Vector2(Constants.LANE_X[chain_info.head_line_index], Constants.LAYER_Y[chain_info.head_line_layer])
+		var tail_pos := Vector2(Constants.LANE_X[chain_info.tail_line_index], Constants.LAYER_Y[chain_info.tail_line_layer])
+		var mid_pos := head_pos + (UNIT_VECTORS[chain_info.head_cut_direction] * head_pos.distance_to(tail_pos) * 0.5)
 		i = 1
 		while i <= chain_info.slice_count:
 			var chain_link := chain_link_template.instantiate() as ChainLink
-			chain_link.spawn(chain_info, current_beat, color, i)
+			chain_link.spawn(chain_info, current_beat, color, head_pos, tail_pos, mid_pos, i)
 			game.track.add_child(chain_link)
 			i += 1
 	
