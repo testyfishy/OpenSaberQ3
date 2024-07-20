@@ -129,11 +129,11 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 		if is_dot: #ignore angle if is a dot
 			cut_angle_accuracy = 1.0
 		var cut_distance_accuracy := clampf((0.1 - absf(cut_distance))/0.1, 0.0, 1.0)
-		var travel_distance_factor := (controller.movement_aabb as AABB).get_longest_axis_size()
+		var travel_distance_factor := controller.movement_aabb.get_longest_axis_size()
 		travel_distance_factor = clampf((travel_distance_factor-0.5)/0.5, 0.0, 1.0)
 		# allows a bit of save margin where the beat is considered 100% correct
 		var beat_accuracy := clampf((1.0 - absf(global_transform.origin.z)) / 0.5, 0.0, 1.0)
-		Scoreboard.update_points_from_cut(transform.origin, beat_accuracy, cut_angle_accuracy, cut_distance_accuracy, travel_distance_factor)
+		Scoreboard.note_cut(transform.origin, beat_accuracy, cut_angle_accuracy, cut_distance_accuracy, travel_distance_factor)
 	else:
 		Scoreboard.bad_cut(transform.origin)
 	

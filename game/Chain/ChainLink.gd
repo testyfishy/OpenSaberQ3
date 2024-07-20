@@ -1,8 +1,11 @@
 extends Cuttable
 class_name ChainLink
 
+var which_saber: int
+
 func spawn(chain_info: Map.ChainInfo, current_beat: float, color: Color, head_pos: Vector2, tail_pos: Vector2, mid_pos: Vector2, link_index: int) -> void:
 	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute * 0.016666666666666667
+	which_saber = chain_info.color
 	
 	var lerp_factor := float(link_index) / float(chain_info.slice_count - 1) * chain_info.squish_factor
 	beat = lerpf(chain_info.head_beat, chain_info.tail_beat, lerp_factor)
@@ -22,6 +25,13 @@ func spawn(chain_info: Map.ChainInfo, current_beat: float, color: Color, head_po
 	material.albedo_color = color
 	
 	visible = true
+
+func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: BeepSaberController) -> void:
+	if saber_type == which_saber:
+		Scoreboard.chain_link_cut(transform.origin)
+	else:
+		Scoreboard.bad_cut(transform.origin)
+	queue_free()
 
 func on_miss() -> void:
 	Scoreboard.reset_combo()
