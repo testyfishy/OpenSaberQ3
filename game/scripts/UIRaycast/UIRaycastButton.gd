@@ -1,31 +1,36 @@
+@tool
 extends UIRaycastTarget
 class_name UIRaycastButton
 
 signal pressed
 signal released
 
-@export var size := Vector2.ONE
-@export var text := "Button"
+@export var size := Vector2(0.25, 0.0625):
+	set(s):
+		size = s
+		var shape := ($Collision as CollisionShape3D).shape as BoxShape3D
+		shape.size.x = s.x
+		shape.size.y = s.y
+		(($BackPanel as MeshInstance3D).mesh as QuadMesh).size = size
+@export var text := "Button":
+	set(txt):
+		text = txt
+		(($Text as MeshInstance3D).mesh as TextMesh).text = txt
 
 var shader: ShaderMaterial
 var held := false
 
 func _ready() -> void:
-	var collision_shape := $Collision as CollisionShape3D
-	collision_shape.shape = collision_shape.shape.duplicate(true) as BoxShape3D
-	var collision := collision_shape.shape as BoxShape3D
+	var collision := ($Collision as CollisionShape3D).shape as BoxShape3D
 	collision.size.x = size.x
 	collision.size.y = size.y
 	
-	var back_panel := $BackPanel as MeshInstance3D
-	back_panel.mesh = back_panel.mesh.duplicate(true) as QuadMesh
-	var mesh := back_panel.mesh as QuadMesh
+	var mesh := ($BackPanel as MeshInstance3D).mesh as QuadMesh
 	mesh.size.x = size.x
 	mesh.size.y = size.y
 	shader = mesh.material as ShaderMaterial
 	
 	var text_mesh := $Text as MeshInstance3D
-	text_mesh.mesh = text_mesh.mesh.duplicate(true) as TextMesh
 	(text_mesh.mesh as TextMesh).text = text
 
 func ui_raycast_hit_event(_pos: Vector3, click: bool, release: bool) -> void:

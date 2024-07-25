@@ -1,28 +1,49 @@
 [gd_scene load_steps=8 format=3 uid="uid://bxsfwm7o1kryl"]
 
 [ext_resource type="Script" path="res://game/scripts/UIRaycast/UIRaycastButton.gd" id="1_xb2lf"]
-[ext_resource type="Shader" path="res://game/UI_Panel.gdshader" id="1_yg4af"]
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_ovdvl"]
+[sub_resource type="BoxShape3D" id="BoxShape3D_5e240"]
+resource_local_to_scene = true
 margin = 0.001
-size = Vector3(0.25, 0.063, 0.001)
+size = Vector3(0.25, 0.0625, 0.001)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_jqx3k"]
+[sub_resource type="Shader" id="Shader_kudun"]
+code = "shader_type spatial;
+render_mode unshaded, cull_back;
+uniform vec2 size = vec2(1.0);
+uniform float highlight = 0.0;
+
+void fragment() {
+	float left_border = 1.0 / (128.0 * size.x);
+	float top_border = 1.0 / (128.0 * size.y);
+	float right_border = 1.0 - left_border;
+	float bottom_border = 1.0 - top_border;
+	if (UV.x < left_border || UV.x > right_border || UV.y < top_border || UV.y > bottom_border) {
+		ALBEDO = vec3(1.0);
+	} else {
+		ALBEDO = vec3(0.015625 * highlight);
+	}
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_tyoha"]
 render_priority = 0
-shader = ExtResource("1_yg4af")
+shader = SubResource("Shader_kudun")
 shader_parameter/size = Vector2(1, 1)
 shader_parameter/highlight = 0.0
 
-[sub_resource type="QuadMesh" id="QuadMesh_yo6nj"]
-material = SubResource("ShaderMaterial_jqx3k")
-size = Vector2(0.25, 0.063)
+[sub_resource type="QuadMesh" id="QuadMesh_sv6mk"]
+resource_local_to_scene = true
+material = SubResource("ShaderMaterial_tyoha")
+size = Vector2(0.5, 0.125)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5pi6w"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d0fyi"]
 shading_mode = 0
 disable_receive_shadows = true
 
-[sub_resource type="TextMesh" id="TextMesh_tkjex"]
-material = SubResource("StandardMaterial3D_5pi6w")
+[sub_resource type="TextMesh" id="TextMesh_u68ff"]
+resource_local_to_scene = true
+material = SubResource("StandardMaterial3D_d0fyi")
 text = "Button"
 font_size = 4
 depth = 0.0
@@ -31,14 +52,13 @@ depth = 0.0
 collision_layer = 2
 collision_mask = 0
 script = ExtResource("1_xb2lf")
-size = Vector2(0.25, 0.063)
 
 [node name="Collision" type="CollisionShape3D" parent="."]
-shape = SubResource("BoxShape3D_ovdvl")
+shape = SubResource("BoxShape3D_5e240")
 
 [node name="BackPanel" type="MeshInstance3D" parent="."]
-mesh = SubResource("QuadMesh_yo6nj")
+mesh = SubResource("QuadMesh_sv6mk")
 
 [node name="Text" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.025)
-mesh = SubResource("TextMesh_tkjex")
+mesh = SubResource("TextMesh_u68ff")
