@@ -3,7 +3,9 @@ class_name ChainLink
 
 var which_saber: int
 
-static var CHAIN_LINK_TEMPLATE := preload("res://game/Chain/ChainLink.tscn") as PackedScene
+# do not make this a preload.  doing so will make the scene show up as corrupt
+# in the editor.
+static var CHAIN_LINK_TEMPLATE := load("res://game/Chain/ChainLink.tscn") as PackedScene
 static var UNIT_VECTORS := PackedVector2Array([
 	Vector2(0, 1), Vector2(0, -1), Vector2(-1, 0), Vector2(1, 0),
 	Vector2(-0.70710678, 0.70710678), Vector2(0.70710678, 0.70710678),
