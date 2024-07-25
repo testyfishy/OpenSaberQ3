@@ -4,12 +4,12 @@
 [ext_resource type="Script" path="res://game/PercentIndicator.gd" id="4"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_seqot"]
+resource_local_to_scene = true
 render_priority = 0
 shader = ExtResource("1_b23qh")
 shader_parameter/how_full = 0.75
 
 [sub_resource type="QuadMesh" id="QuadMesh_02xdc"]
-material = SubResource("ShaderMaterial_seqot")
 size = Vector2(0.5, 0.5)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0v1t3"]
@@ -17,12 +17,14 @@ shading_mode = 0
 disable_receive_shadows = true
 
 [sub_resource type="TextMesh" id="TextMesh_bcnkh"]
+resource_local_to_scene = true
 material = SubResource("StandardMaterial3D_0v1t3")
 text = "75%"
 font_size = 10
 depth = 0.0
 
 [node name="PercentIndicator" type="MeshInstance3D"]
+material_override = SubResource("ShaderMaterial_seqot")
 mesh = SubResource("QuadMesh_02xdc")
 script = ExtResource("4")
 

@@ -12,12 +12,17 @@ signal released
 		shape.size.x = s.x
 		shape.size.y = s.y
 		(($BackPanel as MeshInstance3D).mesh as QuadMesh).size = size
+		# avoid null pointer error when called before ready
+		# this is ugly, but since buttons aren't getting resized very often,
+		# it'll be fine.
+		if back_shader != null:
+			back_shader.set_shader_parameter(&"size", s)
 @export var text := "Button":
 	set(txt):
 		text = txt
 		(($Text as MeshInstance3D).mesh as TextMesh).text = txt
 
-var shader: ShaderMaterial
+var back_shader: ShaderMaterial
 var held := false
 
 func _ready() -> void:
@@ -25,10 +30,11 @@ func _ready() -> void:
 	collision.size.x = size.x
 	collision.size.y = size.y
 	
-	var mesh := ($BackPanel as MeshInstance3D).mesh as QuadMesh
+	var back_panel := $BackPanel as MeshInstance3D
+	var mesh := back_panel.mesh as QuadMesh
 	mesh.size.x = size.x
 	mesh.size.y = size.y
-	shader = mesh.material as ShaderMaterial
+	back_shader = back_panel.material_override as ShaderMaterial
 	
 	var text_mesh := $Text as MeshInstance3D
 	(text_mesh.mesh as TextMesh).text = text
@@ -41,8 +47,8 @@ func ui_raycast_hit_event(_pos: Vector3, click: bool, release: bool) -> void:
 	elif release and held:
 		released.emit()
 		held = false
-	shader.set_shader_parameter("highlight", 1.0 + float(held))
+	back_shader.set_shader_parameter(&"highlight", 1.0 + float(held))
 
 func ui_raycast_exit() -> void:
 	held = false
-	shader.set_shader_parameter("highlight", 0.0)
+	back_shader.set_shader_parameter(&"highlight", 0.0)
