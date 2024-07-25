@@ -37,13 +37,7 @@ func _physics_process(game: BeepSaber_Game) -> void:
 
 var bomb_template := load("res://game/Bomb/Bomb.tscn") as PackedScene
 var wall_template := load("res://game/Wall/Wall.tscn") as PackedScene
-var chain_link_template := load("res://game/Chain/ChainLink.tscn") as PackedScene
 const BEATS_AHEAD := 4.0
-var UNIT_VECTORS := PackedVector2Array([
-	Vector2(0, 1), Vector2(0, -1), Vector2(-1, 0), Vector2(1, 0),
-	Vector2(-0.7071, 0.7071), Vector2(0.7071, 0.7071),
-	Vector2(-0.7071, -0.7071), Vector2(0.7071, -0.7071), Vector2(0,1)
-])
 
 func _process_map(game: BeepSaber_Game) -> void:
 	if (Map.current_info == null):
@@ -82,28 +76,8 @@ func _process_map(game: BeepSaber_Game) -> void:
 	
 	while not Map.chain_stack.is_empty() and Map.chain_stack[-1].head_beat <= look_ahead:
 		var chain_info := Map.chain_stack.pop_back() as Map.ChainInfo
-		if chain_info.slice_count <= 1:
-			continue
-		var color := Map.color_left if chain_info.color == 0 else Map.color_right
-		var i := 0
-		while i < note_info_refs.size():
-			var info_ref := note_info_refs[i]
-			if (
-				info_ref.beat == chain_info.head_beat
-				and info_ref.line_index == chain_info.head_line_index
-				and info_ref.line_layer == chain_info.head_line_layer
-			):
-				cube_refs[i].make_chain_head()
-			i += 1
-		var head_pos := Vector2(Constants.LANE_X[chain_info.head_line_index], Constants.LAYER_Y[chain_info.head_line_layer])
-		var tail_pos := Vector2(Constants.LANE_X[chain_info.tail_line_index], Constants.LAYER_Y[chain_info.tail_line_layer])
-		var mid_pos := head_pos + (UNIT_VECTORS[chain_info.head_cut_direction] * head_pos.distance_to(tail_pos) * 0.5)
-		i = 1
-		while i <= chain_info.slice_count:
-			var chain_link := chain_link_template.instantiate() as ChainLink
-			chain_link.spawn(chain_info, current_beat, color, head_pos, tail_pos, mid_pos, i)
-			game.track.add_child(chain_link)
-			i += 1
+		if chain_info.slice_count > 1: # skip if the chain doesn't have any links
+			ChainLink.construct_chain(chain_info, game.track, current_beat, note_info_refs, cube_refs)
 	
 	while not Map.event_stack.is_empty() and Map.event_stack[-1].beat <= current_beat:
 		game.event_driver.process_event(Map.event_stack.pop_back() as Map.EventInfo, Map.color_left, Map.color_right)
