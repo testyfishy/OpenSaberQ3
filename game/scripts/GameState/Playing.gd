@@ -50,13 +50,13 @@ func _process_map(game: BeepSaber_Game) -> void:
 	# track of what notes were spawned this frame, in case any become the head
 	# of a chain.
 	# why did they do this?
-	var note_info_refs: Array[Map.ColorNoteInfo] = []
+	var note_info_refs: Array[ColorNoteInfo] = []
 	var cube_refs: Array[BeepCube] = []
 	
 	# spawn notes
 	while not Map.note_stack.is_empty() and Map.note_stack[-1].beat <= look_ahead:
 		var note := game.cube_pool.acquire()
-		var note_info := Map.note_stack.pop_back() as Map.ColorNoteInfo
+		var note_info := Map.note_stack.pop_back() as ColorNoteInfo
 		var color := Map.color_left if note_info.color == 0 else Map.color_right
 		note.spawn(note_info, current_beat, color)
 		note_info_refs.append(note_info)
@@ -65,19 +65,19 @@ func _process_map(game: BeepSaber_Game) -> void:
 	# spawn bombs
 	while not Map.bomb_stack.is_empty() and Map.bomb_stack[-1].beat <= look_ahead:
 		var bomb := bomb_template.instantiate() as Bomb
-		bomb.spawn(Map.bomb_stack.pop_back() as Map.BombInfo, current_beat)
+		bomb.spawn(Map.bomb_stack.pop_back() as BombInfo, current_beat)
 		game.track.add_child(bomb)
 	
 	# spawn obstacles (walls)
 	while not Map.obstacle_stack.is_empty() and Map.obstacle_stack[-1].beat <= look_ahead:
 		var wall := wall_template.instantiate() as Wall
-		wall.spawn(Map.obstacle_stack.pop_back() as Map.ObstacleInfo, current_beat)
+		wall.spawn(Map.obstacle_stack.pop_back() as ObstacleInfo, current_beat)
 		game.track.add_child(wall)
 	
 	while not Map.chain_stack.is_empty() and Map.chain_stack[-1].head_beat <= look_ahead:
-		var chain_info := Map.chain_stack.pop_back() as Map.ChainInfo
+		var chain_info := Map.chain_stack.pop_back() as ChainInfo
 		if chain_info.slice_count > 1: # skip if the chain doesn't have any links
 			ChainLink.construct_chain(chain_info, game.track, current_beat, note_info_refs, cube_refs)
 	
 	while not Map.event_stack.is_empty() and Map.event_stack[-1].beat <= current_beat:
-		game.event_driver.process_event(Map.event_stack.pop_back() as Map.EventInfo, Map.color_left, Map.color_right)
+		game.event_driver.process_event(Map.event_stack.pop_back() as EventInfo, Map.color_left, Map.color_right)

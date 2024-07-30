@@ -7,10 +7,10 @@ extends Panel
 class_name MainMenu
 
 # emitted when a new map difficulty is selected
-signal difficulty_changed(map_info: Map.Info, diff_rank: int)
+signal difficulty_changed(map_info: MapInfo, diff_rank: int)
 # emitted when the settings button is pressed
 signal settings_requested()
-signal start_map(info: Map.Info, data: Dictionary, difficulty: int)
+signal start_map(info: MapInfo, data: Dictionary, difficulty: int)
 
 var _cover_texture_create_sw := StopwatchFactory.create("cover_texture_create",10,true)
 
@@ -37,9 +37,9 @@ enum PlaylistOptions {
 }
 
 # [{id:<song_dir_name>, source:<path_to_song?>},...]
-var _all_songs: Array[Map.Info]
-var _recently_added_songs: Array[Map.Info] # newest is first, oldest is last
-var _most_played_songs: Array[Map.Info] # most played is first, least played is last
+var _all_songs: Array[MapInfo]
+var _recently_added_songs: Array[MapInfo] # newest is first, oldest is last
+var _most_played_songs: Array[MapInfo] # most played is first, least played is last
 
 # stop the preview player if the main song player is going
 func _physics_process(_delta: float) -> void:
@@ -52,9 +52,9 @@ func refresh_playlist() -> void:
 
 class MapInfoWithSort:
 	var num: int
-	var info: Map.Info
+	var info: MapInfo
 	
-	func _init(n: int, i: Map.Info) -> void:
+	func _init(n: int, i: MapInfo) -> void:
 		num = n
 		info = i
 
@@ -128,7 +128,7 @@ func _discover_all_songs(seek_path: String) -> void:
 					_all_songs.append(song)
 			file_name = dir.get_next()
 
-func _set_cur_playlist(songs: Array[Map.Info]) -> void:
+func _set_cur_playlist(songs: Array[MapInfo]) -> void:
 	var current_id := songs_menu.get_selected_items()
 	
 	songs_menu.clear()
@@ -249,7 +249,7 @@ func _select_difficulty(id: int) -> void:
 	difficulty_changed.emit(_all_songs[current_selected], difficulty.difficulty_rank)
 
 
-func _load_map_and_start(map: Map.Info) -> void:
+func _load_map_and_start(map: MapInfo) -> void:
 	if map.is_empty(): return
 	
 	var set0 := map.difficulty_beatmaps
@@ -275,7 +275,7 @@ func _on_Delete_Button_button_up() -> void:
 		delete_button.text = "Delete"
 		_delete_map(_all_songs[current_selected])
 	
-func _delete_map(map: Map.Info) -> void:
+func _delete_map(map: MapInfo) -> void:
 	Highscores.remove_map(map)
 	PlayCount.remove_map(map)
 	

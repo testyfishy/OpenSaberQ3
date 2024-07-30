@@ -56,7 +56,7 @@ func _ready() -> void:
 	_mat = mi.material_override as ShaderMaterial
 	_mesh = mi.mesh
 
-func spawn(note_info: Map.ColorNoteInfo, current_beat: float, color: Color) -> void:
+func spawn(note_info: ColorNoteInfo, current_beat: float, color: Color) -> void:
 	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute * 0.016666666666666667
 	beat = note_info.beat
 	which_saber = note_info.color

@@ -15,7 +15,7 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 func on_miss() -> void:
 	queue_free()
 
-func spawn(info: Map.BombInfo, current_beat: float) -> void:
+func spawn(info: BombInfo, current_beat: float) -> void:
 	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute / 60.0
 	beat = info.beat
 	

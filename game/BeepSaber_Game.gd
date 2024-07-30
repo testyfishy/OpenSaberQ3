@@ -70,7 +70,10 @@ var _in_wall := false
 #prevents the song for starting from the start when pausing and unpausing
 var pause_position := 0.0
 
-func start_map(info: Map.Info, map_difficulty: int) -> void:
+func start_map(info: MapInfo, map_difficulty: int) -> void:
+	Map.current_difficulty_index = map_difficulty
+	Map.current_info = info
+	
 	var set0 := info.difficulty_beatmaps
 	if (set0.is_empty()):
 		vr.log_error("No difficulty beatmaps in set")
@@ -80,7 +83,7 @@ func start_map(info: Map.Info, map_difficulty: int) -> void:
 		return
 	
 	if not Settings.disable_map_color:
-		Map.set_colors_from_custom_data(info.custom_data, info.difficulty_beatmaps[map_difficulty].custom_data, Settings.color_left, Settings.color_right)
+		Map.set_colors_from_custom_data(Settings.color_left, Settings.color_right)
 	update_colors(Map.color_left, Map.color_right)
 	if Map.event_stack.is_empty():
 		event_driver.set_all_on(Map.color_left, Map.color_right)
@@ -89,8 +92,6 @@ func start_map(info: Map.Info, map_difficulty: int) -> void:
 	
 	vr.log_info("loading: " + info.filepath + info.song_filename)
 	song_player.stream = AudioStreamOggVorbis.load_from_file(info.filepath + info.song_filename)
-	Map.current_difficulty_index = map_difficulty
-	Map.current_info = info
 	
 	_audio_synced_after_restart = false
 	song_player.play(0.0)
@@ -305,7 +306,7 @@ func _unpause_button() -> void:
 	song_player.play(pause_position)
 	_transition_game_state(gamestate_playing)
 
-func _on_BeepSaberMainMenu_difficulty_changed(map_info: Map.Info, diff_rank: int) -> void:
+func _on_BeepSaberMainMenu_difficulty_changed(map_info: MapInfo, diff_rank: int) -> void:
 	Map.current_difficulty = null
 	for diff in map_info.difficulty_beatmaps:
 		if diff_rank == diff.difficulty_rank:

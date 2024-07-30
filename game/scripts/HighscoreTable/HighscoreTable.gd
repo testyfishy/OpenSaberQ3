@@ -32,14 +32,14 @@ func clear_table() -> void:
 	_hs_table = {}
 
 # removes a given map from the table, effectively resetting that map's records
-func remove_map(map_info: Map.Info) -> void:
+func remove_map(map_info: MapInfo) -> void:
 	var hs_key := map_info.get_key()
 	@warning_ignore("return_value_discarded")
 	_hs_table.erase(hs_key)
 	save_hs_table()
 	
 # returns true if score is a new highscore in the table, false otherwise
-func is_new_highscore(map_info: Map.Info, diff_rank: int, score: int) -> bool:
+func is_new_highscore(map_info: MapInfo, diff_rank: int, score: int) -> bool:
 	var hs_key := map_info.get_key()
 	return _is_new_highscore(hs_key, diff_rank, score)
 	
@@ -52,7 +52,7 @@ func is_new_highscore(map_info: Map.Info, diff_rank: int, score: int) -> bool:
 # score : integer score to store
 #
 # return : None
-func add_highscore(map_info: Map.Info, diff_rank: int ,player_name: String, score: int) -> void:
+func add_highscore(map_info: MapInfo, diff_rank: int ,player_name: String, score: int) -> void:
 	# get existing records for song + difficulty
 	var hs_key := map_info.get_key()
 	var records := _get_records(hs_key,diff_rank)
@@ -74,13 +74,13 @@ func add_highscore(map_info: Map.Info, diff_rank: int ,player_name: String, scor
 	save_hs_table()
 
 # return : the list of records for the given map + difficulty
-func get_records(map_info: Map.Info, diff_rank: int) -> Array:
+func get_records(map_info: MapInfo, diff_rank: int) -> Array:
 	var hs_key := map_info.get_key()
 	return _get_records(hs_key,diff_rank)
 	
 # return : the overall highscore for the given map + difficulty. -1 is
 # returned if no record exist for this song yet
-func get_highscore(map_info: Map.Info, diff_rank: int) -> int:
+func get_highscore(map_info: MapInfo, diff_rank: int) -> int:
 	var hs_key := map_info.get_key()
 	var records := _get_records(hs_key,diff_rank)
 	if records.size() == 0:

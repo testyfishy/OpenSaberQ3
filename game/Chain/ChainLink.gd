@@ -12,7 +12,7 @@ static var UNIT_VECTORS := PackedVector2Array([
 	Vector2(-0.70710678, -0.70710678), Vector2(0.70710678, -0.70710678), Vector2(0,1)
 ])
 
-static func construct_chain(chain_info: Map.ChainInfo, track_ref: Node3D, current_beat: float, note_info_refs: Array[Map.ColorNoteInfo], cube_refs: Array[BeepCube]) -> void:
+static func construct_chain(chain_info: ChainInfo, track_ref: Node3D, current_beat: float, note_info_refs: Array[ColorNoteInfo], cube_refs: Array[BeepCube]) -> void:
 	var color := Map.color_left if chain_info.color == 0 else Map.color_right
 	# instead of just making a new note head for a new chain, beat saber
 	# modifies an already-existing note to be the head, which is why we have to
@@ -47,7 +47,7 @@ static func construct_chain(chain_info: Map.ChainInfo, track_ref: Node3D, curren
 		track_ref.add_child(chain_link)
 		i += 1
 
-func spawn(chain_info: Map.ChainInfo, current_beat: float, color: Color, head_pos: Vector2, tail_pos: Vector2, mid_pos: Vector2, link_index: int) -> void:
+func spawn(chain_info: ChainInfo, current_beat: float, color: Color, head_pos: Vector2, tail_pos: Vector2, mid_pos: Vector2, link_index: int) -> void:
 	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute * 0.016666666666666667
 	which_saber = chain_info.color
 	

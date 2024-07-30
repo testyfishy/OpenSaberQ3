@@ -12,7 +12,7 @@ func _physics_process(delta: float) -> void:
 	if transform.origin.z > despawn_z:
 		queue_free()
 
-func spawn(wall_info: Map.ObstacleInfo, current_beat: float) -> void:
+func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	var mesh := $WallMeshOrientation/WallMesh as MeshInstance3D
 	var m := mesh.mesh as BoxMesh
 	var shape := ($WallMeshOrientation/WallArea/CollisionShape3D as CollisionShape3D).shape as BoxShape3D
