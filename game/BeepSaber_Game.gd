@@ -42,7 +42,7 @@ var gamestate: GameState = gamestate_bootup
 @onready var map_source_dialogs := $MapSourceDialogs as Node3D
 @onready var online_search_keyboard := $Keyboard_online_search as OQ_UI2DKeyboard
 
-@onready var fps_label := $XROrigin3D/XRCamera3D/PlayerHead/FPS_Label as OQ_UI2DLabel
+@onready var fps_label := $XROrigin3D/XRCamera3D/PlayerHead/FPS_Label as MeshInstance3D
 
 @onready var cube_template := preload("res://game/BeepCube.tscn").instantiate() as BeepCube
 
@@ -156,7 +156,7 @@ func _check_and_update_saber(controller: BeepSaberController, saber: LightSaber)
 
 func _physics_process(_dt: float) -> void:
 	if fps_label.visible:
-		fps_label.set_label_text("FPS: %d" % Engine.get_frames_per_second())
+		(fps_label.mesh as TextMesh).text = "FPS: %d" % Engine.get_frames_per_second()
 	
 	gamestate._physics_process(self)
 	
@@ -169,13 +169,12 @@ func _ready() -> void:
 	vr.leftController = left_controller
 	vr.rightController = right_controller
 	
-	left_saber.set_saber(Settings.SABER_VISUALS[Settings.saber_visual][1])
-	right_saber.set_saber(Settings.SABER_VISUALS[Settings.saber_visual][1])
 	fps_label.visible = Settings.show_fps
+	set_colors_from_settings()
+	($WorldEnvironment as WorldEnvironment).environment.glow_enabled = Settings.glare
 	
 	if not vr.inVR:
 		$XROrigin3D.add_child(preload("res://OQ_Toolkit/OQ_ARVROrigin/Feature_VRSimulator.tscn").instantiate())
-	set_colors_from_settings()
 	
 	UI_AudioEngine.attach_children(highscore_keyboard)
 	UI_AudioEngine.attach_children(online_search_keyboard)

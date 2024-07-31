@@ -1,6 +1,7 @@
 [gd_scene load_steps=8 format=3 uid="uid://bxsfwm7o1kryl"]
 
 [ext_resource type="Script" path="res://game/scripts/UIRaycast/UIRaycastButton.gd" id="1_xb2lf"]
+[ext_resource type="Material" uid="uid://dqox51k4cngtf" path="res://game/Text.material" id="2_3kli4"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_5e240"]
 resource_local_to_scene = true
@@ -36,13 +37,8 @@ shader_parameter/highlight = 0.0
 resource_local_to_scene = true
 size = Vector2(0.25, 0.0625)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d0fyi"]
-shading_mode = 0
-disable_receive_shadows = true
-
 [sub_resource type="TextMesh" id="TextMesh_u68ff"]
 resource_local_to_scene = true
-material = SubResource("StandardMaterial3D_d0fyi")
 text = "Button"
 font_size = 4
 depth = 0.0
@@ -61,4 +57,5 @@ mesh = SubResource("QuadMesh_sv6mk")
 
 [node name="Text" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.025)
+material_override = ExtResource("2_3kli4")
 mesh = SubResource("TextMesh_u68ff")

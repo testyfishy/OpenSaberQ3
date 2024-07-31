@@ -1,10 +1,11 @@
-[gd_scene load_steps=24 format=3 uid="uid://i5nhm2p2kqay"]
+[gd_scene load_steps=25 format=3 uid="uid://i5nhm2p2kqay"]
 
 [ext_resource type="Shader" path="res://game/UI_Panel.gdshader" id="1_cfcnp"]
 [ext_resource type="Script" path="res://game/EndScore.gd" id="1_jacne"]
 [ext_resource type="PackedScene" uid="uid://63fr72w7kh2w" path="res://game/PercentIndicator.tscn" id="2_dpn16"]
 [ext_resource type="PackedScene" uid="uid://bxsfwm7o1kryl" path="res://game/scripts/UIRaycast/UIRaycastButton.tscn" id="4_n4s7s"]
 [ext_resource type="FontFile" uid="uid://01k27lk2a4bw" path="res://OQ_Toolkit/OQ_UI2D/theme/RobotoMono-Medium.ttf" id="5_v4xkn"]
+[ext_resource type="Material" uid="uid://dqox51k4cngtf" path="res://game/Text.material" id="6_2vw0d"]
 [ext_resource type="Script" path="res://game/scripts/UIRaycast/UIRaycastTarget.gd" id="6_25iqa"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_igkn4"]
@@ -17,12 +18,12 @@ shader_parameter/highlight = 0.0
 material = SubResource("ShaderMaterial_igkn4")
 size = Vector2(2, 1)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hymhc"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cwpr4"]
+resource_local_to_scene = true
 shading_mode = 0
 disable_receive_shadows = true
 
 [sub_resource type="TextMesh" id="TextMesh_siova"]
-material = SubResource("StandardMaterial3D_hymhc")
 text = "A"
 font_size = 8
 vertical_alignment = 0
@@ -43,7 +44,6 @@ material = SubResource("StandardMaterial3D_snkgs")
 size = Vector2(0.5, 0.5)
 
 [sub_resource type="TextMesh" id="TextMesh_o35jt"]
-material = SubResource("StandardMaterial3D_hymhc")
 text = "Name"
 font_size = 4
 horizontal_alignment = 0
@@ -1365,6 +1365,7 @@ text = "Main Menu"
 
 [node name="Details" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0.25, 0.1)
+material_override = SubResource("StandardMaterial3D_cwpr4")
 mesh = SubResource("TextMesh_siova")
 
 [node name="GradeMesh" type="MeshInstance3D" parent="."]
@@ -1373,10 +1374,11 @@ mesh = SubResource("QuadMesh_u7okp")
 
 [node name="NameLabel" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.925, 0.45, 0.1)
+material_override = ExtResource("6_2vw0d")
 mesh = SubResource("TextMesh_o35jt")
 
 [node name="FCMesh" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, -0.3, 0.1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, -0.25, 0.1)
 mesh = SubResource("QuadMesh_eor5b")
 
 [node name="NRMesh" type="MeshInstance3D" parent="."]

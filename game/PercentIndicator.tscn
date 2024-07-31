@@ -1,6 +1,7 @@
 [gd_scene load_steps=7 format=3 uid="uid://63fr72w7kh2w"]
 
 [ext_resource type="Shader" path="res://game/PercentIndicator.gdshader" id="1_b23qh"]
+[ext_resource type="Material" uid="uid://dqox51k4cngtf" path="res://game/Text.material" id="3_wm8ff"]
 [ext_resource type="Script" path="res://game/PercentIndicator.gd" id="4"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_seqot"]
@@ -12,13 +13,8 @@ shader_parameter/how_full = 0.75
 [sub_resource type="QuadMesh" id="QuadMesh_02xdc"]
 size = Vector2(0.5, 0.5)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0v1t3"]
-shading_mode = 0
-disable_receive_shadows = true
-
 [sub_resource type="TextMesh" id="TextMesh_bcnkh"]
 resource_local_to_scene = true
-material = SubResource("StandardMaterial3D_0v1t3")
 text = "75%"
 font_size = 10
 depth = 0.0
@@ -30,4 +26,5 @@ script = ExtResource("4")
 
 [node name="PercentLabel" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.1)
+material_override = ExtResource("3_wm8ff")
 mesh = SubResource("TextMesh_bcnkh")
