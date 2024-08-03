@@ -4,7 +4,7 @@ class_name BeepCubePool
 # emitted when the pool intances a scene for the first time
 signal scene_instanced(cube: BeepCube)
 
-var scene := load("res://game/BeepCube.tscn") as PackedScene
+var scene := load("res://game/BeepCube/BeepCube.tscn") as PackedScene
 var _free_list: Array[BeepCube] = []
 
 func _ready() -> void:

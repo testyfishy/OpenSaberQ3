@@ -52,6 +52,10 @@ window/vsync/vsync_mode=false
 
 enabled=PackedStringArray("res://addons/stopwatch/plugin.cfg")
 
+[filesystem]
+
+import/blender/enabled=false
+
 [gdnative]
 
 singletons=["res://addons/godot-openxr/config/godot_openxr.gdnlib"]

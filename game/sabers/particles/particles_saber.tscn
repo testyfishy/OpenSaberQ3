@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://game/sabers/particles/particles_saber.gd" id="1"]
 [ext_resource type="ArrayMesh" uid="uid://cq3betaoj4fv8" path="res://game/sabers/particles/sword.obj" id="2"]
-[ext_resource type="Texture2D" uid="uid://drc5tdiltfqnk" path="res://game/data/BeepCube_Emission.png" id="2_ffgv8"]
+[ext_resource type="Texture2D" uid="uid://drc5tdiltfqnk" path="res://game/BeepCube/BeepCubeEmission.png" id="2_ffgv8"]
 [ext_resource type="AudioStream" uid="uid://20lqjew01h0j" path="res://game/sabers/particles/sword_clash.8a.ogg" id="3"]
 [ext_resource type="Texture2D" uid="uid://cg6kwny2mi3wq" path="res://game/data/gradient.png" id="4"]
 [ext_resource type="Shader" path="res://game/LightSaber.gdshader" id="5"]

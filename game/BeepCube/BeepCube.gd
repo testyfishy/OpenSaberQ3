@@ -13,10 +13,10 @@ signal scene_released(this: BeepCube)
 var which_saber: int
 var is_dot: bool
 
-static var particles_scene := load("res://game/BeepCube_SliceParticles.tscn") as PackedScene
+static var particles_scene := load("res://game/BeepCube/BeepCube_SliceParticles.tscn") as PackedScene
 # structure of nodes that represent a cut piece of a cube (ie. one half)
 class CutPiece extends RigidBody3D:
-	static var cube_phys_mat := load("res://game/BeepCube_Cut.phymat") as PhysicsMaterial
+	static var cube_phys_mat := load("res://game/BeepCube/BeepCube_Cut.phymat") as PhysicsMaterial
 	var mesh := MeshInstance3D.new()
 	var coll := CollisionShape3D.new()
 	var lifetime: float = 0.0

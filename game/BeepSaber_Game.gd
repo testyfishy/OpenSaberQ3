@@ -44,7 +44,7 @@ var gamestate: GameState = gamestate_bootup
 
 @onready var fps_label := $XROrigin3D/XRCamera3D/PlayerHead/FPS_Label as MeshInstance3D
 
-@onready var cube_template := preload("res://game/BeepCube.tscn").instantiate() as BeepCube
+@onready var cube_template := preload("res://game/BeepCube/BeepCube.tscn").instantiate() as BeepCube
 
 @onready var track := $Track as Node3D
 
