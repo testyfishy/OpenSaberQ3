@@ -64,6 +64,8 @@ func spawn(note_info: ColorNoteInfo, current_beat: float, color: Color) -> void:
 	
 	if is_dot:
 		(collision_big.shape as BoxShape3D).size.y = 0.8
+	else:
+		(collision_big.shape as BoxShape3D).size.y = 0.5
 	
 	transform.origin.x = Constants.LANE_X[note_info.line_index]
 	transform.origin.y = Constants.LAYER_Y[note_info.line_layer]
@@ -71,8 +73,11 @@ func spawn(note_info: ColorNoteInfo, current_beat: float, color: Color) -> void:
 	
 	rotation.z = Constants.CUBE_ROTATIONS[note_info.cut_direction] + deg_to_rad(note_info.angle_offset)
 	
-	_mat.set_shader_parameter(&"color",color)
+	_mat.set_shader_parameter(&"color", color)
 	_mat.set_shader_parameter(&"is_dot", is_dot)
+	# since cube instances get recycled, we gotta reset cubes that were chain
+	# heads in a past life
+	_mat.set_shader_parameter(&"is_chain_head", false)
 	
 	# separate cube collision layers to allow a diferent collider on right/wrong cuts.
 	# opposing collision layers (ie. right note & left saber) will be placed on the
@@ -102,9 +107,7 @@ func release() -> void:
 	scene_released.emit(self)
 
 func make_chain_head() -> void:
-	_mat.set_shader_parameter(&"cutted", true)
-	_mat.set_shader_parameter(&"cut_dist_from_center", 0.1)
-	_mat.set_shader_parameter(&"cut_angle", TAU*0.25)
+	_mat.set_shader_parameter(&"is_chain_head", true)
 
 func on_miss() -> void:
 	Scoreboard.reset_combo()
