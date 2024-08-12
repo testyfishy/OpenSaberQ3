@@ -175,11 +175,12 @@ font_size_multiplier = 4.587
 transform = Transform3D(2.3178, 0, 0, 0, 2.3178, 0, 0, 0, 2.3178, 0, 1.5, -1)
 visible = false
 
-[node name="settings_Panel" parent="Settings_canvas" node_paths=PackedStringArray("game", "left_saber_ref", "right_saber_ref", "environment_ref") instance=ExtResource("19")]
+[node name="settings_Panel" parent="Settings_canvas" node_paths=PackedStringArray("game", "left_saber_ref", "right_saber_ref", "environment_ref", "player_ref") instance=ExtResource("19")]
 game = NodePath("../..")
 left_saber_ref = NodePath("../../XROrigin3D/LeftController/LeftLightSaber")
 right_saber_ref = NodePath("../../XROrigin3D/RightController/RightLightSaber")
 environment_ref = NodePath("../../WorldEnvironment")
+player_ref = NodePath("../../XROrigin3D")
 
 [node name="OQ_UI2DLogWindow" parent="Settings_canvas" instance=ExtResource("31")]
 transform = Transform3D(0.373265, 0, 0, 0, 0.323257, 0.186633, 0, -0.186633, 0.323257, 0, -0.407229, 0.0410669)

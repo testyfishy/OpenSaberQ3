@@ -7,6 +7,7 @@ signal apply()
 @export var left_saber_ref: LightSaber
 @export var right_saber_ref: LightSaber
 @export var environment_ref: WorldEnvironment
+@export var player_ref: XROrigin3D
 
 @onready var saber_control := $ScrollContainer/VBox/SaberTypeRow/saber as OptionButton
 @onready var glare_control := $ScrollContainer/VBox/glare as CheckButton
@@ -33,6 +34,7 @@ signal apply()
 @onready var right_saber_rotx_control := $ScrollContainer/VBox/right_saber_offset/rotx as SpinBox
 @onready var right_saber_roty_control := $ScrollContainer/VBox/right_saber_offset/roty as SpinBox
 @onready var right_saber_rotz_control := $ScrollContainer/VBox/right_saber_offset/rotz as SpinBox
+@onready var player_height_offset_control := $ScrollContainer/VBox/player_height_offset/pos as SpinBox
 
 var _play_ui_sound_demo := false
 
@@ -83,6 +85,7 @@ func set_controls_from_settings() -> void:
 	right_saber_rotx_control.value = Settings.right_saber_offset_rot.x
 	right_saber_roty_control.value = Settings.right_saber_offset_rot.y
 	right_saber_rotz_control.value = Settings.right_saber_offset_rot.z
+	player_height_offset_control.value = Settings.player_height_offset
 
 func _restore_defaults() -> void:
 	Settings.restore_defaults()
@@ -188,6 +191,10 @@ func _on_right_saber_rot_y_changed(value: float) -> void:
 func _on_right_saber_rot_z_changed(value: float) -> void:
 	Settings.right_saber_offset_rot.z = value
 	right_saber_ref.extra_offset_rot.z = value
+
+func _on_player_height_offset_changed(value: float) -> void:
+	Settings.player_height_offset = value
+	player_ref.position.y = value
 
 func _on_disable_map_color_toggled(toggled_on: bool) -> void:
 	Settings.disable_map_color = toggled_on
