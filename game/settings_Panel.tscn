@@ -499,6 +499,23 @@ min_value = -180.0
 max_value = 180.0
 step = 0.5
 
+[node name="player_height_offset" type="HBoxContainer" parent="ScrollContainer/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="ScrollContainer/VBox/player_height_offset"]
+layout_mode = 2
+text = "Player Height Offset:"
+
+[node name="Control" type="Control" parent="ScrollContainer/VBox/player_height_offset"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="pos" type="SpinBox" parent="ScrollContainer/VBox/player_height_offset"]
+layout_mode = 2
+min_value = -0.25
+max_value = 0.25
+step = 0.05
+
 [node name="disable_map_color" type="CheckButton" parent="ScrollContainer/VBox"]
 layout_mode = 2
 theme = SubResource("3")
@@ -555,6 +572,7 @@ scroll_node_path = NodePath("../ScrollContainer")
 [connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/rotx" to="." method="_on_right_saber_rot_x_changed"]
 [connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/roty" to="." method="_on_right_saber_rot_y_changed"]
 [connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/rotz" to="." method="_on_right_saber_rot_z_changed"]
+[connection signal="value_changed" from="ScrollContainer/VBox/player_height_offset/pos" to="." method="_on_player_height_offset_changed"]
 [connection signal="toggled" from="ScrollContainer/VBox/disable_map_color" to="." method="_on_disable_map_color_toggled"]
 [connection signal="button_up" from="defaults" to="." method="_restore_defaults"]
 [connection signal="pressed" from="apply" to="." method="_on_apply_pressed"]

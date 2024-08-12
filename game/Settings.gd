@@ -19,6 +19,7 @@ var show_fps: bool
 var bombs_enabled: bool
 var events: bool
 var disable_map_color: bool
+var player_height_offset: float
 
 var SABER_VISUALS: Array[PackedStringArray] = [
 	PackedStringArray(["Default saber","res://game/sabers/default/default_saber.tscn"]),
@@ -59,6 +60,7 @@ func reload() -> void:
 	right_saber_offset_rot.x = file.get_float()
 	right_saber_offset_rot.y = file.get_float()
 	right_saber_offset_rot.z = file.get_float()
+	player_height_offset = file.get_float()
 	var bools_as_byte := file.get_8()
 	file.close()
 	cube_cuts_falloff = bools_as_byte & 64
@@ -120,6 +122,7 @@ func load_old_config(file: FileAccess) -> void:
 	bombs_enabled = Utils.get_bool(settings_dict, "bombs_enabled", true)
 	events = Utils.get_bool(settings_dict, "events", true)
 	disable_map_color = Utils.get_bool(settings_dict, "disable_map_color", false)
+	player_height_offset = Utils.get_float(settings_dict, "player_height_offset", 0)
 
 func save() -> void:
 	var file := FileAccess.open(CONFIG_PATH, FileAccess.WRITE)
@@ -149,6 +152,7 @@ func save() -> void:
 	file.store_float(right_saber_offset_rot.x)
 	file.store_float(right_saber_offset_rot.y)
 	file.store_float(right_saber_offset_rot.z)
+	file.store_float(player_height_offset)
 	var bools_to_byte := (
 		int(cube_cuts_falloff) * 64
 		+ int(saber_tail) * 32
