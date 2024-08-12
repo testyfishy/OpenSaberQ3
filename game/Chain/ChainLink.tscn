@@ -1,15 +1,16 @@
-[gd_scene load_steps=5 format=3 uid="uid://b62c3hkjmky75"]
+[gd_scene load_steps=6 format=3 uid="uid://b62c3hkjmky75"]
 
 [ext_resource type="Script" path="res://game/Chain/ChainLink.gd" id="1_8l7tk"]
+[ext_resource type="PackedScene" uid="uid://bbsbv2l8r8kxm" path="res://game/Chain/ChainLink.glb" id="2_jgcvi"]
+[ext_resource type="Shader" path="res://game/Chain/ChainLink.gdshader" id="3_2sf1k"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bvd2u"]
-resource_local_to_scene = true
-shading_mode = 0
-specular_mode = 2
-
-[sub_resource type="TextMesh" id="TextMesh_11pxu"]
-text = "todo"
-depth = 0.0
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_4x03s"]
+render_priority = 0
+shader = ExtResource("3_2sf1k")
+shader_parameter/color = Color(1, 0, 0, 1)
+shader_parameter/cutted = false
+shader_parameter/cut_dist_from_center = 0.0
+shader_parameter/cut_angle = 0.0
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_thkam"]
 size = Vector3(0.8, 0.1, 1)
@@ -17,14 +18,13 @@ size = Vector3(0.8, 0.1, 1)
 [node name="ChainLink" type="Node3D"]
 script = ExtResource("1_8l7tk")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-material_override = SubResource("StandardMaterial3D_bvd2u")
-mesh = SubResource("TextMesh_11pxu")
+[node name="Mesh" parent="." instance=ExtResource("2_jgcvi")]
+material_override = SubResource("ShaderMaterial_4x03s")
 
 [node name="Area3D" type="Area3D" parent="."]
 collision_layer = 768
 collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.25)
 shape = SubResource("BoxShape3D_thkam")

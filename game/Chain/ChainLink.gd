@@ -70,12 +70,13 @@ func spawn(chain_info: ChainInfo, current_beat: float, color: Color, head_pos: V
 	var z_distance_from_head := (beat - chain_info.head_beat) * Constants.BEAT_DISTANCE
 	if z_distance_from_head > 1.0:
 		var collision := $Area3D/CollisionShape3D as CollisionShape3D
-		collision.transform.origin.z = z_distance_from_head * 0.25
-		(collision.shape as BoxShape3D).size.z = z_distance_from_head * 0.5
+		var new_size := z_distance_from_head * 0.5
+		(collision.shape as BoxShape3D).size.z = new_size
+		collision.transform.origin.z = new_size * 0.5 - 0.25
 	
-	var instance := $MeshInstance3D as MeshInstance3D
-	var material := instance.material_override as StandardMaterial3D
-	material.albedo_color = color
+	var instance := $Mesh as MeshInstance3D
+	var material := instance.material_override as ShaderMaterial
+	material.set_shader_parameter(&"color", color)
 	
 	visible = true
 
