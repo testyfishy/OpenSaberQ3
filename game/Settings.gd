@@ -1,7 +1,7 @@
 extends Node
 
 const CONFIG_PATH := "user://config.dat"
-const NEW_CONFIG_SIZE := 90
+const NEW_CONFIG_SIZE := 94
 
 var thickness: float
 var color_left: Color

@@ -26,6 +26,14 @@ class CutPiece extends RigidBody3D:
 		if lifetime > 0.3:
 			queue_free()
 		else:
+			# copied from cube code.  the "cut_vanish" shader parameter controls
+			# how faded-out the piece is.  0.0 is not faded out at all, and
+			# higher numbers make it more faded.
+			# other than that, not sure exactly what's going on here.
+			# todo: figure that out and document it.
+			# todo: figure out a better variable name than f.
+			# todo: once figured out, do these todos in BeepCube.gd too
+			# - steve hocktail
 			var f := lifetime*(1.0/0.3)
 			(mesh.material_override as ShaderMaterial).set_shader_parameter(&"cut_vanish",ease(f,2)*0.5)
 

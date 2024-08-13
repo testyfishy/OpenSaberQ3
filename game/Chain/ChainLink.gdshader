@@ -1,11 +1,10 @@
 shader_type spatial;
 render_mode cull_disabled,diffuse_burley,specular_schlick_ggx;
 
-uniform vec4 color : source_color;
-
 const float sub_emission_energy = 0.18;
 const float cut_white_margin = 0.04;
 
+uniform vec4 color : source_color;
 uniform bool cutted = false;
 uniform float cut_dist_from_center = 0.0;
 uniform float cut_angle = 0.0;
@@ -27,14 +26,16 @@ varying float cut_interp;
 void vertex() {
 	if (cutted) {
 		float cut_line = cut_dist_from_center+(VERTEX*rotation3dZ(cut_angle)).x;
-		cut_interp = cut_line;
-		cut_interp -= cut_vanish;
+		cut_interp = cut_line - cut_vanish;
+	} else {
+		// not cut, ensure no discard later
+		cut_interp = 1.0;
 	}
 }
 
 void fragment() {
 	// Discard all pixels "in the cut"
-	if ((cutted && cut_interp < 0.0)) {
+	if (cut_interp < 0.0) {
 		discard;
 	}
 	
@@ -49,13 +50,12 @@ void fragment() {
 			EMISSION = vec3(1.0);
 		} else {
 			EMISSION = color.rgb * sub_emission_energy;
-		}
-		
-		if (cutted){
-			// soft white margin
-			EMISSION += vec3( smoothstep(cut_white_margin+0.01,cut_white_margin,cut_interp) );
-			// hard white margin
-			//EMISSION += vec3( float(cut_white_margin < cut_interp) );
+			if (cutted){
+				// soft white margin
+				EMISSION += vec3(smoothstep(cut_white_margin+0.01,cut_white_margin,cut_interp));
+				// hard white margin
+				//EMISSION += vec3( float(cut_white_margin < cut_interp) );
+			}
 		}
 	} else {
 		EMISSION = vec3(1.0);
