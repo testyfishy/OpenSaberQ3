@@ -199,6 +199,8 @@ func update_colors(left: Color, right: Color) -> void:
 	Map.color_right = right
 	left_saber.set_color(left)
 	right_saber.set_color(right)
+	ChainLink.left_material.set_shader_parameter(&"color", left)
+	ChainLink.right_material.set_shader_parameter(&"color", right)
 	#also updates map colors
 	event_driver.update_colors(left, right)
 	($StandingGround as Floor).update_colors(left, right)

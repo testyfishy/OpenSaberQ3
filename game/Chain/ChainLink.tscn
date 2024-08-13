@@ -1,16 +1,8 @@
-[gd_scene load_steps=6 format=3 uid="uid://b62c3hkjmky75"]
+[gd_scene load_steps=5 format=3 uid="uid://b62c3hkjmky75"]
 
 [ext_resource type="Script" path="res://game/Chain/ChainLink.gd" id="1_8l7tk"]
 [ext_resource type="PackedScene" uid="uid://bbsbv2l8r8kxm" path="res://game/Chain/ChainLink.glb" id="2_jgcvi"]
-[ext_resource type="Shader" path="res://game/Chain/ChainLink.gdshader" id="3_2sf1k"]
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_4x03s"]
-render_priority = 0
-shader = ExtResource("3_2sf1k")
-shader_parameter/color = Color(1, 0, 0, 1)
-shader_parameter/cutted = false
-shader_parameter/cut_dist_from_center = 0.0
-shader_parameter/cut_angle = 0.0
+[ext_resource type="Material" uid="uid://cvyav7ol7yep4" path="res://game/Chain/ChainLink.material" id="3_c2d47"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_thkam"]
 size = Vector3(0.8, 0.1, 1)
@@ -19,7 +11,7 @@ size = Vector3(0.8, 0.1, 1)
 script = ExtResource("1_8l7tk")
 
 [node name="Mesh" parent="." instance=ExtResource("2_jgcvi")]
-material_override = SubResource("ShaderMaterial_4x03s")
+material_override = ExtResource("3_c2d47")
 
 [node name="Area3D" type="Area3D" parent="."]
 collision_layer = 768
