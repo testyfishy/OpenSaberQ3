@@ -1,6 +1,34 @@
 extends Cuttable
 class_name ChainLink
 
+# unfortunately, doing this instead of creating a .tscn file for pieces is much,
+# much faster.  repeatedly instantiating a packed scene every time a single link
+# gets cut leads to noticeable stutter.
+class CutPiece extends RigidBody3D:
+	var mesh := MeshInstance3D.new()
+	var coll := CollisionShape3D.new()
+	var lifetime: float = 0.0
+	
+	func _init() -> void:
+		collision_layer = 0
+		collision_mask = CollisionLayerConstants.Floor_mask
+		gravity_scale = 1
+		
+		var shape := BoxShape3D.new()
+		shape.size = Vector3(0.25, 0.25, 0.125)
+		coll.shape = shape
+		
+		add_child(coll)
+		add_child(mesh)
+	
+	func _physics_process(delta: float) -> void:
+		lifetime += delta
+		if lifetime > 0.3:
+			queue_free()
+		else:
+			var f := lifetime*(1.0/0.3)
+			(mesh.material_override as ShaderMaterial).set_shader_parameter(&"cut_vanish",ease(f,2)*0.5)
+
 var which_saber: int
 
 # do not make this a preload.  doing so will make the scene show up as corrupt
@@ -79,7 +107,8 @@ func spawn(chain_info: ChainInfo, current_beat: float, head_pos: Vector2, tail_p
 	
 	visible = true
 
-func cut(saber_type: int, _cut_speed: Vector3, _cut_plane: Plane, _controller: BeepSaberController) -> void:
+func cut(saber_type: int, _cut_speed: Vector3, cut_plane: Plane, _controller: BeepSaberController) -> void:
+	_create_cut_rigid_body(cut_plane)
 	if saber_type == which_saber:
 		Scoreboard.chain_link_cut(transform.origin)
 	else:
@@ -89,3 +118,37 @@ func cut(saber_type: int, _cut_speed: Vector3, _cut_plane: Plane, _controller: B
 func on_miss() -> void:
 	Scoreboard.reset_combo()
 	queue_free()
+
+func _create_cut_rigid_body(cutplane: Plane) -> void:
+	var piece_left := CutPiece.new()
+	var piece_right := CutPiece.new()
+	var mesh_ref := ($Mesh as MeshInstance3D)
+	piece_left.mesh.mesh = mesh_ref.mesh
+	piece_right.mesh.mesh = mesh_ref.mesh
+	piece_left.transform = transform
+	piece_right.transform = transform
+	
+	var left_mat := mesh_ref.material_override.duplicate() as ShaderMaterial
+	left_mat.set_shader_parameter(&"cutted", true)
+	var right_mat := left_mat.duplicate() as ShaderMaterial
+	
+	# calculate angle and position of the cut
+	var cut_angle_abs := Vector2(cutplane.normal.x, cutplane.normal.y).angle()
+	var cut_dist_from_center := cutplane.distance_to(transform.origin)
+	var cut_angle_rel := cut_angle_abs - global_rotation.z
+	
+	left_mat.set_shader_parameter(&"cut_dist_from_center", -cut_dist_from_center)
+	right_mat.set_shader_parameter(&"cut_dist_from_center", cut_dist_from_center)
+	left_mat.set_shader_parameter(&"cut_angle", cut_angle_rel + PI)
+	right_mat.set_shader_parameter(&"cut_angle", cut_angle_rel)
+	piece_left.mesh.material_override = left_mat
+	piece_right.mesh.material_override = right_mat
+	
+	# some impulse so the cube half moves
+	var cutplane_2d := Vector3(cutplane.x, cutplane.y, 0.0)
+	var splitplane_2d := cutplane_2d.cross(piece_left.transform.basis.z)
+	piece_left.apply_central_impulse(-splitplane_2d)
+	piece_right.apply_central_impulse(splitplane_2d)
+	
+	get_parent().add_child(piece_left)
+	get_parent().add_child(piece_right)

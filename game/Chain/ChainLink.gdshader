@@ -9,6 +9,7 @@ const float cut_white_margin = 0.04;
 uniform bool cutted = false;
 uniform float cut_dist_from_center = 0.0;
 uniform float cut_angle = 0.0;
+uniform float cut_vanish = 0.0;
 
 // [firepal]TODO: Build matrix on CPU (I tried but couldn't')
 mat3 rotation3dZ(float angle) {
@@ -27,6 +28,7 @@ void vertex() {
 	if (cutted) {
 		float cut_line = cut_dist_from_center+(VERTEX*rotation3dZ(cut_angle)).x;
 		cut_interp = cut_line;
+		cut_interp -= cut_vanish;
 	}
 }
 
