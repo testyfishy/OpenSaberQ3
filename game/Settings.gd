@@ -80,8 +80,10 @@ var player_height_offset: float:
 		config.set_value(SECTION, "player_height_offset", value)
 
 func _ready() -> void:
-	if FileAccess.file_exists(OLD_CONFIG_PATH):
+	if FileAccess.file_exists(CONFIG_PATH):
 		reload()
+	elif FileAccess.file_exists(OLD_CONFIG_PATH):
+		load_old_config()
 	else:
 		restore_defaults()
 		save()
@@ -89,13 +91,9 @@ func _ready() -> void:
 # load() is the name of a built-in function,
 # so i went with the next best thing.
 func reload() -> void:
-	#var file := FileAccess.open(OLD_CONFIG_PATH, FileAccess.READ)
 	var config_error := config.load(CONFIG_PATH)
 	if config_error != OK:
-		if config_error == ERR_FILE_NOT_FOUND:
-			load_old_config()
-		else:
-			vr.log_file_error(config_error, CONFIG_PATH, "reload() in Settings.gd")
+		vr.log_file_error(config_error, CONFIG_PATH, "reload() in Settings.gd")
 		return
 	
 	var type_checking_holder: Variant = config.get_value(SECTION, "thickness")
@@ -137,6 +135,7 @@ func load_old_config() -> void:
 	var file := FileAccess.open(OLD_CONFIG_PATH, FileAccess.READ)
 	if FileAccess.get_open_error() != OK:
 		vr.log_file_error(FileAccess.get_open_error(), OLD_CONFIG_PATH, "load_old_config() in Settings.gd")
+		return
 	var settings_var: Variant = file.get_var(true)
 	file.close()
 	if not settings_var is Dictionary:
