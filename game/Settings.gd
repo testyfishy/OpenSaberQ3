@@ -1,33 +1,86 @@
 extends Node
 
-const CONFIG_PATH := "user://config.dat"
-const NEW_CONFIG_SIZE := 94
+var config := ConfigFile.new()
 
-var thickness: float
-var color_left: Color
-var color_right: Color
-var saber_visual: int
-var ui_volume: float
-var left_saber_offset_pos: Vector3
-var left_saber_offset_rot: Vector3
-var right_saber_offset_pos: Vector3
-var right_saber_offset_rot: Vector3
-var cube_cuts_falloff: bool
-var saber_tail: bool
-var glare: bool
-var show_fps: bool
-var bombs_enabled: bool
-var events: bool
-var disable_map_color: bool
-var player_height_offset: float
-
+const SECTION := "OpenSaber"
+const CONFIG_PATH := "user://config.ini"
+const OLD_CONFIG_PATH := "user://config.dat"
 var SABER_VISUALS: Array[PackedStringArray] = [
 	PackedStringArray(["Default saber","res://game/sabers/default/default_saber.tscn"]),
 	PackedStringArray(["Particle sword","res://game/sabers/particles/particles_saber.tscn"])
 ]
 
+var thickness: float:
+	set(value):
+		thickness = value
+		config.set_value(SECTION, "thickness", value)
+var color_left: Color:
+	set(value):
+		color_left = value
+		config.set_value(SECTION, "color_left", value)
+var color_right: Color:
+	set(value):
+		color_right = value
+		config.set_value(SECTION, "color_right", value)
+var saber_visual: int:
+	set(value):
+		saber_visual = value
+		config.set_value(SECTION, "saber_visual", value)
+var ui_volume: float:
+	set(value):
+		ui_volume = value
+		config.set_value(SECTION, "ui_volume", value)
+var left_saber_offset_pos: Vector3:
+	set(value):
+		left_saber_offset_pos = value
+		config.set_value(SECTION, "left_saber_offset_pos", value)
+var left_saber_offset_rot: Vector3:
+	set(value):
+		left_saber_offset_rot = value
+		config.set_value(SECTION, "left_saber_offset_rot", value)
+var right_saber_offset_pos: Vector3:
+	set(value):
+		right_saber_offset_pos = value
+		config.set_value(SECTION, "right_saber_offset_pos", value)
+var right_saber_offset_rot: Vector3:
+	set(value):
+		right_saber_offset_rot = value
+		config.set_value(SECTION, "right_saber_offset_rot", value)
+var cube_cuts_falloff: bool:
+	set(value):
+		cube_cuts_falloff = value
+		config.set_value(SECTION, "cube_cuts_falloff", value)
+var saber_tail: bool:
+	set(value):
+		saber_tail = value
+		config.set_value(SECTION, "saber_tail", value)
+var glare: bool:
+	set(value):
+		glare = value
+		config.set_value(SECTION, "glare", value)
+var show_fps: bool:
+	set(value):
+		show_fps = value
+		config.set_value(SECTION, "show_fps", value)
+var bombs_enabled: bool:
+	set(value):
+		bombs_enabled = value
+		config.set_value(SECTION, "bombs_enabled", value)
+var events: bool:
+	set(value):
+		events = value
+		config.set_value(SECTION, "events", value)
+var disable_map_color: bool:
+	set(value):
+		disable_map_color = value
+		config.set_value(SECTION, "disable_map_color", value)
+var player_height_offset: float:
+	set(value):
+		player_height_offset = value
+		config.set_value(SECTION, "player_height_offset", value)
+
 func _ready() -> void:
-	if FileAccess.file_exists(CONFIG_PATH):
+	if FileAccess.file_exists(OLD_CONFIG_PATH):
 		reload()
 	else:
 		restore_defaults()
@@ -36,42 +89,54 @@ func _ready() -> void:
 # load() is the name of a built-in function,
 # so i went with the next best thing.
 func reload() -> void:
-	var file := FileAccess.open(CONFIG_PATH, FileAccess.READ)
-	if not file:
-		vr.log_file_error(FileAccess.get_open_error(), CONFIG_PATH, "load() in Settings.gd")
+	#var file := FileAccess.open(OLD_CONFIG_PATH, FileAccess.READ)
+	var config_error := config.load(CONFIG_PATH)
+	if config_error != OK:
+		if config_error == ERR_FILE_NOT_FOUND:
+			load_old_config()
+		else:
+			vr.log_file_error(config_error, CONFIG_PATH, "reload() in Settings.gd")
 		return
-	if file.get_length() != NEW_CONFIG_SIZE:
-		load_old_config(file)
-		return
-	thickness = file.get_float()
-	color_left = Color(file.get_float(), file.get_float(), file.get_float(), file.get_float())
-	color_right = Color(file.get_float(), file.get_float(), file.get_float(), file.get_float())
-	saber_visual = file.get_8()
-	ui_volume = file.get_float()
-	left_saber_offset_pos.x = file.get_float()
-	left_saber_offset_pos.y = file.get_float()
-	left_saber_offset_pos.z = file.get_float()
-	left_saber_offset_rot.x = file.get_float()
-	left_saber_offset_rot.y = file.get_float()
-	left_saber_offset_rot.z = file.get_float()
-	right_saber_offset_pos.x = file.get_float()
-	right_saber_offset_pos.y = file.get_float()
-	right_saber_offset_pos.z = file.get_float()
-	right_saber_offset_rot.x = file.get_float()
-	right_saber_offset_rot.y = file.get_float()
-	right_saber_offset_rot.z = file.get_float()
-	player_height_offset = file.get_float()
-	var bools_as_byte := file.get_8()
-	file.close()
-	cube_cuts_falloff = bools_as_byte & 64
-	saber_tail = bools_as_byte & 32
-	glare = bools_as_byte & 16
-	show_fps = bools_as_byte & 8
-	bombs_enabled = bools_as_byte & 4
-	events = bools_as_byte & 2
-	disable_map_color = bools_as_byte & 1
+	
+	var type_checking_holder: Variant = config.get_value(SECTION, "thickness")
+	thickness = (type_checking_holder as float) if (type_checking_holder is float) else 100.0
+	type_checking_holder = config.get_value(SECTION, "color_left")
+	color_left = (type_checking_holder as Color) if (type_checking_holder is Color) else Color("ff1a1a")
+	type_checking_holder = config.get_value(SECTION, "color_right")
+	color_right = (type_checking_holder as Color) if (type_checking_holder is Color) else Color("1a1aff")
+	type_checking_holder = config.get_value(SECTION, "saber_visual")
+	saber_visual = (type_checking_holder as int) if (type_checking_holder is int) else 0
+	type_checking_holder = config.get_value(SECTION, "ui_volume")
+	ui_volume = (type_checking_holder as float) if (type_checking_holder is float) else 10.0
+	type_checking_holder = config.get_value(SECTION, "left_saber_offset_pos")
+	left_saber_offset_pos = (type_checking_holder as Vector3) if (type_checking_holder is Vector3) else Vector3.ZERO
+	type_checking_holder = config.get_value(SECTION, "left_saber_offset_rot")
+	left_saber_offset_rot = (type_checking_holder as Vector3) if (type_checking_holder is Vector3) else Vector3.ZERO
+	type_checking_holder = config.get_value(SECTION, "right_saber_offset_pos")
+	right_saber_offset_pos = (type_checking_holder as Vector3) if (type_checking_holder is Vector3) else Vector3.ZERO
+	type_checking_holder = config.get_value(SECTION, "right_saber_offset_rot")
+	right_saber_offset_rot = (type_checking_holder as Vector3) if (type_checking_holder is Vector3) else Vector3.ZERO
+	type_checking_holder = config.get_value(SECTION, "player_height_offset")
+	player_height_offset = (type_checking_holder as float) if (type_checking_holder is float) else 0.0
+	type_checking_holder = config.get_value(SECTION, "cube_cuts_falloff")
+	cube_cuts_falloff = (type_checking_holder as bool) if (type_checking_holder is bool) else true
+	type_checking_holder = config.get_value(SECTION, "saber_tail")
+	saber_tail = (type_checking_holder as bool) if (type_checking_holder is bool) else true
+	type_checking_holder = config.get_value(SECTION, "glare")
+	glare = (type_checking_holder as bool) if (type_checking_holder is bool) else true
+	type_checking_holder = config.get_value(SECTION, "show_fps")
+	show_fps = (type_checking_holder as bool) if (type_checking_holder is bool) else false
+	type_checking_holder = config.get_value(SECTION, "bombs_enabled")
+	bombs_enabled = (type_checking_holder as bool) if (type_checking_holder is bool) else true
+	type_checking_holder = config.get_value(SECTION, "events")
+	events = (type_checking_holder as bool) if (type_checking_holder is bool) else true
+	type_checking_holder = config.get_value(SECTION, "disable_map_color")
+	disable_map_color = (type_checking_holder as bool) if (type_checking_holder is bool) else false
 
-func load_old_config(file: FileAccess) -> void:
+func load_old_config() -> void:
+	var file := FileAccess.open(OLD_CONFIG_PATH, FileAccess.READ)
+	if FileAccess.get_open_error() != OK:
+		vr.log_file_error(FileAccess.get_open_error(), OLD_CONFIG_PATH, "load_old_config() in Settings.gd")
 	var settings_var: Variant = file.get_var(true)
 	file.close()
 	if not settings_var is Dictionary:
@@ -122,51 +187,21 @@ func load_old_config(file: FileAccess) -> void:
 	bombs_enabled = Utils.get_bool(settings_dict, "bombs_enabled", true)
 	events = Utils.get_bool(settings_dict, "events", true)
 	disable_map_color = Utils.get_bool(settings_dict, "disable_map_color", false)
-	player_height_offset = Utils.get_float(settings_dict, "player_height_offset", 0)
+	player_height_offset = Utils.get_float(settings_dict, "player_height_offset", 0.0)
 
 func save() -> void:
-	var file := FileAccess.open(CONFIG_PATH, FileAccess.WRITE)
-	if not file:
-		vr.log_file_error(FileAccess.get_open_error(), CONFIG_PATH, "save() in Settings.gd")
+	var error := config.save(CONFIG_PATH)
+	if error != OK:
+		vr.log_file_error(error, CONFIG_PATH, "save() in Settings.gd")
 		return
-	file.store_float(thickness)
-	file.store_float(color_left.r)
-	file.store_float(color_left.g)
-	file.store_float(color_left.b)
-	file.store_float(color_left.a)
-	file.store_float(color_right.r)
-	file.store_float(color_right.g)
-	file.store_float(color_right.b)
-	file.store_float(color_right.a)
-	file.store_8(saber_visual)
-	file.store_float(ui_volume)
-	file.store_float(left_saber_offset_pos.x)
-	file.store_float(left_saber_offset_pos.y)
-	file.store_float(left_saber_offset_pos.z)
-	file.store_float(left_saber_offset_rot.x)
-	file.store_float(left_saber_offset_rot.y)
-	file.store_float(left_saber_offset_rot.z)
-	file.store_float(right_saber_offset_pos.x)
-	file.store_float(right_saber_offset_pos.y)
-	file.store_float(right_saber_offset_pos.z)
-	file.store_float(right_saber_offset_rot.x)
-	file.store_float(right_saber_offset_rot.y)
-	file.store_float(right_saber_offset_rot.z)
-	file.store_float(player_height_offset)
-	var bools_to_byte := (
-		int(cube_cuts_falloff) * 64
-		+ int(saber_tail) * 32
-		+ int(glare) * 16
-		+ int(show_fps) * 8
-		+ int(bombs_enabled) * 4
-		+ int(events) * 2
-		+ int(disable_map_color)
-	)
-	file.store_8(bools_to_byte)
-	file.close()
+	# remove old config
+	if FileAccess.file_exists(OLD_CONFIG_PATH):
+		error = DirAccess.open("user://").remove(OLD_CONFIG_PATH)
+		if error != OK:
+			vr.log_file_error(error, OLD_CONFIG_PATH, "save() in Settings.gd")
 
 func restore_defaults() -> void:
-	thickness = 100
+	thickness = 100.0
 	cube_cuts_falloff = true
 	color_left = Color("ff1a1a")
 	color_right = Color("1a1aff")
@@ -182,3 +217,4 @@ func restore_defaults() -> void:
 	right_saber_offset_pos = Vector3.ZERO
 	right_saber_offset_rot = Vector3.ZERO
 	disable_map_color = false
+	player_height_offset = 0.0
