@@ -13,71 +13,71 @@ var SABER_VISUALS: Array[PackedStringArray] = [
 var thickness: float:
 	set(value):
 		thickness = value
-		config.set_value(SECTION, "thickness", value)
+		config_set_value("thickness", value)
 var color_left: Color:
 	set(value):
 		color_left = value
-		config.set_value(SECTION, "color_left", value)
+		config_set_value("color_left", value)
 var color_right: Color:
 	set(value):
 		color_right = value
-		config.set_value(SECTION, "color_right", value)
+		config_set_value("color_right", value)
 var saber_visual: int:
 	set(value):
 		saber_visual = value
-		config.set_value(SECTION, "saber_visual", value)
+		config_set_value("saber_visual", value)
 var ui_volume: float:
 	set(value):
 		ui_volume = value
-		config.set_value(SECTION, "ui_volume", value)
+		config_set_value("ui_volume", value)
 var left_saber_offset_pos: Vector3:
 	set(value):
 		left_saber_offset_pos = value
-		config.set_value(SECTION, "left_saber_offset_pos", value)
+		config_set_value("left_saber_offset_pos", value)
 var left_saber_offset_rot: Vector3:
 	set(value):
 		left_saber_offset_rot = value
-		config.set_value(SECTION, "left_saber_offset_rot", value)
+		config_set_value("left_saber_offset_rot", value)
 var right_saber_offset_pos: Vector3:
 	set(value):
 		right_saber_offset_pos = value
-		config.set_value(SECTION, "right_saber_offset_pos", value)
+		config_set_value("right_saber_offset_pos", value)
 var right_saber_offset_rot: Vector3:
 	set(value):
 		right_saber_offset_rot = value
-		config.set_value(SECTION, "right_saber_offset_rot", value)
+		config_set_value("right_saber_offset_rot", value)
 var cube_cuts_falloff: bool:
 	set(value):
 		cube_cuts_falloff = value
-		config.set_value(SECTION, "cube_cuts_falloff", value)
+		config_set_value("cube_cuts_falloff", value)
 var saber_tail: bool:
 	set(value):
 		saber_tail = value
-		config.set_value(SECTION, "saber_tail", value)
+		config_set_value("saber_tail", value)
 var glare: bool:
 	set(value):
 		glare = value
-		config.set_value(SECTION, "glare", value)
+		config_set_value("glare", value)
 var show_fps: bool:
 	set(value):
 		show_fps = value
-		config.set_value(SECTION, "show_fps", value)
+		config_set_value("show_fps", value)
 var bombs_enabled: bool:
 	set(value):
 		bombs_enabled = value
-		config.set_value(SECTION, "bombs_enabled", value)
+		config_set_value("bombs_enabled", value)
 var events: bool:
 	set(value):
 		events = value
-		config.set_value(SECTION, "events", value)
+		config_set_value("events", value)
 var disable_map_color: bool:
 	set(value):
 		disable_map_color = value
-		config.set_value(SECTION, "disable_map_color", value)
+		config_set_value("disable_map_color", value)
 var player_height_offset: float:
 	set(value):
 		player_height_offset = value
-		config.set_value(SECTION, "player_height_offset", value)
+		config_set_value("player_height_offset", value)
 
 func _ready() -> void:
 	if FileAccess.file_exists(CONFIG_PATH):
@@ -88,6 +88,34 @@ func _ready() -> void:
 		restore_defaults()
 		save()
 
+
+const default_values = {
+	thickness = 100.0,
+	cube_cuts_falloff = true,
+	color_left = Color("ff1a1a"),
+	color_right = Color("1a1aff"),
+	saber_tail = true,
+	glare = true,
+	show_fps = false,
+	bombs_enabled = true,
+	events = true,
+	saber_visual = 0,
+	ui_volume = 10.0,
+	left_saber_offset_pos = Vector3.ZERO,
+	left_saber_offset_rot = Vector3.ZERO,
+	right_saber_offset_pos = Vector3.ZERO,
+	right_saber_offset_rot = Vector3.ZERO,
+	disable_map_color = false,
+	player_height_offset = 0.0,
+}
+
+func cast_or_default(key: String, to_type: int = -1) -> Variant:
+	var default = default_values[key] if key in default_values else null
+	return convert(config.get_value(SECTION, key, default), typeof(default) if to_type < 0 else to_type)
+
+func config_set_value(key: String, value: Variant) -> void:
+	config.set_value(SECTION, key, value if default_values[key] != value else null)
+
 # load() is the name of a built-in function,
 # so i went with the next best thing.
 func reload() -> void:
@@ -96,40 +124,8 @@ func reload() -> void:
 		vr.log_file_error(config_error, CONFIG_PATH, "reload() in Settings.gd")
 		return
 	
-	var type_checking_holder: Variant = config.get_value(SECTION, "thickness")
-	thickness = (type_checking_holder as float) if (type_checking_holder is float) else 100.0
-	type_checking_holder = config.get_value(SECTION, "color_left")
-	color_left = (type_checking_holder as Color) if (type_checking_holder is Color) else Color("ff1a1a")
-	type_checking_holder = config.get_value(SECTION, "color_right")
-	color_right = (type_checking_holder as Color) if (type_checking_holder is Color) else Color("1a1aff")
-	type_checking_holder = config.get_value(SECTION, "saber_visual")
-	saber_visual = (type_checking_holder as int) if (type_checking_holder is int) else 0
-	type_checking_holder = config.get_value(SECTION, "ui_volume")
-	ui_volume = (type_checking_holder as float) if (type_checking_holder is float) else 10.0
-	type_checking_holder = config.get_value(SECTION, "left_saber_offset_pos")
-	left_saber_offset_pos = (type_checking_holder as Vector3) if (type_checking_holder is Vector3) else Vector3.ZERO
-	type_checking_holder = config.get_value(SECTION, "left_saber_offset_rot")
-	left_saber_offset_rot = (type_checking_holder as Vector3) if (type_checking_holder is Vector3) else Vector3.ZERO
-	type_checking_holder = config.get_value(SECTION, "right_saber_offset_pos")
-	right_saber_offset_pos = (type_checking_holder as Vector3) if (type_checking_holder is Vector3) else Vector3.ZERO
-	type_checking_holder = config.get_value(SECTION, "right_saber_offset_rot")
-	right_saber_offset_rot = (type_checking_holder as Vector3) if (type_checking_holder is Vector3) else Vector3.ZERO
-	type_checking_holder = config.get_value(SECTION, "player_height_offset")
-	player_height_offset = (type_checking_holder as float) if (type_checking_holder is float) else 0.0
-	type_checking_holder = config.get_value(SECTION, "cube_cuts_falloff")
-	cube_cuts_falloff = (type_checking_holder as bool) if (type_checking_holder is bool) else true
-	type_checking_holder = config.get_value(SECTION, "saber_tail")
-	saber_tail = (type_checking_holder as bool) if (type_checking_holder is bool) else true
-	type_checking_holder = config.get_value(SECTION, "glare")
-	glare = (type_checking_holder as bool) if (type_checking_holder is bool) else true
-	type_checking_holder = config.get_value(SECTION, "show_fps")
-	show_fps = (type_checking_holder as bool) if (type_checking_holder is bool) else false
-	type_checking_holder = config.get_value(SECTION, "bombs_enabled")
-	bombs_enabled = (type_checking_holder as bool) if (type_checking_holder is bool) else true
-	type_checking_holder = config.get_value(SECTION, "events")
-	events = (type_checking_holder as bool) if (type_checking_holder is bool) else true
-	type_checking_holder = config.get_value(SECTION, "disable_map_color")
-	disable_map_color = (type_checking_holder as bool) if (type_checking_holder is bool) else false
+	for key in default_values:
+		set(key, cast_or_default(key))
 
 func load_old_config() -> void:
 	var file := FileAccess.open(OLD_CONFIG_PATH, FileAccess.READ)
@@ -200,20 +196,6 @@ func save() -> void:
 			vr.log_file_error(error, OLD_CONFIG_PATH, "save() in Settings.gd")
 
 func restore_defaults() -> void:
-	thickness = 100.0
-	cube_cuts_falloff = true
-	color_left = Color("ff1a1a")
-	color_right = Color("1a1aff")
-	saber_tail = true
-	glare = true
-	show_fps = false
-	bombs_enabled = true
-	events = true
-	saber_visual = 0
-	ui_volume = 10.0
-	left_saber_offset_pos = Vector3.ZERO
-	left_saber_offset_rot = Vector3.ZERO
-	right_saber_offset_pos = Vector3.ZERO
-	right_saber_offset_rot = Vector3.ZERO
-	disable_map_color = false
-	player_height_offset = 0.0
+	config.clear()
+	save()
+	reload()

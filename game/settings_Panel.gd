@@ -89,6 +89,7 @@ func set_controls_from_settings() -> void:
 
 func _restore_defaults() -> void:
 	Settings.restore_defaults()
+	set_controls_from_settings()
 
 #settings down here
 func _on_thickness_value_changed(value: float) -> void:
