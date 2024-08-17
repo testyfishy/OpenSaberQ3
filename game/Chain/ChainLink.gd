@@ -121,6 +121,7 @@ func spawn(chain_info: ChainInfo, current_beat: float, head_pos: Vector2, tail_p
 	visible = true
 
 func cut(saber_type: int, _cut_speed: Vector3, cut_plane: Plane, _controller: BeepSaberController) -> void:
+	set_collision_disabled(true)
 	_create_cut_rigid_body(cut_plane)
 	if saber_type == which_saber:
 		Scoreboard.chain_link_cut(transform.origin)
