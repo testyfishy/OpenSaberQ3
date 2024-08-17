@@ -127,6 +127,9 @@ func on_miss() -> void:
 	Scoreboard.reset_combo()
 	queue_free()
 
+func set_collision_disabled(value: bool) -> void:
+	($Area3D/CollisionShape3D as CollisionShape3D).disabled = value
+
 func _create_cut_rigid_body(cutplane: Plane) -> void:
 	var piece_left := CutPiece.new()
 	var piece_right := CutPiece.new()
