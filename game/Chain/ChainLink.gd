@@ -38,6 +38,7 @@ class CutPiece extends RigidBody3D:
 			(mesh.material_override as ShaderMaterial).set_shader_parameter(&"cut_vanish",ease(f,2)*0.5)
 
 var which_saber: int
+@export var min_speed := 0.5
 
 # do not make this a preload.  doing so will make the scene show up as corrupt
 # in the editor.
@@ -113,6 +114,10 @@ func spawn(chain_info: ChainInfo, current_beat: float, head_pos: Vector2, tail_p
 	
 	($Mesh as MeshInstance3D).material_override = left_material if which_saber == 0 else right_material
 	
+	var anim := $AnimationPlayer as AnimationPlayer
+	var anim_speed := Map.current_difficulty.note_jump_movement_speed / 9.0
+	anim.speed_scale = maxf(min_speed,anim_speed)
+	anim.play(&"Spawn")
 	visible = true
 
 func cut(saber_type: int, _cut_speed: Vector3, cut_plane: Plane, _controller: BeepSaberController) -> void:
