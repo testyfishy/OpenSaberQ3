@@ -42,9 +42,9 @@ var gamestate: GameState = gamestate_bootup
 @onready var map_source_dialogs := $MapSourceDialogs as Node3D
 @onready var online_search_keyboard := $Keyboard_online_search as OQ_UI2DKeyboard
 
-@onready var fps_label := $XROrigin3D/XRCamera3D/PlayerHead/FPS_Label as OQ_UI2DLabel
+@onready var fps_label := $XROrigin3D/XRCamera3D/PlayerHead/FPS_Label as MeshInstance3D
 
-@onready var cube_template := preload("res://game/BeepCube.tscn").instantiate() as BeepCube
+@onready var cube_template := preload("res://game/BeepCube/BeepCube.tscn").instantiate() as BeepCube
 
 @onready var track := $Track as Node3D
 
@@ -70,7 +70,10 @@ var _in_wall := false
 #prevents the song for starting from the start when pausing and unpausing
 var pause_position := 0.0
 
-func start_map(info: Map.Info, map_difficulty: int) -> void:
+func start_map(info: MapInfo, map_difficulty: int) -> void:
+	Map.current_difficulty_index = map_difficulty
+	Map.current_info = info
+	
 	var set0 := info.difficulty_beatmaps
 	if (set0.is_empty()):
 		vr.log_error("No difficulty beatmaps in set")
@@ -80,7 +83,7 @@ func start_map(info: Map.Info, map_difficulty: int) -> void:
 		return
 	
 	if not Settings.disable_map_color:
-		Map.set_colors_from_custom_data(info.custom_data, info.difficulty_beatmaps[map_difficulty].custom_data, Settings.color_left, Settings.color_right)
+		Map.set_colors_from_custom_data(Settings.color_left, Settings.color_right)
 	update_colors(Map.color_left, Map.color_right)
 	if Map.event_stack.is_empty():
 		event_driver.set_all_on(Map.color_left, Map.color_right)
@@ -89,8 +92,6 @@ func start_map(info: Map.Info, map_difficulty: int) -> void:
 	
 	vr.log_info("loading: " + info.filepath + info.song_filename)
 	song_player.stream = AudioStreamOggVorbis.load_from_file(info.filepath + info.song_filename)
-	Map.current_difficulty_index = map_difficulty
-	Map.current_info = info
 	
 	_audio_synced_after_restart = false
 	song_player.play(0.0)
@@ -155,7 +156,7 @@ func _check_and_update_saber(controller: BeepSaberController, saber: LightSaber)
 
 func _physics_process(_dt: float) -> void:
 	if fps_label.visible:
-		fps_label.set_label_text("FPS: %d" % Engine.get_frames_per_second())
+		(fps_label.mesh as TextMesh).text = "FPS: %d" % Engine.get_frames_per_second()
 	
 	gamestate._physics_process(self)
 	
@@ -168,13 +169,12 @@ func _ready() -> void:
 	vr.leftController = left_controller
 	vr.rightController = right_controller
 	
-	left_saber.set_saber(Settings.SABER_VISUALS[Settings.saber_visual][1])
-	right_saber.set_saber(Settings.SABER_VISUALS[Settings.saber_visual][1])
 	fps_label.visible = Settings.show_fps
+	set_colors_from_settings()
+	($WorldEnvironment as WorldEnvironment).environment.glow_enabled = Settings.glare
 	
 	if not vr.inVR:
 		$XROrigin3D.add_child(preload("res://OQ_Toolkit/OQ_ARVROrigin/Feature_VRSimulator.tscn").instantiate())
-	set_colors_from_settings()
 	
 	UI_AudioEngine.attach_children(highscore_keyboard)
 	UI_AudioEngine.attach_children(online_search_keyboard)
@@ -199,6 +199,8 @@ func update_colors(left: Color, right: Color) -> void:
 	Map.color_right = right
 	left_saber.set_color(left)
 	right_saber.set_color(right)
+	ChainLink.left_material.set_shader_parameter(&"color", left)
+	ChainLink.right_material.set_shader_parameter(&"color", right)
 	#also updates map colors
 	event_driver.update_colors(left, right)
 	($StandingGround as Floor).update_colors(left, right)
@@ -305,7 +307,7 @@ func _unpause_button() -> void:
 	song_player.play(pause_position)
 	_transition_game_state(gamestate_playing)
 
-func _on_BeepSaberMainMenu_difficulty_changed(map_info: Map.Info, diff_rank: int) -> void:
+func _on_BeepSaberMainMenu_difficulty_changed(map_info: MapInfo, diff_rank: int) -> void:
 	Map.current_difficulty = null
 	for diff in map_info.difficulty_beatmaps:
 		if diff_rank == diff.difficulty_rank:

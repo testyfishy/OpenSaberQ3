@@ -22,7 +22,7 @@ func clear_table() -> void:
 	_pc_table = {}
 	
 # removes a given map from the table, effectively resetting that map's counters
-func remove_map(map_info: Map.Info) -> void:
+func remove_map(map_info: MapInfo) -> void:
 	var song_key := map_info.get_key()
 	@warning_ignore("return_value_discarded")
 	_pc_table.erase(song_key)
@@ -34,7 +34,7 @@ func remove_map(map_info: Map.Info) -> void:
 # diff_rank : difficulty rank (1,3,etc.) that the score was set on
 #
 # return : None
-func increment_play_count(map_info: Map.Info, diff_rank: int) -> void:
+func increment_play_count(map_info: MapInfo, diff_rank: int) -> void:
 	var song_key := map_info.get_key()
 	var key_dict := Utils.get_dict(_pc_table, song_key, {})
 	if not _pc_table.has(song_key):
@@ -49,7 +49,7 @@ func increment_play_count(map_info: Map.Info, diff_rank: int) -> void:
 	save_table()
 
 # return : the map's play count for the given difficulty
-func get_play_count(map_info: Map.Info, diff_rank: int) -> int:
+func get_play_count(map_info: MapInfo, diff_rank: int) -> int:
 	var song_key := map_info.get_key()
 	var key_dict := Utils.get_dict(_pc_table, song_key, {})
 	if key_dict.is_empty():
@@ -62,7 +62,7 @@ func get_play_count(map_info: Map.Info, diff_rank: int) -> int:
 	return int(Utils.get_float(key_dict, diff_str, 0))
 
 # return : the map's total play count accros all difficulties
-func get_total_play_count(map_info: Map.Info) -> int:
+func get_total_play_count(map_info: MapInfo) -> int:
 	var song_key := map_info.get_key()
 	var key_dict := Utils.get_dict(_pc_table, song_key, {})
 	if key_dict.is_empty():

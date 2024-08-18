@@ -13,10 +13,10 @@ signal scene_released(this: BeepCube)
 var which_saber: int
 var is_dot: bool
 
-static var particles_scene := load("res://game/BeepCube_SliceParticles.tscn") as PackedScene
+static var particles_scene := load("res://game/BeepCube/BeepCube_SliceParticles.tscn") as PackedScene
 # structure of nodes that represent a cut piece of a cube (ie. one half)
 class CutPiece extends RigidBody3D:
-	static var cube_phys_mat := load("res://game/BeepCube_Cut.phymat") as PhysicsMaterial
+	static var cube_phys_mat := load("res://game/BeepCube/BeepCube_Cut.phymat") as PhysicsMaterial
 	var mesh := MeshInstance3D.new()
 	var coll := CollisionShape3D.new()
 	var lifetime: float = 0.0
@@ -53,26 +53,31 @@ var _mat: ShaderMaterial
 
 func _ready() -> void:
 	var mi := $BeepCubeMesh as MeshInstance3D
-	_mat = mi.material_override.duplicate(true) as ShaderMaterial
-	mi.mesh = mi.mesh.duplicate() as Mesh
-	mi.material_override = _mat
+	_mat = mi.material_override as ShaderMaterial
 	_mesh = mi.mesh
 
-static var CUBE_ROTATIONS := PackedFloat64Array([PI, 0.0, TAU*0.75, TAU*0.25, -TAU*0.375, TAU*0.375, -TAU*0.125, TAU*0.125, 0.0])
-func spawn(note_info: Map.ColorNoteInfo, current_beat: float, color: Color) -> void:
-	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute / 60.0
+func spawn(note_info: ColorNoteInfo, current_beat: float, color: Color) -> void:
+	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute * 0.016666666666666667
 	beat = note_info.beat
 	which_saber = note_info.color
 	is_dot = note_info.cut_direction == 8
 	
-	transform.origin.x = (note_info.line_index - 1.5) * Constants.CUBE_DISTANCE
-	transform.origin.y = Constants.CUBE_HEIGHT_OFFSET + ((note_info.line_layer + 1) * Constants.CUBE_DISTANCE)
+	if is_dot:
+		(collision_big.shape as BoxShape3D).size.y = 0.8
+	else:
+		(collision_big.shape as BoxShape3D).size.y = 0.5
+	
+	transform.origin.x = Constants.LANE_X[note_info.line_index]
+	transform.origin.y = Constants.LAYER_Y[note_info.line_layer]
 	transform.origin.z = -(note_info.beat - current_beat) * Constants.BEAT_DISTANCE
 	
-	rotation.z = CUBE_ROTATIONS[note_info.cut_direction]
+	rotation.z = Constants.CUBE_ROTATIONS[note_info.cut_direction] + deg_to_rad(note_info.angle_offset)
 	
-	_mat.set_shader_parameter(&"color",color)
+	_mat.set_shader_parameter(&"color", color)
 	_mat.set_shader_parameter(&"is_dot", is_dot)
+	# since cube instances get recycled, we gotta reset cubes that were chain
+	# heads in a past life
+	_mat.set_shader_parameter(&"is_chain_head", false)
 	
 	# separate cube collision layers to allow a diferent collider on right/wrong cuts.
 	# opposing collision layers (ie. right note & left saber) will be placed on the
@@ -101,6 +106,9 @@ func release() -> void:
 	set_collision_disabled(true)
 	scene_released.emit(self)
 
+func make_chain_head() -> void:
+	_mat.set_shader_parameter(&"is_chain_head", true)
+
 func on_miss() -> void:
 	Scoreboard.reset_combo()
 	release()
@@ -124,11 +132,11 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 		if is_dot: #ignore angle if is a dot
 			cut_angle_accuracy = 1.0
 		var cut_distance_accuracy := clampf((0.1 - absf(cut_distance))/0.1, 0.0, 1.0)
-		var travel_distance_factor := (controller.movement_aabb as AABB).get_longest_axis_size()
+		var travel_distance_factor := controller.movement_aabb.get_longest_axis_size()
 		travel_distance_factor = clampf((travel_distance_factor-0.5)/0.5, 0.0, 1.0)
 		# allows a bit of save margin where the beat is considered 100% correct
 		var beat_accuracy := clampf((1.0 - absf(global_transform.origin.z)) / 0.5, 0.0, 1.0)
-		Scoreboard.update_points_from_cut(transform.origin, beat_accuracy, cut_angle_accuracy, cut_distance_accuracy, travel_distance_factor)
+		Scoreboard.note_cut(transform.origin, beat_accuracy, cut_angle_accuracy, cut_distance_accuracy, travel_distance_factor)
 	else:
 		Scoreboard.bad_cut(transform.origin)
 	
@@ -157,11 +165,11 @@ func _create_cut_rigid_body(cutplane: Plane) -> void:
 	# calculate angle and position of the cut
 	var cut_angle_abs := Vector2(cutplane.normal.x, cutplane.normal.y).angle()
 	# multiply by 1.25 to make up for the mesh being at 0.8 scale
-	var cut_dist_from_center := cutplane.distance_to(global_transform.origin) * 1.25
+	var cut_dist_from_center := cutplane.distance_to(global_transform.origin)# * 1.25
 	var cut_angle_rel := cut_angle_abs - global_rotation.z
 	
-	left_mat.set_shader_parameter(&"cut_pos", -cut_dist_from_center)
-	right_mat.set_shader_parameter(&"cut_pos", cut_dist_from_center)
+	left_mat.set_shader_parameter(&"cut_dist_from_center", -cut_dist_from_center)
+	right_mat.set_shader_parameter(&"cut_dist_from_center", cut_dist_from_center)
 	left_mat.set_shader_parameter(&"cut_angle", cut_angle_rel + PI)
 	right_mat.set_shader_parameter(&"cut_angle", cut_angle_rel)
 	piece_left.mesh.material_override = left_mat

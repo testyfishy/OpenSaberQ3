@@ -7,12 +7,6 @@ signal repeat
 var animated_percent: float = 0.0
 @onready var raycast_area := $RaycastArea as Area3D
 @onready var collision := $RaycastArea/CollisionShape3D as CollisionShape3D
-@onready var percent_indicator := $PercentIndicator as PercentIndicator
-@onready var details := ($Details as MeshInstance3D).mesh as TextMesh
-@onready var grade_label := $GradeViewport/GradeLabel as RichTextLabel
-@onready var fc_label := $FCViewport/FCLabel as RichTextLabel
-@onready var nr_label := $NRViewport/NRLabel as RichTextLabel
-@onready var name_label := ($NameLabel as MeshInstance3D).mesh as TextMesh
 
 func _ready() -> void:
 	set_buttons_disabled(true)
@@ -32,16 +26,23 @@ func _hide() -> void:
 	hide()
 
 func show_score(score: int, record: int, percent: float, song_string: String, is_full_combo: bool, is_new_record: bool) -> void:
-	var transparent := Color(1,1,1,0)
-	(details.material as StandardMaterial3D).albedo_color = transparent
-	grade_label.modulate = transparent
-	fc_label.modulate = transparent
-	nr_label.modulate = transparent
+	var details_mesh := ($Details as MeshInstance3D).mesh as TextMesh
+	var details_material := ($Details as MeshInstance3D).material_override as StandardMaterial3D
+	var percent_indicator := $PercentIndicator as PercentIndicator
+	var grade_label := $GradeViewport/GradeLabel as RichTextLabel
+	var fc_label := $FCViewport/FCLabel as RichTextLabel
+	var nr_label := $NRViewport/NRLabel as RichTextLabel
+	var name_label := ($NameLabel as MeshInstance3D).mesh as TextMesh
+	
+	details_material.albedo_color = Color.TRANSPARENT
+	grade_label.modulate = Color.TRANSPARENT
+	fc_label.modulate = Color.TRANSPARENT
+	nr_label.modulate = Color.TRANSPARENT
 	percent_indicator.endscore()
 	fc_label.visible = is_full_combo
 	nr_label.visible = is_new_record
 	name_label.text = song_string
-	details.text = "Your Score:\n%d\n\nRecord:\n%d" % [score,record]
+	details_mesh.text = "Your Score:\n%d\n\nRecord:\n%d" % [score,record]
 	
 	if percent >= 0.98:
 		grade_label.text = "[center][rainbow freq=0.5 sat=0.7 val=2]S"
@@ -68,10 +69,10 @@ func show_score(score: int, record: int, percent: float, song_string: String, is
 	
 	percent_indicator.update_percent(animated_percent)
 	tw = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT).set_parallel()
-	tw.tween_property(details.material,^"albedo_color",Color.WHITE,2).from(transparent)
-	tw.tween_property(grade_label,^"modulate",Color.WHITE,2).from(transparent)
-	tw.tween_property(fc_label,^"modulate",Color.WHITE,2).from(transparent)
-	tw.tween_property(nr_label,^"modulate",Color.WHITE,2).from(transparent)
+	tw.tween_property(details_material,^"albedo_color",Color.WHITE,2).from(Color.TRANSPARENT)
+	tw.tween_property(grade_label,^"modulate",Color.WHITE,2).from(Color.TRANSPARENT)
+	tw.tween_property(fc_label,^"modulate",Color.WHITE,2).from(Color.TRANSPARENT)
+	tw.tween_property(nr_label,^"modulate",Color.WHITE,2).from(Color.TRANSPARENT)
 	tw.play()
 
 func set_buttons_disabled(disabled: bool) -> void:

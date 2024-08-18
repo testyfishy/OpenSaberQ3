@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://glii0poslcve" path="res://game/BeepSaberMainMenu.tscn" id="11"]
 [ext_resource type="PackedScene" uid="uid://cisgyiarwaf2i" path="res://game/scripts/UIRaycast/UIRaycast.tscn" id="12"]
 [ext_resource type="PackedScene" uid="uid://qjvg3reomvyk" path="res://game/event_driver.tscn" id="13"]
+[ext_resource type="Material" uid="uid://dqox51k4cngtf" path="res://game/Text.material" id="13_3xkki"]
 [ext_resource type="Sky" uid="uid://byunh6ley5hib" path="res://game/background_sky.tres" id="14"]
 [ext_resource type="PackedScene" uid="uid://63fr72w7kh2w" path="res://game/PercentIndicator.tscn" id="16"]
 [ext_resource type="PackedScene" uid="uid://f53k0dxxtenr" path="res://game/Pause_Panel.tscn" id="18"]
@@ -46,12 +47,12 @@ fog_density = 0.0015
 [sub_resource type="SphereShape3D" id="2"]
 radius = 0.07
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8ccdl"]
-shading_mode = 0
-disable_receive_shadows = true
+[sub_resource type="TextMesh" id="TextMesh_p7n0m"]
+text = "FPS:"
+font_size = 7
+depth = 0.0
 
 [sub_resource type="TextMesh" id="TextMesh_cx1im"]
-material = SubResource("StandardMaterial3D_8ccdl")
 text = "x 0
 Combo 000"
 font_size = 6
@@ -59,12 +60,7 @@ horizontal_alignment = 0
 vertical_alignment = 0
 depth = 0.0
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0v1t3"]
-shading_mode = 0
-disable_receive_shadows = true
-
 [sub_resource type="TextMesh" id="TextMesh_0bbpk"]
-material = SubResource("StandardMaterial3D_0v1t3")
 text = "Score: 000000"
 font_size = 6
 vertical_alignment = 0
@@ -96,16 +92,13 @@ far = 1024.0
 
 [node name="PlayerHead" type="Area3D" parent="XROrigin3D/XRCamera3D"]
 
-[node name="FPS_Label" parent="XROrigin3D/XRCamera3D/PlayerHead" instance=ExtResource("2")]
-transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 1, -0.778996, 0.48322, -1.51666)
-visible = false
-text = "FPS: "
-margin = 0
-background_color = Color(0, 0, 0, 0)
-transparent = true
-
 [node name="CollisionShape3D" type="CollisionShape3D" parent="XROrigin3D/XRCamera3D/PlayerHead"]
 shape = SubResource("2")
+
+[node name="FPS_Label" type="MeshInstance3D" parent="XROrigin3D/XRCamera3D/PlayerHead"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.778996, 0.48322, -1.51666)
+material_override = ExtResource("13_3xkki")
+mesh = SubResource("TextMesh_p7n0m")
 
 [node name="LeftController" type="XRController3D" parent="XROrigin3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.25, 1.5, -0.5)
@@ -150,17 +143,18 @@ keyboard = NodePath("../../Keyboard_highscore")
 
 [node name="Multiplier_Label" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.75, 1.375, -2.5)
+material_override = ExtResource("13_3xkki")
 mesh = SubResource("TextMesh_cx1im")
 skeleton = NodePath("")
 
 [node name="Point_Label" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.375, -2.5)
+material_override = ExtResource("13_3xkki")
 mesh = SubResource("TextMesh_0bbpk")
 skeleton = NodePath("")
 
 [node name="Percent_Indicator" parent="." instance=ExtResource("16")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1, -2.5)
-skeleton = NodePath("")
 
 [node name="EndScore" parent="." instance=ExtResource("20_fgfws")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.60386, -0.777581)

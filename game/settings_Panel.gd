@@ -94,8 +94,8 @@ func _restore_defaults() -> void:
 #settings down here
 func _on_thickness_value_changed(value: float) -> void:
 	Settings.thickness = value
-	left_saber_ref.set_thickness(float(value)/100)
-	right_saber_ref.set_thickness(float(value)/100)
+	left_saber_ref.set_thickness(value * 0.01)
+	right_saber_ref.set_thickness(value * 0.01)
 
 func _on_cut_blocks_toggled(button_pressed: bool) -> void:
 	Settings.cube_cuts_falloff = button_pressed

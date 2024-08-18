@@ -44,7 +44,7 @@ func set_all_on(left: Color, right: Color) -> void:
 		update_colors(left, right)
 		$Level/rings.visible = true
 
-func process_event(data: Map.EventInfo, left: Color, right: Color) -> void:
+func process_event(data: EventInfo, left: Color, right: Color) -> void:
 	if disabled: return
 	if data.type in range(0,5):
 		match data.value:

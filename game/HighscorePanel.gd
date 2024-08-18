@@ -19,7 +19,7 @@ func _ready() -> void:
 	_exit_button.visible = show_close_button
 	_song_info_panel.visible = show_song_info
 
-func load_highscores(map_info: Map.Info, diff_rank: int):
+func load_highscores(map_info: MapInfo, diff_rank: int):
 	# clear the high score list
 	_clear_list()
 	
@@ -53,7 +53,7 @@ func _clear_list():
 	for c in _highscore_list.get_children():
 		c.queue_free()
 	
-func _get_difficulty_name(map_info: Map.Info, diff_rank: int) -> String:
+func _get_difficulty_name(map_info: MapInfo, diff_rank: int) -> String:
 	for beat_map in map_info.difficulty_beatmaps:
 		if beat_map.difficulty_rank == diff_rank:
 			return beat_map.difficulty

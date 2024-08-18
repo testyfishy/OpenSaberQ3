@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://drc5tdiltfqnk"
-path="res://.godot/imported/BeepCube_Emission.png-4718fe8807143be756879824c06c3f2e.ctex"
+path="res://.godot/imported/BeepCubeEmission.png-6ff30b0173f721125cc60cc803f774fe.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://game/data/BeepCube_Emission.png"
-dest_files=["res://.godot/imported/BeepCube_Emission.png-4718fe8807143be756879824c06c3f2e.ctex"]
+source_file="res://game/BeepCube/BeepCubeEmission.png"
+dest_files=["res://.godot/imported/BeepCubeEmission.png-6ff30b0173f721125cc60cc803f774fe.ctex"]
 
 [params]
 

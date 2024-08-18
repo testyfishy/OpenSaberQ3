@@ -50,9 +50,11 @@ func set_trail(enabled: bool = true) -> void:
 	saber_visual.set_trail(enabled)
 
 func _ready() -> void:
-#	set_saber("res://game/sabers/particles/particles_saber.tscn")
+	set_saber(Settings.SABER_VISUALS[Settings.saber_visual][1])
 	_anim.play(&"QuickHide")
 	saber_visual.quickhide()
+	saber_visual.set_thickness(Settings.thickness * 0.01)
+	saber_visual.set_trail(Settings.saber_tail)
 	
 	if type == 0:
 		_swing_cast._set_collision_mask_value(CollisionLayerConstants.LeftNote_bit, true)
