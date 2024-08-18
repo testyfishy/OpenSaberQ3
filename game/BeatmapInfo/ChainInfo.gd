@@ -40,5 +40,5 @@ static func new_v3(chain_dict: Dictionary) -> ChainInfo:
 		int(Utils.get_float(chain_dict, "tx", 0)),
 		int(Utils.get_float(chain_dict, "ty", 0)),
 		int(Utils.get_float(chain_dict, "sc", 0)),
-		int(Utils.get_float(chain_dict, "s", 1.0))
+		Utils.get_float(chain_dict, "s", 1.0)
 	)

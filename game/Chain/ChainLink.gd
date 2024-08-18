@@ -79,7 +79,7 @@ static func construct_chain(chain_info: ChainInfo, track_ref: Node3D, current_be
 	var tail_pos := Vector2(Constants.LANE_X[chain_info.tail_line_index], Constants.LAYER_Y[chain_info.tail_line_layer])
 	var mid_pos := head_pos + (UNIT_VECTORS[chain_info.head_cut_direction] * head_pos.distance_to(tail_pos) * 0.5)
 	i = 1
-	while i <= chain_info.slice_count:
+	while i < chain_info.slice_count:
 		var chain_link := CHAIN_LINK_TEMPLATE.instantiate() as ChainLink
 		chain_link.spawn(chain_info, current_beat, head_pos, tail_pos, mid_pos, i)
 		track_ref.add_child(chain_link)
