@@ -36,10 +36,11 @@ enum PlaylistOptions {
 	MostPlayed
 }
 
-# [{id:<song_dir_name>, source:<path_to_song?>},...]
+# several different lists of maps, for use with the sort-by bar up top
 var _all_songs: Array[MapInfo]
 var _recently_added_songs: Array[MapInfo] # newest is first, oldest is last
 var _most_played_songs: Array[MapInfo] # most played is first, least played is last
+var _currently_selected_songlist_ref: Array[MapInfo] = _all_songs # reference to whichever map list is the currently selected one
 
 # stop the preview player if the main song player is going
 func _physics_process(_delta: float) -> void:
@@ -129,6 +130,7 @@ func _discover_all_songs(seek_path: String) -> void:
 			file_name = dir.get_next()
 
 func _set_cur_playlist(songs: Array[MapInfo]) -> void:
+	_currently_selected_songlist_ref = songs
 	var current_id := songs_menu.get_selected_items()
 	
 	songs_menu.clear()
@@ -202,7 +204,7 @@ func _select_song(id: int) -> void:
 	songs_menu.ensure_current_is_visible()
 	delete_button.disabled = false
 	
-	var map := _all_songs[id]
+	var map := _currently_selected_songlist_ref[id]
 	($SongInfo_Label as Label).text = """Song Author: %s
 	Song Title: %s
 	Beatmap Author: %s
@@ -321,7 +323,7 @@ func _ready() -> void:
 
 func _on_Play_Button_pressed() -> void:
 	song_preview.stop()
-	_load_map_and_start(_all_songs[current_selected])
+	_load_map_and_start(_currently_selected_songlist_ref[current_selected])
 
 
 func _on_Exit_Button_pressed() -> void:
