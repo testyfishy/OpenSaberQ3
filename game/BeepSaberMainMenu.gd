@@ -386,11 +386,11 @@ func _text_input_changed() -> void:
 		return
 	text = text.to_upper() # ignore case
 	var songs_sorted_by_similarity: Array[MapInfoWithSort] = []
-	for song in range(0,_all_songs.size()):
+	for song in _all_songs:
 		# similarity is between 0.0 and 1.0, MapInfoWithSort takes an int,
 		# gotta make the number larger else it'll just be 0 or 1 later
-		var similarity := _all_songs[song].song_name.to_upper().similarity(text) * 65536.0
-		songs_sorted_by_similarity.append(MapInfoWithSort.new(int(similarity), _all_songs[song]))
+		var similarity := song.song_name.to_upper().similarity(text) * 65536.0
+		songs_sorted_by_similarity.append(MapInfoWithSort.new(int(similarity), song))
 	songs_sorted_by_similarity.sort_custom(compare)
 	var songs_sorted: Array[MapInfo] = []
 	for song in songs_sorted_by_similarity:
