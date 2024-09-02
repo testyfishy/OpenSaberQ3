@@ -10,7 +10,7 @@ class_name MainMenu
 signal difficulty_changed(map_info: MapInfo, diff_rank: int)
 # emitted when the settings button is pressed
 signal settings_requested()
-signal start_map(info: MapInfo, data: Dictionary, difficulty: int)
+signal start_map(info: MapInfo, difficulty: DifficultyInfo)
 
 var _cover_texture_create_sw := StopwatchFactory.create("cover_texture_create",10,true)
 
@@ -260,13 +260,8 @@ func _load_map_and_start(map: MapInfo) -> void:
 		return
 	
 	var diff_info := set0[_map_difficulty]
-	var map_filename := map.filepath + diff_info.beatmap_filename
-	var map_data := vr.load_json_file(map_filename)
 	
-	if (map_data == null):
-		vr.log_error("Could not read map data from " + map_filename)
-	
-	start_map.emit(map, _map_difficulty)
+	start_map.emit(map, diff_info)
 
 func _on_Delete_Button_button_up() -> void:
 	if delete_button.text != "Sure?":
@@ -389,15 +384,21 @@ func _text_input_changed() -> void:
 	if text == "":
 		_clean_search()
 		return
-	var most_similar := 0.0
-	for song in range(0,songs_menu.get_item_count()):
-		var similarity := songs_menu.get_item_text(song).similarity(text)
-		if similarity > most_similar:
-			most_similar = similarity
-			songs_menu.move_item(song,0)
+	text = text.to_upper() # ignore case
+	var songs_sorted_by_similarity: Array[MapInfoWithSort] = []
+	for song in range(0,_all_songs.size()):
+		# similarity is between 0.0 and 1.0, MapInfoWithSort takes an int,
+		# gotta make the number larger else it'll just be 0 or 1 later
+		var similarity := _all_songs[song].song_name.to_upper().similarity(text) * 65536.0
+		songs_sorted_by_similarity.append(MapInfoWithSort.new(int(similarity), _all_songs[song]))
+	songs_sorted_by_similarity.sort_custom(compare)
+	var songs_sorted: Array[MapInfo] = []
+	for song in songs_sorted_by_similarity:
+		songs_sorted.append(song.info)
+	_set_cur_playlist(songs_sorted)
 
 func _clean_search() -> void:
-	songs_menu.sort_items_by_text()
+	_on_PlaylistSelector_item_selected(playlist_selector.get_selected_id())
 	($Search_Button/Label as Label).text = ""
 
 func _on_PlaylistSelector_item_selected(id: int) -> void:
