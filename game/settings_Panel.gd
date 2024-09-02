@@ -35,6 +35,9 @@ signal apply()
 @onready var right_saber_roty_control := $ScrollContainer/VBox/right_saber_offset/roty as SpinBox
 @onready var right_saber_rotz_control := $ScrollContainer/VBox/right_saber_offset/rotz as SpinBox
 @onready var player_height_offset_control := $ScrollContainer/VBox/player_height_offset/pos as SpinBox
+@onready var audio_master_control := $ScrollContainer/VBox/audio/master/master_slider as HSlider
+@onready var audio_music_control := $ScrollContainer/VBox/audio/music/music_slider as HSlider
+@onready var audio_sfx_control := $ScrollContainer/VBox/audio/sfx/sfx_slider as HSlider
 
 var _play_ui_sound_demo := false
 
@@ -86,6 +89,9 @@ func set_controls_from_settings() -> void:
 	right_saber_roty_control.value = Settings.right_saber_offset_rot.y
 	right_saber_rotz_control.value = Settings.right_saber_offset_rot.z
 	player_height_offset_control.value = Settings.player_height_offset
+	audio_master_control.value = Settings.audio_master
+	audio_music_control.value = Settings.audio_music
+	audio_sfx_control.value = Settings.audio_sfx
 
 func _restore_defaults() -> void:
 	Settings.restore_defaults()
@@ -224,3 +230,17 @@ func _on_apply_pressed() -> void:
 	apply.emit()
 	left_saber_col.get_popup().hide()
 	right_saber_col.get_popup().hide()
+
+
+func _on_master_slider_value_changed(value):
+	Settings.audio_master = value
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), linear_to_db(value))
+
+func _on_music_slider_value_changed(value):
+	Settings.audio_music = value
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), linear_to_db(value))
+
+func _on_sfx_slider_value_changed(value):
+	Settings.audio_sfx = value
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("SFX"), linear_to_db(value))
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("UI"), linear_to_db(value))

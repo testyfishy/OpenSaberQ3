@@ -236,6 +236,7 @@ text = "Refresh Songs/Playlists"
 
 [node name="song_prev" type="AudioStreamPlayer" parent="."]
 volume_db = -60.0
+bus = &"Music"
 
 [node name="stop_prev" type="Timer" parent="song_prev"]
 one_shot = true

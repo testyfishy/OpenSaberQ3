@@ -1,4 +1,4 @@
-[gd_scene load_steps=33 format=3 uid="uid://dqb3ybvpsfcbw"]
+[gd_scene load_steps=35 format=3 uid="uid://dqb3ybvpsfcbw"]
 
 [ext_resource type="PackedScene" uid="uid://cs8e62lsifik5" path="res://game/floor.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://d04fmtjhjx4oy" path="res://OQ_Toolkit/OQ_UI2D/OQ_UI2DLabel.tscn" id="2"]
@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" uid="uid://qjvg3reomvyk" path="res://game/event_driver.tscn" id="13"]
 [ext_resource type="Material" uid="uid://dqox51k4cngtf" path="res://game/Text.material" id="13_3xkki"]
 [ext_resource type="Sky" uid="uid://byunh6ley5hib" path="res://game/background_sky.tres" id="14"]
+[ext_resource type="Shader" path="res://game/PercentIndicator.gdshader" id="14_155do"]
 [ext_resource type="PackedScene" uid="uid://63fr72w7kh2w" path="res://game/PercentIndicator.tscn" id="16"]
 [ext_resource type="PackedScene" uid="uid://f53k0dxxtenr" path="res://game/Pause_Panel.tscn" id="18"]
 [ext_resource type="PackedScene" uid="uid://biylg2wsontn3" path="res://game/settings_Panel.tscn" id="19"]
@@ -66,6 +67,12 @@ font_size = 6
 vertical_alignment = 0
 depth = 0.0
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_6dld2"]
+resource_local_to_scene = true
+render_priority = 0
+shader = ExtResource("14_155do")
+shader_parameter/how_full = 0.75
+
 [node name="BeepSaber" type="Node3D" groups=["main_game"]]
 script = ExtResource("9")
 
@@ -81,6 +88,7 @@ visible = false
 environment = SubResource("1")
 
 [node name="SongPlayer" type="AudioStreamPlayer" parent="."]
+bus = &"Music"
 
 [node name="XROrigin3D" type="XROrigin3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
@@ -155,6 +163,7 @@ skeleton = NodePath("")
 
 [node name="Percent_Indicator" parent="." instance=ExtResource("16")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1, -2.5)
+material_override = SubResource("ShaderMaterial_6dld2")
 
 [node name="EndScore" parent="." instance=ExtResource("20_fgfws")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.60386, -0.777581)

@@ -78,6 +78,20 @@ var player_height_offset: float:
 	set(value):
 		player_height_offset = value
 		config_set_value("player_height_offset", value)
+var audio_master: float:
+	set(value):
+		audio_master = value
+		config_set_value("audio_master", value)
+var audio_music: float:
+	set(value):
+		audio_music = value
+		config_set_value("audio_music", value)
+var audio_sfx: float:
+	set(value):
+		audio_sfx = value
+		config_set_value("audio_sfx", value)
+
+
 
 func _ready() -> void:
 	if FileAccess.file_exists(CONFIG_PATH):
@@ -107,6 +121,9 @@ const default_values = {
 	right_saber_offset_rot = Vector3.ZERO,
 	disable_map_color = false,
 	player_height_offset = 0.0,
+	audio_master = 0.8,
+	audio_music = 0.8,
+	audio_sfx = 0.8,
 }
 
 func cast_or_default(key: String, to_type: int = -1) -> Variant:
