@@ -247,8 +247,8 @@ func _select_difficulty(id: int) -> void:
 	diff_menu.select(id)
 	
 	# notify listeners that difficulty has changed
-	var difficulty := _all_songs[current_selected].difficulty_beatmaps[id]
-	difficulty_changed.emit(_all_songs[current_selected], difficulty.difficulty_rank)
+	var difficulty := _currently_selected_songlist_ref[current_selected].difficulty_beatmaps[id]
+	difficulty_changed.emit(_currently_selected_songlist_ref[current_selected], difficulty.difficulty_rank)
 
 
 func _load_map_and_start(map: MapInfo) -> void:
@@ -270,7 +270,7 @@ func _on_Delete_Button_button_up() -> void:
 		delete_button.text = "Delete"
 	else:
 		delete_button.text = "Delete"
-		_delete_map(_all_songs[current_selected])
+		_delete_map(_currently_selected_songlist_ref[current_selected])
 	
 func _delete_map(map: MapInfo) -> void:
 	Highscores.remove_map(map)
