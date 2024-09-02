@@ -7,7 +7,6 @@ class_name Map
 
 static var current_info: MapInfo
 static var current_difficulty: DifficultyInfo
-static var current_difficulty_index: int
 
 static var note_stack: Array[ColorNoteInfo]
 static var bomb_stack: Array[BombInfo]
@@ -40,8 +39,8 @@ static var event_thread_0 := Thread.new()
 static var event_thread_1 := Thread.new()
 
 # not officially part of the spec, but used by mods a lot
-static func set_colors_from_custom_data(default_left: Color, default_right: Color) -> void:
-	var set_colors := func(data: Dictionary, color_name: String) -> void:
+static func set_colors_from_custom_data() -> void:
+	var set_colors := func(data: Dictionary, color_name: String) -> bool:
 		var left_name := color_name % "Left"
 		var right_name := color_name % "Right"
 		if (
@@ -53,23 +52,29 @@ static func set_colors_from_custom_data(default_left: Color, default_right: Colo
 			@warning_ignore("unsafe_cast")
 			var right := data[right_name] as Dictionary
 			Map.color_left = Color(
-				Utils.get_float(left, "r", default_left.r),
-				Utils.get_float(left, "g", default_left.g),
-				Utils.get_float(left, "b", default_left.b)
+				Utils.get_float(left, "r", Settings.color_left.r),
+				Utils.get_float(left, "g", Settings.color_left.g),
+				Utils.get_float(left, "b", Settings.color_left.b)
 			)
 			Map.color_right = Color(
-				Utils.get_float(right, "r", default_right.r),
-				Utils.get_float(right, "g", default_right.g),
-				Utils.get_float(right, "b", default_right.b)
+				Utils.get_float(right, "r", Settings.color_right.r),
+				Utils.get_float(right, "g", Settings.color_right.g),
+				Utils.get_float(right, "b", Settings.color_right.b)
 			)
+			return true
+		return false
 	var info_data := current_info.custom_data
 	var diff_data := current_difficulty.custom_data
-	set_colors.call(info_data, "_envColor%sBoost")
-	set_colors.call(diff_data, "_envColor%sBoost")
-	set_colors.call(info_data, "_envColor%s")
-	set_colors.call(diff_data, "_envColor%s")
-	set_colors.call(info_data, "_color%s")
-	set_colors.call(diff_data, "_color%s")
+	var custom_colors_found := false
+	if set_colors.call(info_data, "_envColor%sBoost"): custom_colors_found = true
+	if set_colors.call(diff_data, "_envColor%sBoost"): custom_colors_found = true
+	if set_colors.call(info_data, "_envColor%s"): custom_colors_found = true
+	if set_colors.call(diff_data, "_envColor%s"): custom_colors_found = true
+	if set_colors.call(info_data, "_color%s"): custom_colors_found = true
+	if set_colors.call(diff_data, "_color%s"): custom_colors_found = true
+	if not custom_colors_found:
+		Map.color_left = Settings.color_left
+		Map.color_right = Settings.color_right
 
 static func load_map_info(load_path: String) -> MapInfo:
 	var info_dict := {}
@@ -225,12 +230,16 @@ static func load_event_stack_v3(event_data: Array) -> void:
 	load_range.bind(midpoint, event_data.size()).call()
 	event_thread_1.wait_to_finish()
 
-static func load_beatmap(map_data: Dictionary) -> bool:
+static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Dictionary) -> bool:
 	if map_data.has("_version"):
 		note_thread_0.start(load_note_stack_v2.bind(Utils.get_array(map_data, "_notes", [])))
 		obstacle_thread_0.start(load_obstacle_stack_v2.bind(Utils.get_array(map_data, "_obstacles", [])))
 		event_thread_0.start(load_event_stack_v2.bind(Utils.get_array(map_data, "_events", [])))
 		chain_stack.clear()
+		current_info = info
+		current_difficulty = difficulty
+		if not Settings.disable_map_color:
+			Map.set_colors_from_custom_data()
 		note_thread_0.wait_to_finish()
 		obstacle_thread_0.wait_to_finish()
 		event_thread_0.wait_to_finish()
@@ -243,6 +252,10 @@ static func load_beatmap(map_data: Dictionary) -> bool:
 			obstacle_thread_0.start(load_obstacle_stack_v3.bind(Utils.get_array(map_data, "obstacles", [])))
 			chain_thread_0.start(load_chain_stack_v3.bind(Utils.get_array(map_data, "burstSliders", [])))
 			event_thread_0.start(load_event_stack_v3.bind(Utils.get_array(map_data, "basicBeatmapEvents", [])))
+			current_info = info
+			current_difficulty = difficulty
+			if not Settings.disable_map_color:
+				Map.set_colors_from_custom_data()
 			note_thread_0.wait_to_finish()
 			bomb_thread_0.wait_to_finish()
 			obstacle_thread_0.wait_to_finish()

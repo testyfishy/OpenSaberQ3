@@ -10,7 +10,7 @@ class_name MainMenu
 signal difficulty_changed(map_info: MapInfo, diff_rank: int)
 # emitted when the settings button is pressed
 signal settings_requested()
-signal start_map(info: MapInfo, data: Dictionary, difficulty: int)
+signal start_map(info: MapInfo, difficulty: DifficultyInfo)
 
 var _cover_texture_create_sw := StopwatchFactory.create("cover_texture_create",10,true)
 
@@ -36,10 +36,11 @@ enum PlaylistOptions {
 	MostPlayed
 }
 
-# [{id:<song_dir_name>, source:<path_to_song?>},...]
+# several different lists of maps, for use with the sort-by bar up top
 var _all_songs: Array[MapInfo]
 var _recently_added_songs: Array[MapInfo] # newest is first, oldest is last
 var _most_played_songs: Array[MapInfo] # most played is first, least played is last
+var _currently_selected_songlist_ref: Array[MapInfo] = _all_songs # reference to whichever map list is the currently selected one
 
 # stop the preview player if the main song player is going
 func _physics_process(_delta: float) -> void:
@@ -129,6 +130,7 @@ func _discover_all_songs(seek_path: String) -> void:
 			file_name = dir.get_next()
 
 func _set_cur_playlist(songs: Array[MapInfo]) -> void:
+	_currently_selected_songlist_ref = songs
 	var current_id := songs_menu.get_selected_items()
 	
 	songs_menu.clear()
@@ -202,7 +204,7 @@ func _select_song(id: int) -> void:
 	songs_menu.ensure_current_is_visible()
 	delete_button.disabled = false
 	
-	var map := _all_songs[id]
+	var map := _currently_selected_songlist_ref[id]
 	($SongInfo_Label as Label).text = """Song Author: %s
 	Song Title: %s
 	Beatmap Author: %s
@@ -245,8 +247,8 @@ func _select_difficulty(id: int) -> void:
 	diff_menu.select(id)
 	
 	# notify listeners that difficulty has changed
-	var difficulty := _all_songs[current_selected].difficulty_beatmaps[id]
-	difficulty_changed.emit(_all_songs[current_selected], difficulty.difficulty_rank)
+	var difficulty := _currently_selected_songlist_ref[current_selected].difficulty_beatmaps[id]
+	difficulty_changed.emit(_currently_selected_songlist_ref[current_selected], difficulty.difficulty_rank)
 
 
 func _load_map_and_start(map: MapInfo) -> void:
@@ -258,13 +260,8 @@ func _load_map_and_start(map: MapInfo) -> void:
 		return
 	
 	var diff_info := set0[_map_difficulty]
-	var map_filename := map.filepath + diff_info.beatmap_filename
-	var map_data := vr.load_json_file(map_filename)
 	
-	if (map_data == null):
-		vr.log_error("Could not read map data from " + map_filename)
-	
-	start_map.emit(map, _map_difficulty)
+	start_map.emit(map, diff_info)
 
 func _on_Delete_Button_button_up() -> void:
 	if delete_button.text != "Sure?":
@@ -273,7 +270,7 @@ func _on_Delete_Button_button_up() -> void:
 		delete_button.text = "Delete"
 	else:
 		delete_button.text = "Delete"
-		_delete_map(_all_songs[current_selected])
+		_delete_map(_currently_selected_songlist_ref[current_selected])
 	
 func _delete_map(map: MapInfo) -> void:
 	Highscores.remove_map(map)
@@ -321,7 +318,7 @@ func _ready() -> void:
 
 func _on_Play_Button_pressed() -> void:
 	song_preview.stop()
-	_load_map_and_start(_all_songs[current_selected])
+	_load_map_and_start(_currently_selected_songlist_ref[current_selected])
 
 
 func _on_Exit_Button_pressed() -> void:
@@ -387,15 +384,21 @@ func _text_input_changed() -> void:
 	if text == "":
 		_clean_search()
 		return
-	var most_similar := 0.0
-	for song in range(0,songs_menu.get_item_count()):
-		var similarity := songs_menu.get_item_text(song).similarity(text)
-		if similarity > most_similar:
-			most_similar = similarity
-			songs_menu.move_item(song,0)
+	text = text.to_upper() # ignore case
+	var songs_sorted_by_similarity: Array[MapInfoWithSort] = []
+	for song in _all_songs:
+		# similarity is between 0.0 and 1.0, MapInfoWithSort takes an int,
+		# gotta make the number larger else it'll just be 0 or 1 later
+		var similarity := song.song_name.to_upper().similarity(text) * 65536.0
+		songs_sorted_by_similarity.append(MapInfoWithSort.new(int(similarity), song))
+	songs_sorted_by_similarity.sort_custom(compare)
+	var songs_sorted: Array[MapInfo] = []
+	for song in songs_sorted_by_similarity:
+		songs_sorted.append(song.info)
+	_set_cur_playlist(songs_sorted)
 
 func _clean_search() -> void:
-	songs_menu.sort_items_by_text()
+	_on_PlaylistSelector_item_selected(playlist_selector.get_selected_id())
 	($Search_Button/Label as Label).text = ""
 
 func _on_PlaylistSelector_item_selected(id: int) -> void:

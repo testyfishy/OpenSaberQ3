@@ -70,20 +70,15 @@ var _in_wall := false
 #prevents the song for starting from the start when pausing and unpausing
 var pause_position := 0.0
 
-func start_map(info: MapInfo, map_difficulty: int) -> void:
-	Map.current_difficulty_index = map_difficulty
-	Map.current_info = info
+func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
+	var map_filename := info.filepath + map_difficulty.beatmap_filename
+	var map_data := vr.load_json_file(map_filename)
 	
-	var set0 := info.difficulty_beatmaps
-	if (set0.is_empty()):
-		vr.log_error("No difficulty beatmaps in set")
+	if (map_data == null):
+		vr.log_error("Could not read map data from " + map_filename)
+	if not Map.load_beatmap(info, map_difficulty, map_data):
 		return
 	
-	if not Map.load_beatmap(vr.load_json_file(info.filepath + set0[map_difficulty].beatmap_filename)):
-		return
-	
-	if not Settings.disable_map_color:
-		Map.set_colors_from_custom_data(Settings.color_left, Settings.color_right)
 	update_colors(Map.color_left, Map.color_right)
 	if Map.event_stack.is_empty():
 		event_driver.set_all_on(Map.color_left, Map.color_right)
@@ -195,8 +190,6 @@ func set_colors_from_settings() -> void:
 	update_colors(Settings.color_left, Settings.color_right)
 
 func update_colors(left: Color, right: Color) -> void:
-	Map.color_left = left
-	Map.color_right = right
 	left_saber.set_color(left)
 	right_saber.set_color(right)
 	ChainLink.left_material.set_shader_parameter(&"color", left)
@@ -283,7 +276,7 @@ func _on_song_ended() -> void:
 		_transition_game_state(gamestate_mapcomplete)
 
 func _restart_button() -> void:
-	start_map(Map.current_info, Map.current_difficulty_index)
+	start_map(Map.current_info, Map.current_difficulty)
 	endscore.visible = false
 	pause_menu.visible = false
 
@@ -308,12 +301,6 @@ func _unpause_button() -> void:
 	_transition_game_state(gamestate_playing)
 
 func _on_BeepSaberMainMenu_difficulty_changed(map_info: MapInfo, diff_rank: int) -> void:
-	Map.current_difficulty = null
-	for diff in map_info.difficulty_beatmaps:
-		if diff_rank == diff.difficulty_rank:
-			Map.current_difficulty = diff
-			break
-	
 	# menu loads playlist in _ready(), must yield until scene is loaded
 	if not highscore_canvas:
 		await self.ready
