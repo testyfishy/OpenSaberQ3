@@ -164,27 +164,6 @@ func _notification(what: int) -> void:
 ###############################################################################
 
 var _active_scene_path: String # this assumes that only a single scene will ever be switched
-var scene_switch_root: Node
-var switch_scene_in_progress := false
-
-func switch_scene(scene_path: String) -> void:
-	if (_active_scene_path == scene_path):
-		return
-	print("switch_scene to " + scene_path)
-	
-	for s in scene_switch_root.get_children():
-		scene_switch_root.remove_child(s)
-		s.queue_free()
-	
-	var next_scene_resource := load(scene_path)
-	if next_scene_resource is PackedScene:
-		var next_scene_packed := next_scene_resource as PackedScene
-		_active_scene_path = scene_path
-		var next_scene := next_scene_packed.instantiate()
-		log_info("    switching to scene '%s'" % scene_path)
-		scene_switch_root.add_child(next_scene)
-	else:
-		log_error("could not load scene '%s'" % scene_path)
 
 ###############################################################################
 # Main Funcitonality for initialize and process
@@ -193,8 +172,13 @@ func switch_scene(scene_path: String) -> void:
 var webxr_initializer: CanvasLayer
 var xr_interface: OpenXRInterface
 
-func initialize(render_scale: float = 1.0) -> void:
+func initialize(origin: XROrigin3D, camera: XRCamera3D, left_hand: BeepSaberController, right_hand: BeepSaberController, render_scale: float = 1.0) -> void:
 	_init_vr_log()
+	
+	vrOrigin = origin
+	vrCamera = camera
+	leftController = left_hand
+	rightController = right_hand
 	
 	if OS.get_name() == "Web":
 		var webxr := (load("res://game/scripts/webxr/webxr_initializer.tscn") as PackedScene).instantiate() as CanvasLayer

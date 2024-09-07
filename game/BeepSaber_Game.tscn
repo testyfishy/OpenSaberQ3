@@ -1,4 +1,4 @@
-[gd_scene load_steps=35 format=3 uid="uid://dqb3ybvpsfcbw"]
+[gd_scene load_steps=36 format=3 uid="uid://dqb3ybvpsfcbw"]
 
 [ext_resource type="PackedScene" uid="uid://cs8e62lsifik5" path="res://game/floor.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://d04fmtjhjx4oy" path="res://OQ_Toolkit/OQ_UI2D/OQ_UI2DLabel.tscn" id="2"]
@@ -27,6 +27,7 @@
 [ext_resource type="PackedScene" uid="uid://cjirr6sfxfhhd" path="res://game/scripts/ScenePool/ScenePool.tscn" id="27"]
 [ext_resource type="PackedScene" uid="uid://dkqqtux44xxe7" path="res://game/ui/MapDownloadPanel/MapDownloadPanel.tscn" id="28"]
 [ext_resource type="PackedScene" uid="uid://bmdbiqndkvcm6" path="res://game/ui/BeatSageUI/BeatSageUI.tscn" id="29"]
+[ext_resource type="PackedScene" uid="uid://cbbovki8xp6e2" path="res://game/GodotSplash.tscn" id="29_vrn2v"]
 [ext_resource type="PackedScene" uid="uid://cgfj82g2xp1ne" path="res://OQ_Toolkit/OQ_UI2D/OQ_UI2DLogWindow.tscn" id="31"]
 
 [sub_resource type="Environment" id="1"]
@@ -75,6 +76,9 @@ shader_parameter/how_full = 0.75
 
 [node name="BeepSaber" type="Node3D" groups=["main_game"]]
 script = ExtResource("9")
+
+[node name="GodotSplash" parent="." node_paths=PackedStringArray("camera") instance=ExtResource("29_vrn2v")]
+camera = NodePath("../XROrigin3D/XRCamera3D")
 
 [node name="pre_renderer" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.00581, -5.78464)

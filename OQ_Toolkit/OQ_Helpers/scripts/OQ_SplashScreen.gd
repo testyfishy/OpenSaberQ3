@@ -3,11 +3,15 @@ extends Node3D
 var currentPosition: Vector3
 var movePosition: Vector3
 var targetPosition: Vector3
-var distance :=  3.0
+var distance := 3.0
 var time_to_move := 0.5
+var time_remaining := 3.0
 
-@onready var camera := $XROrigin3D/XRCamera3D as Node3D
-@onready var splash_screen := $SplashScreen as Node3D
+@export var camera: Node3D
+@onready var opensaber_material := ($opensaber as MeshInstance3D).material_override as StandardMaterial3D
+@onready var godot_material := ($Godot as MeshInstance3D).material_override as StandardMaterial3D
+@onready var view_blocker := $ViewBlocker as MeshInstance3D
+@onready var view_blocker_material := view_blocker.material_override as StandardMaterial3D
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -17,14 +21,23 @@ func _ready() -> void:
 	targetPosition = currentPosition
 	movePosition = currentPosition
 	
-	splash_screen.look_at_from_position(currentPosition, camPos, Vector3(0,1,0))
+	look_at_from_position(currentPosition, camPos, Vector3(0,1,0))
 	
-	($SplashScreen/DebugLabel as Node3D).visible = OS.is_debug_build()
+	($DebugLabel as Node3D).visible = OS.is_debug_build()
 
 var moving := false
 var moveTimer := 0.0
 
 func _process(dt: float) -> void:
+	time_remaining -= dt
+	if time_remaining < 0.0:
+		queue_free()
+		return
+	elif time_remaining < 1.0:
+		opensaber_material.albedo_color.a = time_remaining
+		godot_material.albedo_color.a = time_remaining
+		view_blocker_material.albedo_color.a = time_remaining
+	
 	var viewDir := -camera.global_transform.basis.z
 	viewDir.y = 0.0
 	viewDir = viewDir.normalized()
@@ -48,4 +61,5 @@ func _process(dt: float) -> void:
 		moving = true
 		movePosition = targetPosition
 	
-	splash_screen.look_at_from_position(currentPosition, camPos, Vector3(0,1,0))
+	look_at_from_position(currentPosition, camPos, Vector3(0,1,0))
+	view_blocker.global_position = camera.global_position
