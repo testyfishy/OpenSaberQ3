@@ -1,3 +1,6 @@
+# This is a stand-alone version of the demo game Beep Saber. It started (and is still included)
+# in the godot oculus quest toolkit (https://github.com/NeoSpark314/godot_oculus_quest_toolkit)
+# But this stand-alone version as additional features and will be developed independently
 # This file contains the main game logic for the BeepSaber demo implementation
 extends Node3D
 class_name BeepSaber_Game
@@ -159,10 +162,7 @@ func _physics_process(_dt: float) -> void:
 	_check_and_update_saber(right_controller, right_saber)
 
 func _ready() -> void:
-	vr.vrOrigin = $XROrigin3D as XROrigin3D
-	vr.vrCamera = $XROrigin3D/XRCamera3D as XRCamera3D
-	vr.leftController = left_controller
-	vr.rightController = right_controller
+	vr.initialize($XROrigin3D as XROrigin3D, $XROrigin3D/XRCamera3D as XRCamera3D, left_controller, right_controller)
 	
 	fps_label.visible = Settings.show_fps
 	set_colors_from_settings()
