@@ -1,8 +1,7 @@
 extends Node3D
 
-var currentPosition: Vector3
-var movePosition: Vector3
-var targetPosition: Vector3
+var current_position: Vector3
+var move_position: Vector3
 var distance := 3.0
 var time_to_move := 0.5
 var time_remaining := 3.0
@@ -16,17 +15,16 @@ var time_remaining := 3.0
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	var viewDir := -camera.global_transform.basis.z
-	var camPos := -camera.global_transform.origin
-	currentPosition = camPos + viewDir * distance
-	targetPosition = currentPosition
-	movePosition = currentPosition
+	var camPos := camera.global_transform.origin
+	current_position = camPos + viewDir * distance
+	move_position = current_position
 	
-	look_at_from_position(currentPosition, camPos, Vector3(0,1,0))
+	look_at_from_position(current_position, camPos, Vector3(0,1,0))
 	
 	($DebugLabel as Node3D).visible = OS.is_debug_build()
 
 var moving := false
-var moveTimer := 0.0
+var move_timer := 0.0
 
 func _process(dt: float) -> void:
 	time_remaining -= dt
@@ -38,28 +36,28 @@ func _process(dt: float) -> void:
 		godot_material.albedo_color.a = time_remaining
 		view_blocker_material.albedo_color.a = time_remaining
 	
-	var viewDir := -camera.global_transform.basis.z
-	viewDir.y = 0.0
-	viewDir = viewDir.normalized()
+	var view_dir := -camera.global_transform.basis.z
+	view_dir.y = 0.0
+	view_dir = view_dir.normalized()
 	
-	var camPos := camera.global_transform.origin
+	var cam_pos := camera.global_transform.origin
 	
 	#TODO: rotate instead of move
-	targetPosition = camPos + viewDir * distance
-	var distToTarget := (targetPosition - currentPosition).length()
+	var target_position := cam_pos + view_dir * distance
+	var dist_to_target := (target_position - current_position).length()
 	if moving:
-		currentPosition = currentPosition + (movePosition - currentPosition) * dt
-		if (distToTarget < 0.05):
+		current_position = current_position + (move_position - current_position) * dt
+		if dist_to_target < 0.05:
 			moving = false
 	
-	if (distToTarget > 0.5):
-		moveTimer += dt
+	if dist_to_target > 0.5:
+		move_timer += dt
 	else:
-		moveTimer = 0.0
+		move_timer = 0.0
 	
-	if (moveTimer > time_to_move):
+	if (move_timer > time_to_move):
 		moving = true
-		movePosition = targetPosition
+		move_position = target_position
 	
-	look_at_from_position(currentPosition, camPos, Vector3(0,1,0))
-	view_blocker.global_position = camera.global_position
+	look_at_from_position(current_position, cam_pos, Vector3(0,1,0))
+	view_blocker.global_position = cam_pos
