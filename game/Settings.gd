@@ -90,6 +90,10 @@ var audio_sfx: float:
 	set(value):
 		audio_sfx = value
 		config_set_value("audio_sfx", value)
+var spectator_view: bool:
+	set(value):
+		spectator_view = value
+		config_set_value("spectator_view", value)
 
 
 
@@ -124,6 +128,7 @@ const default_values = {
 	audio_master = 0.8,
 	audio_music = 0.8,
 	audio_sfx = 0.8,
+	spectator_view = false
 }
 
 func cast_or_default(key: String, to_type: int = -1) -> Variant:

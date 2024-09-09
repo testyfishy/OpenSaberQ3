@@ -172,7 +172,8 @@ var _active_scene_path: String # this assumes that only a single scene will ever
 var webxr_initializer: CanvasLayer
 var xr_interface: OpenXRInterface
 
-func initialize(origin: XROrigin3D, camera: XRCamera3D, left_hand: BeepSaberController, right_hand: BeepSaberController, render_scale: float = 1.0) -> void:
+func initialize(origin: XROrigin3D, camera: XRCamera3D, left_hand: BeepSaberController, right_hand: BeepSaberController,
+	xr_viewport: Viewport, render_scale: float = 1.0) -> void:
 	_init_vr_log()
 	
 	vrOrigin = origin
@@ -202,7 +203,7 @@ func initialize(origin: XROrigin3D, camera: XRCamera3D, left_hand: BeepSaberCont
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 		
 		# Change our main viewport to output to the HMD
-		get_viewport().use_xr = true
+		xr_viewport.use_xr = true
 		inVR = true
 	else:
 		log_info("OpenXR not initialized, please check if your headset is connected")
