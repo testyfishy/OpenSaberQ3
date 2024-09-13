@@ -14,8 +14,13 @@ var gamestate_playing := GameStatePlaying.new()
 var gamestate_settings := GameStateSettings.new()
 var gamestate: GameState = gamestate_bootup
 
+@onready var xr_viewport := $XRViewport as SubViewport
+@onready var xr_origin := $XRViewport/XROrigin3D as XROrigin3D
+@onready var xr_camera := $XRViewport/XROrigin3D/XRCamera3D as XRCamera3D
 @onready var left_controller := $XRViewport/XROrigin3D/LeftController as BeepSaberController
 @onready var right_controller := $XRViewport/XROrigin3D/RightController as BeepSaberController
+
+@onready var spectator_camera := $SpectatorCamera as Camera3D
 
 @onready var goggles_shader := ($XRViewport/XROrigin3D/XRCamera3D/VRGoggles as MeshInstance3D).material_override as ShaderMaterial
 
@@ -165,11 +170,11 @@ func _physics_process(_dt: float) -> void:
 
 func _ready() -> void:
 	vr.initialize(
-		$XRViewport/XROrigin3D as XROrigin3D,
-		$XRViewport/XROrigin3D/XRCamera3D as XRCamera3D,
+		xr_origin,
+		xr_camera,
 		left_controller,
 		right_controller,
-		$XRViewport as Viewport
+		xr_viewport
 	)
 	
 	fps_label.visible = Settings.show_fps
@@ -177,16 +182,12 @@ func _ready() -> void:
 	($WorldEnvironment as WorldEnvironment).environment.glow_enabled = Settings.glare
 	
 	if vr.inVR:
-		if not Settings.spectator_view:
-			$XRViewport/XROrigin3D.reparent(self)
-			$XRViewport.queue_free()
-			$SpectatorCamera.queue_free()
-			get_viewport().use_xr = true
+		set_in_spectator_mode(Settings.spectator_view)
 	else:
-		$XRViewport/XROrigin3D.reparent(self)
-		$XRViewport.queue_free()
-		$SpectatorCamera.queue_free()
-		$XROrigin3D.add_child(preload("res://OQ_Toolkit/OQ_ARVROrigin/Feature_VRSimulator.tscn").instantiate())
+		xr_origin.reparent(self)
+		xr_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		xr_camera.make_current()
+		xr_origin.add_child(preload("res://OQ_Toolkit/OQ_ARVROrigin/Feature_VRSimulator.tscn").instantiate())
 	
 	UI_AudioEngine.attach_children(highscore_keyboard)
 	UI_AudioEngine.attach_children(online_search_keyboard)
@@ -202,6 +203,27 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	($pre_renderer as Node3D).queue_free()
+
+# in godot, the camera used by a viewport is determined by scene heirarchy.
+# the main window and the xr renderer are both viewports, so they're limited
+# by this rule as well.  unfortunately, the easiest way i could find to change
+# which camera is being used by the main window involves moving things around
+# the scene tree.
+# - steve hocktail
+func set_in_spectator_mode(value: bool) -> void:
+	if not vr.inVR: return
+	if value:
+		xr_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		xr_origin.reparent(xr_viewport)
+		spectator_camera.make_current()
+		get_viewport().use_xr = false
+		xr_viewport.use_xr = true
+	else:
+		xr_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		xr_origin.reparent(self)
+		xr_camera.make_current()
+		xr_viewport.use_xr = false
+		get_viewport().use_xr = true
 
 func set_colors_from_settings() -> void:
 	update_colors(Settings.color_left, Settings.color_right)

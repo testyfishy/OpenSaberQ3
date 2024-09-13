@@ -250,3 +250,4 @@ func _on_sfx_slider_value_changed(value: float) -> void:
 
 func _on_spectator_view_toggled(value: bool) -> void:
 	Settings.spectator_view = value
+	game.set_in_spectator_mode(value)

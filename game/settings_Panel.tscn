@@ -588,7 +588,7 @@ text = "Ignore Map's Colors:"
 layout_mode = 2
 tooltip_text = "High Performance impact*"
 theme = SubResource("3")
-text = "*Spectator View: (Requires Restart)"
+text = "*Spectator View:"
 
 [node name="defaults" type="Button" parent="."]
 layout_mode = 0
