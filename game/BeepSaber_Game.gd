@@ -17,6 +17,8 @@ var gamestate: GameState = gamestate_bootup
 @onready var left_controller := $XRViewport/XROrigin3D/LeftController as BeepSaberController
 @onready var right_controller := $XRViewport/XROrigin3D/RightController as BeepSaberController
 
+@onready var goggles_shader := ($XRViewport/XROrigin3D/XRCamera3D/VRGoggles as MeshInstance3D).material_override as ShaderMaterial
+
 @onready var left_saber := $XRViewport/XROrigin3D/LeftController/LeftLightSaber as LightSaber
 @onready var right_saber := $XRViewport/XROrigin3D/RightController/RightLightSaber as LightSaber
 
@@ -209,6 +211,8 @@ func update_colors(left: Color, right: Color) -> void:
 	right_saber.set_color(right)
 	ChainLink.left_material.set_shader_parameter(&"color", left)
 	ChainLink.right_material.set_shader_parameter(&"color", right)
+	goggles_shader.set_shader_parameter(&"left_color", left)
+	goggles_shader.set_shader_parameter(&"right_color", right)
 	#also updates map colors
 	event_driver.update_colors(left, right)
 	($StandingGround as Floor).update_colors(left, right)

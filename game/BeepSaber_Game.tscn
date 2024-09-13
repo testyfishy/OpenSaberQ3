@@ -1,10 +1,12 @@
-[gd_scene load_steps=36 format=3 uid="uid://dqb3ybvpsfcbw"]
+[gd_scene load_steps=39 format=3 uid="uid://dqb3ybvpsfcbw"]
 
 [ext_resource type="PackedScene" uid="uid://cs8e62lsifik5" path="res://game/floor.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://d04fmtjhjx4oy" path="res://OQ_Toolkit/OQ_UI2D/OQ_UI2DLabel.tscn" id="2"]
 [ext_resource type="PackedScene" uid="uid://crstqa7v6ehg3" path="res://OQ_Toolkit/OQ_UI2D/OQ_UI2DCanvas.tscn" id="3"]
 [ext_resource type="PackedScene" uid="uid://iglrdadxsqw4" path="res://game/Wall/Wall.tscn" id="3_73652"]
+[ext_resource type="PackedScene" uid="uid://b08nwxm66uyir" path="res://game/vr_goggles.glb" id="7_e6irq"]
 [ext_resource type="Script" path="res://game/scripts/BeepSaberController.gd" id="8_5lcn1"]
+[ext_resource type="Shader" path="res://game/vr_goggles.gdshader" id="8_7x23q"]
 [ext_resource type="Script" path="res://game/BeepSaber_Game.gd" id="9"]
 [ext_resource type="PackedScene" uid="uid://n1wrym3osxb8" path="res://game/LightSaber.tscn" id="10"]
 [ext_resource type="PackedScene" uid="uid://glii0poslcve" path="res://game/BeepSaberMainMenu.tscn" id="11"]
@@ -54,6 +56,12 @@ text = "FPS:"
 font_size = 7
 depth = 0.0
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0pkk4"]
+render_priority = 0
+shader = ExtResource("8_7x23q")
+shader_parameter/left_color = Color(1, 0, 0, 1)
+shader_parameter/right_color = Color(0, 0, 1, 1)
+
 [sub_resource type="TextMesh" id="TextMesh_cx1im"]
 text = "x 0
 Combo 000"
@@ -101,6 +109,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
 
 [node name="XRCamera3D" type="XRCamera3D" parent="XRViewport/XROrigin3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+cull_mask = 1047553
 far = 1024.0
 
 [node name="PlayerHead" type="Area3D" parent="XRViewport/XROrigin3D/XRCamera3D"]
@@ -112,6 +121,10 @@ shape = SubResource("2")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.778996, 0.48322, -1.51666)
 material_override = ExtResource("13_3xkki")
 mesh = SubResource("TextMesh_p7n0m")
+
+[node name="VRGoggles" parent="XRViewport/XROrigin3D/XRCamera3D" instance=ExtResource("7_e6irq")]
+layers = 2
+material_override = SubResource("ShaderMaterial_0pkk4")
 
 [node name="LeftController" type="XRController3D" parent="XRViewport/XROrigin3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.25, 1.5, -0.5)
