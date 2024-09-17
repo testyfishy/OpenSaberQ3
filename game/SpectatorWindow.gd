@@ -7,12 +7,6 @@ extends Window
 
 func _ready() -> void:
 	@warning_ignore("return_value_discarded")
-	visibility_changed.connect(resize_to_main_window_size)
-	@warning_ignore("return_value_discarded")
-	size_changed.connect(reposition_ui_elements)
-	@warning_ignore("return_value_discarded")
-	close_requested.connect(close)
-	@warning_ignore("return_value_discarded")
 	Scoreboard.score_changed.connect(on_scoreboard_update)
 	
 	visible = Settings.spectator_view
@@ -24,6 +18,8 @@ func resize_to_main_window_size() -> void:
 		reposition_ui_elements()
 
 func reposition_ui_elements() -> void:
+	if not visible: return
+	
 	var cam := $Camera3D as Camera3D
 	($Camera3D/PIPivot as Node3D).global_transform.origin = cam.project_position(size, 1.0)
 	multiplier_label.global_transform.origin = cam.project_position(Vector2.ZERO, 1.0)

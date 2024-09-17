@@ -40,6 +40,7 @@ handle_input_locally = false
 title = "Spectator View"
 initial_position = 1
 size = Vector2i(960, 540)
+visible = false
 script = ExtResource("1_s3dpd")
 
 [node name="Camera3D" type="Camera3D" parent="."]
@@ -69,3 +70,7 @@ script = ExtResource("3_be825")
 [node name="PercentLabel" type="MeshInstance3D" parent="Camera3D/PIPivot/PercentIndicator"]
 material_override = ExtResource("4_ometx")
 mesh = SubResource("TextMesh_270nm")
+
+[connection signal="close_requested" from="." to="." method="close"]
+[connection signal="size_changed" from="." to="." method="reposition_ui_elements"]
+[connection signal="visibility_changed" from="." to="." method="resize_to_main_window_size"]
