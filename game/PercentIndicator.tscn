@@ -20,11 +20,13 @@ font_size = 10
 depth = 0.0
 
 [node name="PercentIndicator" type="MeshInstance3D"]
+layers = 3
 material_override = SubResource("ShaderMaterial_seqot")
 mesh = SubResource("QuadMesh_02xdc")
 script = ExtResource("4")
 
 [node name="PercentLabel" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.1)
+layers = 3
 material_override = ExtResource("3_wm8ff")
 mesh = SubResource("TextMesh_bcnkh")

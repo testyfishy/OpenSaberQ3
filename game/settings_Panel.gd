@@ -8,6 +8,7 @@ signal apply()
 @export var right_saber_ref: LightSaber
 @export var environment_ref: WorldEnvironment
 @export var player_ref: XROrigin3D
+@export var spectator_window_ref: Window
 
 @onready var saber_control := $ScrollContainer/VBox/SaberTypeRow/saber as OptionButton
 @onready var glare_control := $ScrollContainer/VBox/glare as CheckButton
@@ -247,7 +248,6 @@ func _on_sfx_slider_value_changed(value: float) -> void:
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"SFX"), linear_to_db(value))
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"UI"), linear_to_db(value))
 
-
 func _on_spectator_view_toggled(value: bool) -> void:
 	Settings.spectator_view = value
-	game.set_in_spectator_mode(value)
+	spectator_window_ref.visible = value

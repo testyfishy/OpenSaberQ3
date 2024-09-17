@@ -1,9 +1,10 @@
-[gd_scene load_steps=39 format=3 uid="uid://dqb3ybvpsfcbw"]
+[gd_scene load_steps=40 format=3 uid="uid://dqb3ybvpsfcbw"]
 
 [ext_resource type="PackedScene" uid="uid://cs8e62lsifik5" path="res://game/floor.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://d04fmtjhjx4oy" path="res://OQ_Toolkit/OQ_UI2D/OQ_UI2DLabel.tscn" id="2"]
 [ext_resource type="PackedScene" uid="uid://crstqa7v6ehg3" path="res://OQ_Toolkit/OQ_UI2D/OQ_UI2DCanvas.tscn" id="3"]
 [ext_resource type="PackedScene" uid="uid://iglrdadxsqw4" path="res://game/Wall/Wall.tscn" id="3_73652"]
+[ext_resource type="PackedScene" uid="uid://iiatb07725bg" path="res://game/SpectatorWindow.tscn" id="6_g42ih"]
 [ext_resource type="PackedScene" uid="uid://b08nwxm66uyir" path="res://game/vr_goggles.glb" id="7_e6irq"]
 [ext_resource type="Script" path="res://game/scripts/BeepSaberController.gd" id="8_5lcn1"]
 [ext_resource type="Shader" path="res://game/vr_goggles.gdshader" id="8_7x23q"]
@@ -86,7 +87,7 @@ shader_parameter/how_full = 0.75
 script = ExtResource("9")
 
 [node name="GodotSplash" parent="." node_paths=PackedStringArray("camera") instance=ExtResource("29_vrn2v")]
-camera = NodePath("../XRViewport/XROrigin3D/XRCamera3D")
+camera = NodePath("../XROrigin3D/XRCamera3D")
 
 [node name="pre_renderer" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.00581, -5.78464)
@@ -102,54 +103,54 @@ environment = SubResource("1")
 [node name="SongPlayer" type="AudioStreamPlayer" parent="."]
 bus = &"Music"
 
-[node name="XRViewport" type="SubViewport" parent="."]
+[node name="SpectatorWindow" parent="." instance=ExtResource("6_g42ih")]
 
-[node name="XROrigin3D" type="XROrigin3D" parent="XRViewport"]
+[node name="XROrigin3D" type="XROrigin3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
 
-[node name="XRCamera3D" type="XRCamera3D" parent="XRViewport/XROrigin3D"]
+[node name="XRCamera3D" type="XRCamera3D" parent="XROrigin3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
-cull_mask = 1047553
+cull_mask = 1
 far = 1024.0
 
-[node name="PlayerHead" type="Area3D" parent="XRViewport/XROrigin3D/XRCamera3D"]
+[node name="PlayerHead" type="Area3D" parent="XROrigin3D/XRCamera3D"]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="XRViewport/XROrigin3D/XRCamera3D/PlayerHead"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="XROrigin3D/XRCamera3D/PlayerHead"]
 shape = SubResource("2")
 
-[node name="FPS_Label" type="MeshInstance3D" parent="XRViewport/XROrigin3D/XRCamera3D/PlayerHead"]
+[node name="FPS_Label" type="MeshInstance3D" parent="XROrigin3D/XRCamera3D/PlayerHead"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.778996, 0.48322, -1.51666)
 material_override = ExtResource("13_3xkki")
 mesh = SubResource("TextMesh_p7n0m")
 
-[node name="VRGoggles" parent="XRViewport/XROrigin3D/XRCamera3D" instance=ExtResource("7_e6irq")]
+[node name="VRGoggles" parent="XROrigin3D/XRCamera3D" instance=ExtResource("7_e6irq")]
 layers = 2
 material_override = SubResource("ShaderMaterial_0pkk4")
 
-[node name="LeftController" type="XRController3D" parent="XRViewport/XROrigin3D"]
+[node name="LeftController" type="XRController3D" parent="XROrigin3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.25, 1.5, -0.5)
 tracker = &"left_hand"
 script = ExtResource("8_5lcn1")
 
-[node name="LeftLightSaber" parent="XRViewport/XROrigin3D/LeftController" node_paths=PackedStringArray("song_player_ref") instance=ExtResource("10")]
-song_player_ref = NodePath("../../../../SongPlayer")
+[node name="LeftLightSaber" parent="XROrigin3D/LeftController" node_paths=PackedStringArray("song_player_ref") instance=ExtResource("10")]
+song_player_ref = NodePath("../../../SongPlayer")
 
-[node name="UIRaycast" parent="XRViewport/XROrigin3D/LeftController" node_paths=PackedStringArray("controller") instance=ExtResource("12")]
+[node name="UIRaycast" parent="XROrigin3D/LeftController" node_paths=PackedStringArray("controller") instance=ExtResource("12")]
 transform = Transform3D(1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, 0, 0, 0)
 active = false
 ui_raycast_length = 5.0
 controller = NodePath("..")
 
-[node name="RightController" type="XRController3D" parent="XRViewport/XROrigin3D"]
+[node name="RightController" type="XRController3D" parent="XROrigin3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, 1.5, -0.5)
 tracker = &"right_hand"
 script = ExtResource("8_5lcn1")
 
-[node name="RightLightSaber" parent="XRViewport/XROrigin3D/RightController" node_paths=PackedStringArray("song_player_ref") instance=ExtResource("10")]
+[node name="RightLightSaber" parent="XROrigin3D/RightController" node_paths=PackedStringArray("song_player_ref") instance=ExtResource("10")]
 type = 1
-song_player_ref = NodePath("../../../../SongPlayer")
+song_player_ref = NodePath("../../../SongPlayer")
 
-[node name="UIRaycast" parent="XRViewport/XROrigin3D/RightController" node_paths=PackedStringArray("controller") instance=ExtResource("12")]
+[node name="UIRaycast" parent="XROrigin3D/RightController" node_paths=PackedStringArray("controller") instance=ExtResource("12")]
 transform = Transform3D(1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, 0, 0, 0)
 ui_raycast_length = 5.0
 controller = NodePath("..")
@@ -169,12 +170,14 @@ keyboard = NodePath("../../Keyboard_highscore")
 
 [node name="Multiplier_Label" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.75, 1.375, -2.5)
+layers = 3
 material_override = ExtResource("13_3xkki")
 mesh = SubResource("TextMesh_cx1im")
 skeleton = NodePath("")
 
 [node name="Point_Label" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.375, -2.5)
+layers = 3
 material_override = ExtResource("13_3xkki")
 mesh = SubResource("TextMesh_0bbpk")
 skeleton = NodePath("")
@@ -185,6 +188,7 @@ material_override = SubResource("ShaderMaterial_6dld2")
 
 [node name="EndScore" parent="." instance=ExtResource("20_fgfws")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.60386, -0.777581)
+layers = 3
 
 [node name="PauseMenu_canvas" parent="." instance=ExtResource("3")]
 transform = Transform3D(1.86849, 0, 0, 0, 1.86849, 0, 0, 0, 1.86849, 0, 1.43532, -0.756856)
@@ -202,12 +206,13 @@ font_size_multiplier = 4.587
 transform = Transform3D(2.3178, 0, 0, 0, 2.3178, 0, 0, 0, 2.3178, 0, 1.5, -1)
 visible = false
 
-[node name="settings_Panel" parent="Settings_canvas" node_paths=PackedStringArray("game", "left_saber_ref", "right_saber_ref", "environment_ref", "player_ref") instance=ExtResource("19")]
+[node name="settings_Panel" parent="Settings_canvas" node_paths=PackedStringArray("game", "left_saber_ref", "right_saber_ref", "environment_ref", "player_ref", "spectator_window_ref") instance=ExtResource("19")]
 game = NodePath("../..")
-left_saber_ref = NodePath("../../XRViewport/XROrigin3D/LeftController/LeftLightSaber")
-right_saber_ref = NodePath("../../XRViewport/XROrigin3D/RightController/RightLightSaber")
+left_saber_ref = NodePath("../../XROrigin3D/LeftController/LeftLightSaber")
+right_saber_ref = NodePath("../../XROrigin3D/RightController/RightLightSaber")
 environment_ref = NodePath("../../WorldEnvironment")
-player_ref = NodePath("../../XRViewport/XROrigin3D")
+player_ref = NodePath("../../XROrigin3D")
+spectator_window_ref = NodePath("../../SpectatorWindow")
 
 [node name="OQ_UI2DLogWindow" parent="Settings_canvas" instance=ExtResource("31")]
 transform = Transform3D(0.373265, 0, 0, 0, 0.323257, 0.186633, 0, -0.186633, 0.323257, 0, -0.407229, 0.0410669)
@@ -274,13 +279,9 @@ cancelable = false
 min_chars_to_enable_enter = 1
 is_name_input = true
 
-[node name="SpectatorCamera" type="Camera3D" parent="."]
-transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 2, 3, 3)
-current = true
-
 [connection signal="finished" from="SongPlayer" to="." method="_on_song_ended"]
-[connection signal="area_entered" from="XRViewport/XROrigin3D/XRCamera3D/PlayerHead" to="." method="_on_PlayerHead_area_entered"]
-[connection signal="area_exited" from="XRViewport/XROrigin3D/XRCamera3D/PlayerHead" to="." method="_on_PlayerHead_area_exited"]
+[connection signal="area_entered" from="XROrigin3D/XRCamera3D/PlayerHead" to="." method="_on_PlayerHead_area_entered"]
+[connection signal="area_exited" from="XROrigin3D/XRCamera3D/PlayerHead" to="." method="_on_PlayerHead_area_exited"]
 [connection signal="difficulty_changed" from="MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu" to="." method="_on_BeepSaberMainMenu_difficulty_changed"]
 [connection signal="settings_requested" from="MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu" to="." method="_settings_button"]
 [connection signal="start_map" from="MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu" to="." method="start_map"]

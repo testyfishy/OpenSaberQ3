@@ -46,6 +46,7 @@ gdscript/warnings/return_value_discarded=1
 
 window/size/viewport_width=960
 window/size/viewport_height=540
+window/subwindows/embed_subwindows=false
 window/vsync/vsync_mode=false
 
 [editor_plugins]
@@ -119,6 +120,8 @@ ui_end={
 
 [layer_names]
 
+3d_render/layer_1="VR"
+3d_render/layer_2="Desktop"
 3d_physics/layer_1="Obstacles"
 3d_physics/layer_2="UI"
 3d_physics/layer_3="Player"

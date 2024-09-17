@@ -45,6 +45,7 @@ size = Vector2(0.03, 0.135)
 script = ExtResource("1")
 
 [node name="Particles3D" type="GPUParticles3D" parent="."]
+layers = 3
 emitting = false
 amount = 60
 lifetime = 0.8

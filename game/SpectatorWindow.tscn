@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3 uid="uid://iiatb07725bg"]
+
+[ext_resource type="Script" path="res://game/SpectatorWindow.gd" id="1_s3dpd"]
+
+[node name="SpectatorWindow" type="Window"]
+handle_input_locally = false
+title = "Spectator View"
+initial_position = 1
+size = Vector2i(960, 540)
+visible = false
+script = ExtResource("1_s3dpd")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 2, 3, 3)
+cull_mask = 2

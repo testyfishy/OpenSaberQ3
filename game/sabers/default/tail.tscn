@@ -31,5 +31,6 @@ resource_local_to_scene = true
 script = ExtResource("1_mawj2")
 
 [node name="Mesh" type="MeshInstance3D" parent="."]
+layers = 3
 material_override = SubResource("StandardMaterial3D_6viak")
 mesh = SubResource("ImmediateMesh_f67k3")
