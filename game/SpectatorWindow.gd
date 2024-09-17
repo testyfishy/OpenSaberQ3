@@ -1,21 +1,33 @@
 extends Window
 
-@onready var score_view := $ScoreView as Control
-@onready var point_label := $ScoreView/PointLabel as RichTextLabel
-@onready var multiplier_label := $ScoreView/MultiplierLabel as RichTextLabel
-@onready var percent_indicator := $ScoreView/SubViewportContainer/SubViewport/Camera3D/PercentIndicator as PercentIndicator
+@onready var point_label := $Camera3D/PointLabel as MeshInstance3D
+@onready var multiplier_label := $Camera3D/MultiplierLabel as MeshInstance3D
+# made local to reposition the text to be flush with the circle
+@onready var percent_indicator := $Camera3D/PIPivot/PercentIndicator as PercentIndicator
 
 func _ready() -> void:
 	@warning_ignore("return_value_discarded")
 	visibility_changed.connect(resize_to_main_window_size)
-	visible = Settings.spectator_view
+	@warning_ignore("return_value_discarded")
+	size_changed.connect(reposition_ui_elements)
 	@warning_ignore("return_value_discarded")
 	close_requested.connect(close)
+	@warning_ignore("return_value_discarded")
 	Scoreboard.score_changed.connect(on_scoreboard_update)
+	
+	visible = Settings.spectator_view
+	reposition_ui_elements()
 
 func resize_to_main_window_size() -> void:
 	if visible:
 		size = get_tree().get_root().size
+		reposition_ui_elements()
+
+func reposition_ui_elements() -> void:
+	var cam := $Camera3D as Camera3D
+	($Camera3D/PIPivot as Node3D).global_transform.origin = cam.project_position(size, 1.0)
+	multiplier_label.global_transform.origin = cam.project_position(Vector2.ZERO, 1.0)
+	point_label.global_transform.origin = cam.project_position(Vector2(size.x, 0.0), 1.0)
 
 func on_scoreboard_update() -> void:
 	if not visible: return
@@ -26,8 +38,8 @@ func on_scoreboard_update() -> void:
 	else:
 		hit_rate = 1.0
 	
-	point_label.text = "Score: %6d" % Scoreboard.points
-	multiplier_label.text = "x %d\nCombo %d" % [Scoreboard.multiplier, Scoreboard.combo]
+	(point_label.mesh as TextMesh).text = "Score: %6d" % Scoreboard.points
+	(multiplier_label.mesh as TextMesh).text = " x %d\n Combo %d" % [Scoreboard.multiplier, Scoreboard.combo]
 	percent_indicator.update_percent(hit_rate)
 
 func close() -> void:
