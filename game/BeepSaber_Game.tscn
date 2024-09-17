@@ -1,4 +1,4 @@
-[gd_scene load_steps=40 format=3 uid="uid://dqb3ybvpsfcbw"]
+[gd_scene load_steps=41 format=3 uid="uid://dqb3ybvpsfcbw"]
 
 [ext_resource type="PackedScene" uid="uid://cs8e62lsifik5" path="res://game/floor.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://d04fmtjhjx4oy" path="res://OQ_Toolkit/OQ_UI2D/OQ_UI2DLabel.tscn" id="2"]
@@ -82,6 +82,9 @@ resource_local_to_scene = true
 render_priority = 0
 shader = ExtResource("14_155do")
 shader_parameter/how_full = 0.75
+
+[sub_resource type="QuadMesh" id="QuadMesh_02xdc"]
+size = Vector2(0.5, 0.5)
 
 [node name="BeepSaber" type="Node3D" groups=["main_game"]]
 script = ExtResource("9")
@@ -170,14 +173,12 @@ keyboard = NodePath("../../Keyboard_highscore")
 
 [node name="Multiplier_Label" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.75, 1.375, -2.5)
-layers = 3
 material_override = ExtResource("13_3xkki")
 mesh = SubResource("TextMesh_cx1im")
 skeleton = NodePath("")
 
 [node name="Point_Label" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.375, -2.5)
-layers = 3
 material_override = ExtResource("13_3xkki")
 mesh = SubResource("TextMesh_0bbpk")
 skeleton = NodePath("")
@@ -185,6 +186,7 @@ skeleton = NodePath("")
 [node name="Percent_Indicator" parent="." instance=ExtResource("16")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1, -2.5)
 material_override = SubResource("ShaderMaterial_6dld2")
+mesh = SubResource("QuadMesh_02xdc")
 
 [node name="EndScore" parent="." instance=ExtResource("20_fgfws")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.60386, -0.777581)

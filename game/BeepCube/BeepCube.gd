@@ -29,6 +29,8 @@ class CutPiece extends RigidBody3D:
 		# set a phyiscs material for some more bouncy behaviour
 		physics_material_override = cube_phys_mat
 		
+		mesh.layers = 3 # visible to both spectator and player
+		
 		var shape := BoxShape3D.new()
 		shape.size = Vector3(0.25, 0.25, 0.125)
 		coll.shape = shape
