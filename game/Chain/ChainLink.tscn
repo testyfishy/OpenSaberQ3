@@ -71,6 +71,7 @@ _data = {
 script = ExtResource("1_8l7tk")
 
 [node name="Mesh" parent="." instance=ExtResource("2_jgcvi")]
+layers = 3
 material_override = ExtResource("3_c2d47")
 
 [node name="Area3D" type="Area3D" parent="."]

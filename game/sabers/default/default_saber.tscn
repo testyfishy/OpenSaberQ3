@@ -295,11 +295,13 @@ script = ExtResource("3")
 
 [node name="LightSaber_Mesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -1, -1.33118e-07, 0, 1.33118e-07, -1, 0, 0.65, 0)
+layers = 3
 material_override = ExtResource("1")
 mesh = SubResource("1")
 
 [node name="Hilt_Mesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.03, 0)
+layers = 3
 material_override = SubResource("StandardMaterial3D_vuh23")
 mesh = SubResource("2")
 
@@ -316,7 +318,7 @@ libraries = {
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0492174, 0)
 
 [node name="tip" type="Marker3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.255, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2554, 0)
 
 [node name="hitsound" type="AudioStreamPlayer3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.759516, 0)

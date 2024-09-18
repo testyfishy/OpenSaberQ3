@@ -16,12 +16,12 @@ var gamestate: GameState = gamestate_bootup
 
 @onready var left_controller := $XROrigin3D/LeftController as BeepSaberController
 @onready var right_controller := $XROrigin3D/RightController as BeepSaberController
-
 @onready var left_saber := $XROrigin3D/LeftController/LeftLightSaber as LightSaber
 @onready var right_saber := $XROrigin3D/RightController/RightLightSaber as LightSaber
-
-@onready var right_ui_raycast := $XROrigin3D/RightController/UIRaycast as UIRaycast
 @onready var left_ui_raycast := $XROrigin3D/LeftController/UIRaycast as UIRaycast
+@onready var right_ui_raycast := $XROrigin3D/RightController/UIRaycast as UIRaycast
+@onready var goggles_shader := ($XROrigin3D/XRCamera3D/VRGoggles as MeshInstance3D).material_override as ShaderMaterial
+@onready var fps_label := $XROrigin3D/XRCamera3D/PlayerHead/FPS_Label as MeshInstance3D
 
 @onready var main_menu := $MainMenu_OQ_UI2DCanvas as OQ_UI2DCanvas
 @onready var pause_menu := $PauseMenu_canvas as OQ_UI2DCanvas
@@ -44,8 +44,6 @@ var gamestate: GameState = gamestate_bootup
 
 @onready var map_source_dialogs := $MapSourceDialogs as Node3D
 @onready var online_search_keyboard := $Keyboard_online_search as OQ_UI2DKeyboard
-
-@onready var fps_label := $XROrigin3D/XRCamera3D/PlayerHead/FPS_Label as MeshInstance3D
 
 @onready var cube_template := preload("res://game/BeepCube/BeepCube.tscn").instantiate() as BeepCube
 
@@ -162,14 +160,21 @@ func _physics_process(_dt: float) -> void:
 	_check_and_update_saber(right_controller, right_saber)
 
 func _ready() -> void:
-	vr.initialize($XROrigin3D as XROrigin3D, $XROrigin3D/XRCamera3D as XRCamera3D, left_controller, right_controller)
+	var xr_origin := $XROrigin3D as XROrigin3D
+	var xr_camera := $XROrigin3D/XRCamera3D as XRCamera3D
+	vr.initialize(
+		xr_origin,
+		xr_camera,
+		left_controller,
+		right_controller
+	)
 	
 	fps_label.visible = Settings.show_fps
 	set_colors_from_settings()
 	($WorldEnvironment as WorldEnvironment).environment.glow_enabled = Settings.glare
 	
 	if not vr.inVR:
-		$XROrigin3D.add_child(preload("res://OQ_Toolkit/OQ_ARVROrigin/Feature_VRSimulator.tscn").instantiate())
+		xr_origin.add_child(preload("res://OQ_Toolkit/OQ_ARVROrigin/Feature_VRSimulator.tscn").instantiate())
 	
 	UI_AudioEngine.attach_children(highscore_keyboard)
 	UI_AudioEngine.attach_children(online_search_keyboard)
@@ -194,6 +199,8 @@ func update_colors(left: Color, right: Color) -> void:
 	right_saber.set_color(right)
 	ChainLink.left_material.set_shader_parameter(&"color", left)
 	ChainLink.right_material.set_shader_parameter(&"color", right)
+	goggles_shader.set_shader_parameter(&"left_color", left)
+	goggles_shader.set_shader_parameter(&"right_color", right)
 	#also updates map colors
 	event_driver.update_colors(left, right)
 	($StandingGround as Floor).update_colors(left, right)

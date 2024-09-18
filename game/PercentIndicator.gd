@@ -8,7 +8,9 @@ var shader: ShaderMaterial
 
 func _ready() -> void:
 	shader = material_override as ShaderMaterial
-	label = ($PercentLabel as MeshInstance3D).mesh as TextMesh
+	var label_instance = $PercentLabel as MeshInstance3D
+	label = label_instance.mesh as TextMesh
+	label_instance.layers = layers
 
 func _process(delta: float) -> void:
 	how_full_display = lerpf(how_full_display, how_full, delta*8)

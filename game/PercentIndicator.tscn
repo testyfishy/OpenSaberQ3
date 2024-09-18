@@ -8,14 +8,14 @@
 resource_local_to_scene = true
 render_priority = 0
 shader = ExtResource("1_b23qh")
-shader_parameter/how_full = 0.75
+shader_parameter/how_full = 0.0
 
 [sub_resource type="QuadMesh" id="QuadMesh_02xdc"]
 size = Vector2(0.5, 0.5)
 
 [sub_resource type="TextMesh" id="TextMesh_bcnkh"]
 resource_local_to_scene = true
-text = "75%"
+text = "0%"
 font_size = 10
 depth = 0.0
 

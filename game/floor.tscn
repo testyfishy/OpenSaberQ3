@@ -90,36 +90,42 @@ transform = Transform3D(4, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 0)
 
 [node name="MeshInstance3D2" type="MeshInstance3D" parent="Node3D/Node3D"]
 transform = Transform3D(0.02, 0, 0, 0, 1, 0, 0, 0, 1, -0.245, 0, 0)
+layers = 3
 material_override = SubResource("StandardMaterial3D_2qncm")
 mesh = SubResource("2")
 skeleton = NodePath("../..")
 
 [node name="MeshInstance3D3" type="MeshInstance3D" parent="Node3D/Node3D"]
 transform = Transform3D(0.02, 0, 0, 0, 1, 0, 0, 0, 1, 0.245, 0, 0)
+layers = 3
 material_override = SubResource("StandardMaterial3D_2qncm")
 mesh = SubResource("2")
 skeleton = NodePath("../..")
 
 [node name="MeshInstance3D4" type="MeshInstance3D" parent="Node3D/Node3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 0.02, 0, 0, 0.245)
+layers = 3
 material_override = SubResource("StandardMaterial3D_2qncm")
 mesh = SubResource("2")
 skeleton = NodePath("../..")
 
 [node name="MeshInstance3D5" type="MeshInstance3D" parent="Node3D/Node3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 0.02, 0, 0, -0.245)
+layers = 3
 material_override = SubResource("StandardMaterial3D_2qncm")
 mesh = SubResource("2")
 skeleton = NodePath("../..")
 
 [node name="cutFloor" type="MeshInstance3D" parent="Node3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.001, 0)
+layers = 3
 material_override = SubResource("StandardMaterial3D_boyhf")
 mesh = SubResource("2")
 
 [node name="MeshInstance2" type="MeshInstance3D" parent="Node3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.001, 0)
 visible = false
+layers = 3
 mesh = SubResource("2")
 
 [node name="TimerClear" type="Timer" parent="."]

@@ -584,6 +584,18 @@ layout_mode = 2
 theme = SubResource("3")
 text = "Ignore Map's Colors:"
 
+[node name="spectator_view" type="CheckButton" parent="ScrollContainer/VBox"]
+layout_mode = 2
+tooltip_text = "High Performance impact*"
+theme = SubResource("3")
+text = "*Spectator View:"
+
+[node name="spectator_hud" type="CheckButton" parent="ScrollContainer/VBox"]
+layout_mode = 2
+tooltip_text = "High Performance impact*"
+theme = SubResource("3")
+text = "Spectator HUD:"
+
 [node name="defaults" type="Button" parent="."]
 layout_mode = 0
 offset_left = 546.283
@@ -640,5 +652,7 @@ scroll_node_path = NodePath("../ScrollContainer")
 [connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/rotz" to="." method="_on_right_saber_rot_z_changed"]
 [connection signal="value_changed" from="ScrollContainer/VBox/player_height_offset/pos" to="." method="_on_player_height_offset_changed"]
 [connection signal="toggled" from="ScrollContainer/VBox/disable_map_color" to="." method="_on_disable_map_color_toggled"]
+[connection signal="toggled" from="ScrollContainer/VBox/spectator_view" to="." method="_on_spectator_view_toggled"]
+[connection signal="toggled" from="ScrollContainer/VBox/spectator_hud" to="." method="_on_spectator_hud_toggled"]
 [connection signal="button_up" from="defaults" to="." method="_restore_defaults"]
 [connection signal="pressed" from="apply" to="." method="_on_apply_pressed"]

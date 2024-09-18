@@ -34,6 +34,7 @@ script = ExtResource("2")
 [node name="WallMeshOrientation" type="Node3D" parent="."]
 
 [node name="WallMesh" type="MeshInstance3D" parent="WallMeshOrientation"]
+layers = 3
 material_override = ExtResource("1")
 mesh = SubResource("1")
 

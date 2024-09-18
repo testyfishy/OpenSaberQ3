@@ -172,7 +172,8 @@ var _active_scene_path: String # this assumes that only a single scene will ever
 var webxr_initializer: CanvasLayer
 var xr_interface: OpenXRInterface
 
-func initialize(origin: XROrigin3D, camera: XRCamera3D, left_hand: BeepSaberController, right_hand: BeepSaberController, render_scale: float = 1.0) -> void:
+func initialize(origin: XROrigin3D, camera: XRCamera3D, left_hand: BeepSaberController, right_hand: BeepSaberController,
+	render_scale: float = 1.0) -> void:
 	_init_vr_log()
 	
 	vrOrigin = origin

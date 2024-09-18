@@ -28,9 +28,11 @@ collide_with_bodies = false
 
 [node name="RayCastMesh" type="MeshInstance3D" parent="RayCastPosition"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
+layers = 3
 material_override = SubResource("StandardMaterial3D_6opxp")
 mesh = SubResource("1")
 
 [node name="RayCastHitMarker" type="MeshInstance3D" parent="RayCastPosition"]
+layers = 3
 material_override = SubResource("StandardMaterial3D_2jvdb")
 mesh = SubResource("3")

@@ -1,24 +1,23 @@
 extends Node3D
 class_name SaberTail
 
-@onready var mesh := $Mesh as MeshInstance3D
-@onready var imm_geo := mesh.mesh as ImmediateMesh
+@onready var material := ($Mesh as MeshInstance3D).material_override as StandardMaterial3D
+@onready var imm_geo := ($Mesh as MeshInstance3D).mesh as ImmediateMesh
 
 @export var size := 1.0
 
+# for the math in _process to work properly and the tail to be drawn in the
+# right spot,the mesh has to be reparented to root.
+# TODO: reparenting to root like this is difficult for any future coders to
+# follow.  the math should be rewritten to work without reparenting.
 func _ready() -> void:
-	mesh.material_override = mesh.material_override.duplicate() as Material
-	imm_geo = imm_geo.duplicate() as ImmediateMesh
-	mesh.mesh = imm_geo
+	var mesh := $Mesh as MeshInstance3D
 	remove_child(mesh)
 	get_tree().get_root().add_child.call_deferred(mesh)
 
 func set_color(color: Color) -> void:
-	(mesh.material_override as StandardMaterial3D).albedo_color = color
-	(mesh.material_override as StandardMaterial3D).emission = color
-
-func _exit_tree() -> void:
-	mesh.queue_free()
+	material.albedo_color = color
+	material.emission = color
 
 var last_pos: Array[Array] = []
 var time := 0.15
