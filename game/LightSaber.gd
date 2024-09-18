@@ -40,14 +40,36 @@ func _hide() -> void:
 		_anim.play(&"Hide")
 		saber_visual._hide()
 
-func set_thickness(value: float) -> void:
-	saber_visual.set_thickness(value)
-
 func set_color(color: Color) -> void:
 	saber_visual.set_color(color)
-	
-func set_trail(enabled: bool = true) -> void:
-	saber_visual.set_trail(enabled)
+
+func on_settings_changed(key: StringName) -> void:
+	match key:
+		&"color_left":
+			if type == 0:
+				saber_visual.set_color(Settings.color_left)
+		&"color_right":
+			if type == 1:
+				saber_visual.set_color(Settings.color_right)
+		&"thickness":
+			saber_visual.set_thickness(Settings.thickness)
+		&"saber_tail":
+			saber_visual.set_trail(Settings.saber_tail)
+		&"saber_visual":
+			set_saber(Settings.SABER_VISUALS[Settings.saber_visual][1])
+		&"left_saber_offset_pos":
+			if type == 0:
+				extra_offset_pos = Settings.left_saber_offset_pos
+		&"right_saber_offset_pos":
+			if type == 1:
+				extra_offset_pos = Settings.right_saber_offset_pos
+		&"left_saber_offset_rot":
+			if type == 0:
+				@warning_ignore("unsafe_cast")
+				extra_offset_rot = Settings.left_saber_offset_rot
+		&"right_saber_offset_rot":
+			if type == 1:
+				extra_offset_rot = Settings.right_saber_offset_rot	
 
 func _ready() -> void:
 	set_saber(Settings.SABER_VISUALS[Settings.saber_visual][1])
@@ -55,6 +77,9 @@ func _ready() -> void:
 	saber_visual.quickhide()
 	saber_visual.set_thickness(Settings.thickness * 0.01)
 	saber_visual.set_trail(Settings.saber_tail)
+	
+	@warning_ignore("return_value_discarded")
+	Settings.changed.connect(on_settings_changed)
 	
 	if type == 0:
 		_swing_cast._set_collision_mask_value(CollisionLayerConstants.LeftNote_bit, true)
@@ -82,8 +107,11 @@ func set_saber(saber_path: String) -> void:
 	if newsaber is DefaultSaber:
 		for i in $saber_holder.get_children():
 			i.queue_free()
-		saber_visual = newsaber as DefaultSaber
-		$saber_holder.add_child(newsaber)
+		saber_visual = newsaber
+		$saber_holder.add_child(saber_visual)
+		saber_visual.set_color(Settings.color_right if type else Settings.color_left)
+		saber_visual.set_thickness(Settings.thickness)
+		saber_visual.set_trail(Settings.saber_tail)
 
 func set_swingcast_enabled(value: bool) -> void:
 	_swing_cast.set_raycasts_enabled(value)
@@ -107,8 +135,8 @@ func _handle_area_collided(area: Area3D) -> void:
 	var cutplane := Plane(o, saber_end, saber_end_past + Vector3(0, 0, BEAT_DISTANCE * Map.current_info.beats_per_minute * last_dt / 30)) # Account for relative position to track speed
 	note.cut(type, controller_speed, cutplane, controller)
 
-func _on_AnimationPlayer_animation_started(anim_name: StringName) -> void:
+func _on_AnimationPlayer_animation_started(_anim_name: StringName) -> void:
 	_swing_cast.adjust_segments = true
 
-func _on_AnimationPlayer_animation_finished(anim_name: StringName) -> void:
+func _on_AnimationPlayer_animation_finished(_anim_name: StringName) -> void:
 	_swing_cast.adjust_segments = false

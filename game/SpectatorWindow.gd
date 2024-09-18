@@ -16,6 +16,15 @@ func _ready() -> void:
 	percent_indicator.visible = Settings.spectator_view
 	reposition_ui_elements()
 
+func on_settings_changed(key: StringName) -> void:
+	match key:
+		&"spectator_view":
+			visible = Settings.spectator_view
+		&"spectator_hud":
+			point_label.visible = Settings.spectator_hud
+			multiplier_label.visible = Settings.spectator_hud
+			percent_indicator.visible = Settings.spectator_hud
+
 func resize_to_main_window_size() -> void:
 	if visible:
 		size = get_tree().get_root().size

@@ -25,12 +25,14 @@ func _process(delta: float) -> void:
 				if ring_rot_inv_dir: rot *= -1
 				(ring as Node3D).rotate_z((rot * delta) * (float(ring.get_index()+1)/5))
 
-func update_colors(left: Color, right: Color) -> void:
+func update_left_color(color: Color) -> void:
 	for i in [0,2,3]:
-		change_light_color(i,left)
+		change_light_color(i,color)
+
+func update_right_color(color: Color) -> void:
 	for i in [1,4]:
-		change_light_color(i,right)
-		
+		change_light_color(i,color)
+
 func set_all_off() -> void:
 	if not disabled:
 		for i in range(5):
@@ -41,7 +43,8 @@ func set_all_off() -> void:
 		$Level/rings.visible = false
 
 func set_all_on(left: Color, right: Color) -> void:
-		update_colors(left, right)
+		update_left_color(left)
+		update_right_color(right)
 		$Level/rings.visible = true
 
 func process_event(data: EventInfo, left: Color, right: Color) -> void:

@@ -10,94 +10,100 @@ var SABER_VISUALS: Array[PackedStringArray] = [
 	PackedStringArray(["Particle sword","res://game/sabers/particles/particles_saber.tscn"])
 ]
 
+signal changed(name: StringName)
+
 var thickness: float:
 	set(value):
 		thickness = value
-		config_set_value("thickness", value)
+		set_and_emit(&"thickness", value)
 var color_left: Color:
 	set(value):
 		color_left = value
-		config_set_value("color_left", value)
+		set_and_emit(&"color_left", value)
 var color_right: Color:
 	set(value):
 		color_right = value
-		config_set_value("color_right", value)
+		set_and_emit(&"color_right", value)
 var saber_visual: int:
 	set(value):
 		saber_visual = value
-		config_set_value("saber_visual", value)
+		set_and_emit(&"saber_visual", value)
 var ui_volume: float:
 	set(value):
 		ui_volume = value
-		config_set_value("ui_volume", value)
+		set_and_emit(&"ui_volume", value)
 var left_saber_offset_pos: Vector3:
 	set(value):
 		left_saber_offset_pos = value
-		config_set_value("left_saber_offset_pos", value)
+		set_and_emit(&"left_saber_offset_pos", value)
 var left_saber_offset_rot: Vector3:
 	set(value):
 		left_saber_offset_rot = value
-		config_set_value("left_saber_offset_rot", value)
+		set_and_emit(&"left_saber_offset_rot", value)
 var right_saber_offset_pos: Vector3:
 	set(value):
 		right_saber_offset_pos = value
-		config_set_value("right_saber_offset_pos", value)
+		set_and_emit(&"right_saber_offset_pos", value)
 var right_saber_offset_rot: Vector3:
 	set(value):
 		right_saber_offset_rot = value
-		config_set_value("right_saber_offset_rot", value)
+		set_and_emit(&"right_saber_offset_rot", value)
 var cube_cuts_falloff: bool:
 	set(value):
 		cube_cuts_falloff = value
-		config_set_value("cube_cuts_falloff", value)
+		set_and_emit(&"cube_cuts_falloff", value)
 var saber_tail: bool:
 	set(value):
 		saber_tail = value
-		config_set_value("saber_tail", value)
+		set_and_emit(&"saber_tail", value)
 var glare: bool:
 	set(value):
 		glare = value
-		config_set_value("glare", value)
+		set_and_emit(&"glare", value)
 var show_fps: bool:
 	set(value):
 		show_fps = value
-		config_set_value("show_fps", value)
+		set_and_emit(&"show_fps", value)
 var bombs_enabled: bool:
 	set(value):
 		bombs_enabled = value
-		config_set_value("bombs_enabled", value)
+		set_and_emit(&"bombs_enabled", value)
 var events: bool:
 	set(value):
 		events = value
-		config_set_value("events", value)
+		set_and_emit(&"events", value)
 var disable_map_color: bool:
 	set(value):
 		disable_map_color = value
-		config_set_value("disable_map_color", value)
+		set_and_emit(&"disable_map_color", value)
 var player_height_offset: float:
 	set(value):
 		player_height_offset = value
-		config_set_value("player_height_offset", value)
+		set_and_emit(&"player_height_offset", value)
 var audio_master: float:
 	set(value):
 		audio_master = value
-		config_set_value("audio_master", value)
+		AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"Master"), linear_to_db(value))
+		set_and_emit(&"audio_master", value)
 var audio_music: float:
 	set(value):
 		audio_music = value
-		config_set_value("audio_music", value)
+		AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"Music"), linear_to_db(value))
+		set_and_emit(&"audio_music", value)
 var audio_sfx: float:
 	set(value):
 		audio_sfx = value
-		config_set_value("audio_sfx", value)
+		AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"SFX"), linear_to_db(value))
+		AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"UI"), linear_to_db(value))
+		set_and_emit(&"audio_sfx", value)
 var spectator_view: bool:
 	set(value):
 		spectator_view = value
-		config_set_value("spectator_view", value)
+		set_and_emit(&"spectator_view", value)
 var spectator_hud: bool:
 	set(value):
 		spectator_hud = value
-		config_set_value("spectator_hud", value)
+		set_and_emit(&"spectator_hud", value)
 
 
 
@@ -140,8 +146,9 @@ func cast_or_default(key: String, to_type: int = -1) -> Variant:
 	var default = default_values[key] if key in default_values else null
 	return convert(config.get_value(SECTION, key, default), typeof(default) if to_type < 0 else to_type)
 
-func config_set_value(key: String, value: Variant) -> void:
-	config.set_value(SECTION, key, value if default_values[key] != value else null)
+func set_and_emit(key: StringName, value: Variant) -> void:
+	config.set_value(SECTION, String(key), value if default_values[key] != value else null)
+	changed.emit(key)
 
 # load() is the name of a built-in function,
 # so i went with the next best thing.

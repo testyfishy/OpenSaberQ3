@@ -3,13 +3,6 @@ class_name SettingsPanel
 
 signal apply()
 
-@export var game: BeepSaber_Game
-@export var left_saber_ref: LightSaber
-@export var right_saber_ref: LightSaber
-@export var environment_ref: WorldEnvironment
-@export var player_ref: XROrigin3D
-@export var spectator_window_ref: SpectatorWindow
-
 @onready var saber_control := $ScrollContainer/VBox/SaberTypeRow/saber as OptionButton
 @onready var glare_control := $ScrollContainer/VBox/glare as CheckButton
 @onready var saber_tail_control := $ScrollContainer/VBox/saber_tail as CheckButton
@@ -46,13 +39,6 @@ var _play_ui_sound_demo := false
 
 func _ready() -> void:
 	UI_AudioEngine.attach_children(self)
-	
-	if OS.get_name() in ["Web"]:
-		#savedata.saber_tail = false
-		#savedata.cube_cuts_falloff = false
-		Settings.glare = false
-		#savedata.events = false
-		(game.get_node("StandingGround/SubViewport") as SubViewport).render_target_update_mode = SubViewport.UPDATE_DISABLED
 	
 	set_controls_from_settings()
 	_play_ui_sound_demo = true
@@ -105,46 +91,30 @@ func _restore_defaults() -> void:
 #settings down here
 func _on_thickness_value_changed(value: float) -> void:
 	Settings.thickness = value
-	left_saber_ref.set_thickness(value * 0.01)
-	right_saber_ref.set_thickness(value * 0.01)
 
 func _on_cut_blocks_toggled(button_pressed: bool) -> void:
 	Settings.cube_cuts_falloff = button_pressed
 
 func _on_left_saber_color_changed(color: Color) -> void:
 	Settings.color_left = color
-	game.set_colors_from_settings()
 
 func _on_right_saber_color_changed(color: Color) -> void:
 	Settings.color_right = color
-	game.set_colors_from_settings()
 
 func _on_saber_tail_toggled(button_pressed: bool) -> void:
 	Settings.saber_tail = button_pressed
-	left_saber_ref.set_trail(button_pressed)
-	right_saber_ref.set_trail(button_pressed)
 
 func _on_glare_toggled(button_pressed: bool) -> void:
 	Settings.glare = button_pressed
-	environment_ref.environment.glow_enabled = button_pressed
 
 func _on_d_background_toggled(button_pressed: bool) -> void:
 	Settings.events = button_pressed
-	game.disable_events(not button_pressed)
-	if OS.get_name() in ["Web"]:
-		game.event_driver.visible = button_pressed
 
 func _on_saber_item_selected(index: int) -> void:
 	Settings.saber_visual = index
-	left_saber_ref.set_saber(Settings.SABER_VISUALS[Settings.saber_visual][1])
-	right_saber_ref.set_saber(Settings.SABER_VISUALS[Settings.saber_visual][1])
-	await get_tree().process_frame
-	game.set_colors_from_settings()
-	_on_saber_tail_toggled(Settings.saber_tail)
 
 func _on_show_fps_toggled(button_pressed: bool) -> void:
 	Settings.show_fps = button_pressed
-	game.fps_label.visible = button_pressed
 
 func _on_bombs_enabled_toggled(button_pressed: bool) -> void:
 	Settings.bombs_enabled = button_pressed
@@ -158,55 +128,42 @@ func _on_ui_volume_slider_value_changed(value: float) -> void:
 
 func _on_left_saber_pos_x_changed(value: float) -> void:
 	Settings.left_saber_offset_pos.x = value
-	left_saber_ref.extra_offset_pos.x = value
 
 func _on_left_saber_pos_y_changed(value: float) -> void:
 	Settings.left_saber_offset_pos.y = value
-	left_saber_ref.extra_offset_pos.y = value
 
 func _on_left_saber_pos_z_changed(value: float) -> void:
 	Settings.left_saber_offset_pos.z = value
-	left_saber_ref.extra_offset_pos.z = value
 
 func _on_left_saber_rot_x_changed(value: float) -> void:
 	Settings.left_saber_offset_rot.x = value
-	left_saber_ref.extra_offset_rot.x = value
 
 func _on_left_saber_rot_y_changed(value: float) -> void:
 	Settings.left_saber_offset_rot.y = value
-	left_saber_ref.extra_offset_rot.y = value
 
 func _on_left_saber_rot_z_changed(value: float) -> void:
 	Settings.left_saber_offset_rot.z = value
-	left_saber_ref.extra_offset_rot.z = value
 
 func _on_right_saber_pos_x_changed(value: float) -> void:
 	Settings.right_saber_offset_pos.x = value
-	right_saber_ref.extra_offset_pos.x = value
 
 func _on_right_saber_pos_y_changed(value: float) -> void:
 	Settings.right_saber_offset_pos.y = value
-	right_saber_ref.extra_offset_pos.y = value
 
 func _on_right_saber_pos_z_changed(value: float) -> void:
 	Settings.right_saber_offset_pos.z = value
-	right_saber_ref.extra_offset_pos.z = value
 
 func _on_right_saber_rot_x_changed(value: float) -> void:
 	Settings.right_saber_offset_rot.x = value
-	right_saber_ref.extra_offset_rot.x = value
 
 func _on_right_saber_rot_y_changed(value: float) -> void:
 	Settings.right_saber_offset_rot.y = value
-	right_saber_ref.extra_offset_rot.y = value
 
 func _on_right_saber_rot_z_changed(value: float) -> void:
 	Settings.right_saber_offset_rot.z = value
-	right_saber_ref.extra_offset_rot.z = value
 
 func _on_player_height_offset_changed(value: float) -> void:
 	Settings.player_height_offset = value
-	player_ref.position.y = value
 
 func _on_disable_map_color_toggled(toggled_on: bool) -> void:
 	Settings.disable_map_color = toggled_on
@@ -239,24 +196,15 @@ func _on_apply_pressed() -> void:
 
 func _on_master_slider_value_changed(value: float) -> void:
 	Settings.audio_master = value
-	AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"Master"), linear_to_db(value))
 
 func _on_music_slider_value_changed(value: float) -> void:
 	Settings.audio_music = value
-	AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"Music"), linear_to_db(value))
 
 func _on_sfx_slider_value_changed(value: float) -> void:
 	Settings.audio_sfx = value
-	AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"SFX"), linear_to_db(value))
-	AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"UI"), linear_to_db(value))
 
 func _on_spectator_view_toggled(value: bool) -> void:
 	Settings.spectator_view = value
-	spectator_window_ref.visible = value
-
 
 func _on_spectator_hud_toggled(value: bool) -> void:
 	Settings.spectator_hud = value
-	spectator_window_ref.point_label.visible = value
-	spectator_window_ref.multiplier_label.visible = value
-	spectator_window_ref.percent_indicator.visible = value
