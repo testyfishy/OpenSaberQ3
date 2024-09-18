@@ -14,6 +14,7 @@ var gamestate_playing := GameStatePlaying.new()
 var gamestate_settings := GameStateSettings.new()
 var gamestate: GameState = gamestate_bootup
 
+@onready var xr_origin := $XROrigin3D as XROrigin3D
 @onready var left_controller := $XROrigin3D/LeftController as BeepSaberController
 @onready var right_controller := $XROrigin3D/RightController as BeepSaberController
 @onready var left_saber := $XROrigin3D/LeftController/LeftLightSaber as LightSaber
@@ -48,6 +49,7 @@ var gamestate: GameState = gamestate_bootup
 @onready var cube_template := preload("res://game/BeepCube/BeepCube.tscn").instantiate() as BeepCube
 
 @onready var track := $Track as Node3D
+@onready var standing_ground := $StandingGround as Floor
 
 @onready var song_player := $SongPlayer as AudioStreamPlayer
 
@@ -80,7 +82,8 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 	if not Map.load_beatmap(info, map_difficulty, map_data):
 		return
 	
-	update_colors(Map.color_left, Map.color_right)
+	update_left_color(Map.color_left)
+	update_right_color(Map.color_right)
 	if Map.event_stack.is_empty():
 		event_driver.set_all_on(Map.color_left, Map.color_right)
 	else:
@@ -160,7 +163,6 @@ func _physics_process(_dt: float) -> void:
 	_check_and_update_saber(right_controller, right_saber)
 
 func _ready() -> void:
-	var xr_origin := $XROrigin3D as XROrigin3D
 	var xr_camera := $XROrigin3D/XRCamera3D as XRCamera3D
 	vr.initialize(
 		xr_origin,
@@ -176,12 +178,17 @@ func _ready() -> void:
 	if not vr.inVR:
 		xr_origin.add_child(preload("res://OQ_Toolkit/OQ_ARVROrigin/Feature_VRSimulator.tscn").instantiate())
 	
+	@warning_ignore("return_value_discarded")
+	Settings.changed.connect(on_settings_changed)
+	
 	UI_AudioEngine.attach_children(highscore_keyboard)
 	UI_AudioEngine.attach_children(online_search_keyboard)
 	
 	_transition_game_state(gamestate_mapselection)
 	
+	@warning_ignore("return_value_discarded")
 	Scoreboard.score_changed.connect(_display_points)
+	@warning_ignore("return_value_discarded")
 	Scoreboard.points_awarded.connect(points_label_driver.show_points)
 	
 	#render common assets for a couple of frames to prevent performance issues when loading them mid game
@@ -191,19 +198,38 @@ func _ready() -> void:
 	await get_tree().process_frame
 	($pre_renderer as Node3D).queue_free()
 
-func set_colors_from_settings() -> void:
-	update_colors(Settings.color_left, Settings.color_right)
+func on_settings_changed(key: StringName) -> void:
+	match key:
+		&"color_left":
+			update_left_color(Settings.color_left)
+		&"color_right":
+			update_right_color(Settings.color_right)
+		&"events":
+			disable_events(not Settings.events)
+		&"show_fps":
+			fps_label.visible = Settings.show_fps
+		&"glare":
+			($WorldEnvironment as WorldEnvironment).environment.glow_enabled = Settings.glare
+		&"player_height_offset":
+			xr_origin.transform.origin.y = Settings.player_height_offset
 
-func update_colors(left: Color, right: Color) -> void:
-	left_saber.set_color(left)
-	right_saber.set_color(right)
-	ChainLink.left_material.set_shader_parameter(&"color", left)
-	ChainLink.right_material.set_shader_parameter(&"color", right)
-	goggles_shader.set_shader_parameter(&"left_color", left)
-	goggles_shader.set_shader_parameter(&"right_color", right)
-	#also updates map colors
-	event_driver.update_colors(left, right)
-	($StandingGround as Floor).update_colors(left, right)
+func set_colors_from_settings() -> void:
+	update_left_color(Settings.color_left)
+	update_right_color(Settings.color_right)
+
+func update_left_color(color: Color) -> void:
+	left_saber.set_color(color)
+	ChainLink.left_material.set_shader_parameter(&"color", color)
+	goggles_shader.set_shader_parameter(&"left_color", color)
+	event_driver.update_left_color(color)
+	standing_ground.update_left_color(color)
+
+func update_right_color(color: Color) -> void:
+	right_saber.set_color(color)
+	ChainLink.right_material.set_shader_parameter(&"color", color)
+	goggles_shader.set_shader_parameter(&"right_color", color)
+	event_driver.update_right_color(color)
+	standing_ground.update_right_color(color)
 
 func disable_events(disabled: bool) -> void:
 	event_driver.disabled = disabled

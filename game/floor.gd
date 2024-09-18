@@ -20,11 +20,13 @@ func _ready() -> void:
 	material.albedo_texture = sub_viewport.get_texture()
 	material.emission_texture = sub_viewport.get_texture()
 
-func update_colors(COLOR_LEFT: Color, COLOR_RIGHT: Color) -> void:
-	C_LEFT = COLOR_LEFT
-	C_RIGHT = COLOR_RIGHT
-	burn_l.modulate = C_LEFT*6
-	burn_r.modulate = C_RIGHT*6
+func update_left_color(color: Color) -> void:
+	C_LEFT = color
+	burn_l.modulate = color*6
+
+func update_right_color(color: Color) -> void:
+	C_RIGHT = color
+	burn_r.modulate = color*6
 
 var left_is_out := false
 var right_is_out := false
