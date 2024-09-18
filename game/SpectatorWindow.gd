@@ -1,4 +1,5 @@
 extends Window
+class_name SpectatorWindow
 
 @onready var point_label := $Camera3D/PointLabel as MeshInstance3D
 @onready var multiplier_label := $Camera3D/MultiplierLabel as MeshInstance3D
@@ -10,6 +11,9 @@ func _ready() -> void:
 	Scoreboard.score_changed.connect(on_scoreboard_update)
 	
 	visible = Settings.spectator_view
+	point_label.visible = Settings.spectator_view
+	multiplier_label.visible = Settings.spectator_view
+	percent_indicator.visible = Settings.spectator_view
 	reposition_ui_elements()
 
 func resize_to_main_window_size() -> void:

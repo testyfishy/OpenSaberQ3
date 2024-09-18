@@ -8,7 +8,7 @@ signal apply()
 @export var right_saber_ref: LightSaber
 @export var environment_ref: WorldEnvironment
 @export var player_ref: XROrigin3D
-@export var spectator_window_ref: Window
+@export var spectator_window_ref: SpectatorWindow
 
 @onready var saber_control := $ScrollContainer/VBox/SaberTypeRow/saber as OptionButton
 @onready var glare_control := $ScrollContainer/VBox/glare as CheckButton
@@ -40,6 +40,7 @@ signal apply()
 @onready var audio_music_control := $ScrollContainer/VBox/audio/music/music_slider as HSlider
 @onready var audio_sfx_control := $ScrollContainer/VBox/audio/sfx/sfx_slider as HSlider
 @onready var spectator_view_control := $ScrollContainer/VBox/spectator_view as CheckButton
+@onready var spectator_hud_control := $ScrollContainer/VBox/spectator_hud as CheckButton
 
 var _play_ui_sound_demo := false
 
@@ -95,6 +96,7 @@ func set_controls_from_settings() -> void:
 	audio_music_control.value = Settings.audio_music
 	audio_sfx_control.value = Settings.audio_sfx
 	spectator_view_control.button_pressed = Settings.spectator_view
+	spectator_hud_control.button_pressed = Settings.spectator_hud
 
 func _restore_defaults() -> void:
 	Settings.restore_defaults()
@@ -251,3 +253,10 @@ func _on_sfx_slider_value_changed(value: float) -> void:
 func _on_spectator_view_toggled(value: bool) -> void:
 	Settings.spectator_view = value
 	spectator_window_ref.visible = value
+
+
+func _on_spectator_hud_toggled(value: bool) -> void:
+	Settings.spectator_hud = value
+	spectator_window_ref.point_label.visible = value
+	spectator_window_ref.multiplier_label.visible = value
+	spectator_window_ref.percent_indicator.visible = value
