@@ -9,6 +9,7 @@ class_name SpectatorWindow
 func _ready() -> void:
 	@warning_ignore("return_value_discarded")
 	Scoreboard.score_changed.connect(on_scoreboard_update)
+	Settings.changed.connect(on_settings_changed)
 	
 	visible = Settings.spectator_view
 	point_label.visible = Settings.spectator_view
