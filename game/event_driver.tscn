@@ -594,300 +594,300 @@ layers = 3
 material_override = SubResource("5")
 mesh = SubResource("6")
 
-[node name="t0" type="Node3D" parent="Level"]
+[node name="DiagonalLasers" type="Node3D" parent="Level"]
 
-[node name="laser1" type="Node3D" parent="Level/t0"]
+[node name="laser1" type="Node3D" parent="Level/DiagonalLasers"]
 transform = Transform3D(0.965926, -5.55139e-09, -0.776457, -0.258819, -4.21669e-08, -2.89778, -5.55139e-09, 1, -1.26501e-07, 4.57081, -2.26002, -30)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t0/laser1"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/DiagonalLasers/laser1"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -16)
 layers = 3
 material_override = SubResource("8")
 mesh = SubResource("10")
 
-[node name="laser2" type="Node3D" parent="Level/t0"]
+[node name="laser2" type="Node3D" parent="Level/DiagonalLasers"]
 transform = Transform3D(0.965926, -5.55139e-09, -0.776457, -0.258819, -4.21669e-08, -2.89778, -5.55139e-09, 1, -1.26501e-07, 4.57081, -2.26002, -35)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t0/laser2"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/DiagonalLasers/laser2"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -16)
 layers = 3
 material_override = SubResource("8")
 mesh = SubResource("10")
 
-[node name="laser3" type="Node3D" parent="Level/t0"]
+[node name="laser3" type="Node3D" parent="Level/DiagonalLasers"]
 transform = Transform3D(0.965926, -5.55139e-09, -0.776457, -0.258819, -4.21669e-08, -2.89778, -5.55139e-09, 1, -1.26501e-07, 4.57081, -2.26002, -40)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t0/laser3"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/DiagonalLasers/laser3"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -16)
 layers = 3
 material_override = SubResource("8")
 mesh = SubResource("10")
 
-[node name="laser4" type="Node3D" parent="Level/t0"]
+[node name="laser4" type="Node3D" parent="Level/DiagonalLasers"]
 transform = Transform3D(0.965926, -5.55139e-09, -0.776457, -0.258819, -4.21669e-08, -2.89778, -5.55139e-09, 1, -1.26501e-07, 4.57081, -2.26002, -45)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t0/laser4"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/DiagonalLasers/laser4"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -16)
 layers = 3
 material_override = SubResource("8")
 mesh = SubResource("10")
 
-[node name="laser5" type="Node3D" parent="Level/t0"]
+[node name="laser5" type="Node3D" parent="Level/DiagonalLasers"]
 transform = Transform3D(0.965926, -5.55139e-09, -0.776457, -0.258819, -4.21669e-08, -2.89778, -5.55139e-09, 1, -1.26501e-07, 4.57081, -2.26002, -50)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t0/laser5"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/DiagonalLasers/laser5"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -16)
 layers = 3
 material_override = SubResource("8")
 mesh = SubResource("10")
 
-[node name="laser6" type="Node3D" parent="Level/t0"]
+[node name="laser6" type="Node3D" parent="Level/DiagonalLasers"]
 transform = Transform3D(0.965926, 5.55139e-09, 0.776457, 0.258819, -4.21669e-08, -2.89778, 5.55139e-09, 1, -1.26501e-07, -4.42919, -2.26002, -30)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t0/laser6"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/DiagonalLasers/laser6"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -16)
 layers = 3
 material_override = SubResource("8")
 mesh = SubResource("10")
 
-[node name="laser7" type="Node3D" parent="Level/t0"]
+[node name="laser7" type="Node3D" parent="Level/DiagonalLasers"]
 transform = Transform3D(0.965926, 5.55139e-09, 0.776457, 0.258819, -4.21669e-08, -2.89778, 5.55139e-09, 1, -1.26501e-07, -4.42919, -2.26002, -35)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t0/laser7"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/DiagonalLasers/laser7"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -16)
 layers = 3
 material_override = SubResource("8")
 mesh = SubResource("10")
 
-[node name="laser8" type="Node3D" parent="Level/t0"]
+[node name="laser8" type="Node3D" parent="Level/DiagonalLasers"]
 transform = Transform3D(0.965926, 5.55139e-09, 0.776457, 0.258819, -4.21669e-08, -2.89778, 5.55139e-09, 1, -1.26501e-07, -4.42919, -2.26002, -40)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t0/laser8"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/DiagonalLasers/laser8"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -16)
 layers = 3
 material_override = SubResource("8")
 mesh = SubResource("10")
 
-[node name="laser9" type="Node3D" parent="Level/t0"]
+[node name="laser9" type="Node3D" parent="Level/DiagonalLasers"]
 transform = Transform3D(0.965926, 5.55139e-09, 0.776457, 0.258819, -4.21669e-08, -2.89778, 5.55139e-09, 1, -1.26501e-07, -4.42919, -2.26002, -45)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t0/laser9"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/DiagonalLasers/laser9"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -16)
 layers = 3
 material_override = SubResource("8")
 mesh = SubResource("10")
 
-[node name="laser10" type="Node3D" parent="Level/t0"]
+[node name="laser10" type="Node3D" parent="Level/DiagonalLasers"]
 transform = Transform3D(0.965926, 5.55139e-09, 0.776457, 0.258819, -4.21669e-08, -2.89778, 5.55139e-09, 1, -1.26501e-07, -4.42919, -2.26002, -50)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t0/laser10"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/DiagonalLasers/laser10"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -16)
 layers = 3
 material_override = SubResource("8")
 mesh = SubResource("10")
 
-[node name="t1" type="Node3D" parent="Level"]
+[node name="SquareLasers" type="Node3D" parent="Level"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -15)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t1"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/SquareLasers"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, 5)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar8" type="MeshInstance3D" parent="Level/t1"]
+[node name="Bar8" type="MeshInstance3D" parent="Level/SquareLasers"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -5)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar9" type="MeshInstance3D" parent="Level/t1"]
+[node name="Bar9" type="MeshInstance3D" parent="Level/SquareLasers"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -15)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar10" type="MeshInstance3D" parent="Level/t1"]
+[node name="Bar10" type="MeshInstance3D" parent="Level/SquareLasers"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -25)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar11" type="MeshInstance3D" parent="Level/t1"]
+[node name="Bar11" type="MeshInstance3D" parent="Level/SquareLasers"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -35)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar12" type="MeshInstance3D" parent="Level/t1"]
+[node name="Bar12" type="MeshInstance3D" parent="Level/SquareLasers"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -45)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="5" type="Node3D" parent="Level/t1"]
+[node name="5" type="Node3D" parent="Level/SquareLasers"]
 transform = Transform3D(-1.62921e-07, -1, 0, 1, -1.62921e-07, 0, 0, 0, 1, 0, 0, 0)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t1/5"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/SquareLasers/5"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, 5)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar8" type="MeshInstance3D" parent="Level/t1/5"]
+[node name="Bar8" type="MeshInstance3D" parent="Level/SquareLasers/5"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -5)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar9" type="MeshInstance3D" parent="Level/t1/5"]
+[node name="Bar9" type="MeshInstance3D" parent="Level/SquareLasers/5"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -15)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar10" type="MeshInstance3D" parent="Level/t1/5"]
+[node name="Bar10" type="MeshInstance3D" parent="Level/SquareLasers/5"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -25)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar11" type="MeshInstance3D" parent="Level/t1/5"]
+[node name="Bar11" type="MeshInstance3D" parent="Level/SquareLasers/5"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -35)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar12" type="MeshInstance3D" parent="Level/t1/5"]
+[node name="Bar12" type="MeshInstance3D" parent="Level/SquareLasers/5"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -45)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="6" type="Node3D" parent="Level/t1"]
+[node name="6" type="Node3D" parent="Level/SquareLasers"]
 transform = Transform3D(-1.62921e-07, 1, 0, -1, -1.62921e-07, 0, 0, 0, 1, 0, 0, 0)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t1/6"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/SquareLasers/6"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, 5)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar8" type="MeshInstance3D" parent="Level/t1/6"]
+[node name="Bar8" type="MeshInstance3D" parent="Level/SquareLasers/6"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -5)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar9" type="MeshInstance3D" parent="Level/t1/6"]
+[node name="Bar9" type="MeshInstance3D" parent="Level/SquareLasers/6"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -15)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar10" type="MeshInstance3D" parent="Level/t1/6"]
+[node name="Bar10" type="MeshInstance3D" parent="Level/SquareLasers/6"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -25)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar11" type="MeshInstance3D" parent="Level/t1/6"]
+[node name="Bar11" type="MeshInstance3D" parent="Level/SquareLasers/6"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -35)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="Bar12" type="MeshInstance3D" parent="Level/t1/6"]
+[node name="Bar12" type="MeshInstance3D" parent="Level/SquareLasers/6"]
 transform = Transform3D(-1.31134e-08, 0, -0.3, 0, 1, 0, 1, 0, -4.37114e-08, 0, 11, -45)
 layers = 3
 material_override = SubResource("11")
 mesh = SubResource("10")
 
-[node name="t2" type="Node3D" parent="Level"]
+[node name="LeftWavingLasers" type="Node3D" parent="Level"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -10)
 
-[node name="laser1" type="Node3D" parent="Level/t2"]
-transform = Transform3D(0.988014, -5.23933e-10, -0.154366, -0.154366, -6.74753e-09, -0.988014, -5.23933e-10, 1, -6.74753e-09, -12.4292, -1.26002, -11)
+[node name="laser1" type="Node3D" parent="Level/LeftWavingLasers"]
+transform = Transform3D(0.871635, -5.611e-09, -0.490155, -0.490155, -2.14254e-08, -0.871635, -5.611e-09, 1, -2.14254e-08, -12.4292, -1.26002, -11)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t2/laser1"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/LeftWavingLasers/laser1"]
 transform = Transform3D(1, 0, -7.02255e-16, 0, 1, 0, 2.34085e-16, 0, 3, 0, 9.53674e-07, -9)
 layers = 3
 material_override = SubResource("12")
 mesh = SubResource("10")
 
-[node name="laser2" type="Node3D" parent="Level/t2"]
-transform = Transform3D(0.915241, -3.70493e-09, 0.402906, 0.402906, 1.76116e-08, -0.915241, -3.70492e-09, 1, 1.76116e-08, -12.4292, -1.26002, -14)
+[node name="laser2" type="Node3D" parent="Level/LeftWavingLasers"]
+transform = Transform3D(0.970231, -1.30123e-09, -0.24218, -0.24218, -1.0586e-08, -0.970231, -1.30123e-09, 1, -1.0586e-08, -12.4292, -1.26002, -14)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t2/laser2"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/LeftWavingLasers/laser2"]
 transform = Transform3D(1, 0, -7.02255e-16, 0, 1, 0, 2.34085e-16, 0, 3, 0, 9.53674e-07, -9)
 layers = 3
 material_override = SubResource("12")
 mesh = SubResource("10")
 
-[node name="laser3" type="Node3D" parent="Level/t2"]
-transform = Transform3D(0.880312, -5.23174e-09, -0.474396, -0.474396, -2.07365e-08, -0.880312, -5.23174e-09, 1, -2.07365e-08, -12.4292, -1.26002, -17)
+[node name="laser3" type="Node3D" parent="Level/LeftWavingLasers"]
+transform = Transform3D(0.97756, -9.8089e-10, -0.210658, -0.210658, -9.20814e-09, -0.97756, -9.8089e-10, 1, -9.20814e-09, -12.4292, -1.26002, -17)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t2/laser3"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/LeftWavingLasers/laser3"]
 transform = Transform3D(1, 0, -7.02255e-16, 0, 1, 0, 2.34085e-16, 0, 3, 0, 0, -9)
 layers = 3
 material_override = SubResource("12")
 mesh = SubResource("10")
 
-[node name="laser4" type="Node3D" parent="Level/t2"]
-transform = Transform3D(0.866025, -5.85622e-09, -0.5, -0.5, -2.18557e-08, -0.866025, -5.85621e-09, 1, -2.18557e-08, -12.4292, -1.26002, -20)
+[node name="laser4" type="Node3D" parent="Level/LeftWavingLasers"]
+transform = Transform3D(0.998162, -8.03233e-11, -0.0605953, -0.0605953, -2.6487e-09, -0.998162, -8.03233e-11, 1, -2.6487e-09, -12.4292, -1.26002, -20)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t2/laser4"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/LeftWavingLasers/laser4"]
 transform = Transform3D(1, 0, -7.02255e-16, 0, 1, 0, 2.34085e-16, 0, 3, 0, 0, -9)
 layers = 3
 material_override = SubResource("12")
 mesh = SubResource("10")
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Level/t2"]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Level/LeftWavingLasers"]
 libraries = {
 "": SubResource("AnimationLibrary_ghmyd")
 }
 autoplay = "laser_anim"
 
-[node name="t3" type="Node3D" parent="Level"]
+[node name="RightWavingLasers" type="Node3D" parent="Level"]
 transform = Transform3D(-1, 0, -3.25841e-07, 0, 1, 0, 3.25841e-07, 0, -1, 0, 0, -41)
 
-[node name="laser1" type="Node3D" parent="Level/t3"]
-transform = Transform3D(0.988014, -5.23933e-10, -0.154366, -0.154366, -6.74753e-09, -0.988014, -5.23933e-10, 1, -6.74753e-09, -12.4292, -1.26002, -11)
+[node name="laser1" type="Node3D" parent="Level/RightWavingLasers"]
+transform = Transform3D(0.893858, -4.63962e-09, 0.448351, 0.448351, 1.9598e-08, -0.893858, -4.63962e-09, 1, 1.9598e-08, -12.4292, -1.26002, -11)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t3/laser1"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/RightWavingLasers/laser1"]
 transform = Transform3D(1, 0, -7.02255e-16, 0, 1, 0, 2.34085e-16, 0, 3, 0, 9.53674e-07, -9)
 layers = 3
 material_override = SubResource("14")
 mesh = SubResource("10")
 
-[node name="laser2" type="Node3D" parent="Level/t3"]
-transform = Transform3D(0.915241, -3.70493e-09, 0.402906, 0.402906, 1.76116e-08, -0.915241, -3.70492e-09, 1, 1.76116e-08, -12.4292, -1.26002, -14)
+[node name="laser2" type="Node3D" parent="Level/RightWavingLasers"]
+transform = Transform3D(0.997654, -1.02553e-10, -0.068459, -0.068459, -2.99244e-09, -0.997654, -1.02553e-10, 1, -2.99244e-09, -12.4292, -1.26002, -14)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t3/laser2"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/RightWavingLasers/laser2"]
 transform = Transform3D(1, 0, -7.02255e-16, 0, 1, 0, 2.34085e-16, 0, 3, 0, 9.53674e-07, -9)
 layers = 3
 material_override = SubResource("14")
 mesh = SubResource("10")
 
-[node name="laser3" type="Node3D" parent="Level/t3"]
-transform = Transform3D(0.880312, -5.23174e-09, -0.474395, -0.474395, -2.07365e-08, -0.880312, -5.23174e-09, 1, -2.07365e-08, -12.4292, -1.26002, -17)
+[node name="laser3" type="Node3D" parent="Level/RightWavingLasers"]
+transform = Transform3D(0.898318, -4.44467e-09, 0.439346, 0.439346, 1.92044e-08, -0.898318, -4.44467e-09, 1, 1.92044e-08, -12.4292, -1.26002, -17)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t3/laser3"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/RightWavingLasers/laser3"]
 transform = Transform3D(1, 0, -7.02255e-16, 0, 1, 0, 2.34085e-16, 0, 3, 0, 0, -9)
 layers = 3
 material_override = SubResource("14")
 mesh = SubResource("10")
 
-[node name="laser4" type="Node3D" parent="Level/t3"]
-transform = Transform3D(0.866025, -5.85622e-09, -0.5, -0.5, -2.18557e-08, -0.866025, -5.85621e-09, 1, -2.18557e-08, -12.4292, -1.26002, -20)
+[node name="laser4" type="Node3D" parent="Level/RightWavingLasers"]
+transform = Transform3D(0.938504, -2.68806e-09, 0.345267, 0.345267, 1.50921e-08, -0.938504, -2.68806e-09, 1, 1.50921e-08, -12.4292, -1.26002, -20)
 
-[node name="Bar7" type="MeshInstance3D" parent="Level/t3/laser4"]
+[node name="Bar7" type="MeshInstance3D" parent="Level/RightWavingLasers/laser4"]
 transform = Transform3D(1, 0, -7.02255e-16, 0, 1, 0, 2.34085e-16, 0, 3, 0, 0, -9)
 layers = 3
 material_override = SubResource("14")
 mesh = SubResource("10")
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Level/t3"]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Level/RightWavingLasers"]
 libraries = {
 "": SubResource("AnimationLibrary_x47bd")
 }
@@ -942,15 +942,15 @@ material_override = SubResource("20")
 mesh = SubResource("19")
 skeleton = NodePath("../..")
 
-[node name="t4" type="Node3D" parent="Level"]
+[node name="TrackLights" type="Node3D" parent="Level"]
 
-[node name="Bar1" type="MeshInstance3D" parent="Level/t4"]
+[node name="Bar1" type="MeshInstance3D" parent="Level/TrackLights"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.49852, 3, 0, -23.8955)
 layers = 3
 material_override = SubResource("1")
 mesh = SubResource("10")
 
-[node name="Bar2" type="MeshInstance3D" parent="Level/t4"]
+[node name="Bar2" type="MeshInstance3D" parent="Level/TrackLights"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.49852, -3, 0, -23.8955)
 layers = 3
 material_override = SubResource("1")
