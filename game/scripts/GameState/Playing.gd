@@ -80,4 +80,4 @@ func _process_map(game: BeepSaber_Game) -> void:
 			ChainLink.construct_chain(chain_info, game.track, current_beat, note_info_refs, cube_refs)
 	
 	while not Map.event_stack.is_empty() and Map.event_stack[-1].beat <= current_beat:
-		game.event_driver.process_event(Map.event_stack.pop_back() as EventInfo, Map.color_left, Map.color_right)
+		game.event_driver.process_event(Map.event_stack.pop_back() as EventInfo)

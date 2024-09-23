@@ -1,6 +1,26 @@
 extends RefCounted
 class_name EventInfo
 
+const TYPE_DIAGONAL_LASERS := 0
+const TYPE_SQUARE_LASERS := 1
+const TYPE_LEFT_WAVING_LASERS := 2
+const TYPE_RIGHT_WAVING_LASERS := 3
+const TYPE_FLOOR_LIGHTS := 4
+
+const VALUE_LIGHTS_OFF := 0
+const VALUE_LIGHTS_RIGHT_ON := 1
+const VALUE_LIGHTS_RIGHT_FLASH := 2
+const VALUE_LIGHTS_RIGHT_FADE := 3
+const VALUE_LIGHTS_FADE_TO_RIGHT := 4
+const VALUE_LIGHTS_LEFT_ON := 5
+const VALUE_LIGHTS_LEFT_FLASH := 6
+const VALUE_LIGHTS_LEFT_FADE := 7
+const VALUE_LIGHTS_FADE_TO_LEFT := 8
+const VALUE_LIGHTS_WHITE_ON := 9
+const VALUE_LIGHTS_WHITE_FLASH := 10
+const VALUE_LIGHTS_WHITE_FADE := 11
+const VALUE_LIGHTS_FADE_TO_WHITE := 12
+
 var beat: float
 var type: int
 var value: int
