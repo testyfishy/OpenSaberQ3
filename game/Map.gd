@@ -231,12 +231,13 @@ static func load_event_stack_v3(event_data: Array) -> void:
 	event_thread_1.wait_to_finish()
 
 static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Dictionary) -> bool:
+	# Ensures the map_data dict has a version (some maps include the version only on info but not in the data)
 	if !map_data.has("_version") and !map_data.has("version"):
-		print(info.version)
 		if info.version.begins_with("2.") or info.version.begins_with("1."):
 			map_data["_version"] = info.version
 		else:
 			map_data["version"] = info.version
+	
 	if map_data.has("_version"):
 		note_thread_0.start(load_note_stack_v2.bind(Utils.get_array(map_data, "_notes", [])))
 		obstacle_thread_0.start(load_obstacle_stack_v2.bind(Utils.get_array(map_data, "_obstacles", [])))
