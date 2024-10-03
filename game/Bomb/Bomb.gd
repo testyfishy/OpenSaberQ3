@@ -21,8 +21,8 @@ func spawn(info: BombInfo, current_beat: float) -> void:
 	
 	var distance: float = info.beat - current_beat
 	
-	transform.origin.x = Constants.LANE_X[info.line_index]
-	transform.origin.y = Constants.LAYER_Y[info.line_layer]
+	transform.origin.x = Constants.LANE_DISTANCE * float(info.line_index) + Constants.LANE_ZERO_X
+	transform.origin.y = Constants.LANE_DISTANCE * float(info.line_layer) + Constants.LAYER_ZERO_Y
 	transform.origin.z = -distance * Constants.BEAT_DISTANCE
 	
 	var anim := $AnimationPlayer as AnimationPlayer
