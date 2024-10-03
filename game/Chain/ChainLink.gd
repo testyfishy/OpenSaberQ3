@@ -75,8 +75,14 @@ static func construct_chain(chain_info: ChainInfo, track_ref: Node3D, current_be
 	# direction the head note is pointing, with length equal to half the length
 	# of a straight line from the head to the tail.  the end point of the line
 	# you just drew is the mid point of the curve.
-	var head_pos := Vector2(Constants.LANE_X[chain_info.head_line_index], Constants.LAYER_Y[chain_info.head_line_layer])
-	var tail_pos := Vector2(Constants.LANE_X[chain_info.tail_line_index], Constants.LAYER_Y[chain_info.tail_line_layer])
+	var head_pos := Vector2(
+		Constants.LANE_DISTANCE * float(chain_info.head_line_index) + Constants.LANE_ZERO_X,
+		Constants.LANE_DISTANCE * float(chain_info.head_line_layer) + Constants.LAYER_ZERO_Y
+	)
+	var tail_pos := Vector2(
+		Constants.LANE_DISTANCE * float(chain_info.tail_line_index) + Constants.LANE_ZERO_X,
+		Constants.LANE_DISTANCE * float(chain_info.tail_line_layer) + Constants.LAYER_ZERO_Y
+	)
 	var mid_pos := head_pos + (UNIT_VECTORS[chain_info.head_cut_direction] * head_pos.distance_to(tail_pos) * 0.5)
 	i = 1
 	while i < chain_info.slice_count:
