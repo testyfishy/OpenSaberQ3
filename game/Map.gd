@@ -11,6 +11,7 @@ static var current_difficulty: DifficultyInfo
 static var note_stack: Array[ColorNoteInfo]
 static var bomb_stack: Array[BombInfo]
 static var obstacle_stack: Array[ObstacleInfo]
+static var arc_stack: Array[ArcInfo]
 static var chain_stack: Array[ChainInfo]
 static var event_stack: Array[EventInfo]
 
@@ -33,6 +34,8 @@ static var bomb_thread_0 := Thread.new()
 static var bomb_thread_1 := Thread.new()
 static var obstacle_thread_0 := Thread.new()
 static var obstacle_thread_1 := Thread.new()
+static var arc_thread_0 := Thread.new()
+static var arc_thread_1 := Thread.new()
 static var chain_thread_0 := Thread.new()
 static var chain_thread_1 := Thread.new()
 static var event_thread_0 := Thread.new()
@@ -137,6 +140,21 @@ static func load_obstacle_stack_v2(obstacle_data: Array) -> void:
 	load_range.bind(midpoint, obstacle_data.size()).call()
 	obstacle_thread_1.wait_to_finish()
 
+static func load_arc_stack_v2(arc_data: Array) -> void:
+	var last_index := arc_data.size() - 1
+	var load_range := func(start: int, end: int) -> void:
+		var i := start
+		while i < end:
+			if arc_data[i] is Dictionary:
+				@warning_ignore("unsafe_cast")
+				arc_stack[last_index - i] = ArcInfo.new_v2(arc_data[i] as Dictionary)
+			i += 1
+	var midpoint := arc_data.size() >> 1
+	arc_stack.resize(arc_data.size())
+	arc_thread_1.start(load_range.bind(0, midpoint))
+	load_range.bind(midpoint, arc_data.size()).call()
+	arc_thread_1.wait_to_finish()
+
 static func load_event_stack_v2(event_data: Array) -> void:
 	var last_index := event_data.size() - 1
 	var load_range := func(start: int, end: int) -> void:
@@ -200,6 +218,21 @@ static func load_obstacle_stack_v3(obstacle_data: Array) -> void:
 	load_range.bind(midpoint, obstacle_data.size()).call()
 	obstacle_thread_1.wait_to_finish()
 
+static func load_arc_stack_v3(arc_data: Array) -> void:
+	var last_index := arc_data.size() - 1
+	var load_range := func(start: int, end: int) -> void:
+		var i := start
+		while i < end:
+			if arc_data[i] is Dictionary:
+				@warning_ignore("unsafe_cast")
+				arc_stack[last_index - i] = ArcInfo.new_v3(arc_data[i] as Dictionary)
+			i += 1
+	var midpoint := arc_data.size() >> 1
+	arc_stack.resize(arc_data.size())
+	arc_thread_1.start(load_range.bind(0, midpoint))
+	load_range.bind(midpoint, arc_data.size()).call()
+	arc_thread_1.wait_to_finish()
+
 static func load_chain_stack_v3(chain_data: Array) -> void:
 	var last_index := chain_data.size() - 1
 	var load_range := func(start: int, end: int) -> void:
@@ -242,6 +275,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 		note_thread_0.start(load_note_stack_v2.bind(Utils.get_array(map_data, "_notes", [])))
 		obstacle_thread_0.start(load_obstacle_stack_v2.bind(Utils.get_array(map_data, "_obstacles", [])))
 		event_thread_0.start(load_event_stack_v2.bind(Utils.get_array(map_data, "_events", [])))
+		arc_thread_0.start(load_arc_stack_v2.bind(Utils.get_array(map_data, "_sliders", [])))
 		chain_stack.clear()
 		current_info = info
 		current_difficulty = difficulty
@@ -250,6 +284,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 		note_thread_0.wait_to_finish()
 		obstacle_thread_0.wait_to_finish()
 		event_thread_0.wait_to_finish()
+		arc_thread_0.wait_to_finish()
 		return true
 	elif map_data.has("version"):
 		var version := Utils.get_str(map_data, "version", "")
@@ -257,6 +292,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 			note_thread_0.start(load_note_stack_v3.bind(Utils.get_array(map_data, "colorNotes", [])))
 			bomb_thread_0.start(load_bomb_stack_v3.bind(Utils.get_array(map_data, "bombNotes", [])))
 			obstacle_thread_0.start(load_obstacle_stack_v3.bind(Utils.get_array(map_data, "obstacles", [])))
+			arc_thread_0.start(load_arc_stack_v3.bind(Utils.get_array(map_data, "sliders", [])))
 			chain_thread_0.start(load_chain_stack_v3.bind(Utils.get_array(map_data, "burstSliders", [])))
 			event_thread_0.start(load_event_stack_v3.bind(Utils.get_array(map_data, "basicBeatmapEvents", [])))
 			current_info = info
@@ -266,6 +302,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 			note_thread_0.wait_to_finish()
 			bomb_thread_0.wait_to_finish()
 			obstacle_thread_0.wait_to_finish()
+			arc_thread_0.wait_to_finish()
 			chain_thread_0.wait_to_finish()
 			event_thread_0.wait_to_finish()
 			return true
