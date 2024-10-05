@@ -43,11 +43,6 @@ var which_saber: int
 # do not make this a preload.  doing so will make the scene show up as corrupt
 # in the editor.
 static var CHAIN_LINK_TEMPLATE := load("res://game/Chain/ChainLink.tscn") as PackedScene
-static var UNIT_VECTORS := PackedVector2Array([
-	Vector2(0, 1), Vector2(0, -1), Vector2(-1, 0), Vector2(1, 0),
-	Vector2(-0.70710678, 0.70710678), Vector2(0.70710678, 0.70710678),
-	Vector2(-0.70710678, -0.70710678), Vector2(0.70710678, -0.70710678), Vector2(0,1)
-])
 static var left_material := load("res://game/Chain/ChainLink.material").duplicate() as ShaderMaterial
 static var right_material := left_material.duplicate() as ShaderMaterial
 
@@ -83,7 +78,7 @@ static func construct_chain(chain_info: ChainInfo, track_ref: Node3D, current_be
 		Constants.LANE_DISTANCE * float(chain_info.tail_line_index) + Constants.LANE_ZERO_X,
 		Constants.LANE_DISTANCE * float(chain_info.tail_line_layer) + Constants.LAYER_ZERO_Y
 	)
-	var mid_pos := head_pos + (UNIT_VECTORS[chain_info.head_cut_direction] * head_pos.distance_to(tail_pos) * 0.5)
+	var mid_pos := head_pos + (Constants.ROTATION_UNIT_VECTORS[chain_info.head_cut_direction] * head_pos.distance_to(tail_pos) * 0.5)
 	i = 1
 	while i < chain_info.slice_count:
 		var chain_link := CHAIN_LINK_TEMPLATE.instantiate() as ChainLink
