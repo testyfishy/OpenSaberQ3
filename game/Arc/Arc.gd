@@ -4,12 +4,27 @@ class_name Arc
 static var left_material := load("res://game/Arc/Arc.material").duplicate() as ShaderMaterial
 static var right_material := left_material.duplicate() as ShaderMaterial
 
+static var left_material_magnet := left_material.duplicate() as ShaderMaterial
+static var right_material_magnet := right_material.duplicate() as ShaderMaterial
+
+@onready var visual: CSGPolygon3D = $Path3D/Visual
+
+var arc_info: ArcInfo
+var activator_cube: BeepCube
+
 var speed: float
 var despawn_z: float
 
-func spawn(info: ArcInfo, current_beat: float) -> void:
+func spawn(info: ArcInfo, current_beat: float, _activator_cube: BeepCube = null) -> void:
+	arc_info = info
 	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute * 0.016666666666666667
-	($Visual as CSGPolygon3D).material_override = right_material if info.color == 1 else left_material
+	visual = $Path3D/Visual
+	visual.material_override = right_material if arc_info.color == 1 else left_material
+	activator_cube = _activator_cube
+	if activator_cube:
+		activator_cube.cutted.connect(_on_activator_cube_cutted)
+	else:
+		start_magnet()
 	
 	var head_pos := Vector3(
 		Constants.LANE_DISTANCE * float(info.head_line_index) + Constants.LANE_ZERO_X,
@@ -39,8 +54,21 @@ func spawn(info: ArcInfo, current_beat: float) -> void:
 	curve.set_point_out(0, Vector3(head_rotation.x, head_rotation.y, 0.0))
 	curve.set_point_in(1, Vector3(tail_rotation.x, tail_rotation.y, 0.0))
 
+func _on_activator_cube_cutted(correct_saber: bool) -> void:
+	if activator_cube and activator_cube.cutted.is_connected(_on_activator_cube_cutted):
+		activator_cube.cutted.disconnect(_on_activator_cube_cutted)
+	if correct_saber:
+		start_magnet()
+
+# sets the magnet version of the material (and ensures correct magnet parameter)
+func start_magnet() -> void:
+	visual.material_override = right_material_magnet if arc_info.color == 1 else left_material_magnet
+	visual.material_override.set_shader_parameter(&"saber_magnet", arc_info.color+1)
+
 func _process(delta: float) -> void:
 	if Scoreboard.paused or not is_visible_in_tree() or not Map.current_info: return
 	transform.origin.z += speed * delta
 	if transform.origin.z >= despawn_z:
+		if activator_cube and activator_cube.cutted.is_connected(_on_activator_cube_cutted):
+			activator_cube.cutted.disconnect(_on_activator_cube_cutted)
 		queue_free()

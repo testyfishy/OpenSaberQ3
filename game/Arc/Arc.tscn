@@ -6,7 +6,7 @@
 [sub_resource type="Curve3D" id="Curve3D_n4apf"]
 resource_local_to_scene = true
 _data = {
-"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1),
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -10),
 "tilts": PackedFloat32Array(0, 0)
 }
 point_count = 2
@@ -17,17 +17,19 @@ script = ExtResource("1_5s55r")
 [node name="Path3D" type="Path3D" parent="."]
 curve = SubResource("Curve3D_n4apf")
 
-[node name="Visual" type="CSGPolygon3D" parent="."]
+[node name="Visual" type="CSGPolygon3D" parent="Path3D"]
 layers = 3
 material_override = ExtResource("2_6ceex")
-polygon = PackedVector2Array(-0.01, 0, 0, 0.01, 0.01, 0, 0, -0.01)
+calculate_tangents = false
+polygon = PackedVector2Array(-0.04, 0, 0, 0.04, 0.04, 0, 0, -0.04)
 mode = 2
-path_node = NodePath("../Path3D")
+path_node = NodePath("..")
 path_interval_type = 0
 path_interval = 0.13
 path_simplify_angle = 0.0
 path_rotation = 2
-path_local = false
+path_local = true
 path_continuous_u = true
 path_u_distance = 1.0
 path_joined = false
+smooth_faces = true

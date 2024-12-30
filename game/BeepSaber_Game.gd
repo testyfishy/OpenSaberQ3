@@ -220,6 +220,7 @@ func set_colors_from_settings() -> void:
 func update_left_color(color: Color) -> void:
 	left_saber.set_color(color)
 	Arc.left_material.set_shader_parameter(&"color", color)
+	Arc.left_material_magnet.set_shader_parameter(&"color", color)
 	ChainLink.left_material.set_shader_parameter(&"color", color)
 	goggles_shader.set_shader_parameter(&"left_color", color)
 	event_driver.update_left_color(color)
@@ -228,6 +229,7 @@ func update_left_color(color: Color) -> void:
 func update_right_color(color: Color) -> void:
 	right_saber.set_color(color)
 	Arc.right_material.set_shader_parameter(&"color", color)
+	Arc.right_material_magnet.set_shader_parameter(&"color", color)
 	ChainLink.right_material.set_shader_parameter(&"color", color)
 	goggles_shader.set_shader_parameter(&"right_color", color)
 	event_driver.update_right_color(color)
