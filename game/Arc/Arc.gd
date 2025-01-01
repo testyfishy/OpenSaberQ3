@@ -48,11 +48,19 @@ func spawn(info: ArcInfo, current_beat: float, _activator_cube: BeepCube = null)
 		tail_rotation = Vector2.ZERO
 	else:
 		tail_rotation = -Constants.ROTATION_UNIT_VECTORS[info.tail_cut_direction] * info.tail_control_point_length_multiplier
+	
 	var curve := ($Path3D as Path3D).curve
-	curve.set_point_position(0, head_pos)
-	curve.set_point_position(1, tail_pos)
-	curve.set_point_out(0, Vector3(head_rotation.x, head_rotation.y, 0.0))
-	curve.set_point_in(1, Vector3(tail_rotation.x, tail_rotation.y, 0.0))
+	curve.clear_points()
+	
+	# sets the origin of the tail at the tail point to use in the shader for a fade out effect
+	$Path3D.position = tail_pos
+	curve.add_point(head_pos - tail_pos, Vector3.ZERO, Vector3(head_rotation.x, head_rotation.y, 0.0))
+	
+	if info.mid_anchor_mode > 0:
+		# mid point mode poinst should be aded in here
+		pass
+	
+	curve.add_point(tail_pos - tail_pos, Vector3(tail_rotation.x, tail_rotation.y, 0.0), Vector3.ZERO)
 
 func _on_activator_cube_cutted(correct_saber: bool) -> void:
 	if activator_cube and activator_cube.cutted.is_connected(_on_activator_cube_cutted):
