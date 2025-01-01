@@ -10,6 +10,7 @@ static var right_material_magnet := right_material.duplicate() as ShaderMaterial
 @onready var visual: CSGPolygon3D = $Path3D/Visual
 
 @export var arc_angle_force := 2.0
+@export var mid_points := 3
 
 var arc_info: ArcInfo
 var activator_cube: BeepCube
@@ -60,9 +61,8 @@ func spawn(info: ArcInfo, current_beat: float, _activator_cube: BeepCube = null)
 	curve.add_point(head_pos - tail_pos, Vector3.ZERO, Vector3(head_rotation.x, head_rotation.y, 0.0) * arc_angle_force)
 	
 	if info.mid_anchor_mode > 0:
-		print("midpoint ", info.mid_anchor_mode)
-		for midpoint_id in [0,1,2]:
-			var range : float = [0.25, 0.5, 0.75][midpoint_id]
+		for midpoint_id in range(mid_points):
+			var range : float = (float(midpoint_id+1) / (mid_points+1))
 			var head_rot := Constants.CUBE_ROTATIONS[info.head_cut_direction]
 			
 			var point_pos :=  head_pos.lerp(tail_pos, range)
@@ -75,7 +75,7 @@ func spawn(info: ArcInfo, current_beat: float, _activator_cube: BeepCube = null)
 			
 			curve.add_point(point_pos - tail_pos, Vector3.ZERO, Vector3.ZERO)
 		# calculate smooth in out directions after all points have been set
-		for smoothpoint_id in [0,1,2]:
+		for smoothpoint_id in range(mid_points):
 			var prev_point_pos := curve.get_point_position(smoothpoint_id)
 			var current_point_pos := curve.get_point_position(smoothpoint_id + 1)
 			var next_point_pos := curve.get_point_position(smoothpoint_id + 2)
