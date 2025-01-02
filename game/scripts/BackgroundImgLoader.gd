@@ -35,7 +35,7 @@ func _start_next_img_load() -> void:
 		var next_req := _img_load_request_queue.pop_front() as ImgLoadRequest
 		
 		_img_load_mutex.lock()
-		if next_req and next_req.thread.start(_load_img_threaded.bind(next_req)) == OK:
+		if next_req and Utils.custom_thread_call(next_req.thread, _load_img_threaded, [next_req]) == OK:
 			_running_img_load_threads += 1
 		_img_load_mutex.unlock()
 

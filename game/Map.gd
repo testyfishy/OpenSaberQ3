@@ -117,9 +117,11 @@ static func load_note_stack_v2(note_data: Array) -> void:
 			i += 1
 		return [note_array, bomb_array]
 	var midpoint := note_data.size() >> 1
-	note_thread_1.start(load_range.bind(0, midpoint))
+	#note_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(note_thread_1, load_range, [0, midpoint])
 	var total_second_half := load_range.bind(midpoint, note_data.size()).call() as Array[Array]
-	var total_first_half := note_thread_1.wait_to_finish() as Array[Array]
+	#var total_first_half := note_thread_1.wait_to_finish() as Array[Array]
+	var total_first_half := Utils.custom_thread_wait_to_finish(note_thread_1) as Array[Array]
 	note_stack = total_first_half[0] + total_second_half[0]
 	bomb_stack = total_first_half[1] + total_second_half[1]
 	note_stack.reverse()
@@ -136,9 +138,11 @@ static func load_obstacle_stack_v2(obstacle_data: Array) -> void:
 			i += 1
 	var midpoint := obstacle_data.size() >> 1
 	obstacle_stack.resize(obstacle_data.size())
-	obstacle_thread_1.start(load_range.bind(0, midpoint))
+	#obstacle_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(obstacle_thread_1, load_range, [0, midpoint])
 	load_range.bind(midpoint, obstacle_data.size()).call()
-	obstacle_thread_1.wait_to_finish()
+	#obstacle_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(obstacle_thread_1)
 
 static func load_arc_stack_v2(arc_data: Array) -> void:
 	var last_index := arc_data.size() - 1
@@ -151,9 +155,12 @@ static func load_arc_stack_v2(arc_data: Array) -> void:
 			i += 1
 	var midpoint := arc_data.size() >> 1
 	arc_stack.resize(arc_data.size())
-	arc_thread_1.start(load_range.bind(0, midpoint))
+	#arc_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(arc_thread_1, load_range, [0, midpoint])
 	load_range.bind(midpoint, arc_data.size()).call()
-	arc_thread_1.wait_to_finish()
+	#arc_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(arc_thread_1)
+	
 
 static func load_event_stack_v2(event_data: Array) -> void:
 	var last_index := event_data.size() - 1
@@ -166,9 +173,11 @@ static func load_event_stack_v2(event_data: Array) -> void:
 			i += 1
 	var midpoint := event_data.size() >> 1
 	event_stack.resize(event_data.size())
-	event_thread_1.start(load_range.bind(0, midpoint))
+	#event_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(event_thread_1, load_range, [0, midpoint])
 	load_range.bind(midpoint, event_data.size()).call()
-	event_thread_1.wait_to_finish()
+	#event_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(event_thread_1)
 
 static func load_note_stack_v3(note_data: Array) -> void:
 	var last_index := note_data.size() - 1
@@ -181,9 +190,11 @@ static func load_note_stack_v3(note_data: Array) -> void:
 			i += 1
 	var midpoint := note_data.size() >> 1
 	note_stack.resize(note_data.size())
-	note_thread_1.start(load_range.bind(0, midpoint))
+	#note_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(note_thread_1, load_range, [0, midpoint])
 	load_range.bind(midpoint, note_data.size()).call()
-	note_thread_1.wait_to_finish()
+	#note_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(note_thread_1)
 
 static func load_bomb_stack_v3(bomb_data: Array) -> void:
 	if not Settings.bombs_enabled:
@@ -199,9 +210,11 @@ static func load_bomb_stack_v3(bomb_data: Array) -> void:
 			i += 1
 	var midpoint := bomb_data.size() >> 1
 	bomb_stack.resize(bomb_data.size())
-	bomb_thread_1.start(load_range.bind(0, midpoint))
+	#bomb_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(bomb_thread_1, load_range, [0, midpoint])
 	load_range.bind(midpoint, bomb_data.size()).call()
-	bomb_thread_1.wait_to_finish()
+	#bomb_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(bomb_thread_1)
 
 static func load_obstacle_stack_v3(obstacle_data: Array) -> void:
 	var last_index := obstacle_data.size() - 1
@@ -214,9 +227,11 @@ static func load_obstacle_stack_v3(obstacle_data: Array) -> void:
 			i += 1
 	var midpoint := obstacle_data.size() >> 1
 	obstacle_stack.resize(obstacle_data.size())
-	obstacle_thread_1.start(load_range.bind(0, midpoint))
+	#obstacle_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(obstacle_thread_1, load_range, [0, midpoint])
 	load_range.bind(midpoint, obstacle_data.size()).call()
-	obstacle_thread_1.wait_to_finish()
+	#obstacle_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(obstacle_thread_1)
 
 static func load_arc_stack_v3(arc_data: Array) -> void:
 	var last_index := arc_data.size() - 1
@@ -229,9 +244,11 @@ static func load_arc_stack_v3(arc_data: Array) -> void:
 			i += 1
 	var midpoint := arc_data.size() >> 1
 	arc_stack.resize(arc_data.size())
-	arc_thread_1.start(load_range.bind(0, midpoint))
+	#arc_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(arc_thread_1, load_range, [0, midpoint])
 	load_range.bind(midpoint, arc_data.size()).call()
-	arc_thread_1.wait_to_finish()
+	#arc_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(arc_thread_1)
 
 static func load_chain_stack_v3(chain_data: Array) -> void:
 	var last_index := chain_data.size() - 1
@@ -244,9 +261,11 @@ static func load_chain_stack_v3(chain_data: Array) -> void:
 			i += 1
 	var midpoint := chain_data.size() >> 1
 	chain_stack.resize(chain_data.size())
-	chain_thread_1.start(load_range.bind(0, midpoint))
+	#chain_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(chain_thread_1, load_range, [0, midpoint])
 	load_range.bind(midpoint, chain_data.size()).call()
-	chain_thread_1.wait_to_finish()
+	#chain_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(chain_thread_1)
 
 static func load_event_stack_v3(event_data: Array) -> void:
 	var last_index := event_data.size() - 1
@@ -259,9 +278,11 @@ static func load_event_stack_v3(event_data: Array) -> void:
 			i += 1
 	var midpoint := event_data.size() >> 1
 	event_stack.resize(event_data.size())
-	event_thread_1.start(load_range.bind(0, midpoint))
+	#event_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(event_thread_1, load_range, [0, midpoint])
 	load_range.bind(midpoint, event_data.size()).call()
-	event_thread_1.wait_to_finish()
+	#event_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(event_thread_1)
 
 static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Dictionary) -> bool:
 	# Ensures the map_data dict has a version (some maps include the version only on info but not in the data)
@@ -272,39 +293,59 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 			map_data["version"] = info.version
 	
 	if map_data.has("_version"):
-		note_thread_0.start(load_note_stack_v2.bind(Utils.get_array(map_data, "_notes", [])))
-		obstacle_thread_0.start(load_obstacle_stack_v2.bind(Utils.get_array(map_data, "_obstacles", [])))
-		event_thread_0.start(load_event_stack_v2.bind(Utils.get_array(map_data, "_events", [])))
-		arc_thread_0.start(load_arc_stack_v2.bind(Utils.get_array(map_data, "_sliders", [])))
+		#note_thread_0.start(load_note_stack_v2.bind(Utils.get_array(map_data, "_notes", [])))
+		Utils.custom_thread_call(note_thread_0, load_note_stack_v2, [Utils.get_array(map_data, "_notes", [])])
+		#obstacle_thread_0.start(load_obstacle_stack_v2.bind(Utils.get_array(map_data, "_obstacles", [])))
+		Utils.custom_thread_call(obstacle_thread_0, load_obstacle_stack_v2, [Utils.get_array(map_data, "_obstacles", [])])
+		#event_thread_0.start(load_event_stack_v2.bind(Utils.get_array(map_data, "_events", [])))
+		Utils.custom_thread_call(event_thread_0, load_event_stack_v2, [Utils.get_array(map_data, "_events", [])])
+		#arc_thread_0.start(load_arc_stack_v2.bind(Utils.get_array(map_data, "_sliders", [])))
+		Utils.custom_thread_call(arc_thread_0, load_arc_stack_v2, [Utils.get_array(map_data, "_sliders", [])])
 		chain_stack.clear()
 		current_info = info
 		current_difficulty = difficulty
 		if not Settings.disable_map_color:
 			Map.set_colors_from_custom_data()
-		note_thread_0.wait_to_finish()
-		obstacle_thread_0.wait_to_finish()
-		event_thread_0.wait_to_finish()
-		arc_thread_0.wait_to_finish()
+		#note_thread_0.wait_to_finish()
+		Utils.custom_thread_wait_to_finish(note_thread_0)
+		#obstacle_thread_0.wait_to_finish()
+		Utils.custom_thread_wait_to_finish(obstacle_thread_0)
+		#event_thread_0.wait_to_finish()
+		Utils.custom_thread_wait_to_finish(event_thread_0)
+		#arc_thread_0.wait_to_finish()
+		Utils.custom_thread_wait_to_finish(arc_thread_0)
 		return true
 	elif map_data.has("version"):
 		var version := Utils.get_str(map_data, "version", "")
 		if version.begins_with("3."):
-			note_thread_0.start(load_note_stack_v3.bind(Utils.get_array(map_data, "colorNotes", [])))
-			bomb_thread_0.start(load_bomb_stack_v3.bind(Utils.get_array(map_data, "bombNotes", [])))
-			obstacle_thread_0.start(load_obstacle_stack_v3.bind(Utils.get_array(map_data, "obstacles", [])))
-			arc_thread_0.start(load_arc_stack_v3.bind(Utils.get_array(map_data, "sliders", [])))
-			chain_thread_0.start(load_chain_stack_v3.bind(Utils.get_array(map_data, "burstSliders", [])))
-			event_thread_0.start(load_event_stack_v3.bind(Utils.get_array(map_data, "basicBeatmapEvents", [])))
+			#note_thread_0.start(load_note_stack_v3.bind(Utils.get_array(map_data, "colorNotes", [])))
+			Utils.custom_thread_call(note_thread_0, load_note_stack_v3, [Utils.get_array(map_data, "colorNotes", [])])
+			#bomb_thread_0.start(load_bomb_stack_v3.bind(Utils.get_array(map_data, "bombNotes", [])))
+			Utils.custom_thread_call(bomb_thread_0, load_bomb_stack_v3, [Utils.get_array(map_data, "bombNotes", [])])
+			#obstacle_thread_0.start(load_obstacle_stack_v3.bind(Utils.get_array(map_data, "obstacles", [])))
+			Utils.custom_thread_call(obstacle_thread_0, load_obstacle_stack_v3, [Utils.get_array(map_data, "obstacles", [])])
+			#arc_thread_0.start(load_arc_stack_v3.bind(Utils.get_array(map_data, "sliders", [])))
+			Utils.custom_thread_call(arc_thread_0, load_arc_stack_v3, [Utils.get_array(map_data, "sliders", [])])
+			#chain_thread_0.start(load_chain_stack_v3.bind(Utils.get_array(map_data, "burstSliders", [])))
+			Utils.custom_thread_call(chain_thread_0, load_chain_stack_v3, [Utils.get_array(map_data, "burstSliders", [])])
+			#event_thread_0.start(load_event_stack_v3.bind(Utils.get_array(map_data, "basicBeatmapEvents", [])))
+			Utils.custom_thread_call(event_thread_0, load_event_stack_v3, [Utils.get_array(map_data, "basicBeatmapEvents", [])])
 			current_info = info
 			current_difficulty = difficulty
 			if not Settings.disable_map_color:
 				Map.set_colors_from_custom_data()
-			note_thread_0.wait_to_finish()
-			bomb_thread_0.wait_to_finish()
-			obstacle_thread_0.wait_to_finish()
-			arc_thread_0.wait_to_finish()
-			chain_thread_0.wait_to_finish()
-			event_thread_0.wait_to_finish()
+			#note_thread_0.wait_to_finish()
+			Utils.custom_thread_wait_to_finish(note_thread_0)
+			#bomb_thread_0.wait_to_finish()
+			Utils.custom_thread_wait_to_finish(bomb_thread_0)
+			#obstacle_thread_0.wait_to_finish()
+			Utils.custom_thread_wait_to_finish(obstacle_thread_0)
+			#arc_thread_0.wait_to_finish()
+			Utils.custom_thread_wait_to_finish(arc_thread_0)
+			#chain_thread_0.wait_to_finish()
+			Utils.custom_thread_wait_to_finish(chain_thread_0)
+			#event_thread_0.wait_to_finish()
+			Utils.custom_thread_wait_to_finish(event_thread_0)
 			return true
 	vr.log_warning("selected map is an unsupported version")
 	return false

@@ -106,6 +106,7 @@ environment = SubResource("1")
 
 [node name="SongPlayer" type="AudioStreamPlayer" parent="."]
 bus = &"Music"
+playback_type = 1
 
 [node name="SpectatorWindow" parent="." instance=ExtResource("6_g42ih")]
 

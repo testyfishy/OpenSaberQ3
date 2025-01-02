@@ -60,6 +60,7 @@ func _process_map(game: BeepSaber_Game) -> void:
 		var note_info := Map.note_stack.pop_back() as ColorNoteInfo
 		var color := Map.color_left if note_info.color == 0 else Map.color_right
 		note.spawn(note_info, current_beat, color)
+		print("note spawn")
 		note_info_refs.append(note_info)
 		cube_refs.append(note)
 	

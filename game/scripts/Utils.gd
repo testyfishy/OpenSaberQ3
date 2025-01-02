@@ -53,3 +53,26 @@ func unzip(zip_file: String, destination: String) -> void:
 			filea.close()
 	@warning_ignore("return_value_discarded")
 	zreader.close()
+
+
+var thread_finished : Array[Thread] = []
+var fake_thread_finished = {}
+
+func custom_thread_wait_to_finish(thread : Thread):
+	if thread in thread_finished:
+		var r = thread.wait_to_finish()
+		thread_finished.remove_at(thread_finished.find(thread))
+		return r
+	elif thread in fake_thread_finished:
+		var r = fake_thread_finished[thread]
+		fake_thread_finished.erase(thread)
+		return r
+	return null
+
+func custom_thread_call(thread : Thread, function : Callable, params := []):
+	if OS.get_name() == &"Web":
+		fake_thread_finished[thread] = function.callv(params)
+		return 0
+	else:
+		thread_finished.append(thread)
+		return thread.start(function.bindv(params))

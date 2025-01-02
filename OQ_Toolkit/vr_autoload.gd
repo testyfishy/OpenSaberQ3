@@ -170,7 +170,7 @@ var _active_scene_path: String # this assumes that only a single scene will ever
 ###############################################################################
 
 var webxr_initializer: CanvasLayer
-var xr_interface: OpenXRInterface
+var xr_interface: XRInterface
 
 func initialize(origin: XROrigin3D, camera: XRCamera3D, left_hand: BeepSaberController, right_hand: BeepSaberController,
 	render_scale: float = 1.0) -> void:
@@ -187,17 +187,18 @@ func initialize(origin: XROrigin3D, camera: XRCamera3D, left_hand: BeepSaberCont
 		webxr_initializer = webxr
 		return
 	
-	xr_interface = XRServer.find_interface("OpenXR") as OpenXRInterface
+	xr_interface = XRServer.find_interface("OpenXR") as XRInterface
 	if xr_interface: xr_interface.render_target_size_multiplier = render_scale
 	if xr_interface and xr_interface.is_initialized():
 		log_info("OpenXR initialised successfully")
-		var fps := xr_interface.get_available_display_refresh_rates()
-		log_info("avaliable fps: "+str(fps))
-		if fps.size() >= 1:
-			var max_fps: Variant = fps[fps.size() - 1]
-			if max_fps is float:
-				xr_interface.set_display_refresh_rate(max_fps as float)
-				Engine.set_physics_ticks_per_second(max_fps as int)
+		if xr_interface.has_method(&"get_available_display_refresh_rates"):
+			var fps : Array[int] = xr_interface.get_available_display_refresh_rates()
+			log_info("avaliable fps: "+str(fps))
+			if fps and fps.size() >= 1:
+				var max_fps: Variant = fps[fps.size() - 1]
+				if max_fps is float:
+					xr_interface.set_display_refresh_rate(max_fps as float)
+					Engine.set_physics_ticks_per_second(max_fps as int)
 		
 		# Turn off v-sync!
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
