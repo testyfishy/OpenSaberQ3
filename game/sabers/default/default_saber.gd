@@ -19,7 +19,7 @@ func set_color(color: Color) -> void:
 
 func set_thickness(value: float) -> void:
 	light_mesh.scale.x = value
-	light_mesh.scale.y = value
+	light_mesh.scale.z = value
 
 func set_trail(enabled: bool = true) -> void:
 	tail.visible = enabled

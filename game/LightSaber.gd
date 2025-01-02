@@ -75,7 +75,7 @@ func _ready() -> void:
 	set_saber(Settings.SABER_VISUALS[Settings.saber_visual][1])
 	_anim.play(&"QuickHide")
 	saber_visual.quickhide()
-	saber_visual.set_thickness(Settings.thickness * 0.01)
+	saber_visual.set_thickness(Settings.thickness)
 	saber_visual.set_trail(Settings.saber_tail)
 	
 	@warning_ignore("return_value_discarded")

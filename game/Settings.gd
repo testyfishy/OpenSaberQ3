@@ -133,7 +133,7 @@ const platform_default_values = {
 }
 
 var default_values = {
-	thickness = 100.0,
+	thickness = 1.0,
 	cube_cuts_falloff = true,
 	color_left = Color("ff1a1a"),
 	color_right = Color("1a1aff"),
@@ -187,7 +187,7 @@ func load_old_config() -> void:
 		restore_defaults()
 		return
 	var settings_dict := settings_var as Dictionary
-	thickness = Utils.get_float(settings_dict, "thickness", 100)
+	thickness = Utils.get_float(settings_dict, "thickness", 1)
 	if settings_dict.has("COLOR_LEFT") and settings_dict["COLOR_LEFT"] is Color:
 		@warning_ignore("unsafe_cast")
 		color_left = settings_dict["COLOR_LEFT"] as Color

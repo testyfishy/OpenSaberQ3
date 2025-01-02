@@ -193,14 +193,14 @@ func _ready() -> void:
 	@warning_ignore("return_value_discarded")
 	Scoreboard.points_awarded.connect(points_label_driver.show_points)
 	
-	recenter()
-	
 	#render common assets for a couple of frames to prevent performance issues when loading them mid game
 	($pre_renderer as Node3D).visible = true
 	await get_tree().process_frame
 	await get_tree().process_frame
 	await get_tree().process_frame
 	($pre_renderer as Node3D).queue_free()
+	
+	recenter()
 
 func on_settings_changed(key: StringName) -> void:
 	match key:
