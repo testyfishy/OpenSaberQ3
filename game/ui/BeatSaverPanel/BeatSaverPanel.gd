@@ -244,6 +244,8 @@ func download_next() -> void:
 
 func _on_HTTPRequest_download_completed(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray) -> void:
 #	$download.disabled = false
+	if body.slice(0, 10) == "<!DOCTYPE html>".to_utf8_buffer().slice(0, 10):
+		result = -1
 	if result == 0:
 		var has_error := false
 		var tempdir := Constants.APPDATA_PATH+"temp"
@@ -287,8 +289,11 @@ func _on_HTTPRequest_download_completed(result: int, response_code: int, headers
 			main_menu_ref._on_LoadPlaylists_Button_pressed()
 			label.text = "All downloaded"
 	else:
-		label.text = "Download error"
+		label.text = "Download error "+str(result)
+		if result == -1:
+			label.text += "\nInvalid URL or server is down"
 		vr.log_info("download error "+str(result))
+		downloading.remove_at(0)
 	
 	var canvas := get_parent().get_parent()
 	if canvas is OQ_UI2DCanvas:
