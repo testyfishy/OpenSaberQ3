@@ -164,6 +164,9 @@ func _physics_process(_dt: float) -> void:
 	_check_and_update_saber(left_controller, left_saber)
 	_check_and_update_saber(right_controller, right_saber)
 
+func _enter_tree() -> void:
+	GlobalReferences.main_game_scene = self
+
 func _ready() -> void:
 	var xr_camera := $XROrigin3D/XRCamera3D as XRCamera3D
 	vr.initialize(

@@ -22,6 +22,8 @@ func _ready():
 		# be called sometime later to let us know if it's supported or not.
 		webxr_interface.is_session_supported("immersive-vr")
 		
+		await get_tree().create_timer(0.5).timeout
+		GlobalReferences.main_game_scene.recenter()
 
 func _webxr_session_supported(session_mode, supported):
 	if session_mode == 'immersive-vr':
