@@ -17,6 +17,8 @@ var _cover_texture_create_sw := StopwatchFactory.create("cover_texture_create",1
 @export var main_song_player_ref: AudioStreamPlayer
 @export var keyboard: OQ_UI2DKeyboard
 
+@export var song_uploader_ref: SongUploader
+
 @onready var playlist_selector := $PlaylistSelector as OptionButton
 @onready var _bg_img_loader := preload("res://game/scripts/BackgroundImgLoader.gd").new()
 
@@ -314,6 +316,14 @@ func _ready() -> void:
 	keyboard._text_edit.text_changed.connect(_text_input_changed)
 	@warning_ignore("return_value_discarded")
 	keyboard._text_edit.focus_exited.connect(_text_input_enter)
+	
+	playlist_selector.select(1)
+	playlist_selector.item_selected.emit(1)
+	
+	if song_uploader_ref:
+		$upload_url.text = "Manually Upload Custom Songs: \n%s"%[
+			song_uploader_ref.get_server_url()
+		]
 
 
 func _on_Play_Button_pressed() -> void:

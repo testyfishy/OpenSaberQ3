@@ -1,4 +1,4 @@
-[gd_scene load_steps=41 format=3 uid="uid://dqb3ybvpsfcbw"]
+[gd_scene load_steps=42 format=3 uid="uid://dqb3ybvpsfcbw"]
 
 [ext_resource type="PackedScene" uid="uid://cs8e62lsifik5" path="res://game/floor.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://d04fmtjhjx4oy" path="res://OQ_Toolkit/OQ_UI2D/OQ_UI2DLabel.tscn" id="2"]
@@ -32,6 +32,7 @@
 [ext_resource type="PackedScene" uid="uid://bmdbiqndkvcm6" path="res://game/ui/BeatSageUI/BeatSageUI.tscn" id="29"]
 [ext_resource type="PackedScene" uid="uid://cbbovki8xp6e2" path="res://game/GodotSplash.tscn" id="29_vrn2v"]
 [ext_resource type="PackedScene" uid="uid://cgfj82g2xp1ne" path="res://OQ_Toolkit/OQ_UI2D/OQ_UI2DLogWindow.tscn" id="31"]
+[ext_resource type="Script" path="res://game/scripts/song_uploader.gd" id="33_l0uxg"]
 
 [sub_resource type="Environment" id="1"]
 background_mode = 2
@@ -167,9 +168,10 @@ controller = NodePath("..")
 [node name="MainMenu_OQ_UI2DCanvas" parent="." instance=ExtResource("3")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 1, 0, 1.5, -1)
 
-[node name="BeepSaberMainMenu" parent="MainMenu_OQ_UI2DCanvas" node_paths=PackedStringArray("main_song_player_ref", "keyboard") instance=ExtResource("11")]
+[node name="BeepSaberMainMenu" parent="MainMenu_OQ_UI2DCanvas" node_paths=PackedStringArray("main_song_player_ref", "keyboard", "song_uploader_ref") instance=ExtResource("11")]
 main_song_player_ref = NodePath("../../SongPlayer")
 keyboard = NodePath("../../Keyboard_highscore")
+song_uploader_ref = NodePath("../../SongUploader")
 
 [node name="Multiplier_Label" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.75, 1.375, -2.5)
@@ -274,6 +276,10 @@ visible = false
 cancelable = false
 min_chars_to_enable_enter = 1
 is_name_input = true
+
+[node name="SongUploader" type="Node" parent="." node_paths=PackedStringArray("main_menu_ref")]
+script = ExtResource("33_l0uxg")
+main_menu_ref = NodePath("../MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu")
 
 [connection signal="finished" from="SongPlayer" to="." method="_on_song_ended"]
 [connection signal="area_entered" from="XROrigin3D/XRCamera3D/PlayerHead" to="." method="_on_PlayerHead_area_entered"]
