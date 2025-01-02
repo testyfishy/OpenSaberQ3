@@ -108,6 +108,10 @@ var spectator_hud: bool:
 
 
 func _ready() -> void:
+	if OS.get_name() in platform_default_values.keys():
+		for key in platform_default_values[OS.get_name()].keys():
+			default_values[key] = platform_default_values[OS.get_name()][key]
+	
 	if FileAccess.file_exists(CONFIG_PATH):
 		reload()
 	elif FileAccess.file_exists(OLD_CONFIG_PATH):
@@ -116,8 +120,19 @@ func _ready() -> void:
 		restore_defaults()
 		save()
 
+const platform_default_values = {
+	Android = {
+		glare = false,
+	},
+	Web = {
+		glare = false,
+		saber_tail = false,
+		cube_cuts_falloff = false,
+		events = false,
+	},
+}
 
-const default_values = {
+var default_values = {
 	thickness = 100.0,
 	cube_cuts_falloff = true,
 	color_left = Color("ff1a1a"),
@@ -209,12 +224,12 @@ func load_old_config() -> void:
 			if right_array[1] is Vector3:
 				@warning_ignore("unsafe_cast")
 				right_saber_offset_rot = right_array[1] as Vector3
-	cube_cuts_falloff = Utils.get_bool(settings_dict, "cube_cuts_falloff", true)
-	saber_tail = Utils.get_bool(settings_dict, "saber_tail", true)
-	glare = Utils.get_bool(settings_dict, "glare", true)
+	cube_cuts_falloff = Utils.get_bool(settings_dict, "cube_cuts_falloff", true, {"Web": false})
+	saber_tail = Utils.get_bool(settings_dict, "saber_tail", true, {"Web": false})
+	glare = Utils.get_bool(settings_dict, "glare", true, {"Android": false, "Web": false})
 	show_fps = Utils.get_bool(settings_dict, "show_fps", false)
 	bombs_enabled = Utils.get_bool(settings_dict, "bombs_enabled", true)
-	events = Utils.get_bool(settings_dict, "events", true)
+	events = Utils.get_bool(settings_dict, "events", true, {"Web": false})
 	disable_map_color = Utils.get_bool(settings_dict, "disable_map_color", false)
 	player_height_offset = Utils.get_float(settings_dict, "player_height_offset", 0.0)
 

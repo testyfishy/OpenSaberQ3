@@ -1,33 +1,43 @@
 extends Node
 
-func get_str(dict: Dictionary, key: String, default: String) -> String:
-		if dict.has(key) and dict[key] is String:
-			@warning_ignore("unsafe_cast")
-			return dict[key] as String
-		return default
+func get_str(dict: Dictionary, key: String, default: String, platform_defaults: Dictionary = {}) -> String:
+	if dict.has(key) and dict[key] is String:
+		@warning_ignore("unsafe_cast")
+		return dict[key] as String
+	if OS.get_name() in platform_defaults.keys():
+		return platform_defaults[OS.get_name()]
+	return default
 
-func get_bool(dict: Dictionary, key: String, default: bool) -> bool:
+func get_bool(dict: Dictionary, key: String, default: bool, platform_defaults: Dictionary = {}) -> bool:
 	if dict.has(key) and dict[key] is bool:
 		@warning_ignore("unsafe_cast")
 		return dict[key] as bool
+	if OS.get_name() in platform_defaults.keys():
+		return platform_defaults[OS.get_name()]
 	return default
 
-func get_float(dict: Dictionary, key: String, default: float) -> float:
+func get_float(dict: Dictionary, key: String, default: float, platform_defaults: Dictionary = {}) -> float:
 	if dict.has(key) and dict[key] is float:
 		@warning_ignore("unsafe_cast")
 		return dict[key] as float
+	if OS.get_name() in platform_defaults.keys():
+		return platform_defaults[OS.get_name()]
 	return default
 
-func get_array(dict: Dictionary, key: String, default: Array) -> Array:
+func get_array(dict: Dictionary, key: String, default: Array, platform_defaults: Dictionary = {}) -> Array:
 	if dict.has(key) and dict[key] is Array:
 		@warning_ignore("unsafe_cast")
 		return dict[key] as Array
+	if OS.get_name() in platform_defaults.keys():
+		return platform_defaults[OS.get_name()]
 	return default
 
-func get_dict(dict: Dictionary, key: String, default: Dictionary) -> Dictionary:
+func get_dict(dict: Dictionary, key: String, default: Dictionary, platform_defaults: Dictionary = {}) -> Dictionary:
 	if dict.has(key) and dict[key] is Dictionary:
 		@warning_ignore("unsafe_cast")
 		return dict[key] as Dictionary
+	if OS.get_name() in platform_defaults.keys():
+		return platform_defaults[OS.get_name()]
 	return default
 
 func unzip(zip_file: String, destination: String) -> void:

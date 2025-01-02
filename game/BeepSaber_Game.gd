@@ -5,6 +5,8 @@
 extends Node3D
 class_name BeepSaber_Game
 
+var version := "0.5.0"
+
 var gamestate_bootup := GameState.new()
 var gamestate_mapcomplete := GameStateMapComplete.new()
 var gamestate_mapselection := GameStateMapSelection.new()

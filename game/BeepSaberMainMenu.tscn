@@ -198,7 +198,7 @@ fixed_icon_size = Vector2i(60, 60)
 
 [node name="PlaylistSelector" type="OptionButton" parent="."]
 layout_mode = 0
-offset_left = 139.0
+offset_left = 639.0
 offset_top = 12.0
 offset_right = 845.0
 offset_bottom = 60.0
@@ -263,6 +263,21 @@ scroll_node_path = NodePath("../SongsMenu")
 
 [node name="diff_vr_slider" parent="." instance=ExtResource("6")]
 scroll_node_path = NodePath("../DifficultyMenu")
+
+[node name="version" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -56.0
+offset_top = -152.0
+offset_right = -16.0
+offset_bottom = -133.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "0.4.1"
 
 [connection signal="pressed" from="Play_Button" to="." method="_on_Play_Button_pressed"]
 [connection signal="button_up" from="Delete_Button" to="." method="_on_Delete_Button_button_up"]

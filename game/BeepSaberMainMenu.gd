@@ -16,6 +16,7 @@ var _cover_texture_create_sw := StopwatchFactory.create("cover_texture_create",1
 
 @export var main_song_player_ref: AudioStreamPlayer
 @export var keyboard: OQ_UI2DKeyboard
+@export var beepsaber_game : BeepSaber_Game
 
 @export var song_uploader_ref: SongUploader
 
@@ -324,6 +325,8 @@ func _ready() -> void:
 		$upload_url.text = "Manually Upload Custom Songs: \n%s"%[
 			song_uploader_ref.get_server_url()
 		]
+	
+	$version.text = beepsaber_game.version
 
 
 func _on_Play_Button_pressed() -> void:
