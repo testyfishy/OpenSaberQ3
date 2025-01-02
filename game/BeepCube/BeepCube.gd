@@ -155,6 +155,8 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 # cut the cube by creating two rigid bodies and using a CSGBox to create
 # the cut plane
 func _create_cut_rigid_body(cutplane: Plane) -> void:
+	if !Settings.cube_cuts_falloff:
+		return
 	var piece_left := CutPiece.new()
 	var piece_right := CutPiece.new()
 	piece_left.global_transform = global_transform

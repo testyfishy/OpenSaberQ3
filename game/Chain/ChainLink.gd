@@ -138,6 +138,8 @@ func set_collision_disabled(value: bool) -> void:
 	($Area3D/CollisionShape3D as CollisionShape3D).disabled = value
 
 func _create_cut_rigid_body(cutplane: Plane) -> void:
+	if !Settings.cube_cuts_falloff:
+		return
 	var piece_left := CutPiece.new()
 	var piece_right := CutPiece.new()
 	var mesh_ref := ($Mesh as MeshInstance3D)
