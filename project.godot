@@ -156,6 +156,17 @@ shading/overrides/force_blinn_over_ggx.mobile=false
 quality/filters/msaa=6
 quality/depth/hdr=false
 
+[shader_globals]
+
+left_saber={
+"type": "vec3",
+"value": Vector3(-0.5, 0, 0)
+}
+right_saber={
+"type": "vec3",
+"value": Vector3(0.5, 0, 0)
+}
+
 [xr]
 
 openxr/enabled=true

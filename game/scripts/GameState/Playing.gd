@@ -37,6 +37,7 @@ func _physics_process(game: BeepSaber_Game) -> void:
 
 var bomb_template := load("res://game/Bomb/Bomb.tscn") as PackedScene
 var wall_template := load("res://game/Wall/Wall.tscn") as PackedScene
+var arc_template := load("res://game/Arc/Arc.tscn") as PackedScene
 const BEATS_AHEAD := 4.0
 
 func _process_map(game: BeepSaber_Game) -> void:
@@ -73,6 +74,25 @@ func _process_map(game: BeepSaber_Game) -> void:
 		var wall := wall_template.instantiate() as Wall
 		wall.spawn(Map.obstacle_stack.pop_back() as ObstacleInfo, current_beat)
 		game.track.add_child(wall)
+	
+	while not Map.arc_stack.is_empty() and Map.arc_stack[-1].head_beat <= look_ahead:
+		var arc := arc_template.instantiate() as Arc
+		var arc_info := Map.arc_stack.pop_back() as ArcInfo
+		
+		# find starting cube to use as magnet trigger
+		var cube : BeepCube
+		var cube_id := cube_refs.size()-1
+		while cube_id >= 0:
+			var current_cube : BeepCube = cube_refs[cube_id]
+			if (current_cube.beat == arc_info.head_beat
+				and current_cube.which_saber == arc_info.color
+				):
+					cube = current_cube
+					break
+			cube_id -= 1
+		
+		arc.spawn(arc_info, current_beat, cube)
+		game.track.add_child(arc)
 	
 	while not Map.chain_stack.is_empty() and Map.chain_stack[-1].head_beat <= look_ahead:
 		var chain_info := Map.chain_stack.pop_back() as ChainInfo

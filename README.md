@@ -19,6 +19,7 @@ this stand alone version was forked so that it can be changed and developed inde
 ![screenshot03](doc/images/OS0.4.0_3.gif)
 # About the implementation
 This game uses godot 4.3. The implementation supports to load and play maps from [BeatSaver](https://beatsaver.com/).
+To export for android headsets the godot openxr vendors plugin may be needed
 
 There is one demo song included that is part of the deployed package.
 

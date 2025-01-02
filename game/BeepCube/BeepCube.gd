@@ -6,6 +6,9 @@ class_name BeepCube
 # manage when an instanced scene is free again.
 signal scene_released(this: BeepCube)
 
+# emitted when the cube gets cutted, correct_saber is true if the right saber was used
+signal cutted(correct_saber: bool)
+
 # the animation player contains the span animation that is applied to the CubeMeshAnimation node
 @onready var collision_big := $BeepCube_Big/CollisionBig as CollisionShape3D
 @onready var collision_small := $BeepCube_Small/CollisionSmall as CollisionShape3D
@@ -139,8 +142,10 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 		# allows a bit of save margin where the beat is considered 100% correct
 		var beat_accuracy := clampf((1.0 - absf(global_transform.origin.z)) / 0.5, 0.0, 1.0)
 		Scoreboard.note_cut(transform.origin, beat_accuracy, cut_angle_accuracy, cut_distance_accuracy, travel_distance_factor)
+		cutted.emit(true)
 	else:
 		Scoreboard.bad_cut(transform.origin)
+		cutted.emit(false)
 	
 	# reset the movement tracking volume for the next cut
 	controller.reset_movement_aabb()
