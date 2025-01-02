@@ -191,6 +191,8 @@ func _ready() -> void:
 	@warning_ignore("return_value_discarded")
 	Scoreboard.points_awarded.connect(points_label_driver.show_points)
 	
+	recenter()
+	
 	#render common assets for a couple of frames to prevent performance issues when loading them mid game
 	($pre_renderer as Node3D).visible = true
 	await get_tree().process_frame
@@ -355,3 +357,9 @@ func _on_settings_Panel_apply() -> void:
 func _on_BeepCubePool_scene_instanced(cube: BeepCube) -> void:
 	cube.visible = false
 	track.add_child(cube)
+
+
+func recenter():
+	var xr_camera := $XROrigin3D/XRCamera3D as XRCamera3D
+	xr_origin.rotation.y -= xr_camera.global_rotation.y
+	xr_origin.position -= (xr_camera.global_position * Vector3(1,0,1)) - Vector3(0,0,1)

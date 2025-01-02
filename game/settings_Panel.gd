@@ -2,6 +2,7 @@ extends Panel
 class_name SettingsPanel
 
 signal apply()
+@export var beepsaber_game : BeepSaber_Game
 
 @onready var saber_control := $ScrollContainer/VBox/SaberTypeRow/saber as OptionButton
 @onready var glare_control := $ScrollContainer/VBox/glare as CheckButton
@@ -208,3 +209,17 @@ func _on_spectator_view_toggled(value: bool) -> void:
 
 func _on_spectator_hud_toggled(value: bool) -> void:
 	Settings.spectator_hud = value
+
+
+func _on_recenter_button_up() -> void:
+	var recenter_button : Button = $ScrollContainer/VBox/recenter
+	recenter_button.disabled = true
+	recenter_button.text = "3.."
+	await get_tree().create_timer(1).timeout
+	recenter_button.text = "2.."
+	await get_tree().create_timer(1).timeout
+	recenter_button.text = "1.."
+	await get_tree().create_timer(1).timeout
+	recenter_button.text = "Recenter"
+	recenter_button.disabled = false
+	beepsaber_game.recenter()
