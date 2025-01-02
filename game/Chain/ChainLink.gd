@@ -148,9 +148,16 @@ func _create_cut_rigid_body(cutplane: Plane) -> void:
 	piece_left.transform = transform
 	piece_right.transform = transform
 	
-	var left_mat := mesh_ref.material_override.duplicate() as ShaderMaterial
+	var left_mat : ShaderMaterial = GlobalReferences.scene_pool.get_pooled_cut_material(mesh_ref.material_override)
+	var right_mat : ShaderMaterial = GlobalReferences.scene_pool.get_pooled_cut_material(mesh_ref.material_override)
+	for property in mesh_ref.material_override.get_property_list():
+		if property.name.begins_with("shader_parameter/"):
+			var value = mesh_ref.material_override.get(property.name)
+			left_mat.set(property.name, value)
+			right_mat.set(property.name, value)
+			
 	left_mat.set_shader_parameter(&"cutted", true)
-	var right_mat := left_mat.duplicate() as ShaderMaterial
+	right_mat.set_shader_parameter(&"cutted", true)
 	
 	# calculate angle and position of the cut
 	var cut_angle_abs := Vector2(cutplane.normal.x, cutplane.normal.y).angle()
