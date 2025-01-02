@@ -12,7 +12,8 @@ func _ready() -> void:
 	@warning_ignore("return_value_discarded")
 	Settings.changed.connect(on_settings_changed)
 	
-	visible = Settings.spectator_view
+	if not OS.get_name() in ["Android", "Web"]:
+		visible = Settings.spectator_view
 	point_label.visible = Settings.spectator_view
 	multiplier_label.visible = Settings.spectator_view
 	percent_indicator.visible = Settings.spectator_view
@@ -21,7 +22,8 @@ func _ready() -> void:
 func on_settings_changed(key: StringName) -> void:
 	match key:
 		&"spectator_view":
-			visible = Settings.spectator_view
+			if not OS.get_name() in ["Android", "Web"]:
+				visible = Settings.spectator_view
 		&"spectator_hud":
 			point_label.visible = Settings.spectator_hud
 			multiplier_label.visible = Settings.spectator_hud
