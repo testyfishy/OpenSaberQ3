@@ -43,6 +43,11 @@ static var event_thread_1 := Thread.new()
 
 # not officially part of the spec, but used by mods a lot
 static func set_colors_from_custom_data() -> void:
+	if Settings.disable_map_color:
+		Map.color_left = Settings.color_left
+		Map.color_right = Settings.color_right
+		return
+	
 	var set_colors := func(data: Dictionary, color_name: String) -> bool:
 		var left_name := color_name % "Left"
 		var right_name := color_name % "Right"
@@ -304,8 +309,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 		chain_stack.clear()
 		current_info = info
 		current_difficulty = difficulty
-		if not Settings.disable_map_color:
-			Map.set_colors_from_custom_data()
+		Map.set_colors_from_custom_data()
 		#note_thread_0.wait_to_finish()
 		Utils.custom_thread_wait_to_finish(note_thread_0)
 		#obstacle_thread_0.wait_to_finish()
@@ -332,8 +336,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 			Utils.custom_thread_call(event_thread_0, load_event_stack_v3, [Utils.get_array(map_data, "basicBeatmapEvents", [])])
 			current_info = info
 			current_difficulty = difficulty
-			if not Settings.disable_map_color:
-				Map.set_colors_from_custom_data()
+			Map.set_colors_from_custom_data()
 			#note_thread_0.wait_to_finish()
 			Utils.custom_thread_wait_to_finish(note_thread_0)
 			#bomb_thread_0.wait_to_finish()

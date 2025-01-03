@@ -15,10 +15,16 @@ var C_RIGHT := Color()
 @onready var r_sprite := $SubViewport/ColorRect/burn_r/sprite as Panel
 @onready var timer_clear := $TimerClear as Timer
 
+var is_disabled := false
+
 func _ready() -> void:
 	var material := ($Node3D/cutFloor as MeshInstance3D).material_override as StandardMaterial3D
 	material.albedo_texture = sub_viewport.get_texture()
 	material.emission_texture = sub_viewport.get_texture()
+	
+	if OS.get_name() == &"Web":
+		sub_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+		is_disabled = true
 
 func update_left_color(color: Color) -> void:
 	C_LEFT = color
@@ -31,6 +37,8 @@ func update_right_color(color: Color) -> void:
 var left_is_out := false
 var right_is_out := false
 func burn_mark(pos:=Vector3(0,0,-50),type:=0) -> void:
+	if is_disabled:
+		return
 	var newpos := Vector2(
 		(pos.x+1)*256,
 		pos.z*256
