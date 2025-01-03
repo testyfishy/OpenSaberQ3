@@ -192,7 +192,7 @@ func initialize(origin: XROrigin3D, camera: XRCamera3D, left_hand: BeepSaberCont
 	if xr_interface and xr_interface.is_initialized():
 		log_info("OpenXR initialised successfully")
 		if xr_interface.has_method(&"get_available_display_refresh_rates"):
-			var fps : Array[int] = xr_interface.get_available_display_refresh_rates()
+			var fps : Array = xr_interface.get_available_display_refresh_rates()
 			log_info("avaliable fps: "+str(fps))
 			if fps and fps.size() >= 1:
 				var max_fps: Variant = fps[fps.size() - 1]
