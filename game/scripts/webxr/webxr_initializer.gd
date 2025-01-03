@@ -21,9 +21,6 @@ func _ready():
 		# (which we connected to the "session_supported" signal above) will
 		# be called sometime later to let us know if it's supported or not.
 		webxr_interface.is_session_supported("immersive-vr")
-		
-		await get_tree().create_timer(0.5).timeout
-		GlobalReferences.main_game_scene.recenter()
 
 func _webxr_session_supported(session_mode, supported):
 	if session_mode == 'immersive-vr':
@@ -66,6 +63,9 @@ func _webxr_session_started():
 	# work a little differently in 'bounded-floor' versus 'local-floor'.
 	print ("Reference space type: " + webxr_interface.reference_space_type)
 	vr.inVR = true
+	
+	await get_tree().create_timer(0.5).timeout
+	GlobalReferences.main_game_scene.recenter()
 
 func _webxr_session_ended():
 	$Button.visible = true
