@@ -136,6 +136,9 @@ func _update_keyboard(dt: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if vr.inVR:
+		return
+	
 	# basic keyboard events
 	if (event is InputEventKey):
 		var eventKey := event as InputEventKey
@@ -165,5 +168,8 @@ func _input(event: InputEvent) -> void:
 
 
 func _physics_process(dt: float) -> void:
+	if vr.inVR:
+		return
+	
 	info_rect.visible = info_label_visible
 	_update_keyboard(dt)
