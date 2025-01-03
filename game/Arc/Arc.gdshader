@@ -28,18 +28,18 @@ global uniform vec3 right_saber;
 
 void vertex() {
 	tip_dist = length(VERTEX);
-	
+
 	vec3 saber_pos = left_saber;
 	if (saber_magnet == 0){
 		saber_pos = vec3(0.0,0.0,9999.0);
 	}else if (saber_magnet == 2){
 		saber_pos = right_saber;
 	}
-	
+
 	vec3 wrld_pos = NODE_POSITION_WORLD + VERTEX;
 	dist = abs(wrld_pos.z - saber_pos.z);
 	float force = max(0.0, 1.0 - (dist / distance_effect));
-	VERTEX = mix(wrld_pos, saber_pos, 
+	VERTEX = mix(wrld_pos, saber_pos,
 		pow(force, distance_power) * min(tip_dist / distance_fade_tip_max, 1.0)
 		) - NODE_POSITION_WORLD;
 	to_discard = float(wrld_pos.z > saber_pos.z);
@@ -54,5 +54,5 @@ void fragment() {
 	ALPHA *= clamp(pow(texture(noise, UV*noise_scale+vec2(TIME*noise_speed,0.0)).r, noise_pow) * noise_mult, 0.0, 1.0);
 	ALBEDO = color.rgb;
 	EMISSION = color.rgb * emission;
-	
+
 }

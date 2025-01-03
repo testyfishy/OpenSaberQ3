@@ -119,9 +119,9 @@ static func load_note_stack_v2(note_data: Array) -> void:
 	var midpoint := note_data.size() >> 1
 	#note_thread_1.start(load_range.bind(0, midpoint))
 	Utils.custom_thread_call(note_thread_1, load_range, [0, midpoint])
-	var total_second_half := load_range.bind(midpoint, note_data.size()).call() as Array[Array]
-	#var total_first_half := note_thread_1.wait_to_finish() as Array[Array]
-	var total_first_half := Utils.custom_thread_wait_to_finish(note_thread_1) as Array[Array]
+	var total_second_half : Array[Array] = load_range.bind(midpoint, note_data.size()).call()
+	#var total_first_half : Array[Array] = note_thread_1.wait_to_finish()
+	var total_first_half : Array[Array] = Utils.custom_thread_wait_to_finish(note_thread_1)
 	note_stack = total_first_half[0] + total_second_half[0]
 	bomb_stack = total_first_half[1] + total_second_half[1]
 	note_stack.reverse()

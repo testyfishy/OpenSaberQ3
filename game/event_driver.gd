@@ -71,6 +71,7 @@ func set_all_off() -> void:
 			turn_light_off(i)
 
 func set_all_on(left: Color, right: Color) -> void:
+	if !disabled:
 		update_left_color(left)
 		update_right_color(right)
 		ring_holder.visible = true

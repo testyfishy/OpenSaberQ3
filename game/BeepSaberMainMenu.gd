@@ -327,6 +327,8 @@ func _ready() -> void:
 		]
 	
 	$version.text = beepsaber_game.version
+	if OS.get_name() == &"Web":
+		$Exit_Button.hide()
 
 
 func _on_Play_Button_pressed() -> void:

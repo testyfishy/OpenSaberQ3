@@ -43,6 +43,10 @@ func _ready() -> void:
 	
 	set_controls_from_settings()
 	_play_ui_sound_demo = true
+	
+	if OS.get_name() == &"Web":
+		# way too heavy for webxr
+		$ScrollContainer/VBox/glare.hide()
 
 func set_controls_from_settings() -> void:
 	saber_control.clear()

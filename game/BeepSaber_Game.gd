@@ -166,6 +166,9 @@ func _physics_process(_dt: float) -> void:
 
 func _enter_tree() -> void:
 	GlobalReferences.main_game_scene = self
+	
+	@warning_ignore("return_value_discarded")
+	Settings.changed.connect(on_settings_changed)
 
 func _ready() -> void:
 	var xr_camera := $XROrigin3D/XRCamera3D as XRCamera3D
@@ -182,9 +185,6 @@ func _ready() -> void:
 	
 	if not vr.inVR:
 		xr_origin.add_child(preload("res://OQ_Toolkit/OQ_ARVROrigin/Feature_VRSimulator.tscn").instantiate())
-	
-	@warning_ignore("return_value_discarded")
-	Settings.changed.connect(on_settings_changed)
 	
 	UI_AudioEngine.attach_children(highscore_keyboard)
 	UI_AudioEngine.attach_children(online_search_keyboard)
@@ -206,6 +206,8 @@ func _ready() -> void:
 	recenter()
 
 func on_settings_changed(key: StringName) -> void:
+	# ensures proper initialization of tree for proper first frame setting loading
+	await get_tree().process_frame
 	match key:
 		&"color_left":
 			update_left_color(Settings.color_left)
@@ -225,6 +227,8 @@ func set_colors_from_settings() -> void:
 	update_right_color(Settings.color_right)
 
 func update_left_color(color: Color) -> void:
+	if !left_saber:
+		await get_tree().process_frame
 	left_saber.set_color(color)
 	Arc.left_material.set_shader_parameter(&"color", color)
 	Arc.left_material_magnet.set_shader_parameter(&"color", color)
@@ -234,6 +238,8 @@ func update_left_color(color: Color) -> void:
 	standing_ground.update_left_color(color)
 
 func update_right_color(color: Color) -> void:
+	if !left_saber:
+		await get_tree().process_frame
 	right_saber.set_color(color)
 	Arc.right_material.set_shader_parameter(&"color", color)
 	Arc.right_material_magnet.set_shader_parameter(&"color", color)
