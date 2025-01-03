@@ -8,16 +8,19 @@ var server = TCPServer.new()
 const UPLOAD_DIR = Constants.APPDATA_PATH+"temp/"
 const CRLF = "\r\n"
 
+var active := false
+
 # reference to the main main node (used for playing downloadable song previews)
 @export var main_menu_ref: MainMenu
 
-func _ready():
+func _enter_tree():
 	if not DirAccess.dir_exists_absolute(UPLOAD_DIR):
 		DirAccess.make_dir_recursive_absolute(UPLOAD_DIR)
 	
 	var err = server.listen(PORT)
 	if err == OK:
 		print("Server started on ", get_server_url())
+		active = true
 	else:
 		print("Failed to start server: ", err)
 

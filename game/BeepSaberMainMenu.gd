@@ -321,10 +321,12 @@ func _ready() -> void:
 	playlist_selector.select(1)
 	playlist_selector.item_selected.emit(1)
 	
-	if song_uploader_ref:
+	if song_uploader_ref and song_uploader_ref.active:
 		$upload_url.text = "Manually Upload Custom Songs: \n%s"%[
 			song_uploader_ref.get_server_url()
 		]
+	else:
+		$upload_url.text = ""
 	
 	$version.text = beepsaber_game.version
 	if OS.get_name() == &"Web":
