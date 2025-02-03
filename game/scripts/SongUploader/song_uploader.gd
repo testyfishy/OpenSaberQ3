@@ -7,6 +7,8 @@ var server := TCPServer.new()
 @export var PORT := 45800
 const UPLOAD_DIR := Constants.APPDATA_PATH+"temp/"
 const CRLF := "\r\n"
+const CRLFCRLF := "\r\n\r\n"
+const GET := "GET "
 
 var active := false
 
@@ -46,47 +48,44 @@ func handle_connection(connection: StreamPeerTCP) -> void:
 	var headers_complete := false
 	var buffer := PackedByteArray()
 	
-	var pulls := 0
 	while not headers_complete:
 		if connection.get_available_bytes() > 0:
 			buffer.append_array(connection.get_partial_data(1)[1])
 			# Check for end of headers
 			if buffer.size() >= 4:
-				var last_four = buffer.slice(buffer.size() - 4)
-				if last_four == "\r\n\r\n".to_utf8_buffer():
+				var last_four := buffer.slice(buffer.size() - 4)
+				if last_four == CRLFCRLF.to_utf8_buffer():
 					headers_complete = true
-		if pulls%64 == 0:
-			await get_tree().process_frame
-		pulls += 1
 	
 	request.append_array(buffer)
 	var headers := request.get_string_from_utf8()
 	
-	if headers.begins_with("GET"):
+	if headers.begins_with(GET):
 		connection.put_data(make_get_response(headers))
-	elif headers.begins_with("POST"):
-		var content_length_match := headers.find("Content-Length: ")
+	elif headers.begins_with("POST "):
+		const LENGTH_HEADER := "Content-Length: "
+		var content_length_match := headers.find(LENGTH_HEADER)
 		if content_length_match == -1:
 			connection.put_data(make_error_response("400 Bad Request"))
-			return
-		# Get Content-Length
-		var content_length := int(headers.substr(content_length_match + 16).split("\r\n")[0])
-		
-		# Read the rest of the data
-		var post_body := PackedByteArray()
-		while post_body.size() < content_length and connection.get_status() == StreamPeerTCP.STATUS_CONNECTED:
-			if connection.get_available_bytes() > 0:
-				post_body.append_array(connection.get_partial_data(connection.get_available_bytes())[1])
-		connection.put_data(handle_post(headers, post_body, content_length))
-		if main_menu_ref:
-			main_menu_ref._on_LoadPlaylists_Button_pressed()
+		else:
+			# Get Content-Length
+			var content_length := int(headers.substr(content_length_match + LENGTH_HEADER.length()).split(CRLF)[0])
+			
+			# Read the rest of the data
+			var post_body := PackedByteArray()
+			while post_body.size() < content_length and connection.get_status() == StreamPeerTCP.STATUS_CONNECTED:
+				if connection.get_available_bytes() > 0:
+					post_body.append_array(connection.get_partial_data(connection.get_available_bytes())[1])
+			connection.put_data(handle_post(headers, post_body, content_length))
+			if main_menu_ref:
+				main_menu_ref._on_LoadPlaylists_Button_pressed()
 	else:
 		connection.put_data(make_error_response("405 Method Not Allowed"))
 	
 	connection.disconnect_from_host()
 
 static func make_get_response(headers: String) -> PackedByteArray:
-	var path := StringName(headers.substr(4, headers.find(" ", 4) - 4))
+	var path := StringName(headers.substr(GET.length(), headers.find(" ", GET.length()) - GET.length()))
 	match path:
 		&"/Roboto-Medium.ttf":
 			return make_response_from_file("res://OQ_Toolkit/OQ_UI2D/theme/Roboto-Medium.ttf", "font/ttf")
@@ -100,14 +99,14 @@ static func make_get_response(headers: String) -> PackedByteArray:
 static func make_response_from_file(path: String, type: String) -> PackedByteArray:
 	var file := FileAccess.get_file_as_bytes(path)
 	
-	var header := ("HTTP/1.1 200 OK" + CRLF +
+	var headers := (
+		"HTTP/1.1 200 OK" + CRLF +
 		"Content-Type: %s" + CRLF +
 		"Content-Length: %d" + CRLF +
-		"Connection: close" + CRLF + CRLF
+		"Connection: close" + CRLFCRLF
 	) % [type, file.size()]
 	
-	var response := header.to_utf8_buffer() + file
-	return response
+	return headers.to_utf8_buffer() + file
 
 static func find_byte_pattern(data: PackedByteArray, pattern: PackedByteArray, start: int = 0) -> int:
 	if pattern.size() > data.size():
@@ -123,27 +122,28 @@ static func find_byte_pattern(data: PackedByteArray, pattern: PackedByteArray, s
 			return i
 	return -1
 
-static func handle_post(headers: String, post_body: PackedByteArray, content_length: int) -> PackedByteArray:
+static func handle_post(post_headers: String, post_body: PackedByteArray, content_length: int) -> PackedByteArray:
 	# Find the boundary in the Content-Type header
 	const BOUNDARY_HEADER := "Content-Type: multipart/form-data; boundary="
-	var boundary_match := headers.find(BOUNDARY_HEADER)
+	var boundary_match := post_headers.find(BOUNDARY_HEADER)
 	if boundary_match == -1:
 		return make_error_response("400 Bad Request")
 	
-	var boundary_delimiter := headers.substr(boundary_match + BOUNDARY_HEADER.length()).split("\r\n")[0]
+	var boundary_delimiter := post_headers.substr(boundary_match + BOUNDARY_HEADER.length()).split(CRLF)[0]
 	
 	# Find the file content boundaries
-	var zipfile_start := find_byte_pattern(post_body, (CRLF + CRLF).to_utf8_buffer(), boundary_delimiter.length()) + 4
+	var zipfile_start := find_byte_pattern(post_body, CRLFCRLF.to_utf8_buffer(), boundary_delimiter.length())
 	if zipfile_start == -1:
 		return make_error_response("400 Bad Request")
+	zipfile_start += CRLFCRLF.length()
 	
 	# Find the end boundary
 	var boundary_end := "--" + boundary_delimiter + "--"
 	var length_to_look_back := (CRLF + boundary_end + CRLF).length()
-	var zipfile_end := find_byte_pattern(post_body, boundary_end.to_utf8_buffer(), content_length - length_to_look_back) - 2
-	
-	if zipfile_end <= -1:
+	var zipfile_end := find_byte_pattern(post_body, boundary_end.to_utf8_buffer(), content_length - length_to_look_back)
+	if zipfile_end == -1:
 		return make_error_response("400 Bad Request")
+	zipfile_end -= CRLF.length()
 	
 	# Extract and save the file content
 	var filename := "UploadedSong-%s"%[hash(post_body)]
@@ -172,19 +172,17 @@ static func handle_post(headers: String, post_body: PackedByteArray, content_len
 </body>
 </html>""" % [filename, file_content.size()]
 
-	var response_headers := [
-		"HTTP/1.1 200 OK",
-		"Content-Type: text/html",
-		"Content-Length: " + str(response_body.length()),
-		"Connection: close"
-	]
+	var response_headers := (
+		"HTTP/1.1 200 OK" + CRLF +
+		"Content-Type: text/html" + CRLF +
+		"Content-Length: %d" + CRLF +
+		"Connection: close" + CRLFCRLF
+	) % response_body.length()
 	
-	var response := CRLF.join(response_headers) + CRLF + CRLF + response_body
-	return response.to_utf8_buffer()
+	return (response_headers + response_body).to_utf8_buffer()
 
 static func make_error_response(error: String) -> PackedByteArray:
-	var response_body := """
-<!DOCTYPE html>
+	var body := """<!DOCTYPE html>
 <html>
 <head>
 	<title>Error</title>
@@ -195,16 +193,15 @@ static func make_error_response(error: String) -> PackedByteArray:
 	<p><a href="/">Go back</a></p>
 </body>
 </html>""" % error
-
-	var headers := [
-		"HTTP/1.1 " + error,
-		"Content-Type: text/html",
-		"Content-Length: " + str(response_body.length()),
-		"Connection: close"
-	]
 	
-	var response := CRLF.join(headers) + CRLF + CRLF + response_body
-	return response.to_utf8_buffer()
+	var headers := (
+		"HTTP/1.1 %s" + CRLF +
+		"Content-Type: text/html" + CRLF +
+		"Content-Length: %d" + CRLF +
+		"Connection: close" + CRLFCRLF
+	) % [error, body.length()]
+	
+	return (headers + body).to_utf8_buffer()
 
 func _exit_tree() -> void:
 	server.stop()
