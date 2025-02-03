@@ -63,27 +63,41 @@ func handle_connection(connection: StreamPeerTCP) -> void:
 	var headers := request.get_string_from_utf8()
 	
 	if headers.begins_with("GET"):
-		handle_get(connection, headers)
+		connection.put_data(make_get_response(headers))
 	elif headers.begins_with("POST"):
-		await handle_post(connection, headers)
+		var content_length_match := headers.find("Content-Length: ")
+		if content_length_match == -1:
+			connection.put_data(make_error_response("400 Bad Request"))
+			return
+		# Get Content-Length
+		var content_length := int(headers.substr(content_length_match + 16).split("\r\n")[0])
+		
+		# Read the rest of the data
+		var post_body := PackedByteArray()
+		while post_body.size() < content_length and connection.get_status() == StreamPeerTCP.STATUS_CONNECTED:
+			if connection.get_available_bytes() > 0:
+				post_body.append_array(connection.get_partial_data(connection.get_available_bytes())[1])
+		connection.put_data(handle_post(headers, post_body, content_length))
+		if main_menu_ref:
+			main_menu_ref._on_LoadPlaylists_Button_pressed()
 	else:
-		send_error(connection, "405 Method Not Allowed")
+		connection.put_data(make_error_response("405 Method Not Allowed"))
 	
 	connection.disconnect_from_host()
 
-func handle_get(connection: StreamPeerTCP, headers: String) -> void:
+static func make_get_response(headers: String) -> PackedByteArray:
 	var path := StringName(headers.substr(4, headers.find(" ", 4) - 4))
 	match path:
 		&"/Roboto-Medium.ttf":
-			response_send_file(connection, "res://OQ_Toolkit/OQ_UI2D/theme/Roboto-Medium.ttf", "font/ttf")
+			return make_response_from_file("res://OQ_Toolkit/OQ_UI2D/theme/Roboto-Medium.ttf", "font/ttf")
 		&"/favicon.ico":
-			response_send_file(connection, "res://game/data/beepsaber_logo.png", "image/png")
+			return make_response_from_file("res://game/data/beepsaber_logo.png", "image/png")
 		&"/style.css":
-			response_send_file(connection, "res://game/scripts/SongUploader/style.css", "text/css")
+			return make_response_from_file("res://game/scripts/SongUploader/style.css", "text/css")
 		_:
-			response_send_file(connection, "res://game/scripts/SongUploader/prompt.html", "text/html")
+			return make_response_from_file("res://game/scripts/SongUploader/prompt.html", "text/html")
 
-func response_send_file(connection: StreamPeerTCP, path: String, type: String) -> void:
+static func make_response_from_file(path: String, type: String) -> PackedByteArray:
 	var file := FileAccess.get_file_as_bytes(path)
 	
 	var header := ("HTTP/1.1 200 OK" + CRLF +
@@ -93,9 +107,9 @@ func response_send_file(connection: StreamPeerTCP, path: String, type: String) -
 	) % [type, file.size()]
 	
 	var response := header.to_utf8_buffer() + file
-	connection.put_data(response)
+	return response
 
-func find_byte_pattern(data: PackedByteArray, pattern: PackedByteArray, start: int = 0) -> int:
+static func find_byte_pattern(data: PackedByteArray, pattern: PackedByteArray, start: int = 0) -> int:
 	if pattern.size() > data.size():
 		return -1
 	
@@ -109,59 +123,38 @@ func find_byte_pattern(data: PackedByteArray, pattern: PackedByteArray, start: i
 			return i
 	return -1
 
-
-
-func handle_post(connection: StreamPeerTCP, headers: String) -> void:
+static func handle_post(headers: String, post_body: PackedByteArray, content_length: int) -> PackedByteArray:
 	# Find the boundary in the Content-Type header
-	var boundary_match := headers.find("boundary=")
+	const BOUNDARY_HEADER := "Content-Type: multipart/form-data; boundary="
+	var boundary_match := headers.find(BOUNDARY_HEADER)
 	if boundary_match == -1:
-		send_error(connection, "400 Bad Request")
-		return
+		return make_error_response("400 Bad Request")
 	
-	var boundary := headers.substr(boundary_match + 9).split("\r\n")[0]
-	var content_length_match := headers.find("Content-Length: ")
-	
-	if content_length_match == -1:
-		send_error(connection, "400 Bad Request")
-		return
-	
-	# Get Content-Length
-	var content_length := int(headers.substr(content_length_match + 16).split("\r\n")[0])
-	
-	# Read the rest of the data
-	var data := PackedByteArray()
-	while data.size() < content_length and connection.get_status() == StreamPeerTCP.STATUS_CONNECTED:
-		if connection.get_available_bytes() > 0:
-			var chunk = connection.get_partial_data(1024)[1]
-			data.append_array(chunk)
-		await get_tree().process_frame
-	
-	var filename := "UploadedSong-%s"%[hash(data)]
+	var boundary_delimiter := headers.substr(boundary_match + BOUNDARY_HEADER.length()).split("\r\n")[0]
 	
 	# Find the file content boundaries
-	var content_start := find_byte_pattern(data, "\r\n\r\n".to_utf8_buffer(), 0) + 4
-	if content_start == -1:
-		send_error(connection, "400 Bad Request")
-		return
+	var zipfile_start := find_byte_pattern(post_body, (CRLF + CRLF).to_utf8_buffer(), boundary_delimiter.length()) + 4
+	if zipfile_start == -1:
+		return make_error_response("400 Bad Request")
 	
 	# Find the end boundary
-	var boundary_end := "--" + boundary + "--"
-	var content_end := find_byte_pattern(data, boundary_end.to_utf8_buffer(), content_start) - 2
+	var boundary_end := "--" + boundary_delimiter + "--"
+	var length_to_look_back := (CRLF + boundary_end + CRLF).length()
+	var zipfile_end := find_byte_pattern(post_body, boundary_end.to_utf8_buffer(), content_length - length_to_look_back) - 2
 	
-	if content_end <= -1:
-		send_error(connection, "400 Bad Request")
-		return
+	if zipfile_end <= -1:
+		return make_error_response("400 Bad Request")
 	
 	# Extract and save the file content
-	var file_content := data.slice(content_start, content_end)
+	var filename := "UploadedSong-%s"%[hash(post_body)]
+	var file_content := post_body.slice(zipfile_start, zipfile_end)
 	var file := FileAccess.open(UPLOAD_DIR + filename + ".zip", FileAccess.WRITE)
 	file.store_buffer(file_content)
 	file.close()
 	
 	var unzipped_dir := unzip_song(filename)
 	if unzipped_dir.is_empty() or DirAccess.get_files_at(unzipped_dir).is_empty():
-		send_error(connection, "400 Unable to unzip file")
-		return
+		return make_error_response("400 Unable to unzip file")
 	
 	# Send success response
 	var response_body := """<!DOCTYPE html>
@@ -187,9 +180,9 @@ func handle_post(connection: StreamPeerTCP, headers: String) -> void:
 	]
 	
 	var response := CRLF.join(response_headers) + CRLF + CRLF + response_body
-	connection.put_data(response.to_utf8_buffer())
+	return response.to_utf8_buffer()
 
-func send_error(connection: StreamPeerTCP, error: String) -> void:
+static func make_error_response(error: String) -> PackedByteArray:
 	var response_body := """
 <!DOCTYPE html>
 <html>
@@ -211,12 +204,12 @@ func send_error(connection: StreamPeerTCP, error: String) -> void:
 	]
 	
 	var response := CRLF.join(headers) + CRLF + CRLF + response_body
-	connection.put_data(response.to_utf8_buffer())
+	return response.to_utf8_buffer()
 
 func _exit_tree() -> void:
 	server.stop()
 
-func unzip_song(filename := "") -> String:
+static func unzip_song(filename := "") -> String:
 	var zippath := UPLOAD_DIR + filename + ".zip"
 	var song_out_dir := Constants.APPDATA_PATH + ("Songs/%s/"%filename)
 	
@@ -229,8 +222,5 @@ func unzip_song(filename := "") -> String:
 	Utils.unzip(zippath,song_out_dir)
 	
 	DirAccess.remove_absolute(zippath)
-	
-	if main_menu_ref:
-		main_menu_ref._on_LoadPlaylists_Button_pressed()
 	
 	return song_out_dir
