@@ -13,56 +13,6 @@ var active := false
 # reference to the main main node (used for playing downloadable song previews)
 @export var main_menu_ref: MainMenu
 
-const STYLE := &"""@font-face {
-	font-family: OpenSaber;
-	src: url('/Roboto-Medium.ttf') format('truetype');
-}
-body {
-	font-family: OpenSaber, Arial, sans-serif;
-	background-color: #000;
-	color: #ccc;
-	max-width: 800px;
-	margin: 0 auto;
-	padding: 20px;
-	border-style: solid;
-	border-width: 5px;
-	border-color: #ccc;
-	text-align: center;
-}
-.upload-form {
-	border-style: solid;
-	border-width: 5px;
-	border-color: #ccc;
-	background-color: #0f0f0f;
-	padding: 20px;
-}
-.title {
-	padding: 10px;
-}
-input {
-	font-family: OpenSaber, Arial, sans-serif;
-	font-size: 1.17em;
-}
-input[type="submit"], input[type="file"]::file-selector-button {
-	font-family: OpenSaber, Arial, sans-serif;
-	border-style: solid;
-	border-width: 5px;
-	border-color: #ccc;
-	background-color: #000;
-	color: #ccc;
-	padding: 5px;
-}
-input[type="submit"]:hover, input[type="file"]::file-selector-button:hover {
-	background-color: #262626;
-	color: #fff;
-	border-color: #fff;
-}
-input[type="submit"]:active, input[type="file"]::file-selector-button:active {
-	background-color: #454545;
-	color: #fff;
-	border-color: #fff;
-}"""
-
 func _enter_tree() -> void:
 	if not DirAccess.dir_exists_absolute(UPLOAD_DIR):
 		DirAccess.make_dir_recursive_absolute(UPLOAD_DIR)
@@ -125,56 +75,25 @@ func handle_get(connection: StreamPeerTCP, headers: String) -> void:
 	var path := StringName(headers.substr(4, headers.find(" ", 4) - 4))
 	match path:
 		&"/Roboto-Medium.ttf":
-			response_send_file(connection, "res://OQ_Toolkit/OQ_UI2D/theme/Roboto-Medium.ttf")
+			response_send_file(connection, "res://OQ_Toolkit/OQ_UI2D/theme/Roboto-Medium.ttf", "font/ttf")
 		&"/favicon.ico":
-			response_send_file(connection, "res://game/data/beepsaber_logo.png")
+			response_send_file(connection, "res://game/data/beepsaber_logo.png", "image/png")
+		&"/style.css":
+			response_send_file(connection, "res://game/scripts/SongUploader/style.css", "text/css")
 		_:
-			response_show_uploader(connection)
+			response_send_file(connection, "res://game/scripts/SongUploader/prompt.html", "text/html")
 
-func response_send_file(connection: StreamPeerTCP, path: String) -> void:
+func response_send_file(connection: StreamPeerTCP, path: String, type: String) -> void:
 	var file := FileAccess.get_file_as_bytes(path)
 	
-	var headers := [
-		"HTTP/1.1 200 OK",
-		"Content-Type: text/html",
-		"Content-Length: " + str(file.size()),
-		"Connection: close"
-	]
+	var header := ("HTTP/1.1 200 OK" + CRLF +
+		"Content-Type: %s" + CRLF +
+		"Content-Length: %d" + CRLF +
+		"Connection: close" + CRLF + CRLF
+	) % [type, file.size()]
 	
-	var response := (CRLF.join(headers) + CRLF + CRLF).to_utf8_buffer() + file
+	var response := header.to_utf8_buffer() + file
 	connection.put_data(response)
-
-func response_show_uploader(connection: StreamPeerTCP) -> void:
-	var response_body := """<!DOCTYPE html>
-<html>
-<head>
-	<title>Open Saber Song Uploader</title>
-	<style>""" + STYLE + """</style>
-</head>
-<body>
-	<img src="/favicon.ico" />
-	<h1 class="title">Open Saber Song Uploader</h1>
-	<h3 class="title">Upload songs directly into the game's songs folder (must be a zip file)</h3>
-	<div class="upload-form">
-		<h3>Upload Song</h3>
-		<form action="/" method="post" enctype="multipart/form-data" />
-			<input type="file" name="file" accept=".zip, .ZIP" required />
-			<br /><br />
-			<input type="submit" value="Upload" />
-		</form>
-	</div>
-</body>
-</html>"""
-	
-	var headers := [
-		"HTTP/1.1 200 OK",
-		"Content-Type: text/html",
-		"Content-Length: " + str(response_body.length()),
-		"Connection: close"
-	]
-	
-	var response := CRLF.join(headers) + CRLF + CRLF + response_body
-	connection.put_data(response.to_utf8_buffer())
 
 func find_byte_pattern(data: PackedByteArray, pattern: PackedByteArray, start: int = 0) -> int:
 	if pattern.size() > data.size():
@@ -249,7 +168,7 @@ func handle_post(connection: StreamPeerTCP, headers: String) -> void:
 <html>
 <head>
 	<title>Upload Success</title>
-	<style>""" + STYLE + """</style>
+	<link rel="stylesheet" href="/style.css" />
 </head>
 <body>
 	<h2>Song uploaded successfully!</h2>
@@ -276,7 +195,7 @@ func send_error(connection: StreamPeerTCP, error: String) -> void:
 <html>
 <head>
 	<title>Error</title>
-	<style>""" + STYLE + """</style>
+	<link rel="stylesheet" href="/style.css" />
 </head>
 <body>
 	<h2>Error: %s</h2>
