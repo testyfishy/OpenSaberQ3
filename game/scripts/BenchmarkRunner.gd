@@ -211,6 +211,22 @@ func _begin() -> void:
 		_abort("bad_config")
 		return
 	
+	# Refresh-rate selection: the panel rate is not fixed. Pin it explicitly so the
+	# physics tick can match it, and record what the runtime actually offers rather
+	# than assuming 72/90/120 are all available on this unit.
+	var xr := XRServer.primary_interface
+	if xr != null:
+		var avail: Array = xr.get_available_display_refresh_rates() if xr.has_method("get_available_display_refresh_rates") else []
+		_meta["refresh_rates_available"] = str(avail)
+		_meta["refresh_rate_before"] = str(xr.get_display_refresh_rate()) if xr.has_method("get_display_refresh_rate") else "unknown"
+		var want_hz := float(cfg.get_value("bench", "refresh_hz", 0.0))
+		if want_hz > 0.0 and xr.has_method("set_display_refresh_rate"):
+			xr.set_display_refresh_rate(want_hz)
+			Engine.physics_ticks_per_second = int(round(want_hz))
+			_meta["refresh_rate_requested"] = str(want_hz)
+		_meta["refresh_rate_after"] = str(xr.get_display_refresh_rate()) if xr.has_method("get_display_refresh_rate") else "unknown"
+	_meta["physics_ticks_effective"] = str(Engine.physics_ticks_per_second)
+
 	var requested := float(cfg.get_value("bench", "duration", 0.0))
 	var max_duration := float(cfg.get_value("bench", "max_duration", DEFAULT_MAX_DURATION_S))
 	if max_duration <= 0.0:

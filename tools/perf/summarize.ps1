@@ -92,6 +92,21 @@ if ($procMs.Count -gt 0) {
     "  max       : {0:N2}" -f (($procMs | Measure-Object -Maximum).Maximum)
 }
 
+# Engine-side CPU attribution (E0 instrumentation): TIME_PROCESS / TIME_PHYSICS_PROCESS
+foreach ($pair in @(@('process_usec','TIME_PROCESS'), @('physics_usec','TIME_PHYSICS_PROCESS'))) {
+    if ($rows[0].PSObject.Properties.Name -contains $pair[0]) {
+        $vals = @($rows | Where-Object { $_.($pair[0]) } | ForEach-Object { [double]$_.($pair[0]) / 1000.0 })
+        if ($vals.Count -gt 0) {
+            ""
+            "$($pair[1]) (ms)"
+            "  mean      : {0:N2}" -f ($vals | Measure-Object -Average).Average
+            "  p95       : {0:N2}" -f (Pct $vals 0.95)
+            "  p99       : {0:N2}" -f (Pct $vals 0.99)
+            "  max       : {0:N2}" -f (($vals | Measure-Object -Maximum).Maximum)
+        }
+    }
+}
+
 # hitch clusters: consecutive dropped frames are one hitch, not N
 $clusters = @(); $run = 0
 foreach ($v in $ms) {
