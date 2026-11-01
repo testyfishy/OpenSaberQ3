@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dwmtrb3qxw57l"
+
+[deps]
+
+files=["res://perf/captures/base-2.bench.ticks.translation", "res://perf/captures/base-2.bench.delta.translation", "res://perf/captures/base-2.bench.process.translation", "res://perf/captures/base-2.bench.song.translation", "res://perf/captures/base-2.bench.frames.translation", "res://perf/captures/base-2.bench.focused.translation", "res://perf/captures/base-2.bench.cubes.translation", "res://perf/captures/base-2.bench.links.translation", "res://perf/captures/base-2.bench.debris.translation", "res://perf/captures/base-2.bench.slice.translation"]
+
+source_file="res://perf/captures/base-2.bench.csv"
+dest_files=["res://perf/captures/base-2.bench.ticks.translation", "res://perf/captures/base-2.bench.delta.translation", "res://perf/captures/base-2.bench.process.translation", "res://perf/captures/base-2.bench.song.translation", "res://perf/captures/base-2.bench.frames.translation", "res://perf/captures/base-2.bench.focused.translation", "res://perf/captures/base-2.bench.cubes.translation", "res://perf/captures/base-2.bench.links.translation", "res://perf/captures/base-2.bench.debris.translation", "res://perf/captures/base-2.bench.slice.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

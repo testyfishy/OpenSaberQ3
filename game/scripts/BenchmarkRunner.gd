@@ -78,7 +78,7 @@ const DEFAULT_MAX_DURATION_S := 180.0
 # Workload counters are sampled every Nth rendered frame; see the Output notes.
 const COUNTER_STRIDE := 4
 
-const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,cubes_in_use,links_in_use,debris_live,slice_bursts"
+const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,cubes_in_use,links_in_use,debris_live,slice_bursts,process_usec,physics_usec"
 
 # Preloaded by path so benchmark mode does not depend on the editor's global
 # class cache being up to date on a clean clone (same reason as BenchmarkRunner).
@@ -104,6 +104,8 @@ var _focused := true
 var _ticks := PackedInt64Array()
 var _deltas := PackedInt64Array()
 var _proc_deltas := PackedInt64Array()
+var _proc_times := PackedInt64Array()
+var _phys_times := PackedInt64Array()
 var _song_pos := PackedInt64Array()
 var _drawn := PackedInt32Array()
 var _focus_col := PackedByteArray()
@@ -179,6 +181,19 @@ func _begin() -> void:
 	_meta["os"] = OS.get_name()
 	_meta["model"] = OS.get_model_name()
 	_meta["rendering_method"] = str(ProjectSettings.get_setting("rendering/renderer/rendering_method", ""))
+	# E0 instrumentation: these settle the native-resolution question on device instead of
+	# trusting a remembered default (advisor flagged its own figures as unverified).
+	var xr_iface := XRServer.primary_interface
+	if xr_iface != null:
+		var rt := xr_iface.get_render_target_size()
+		_meta["render_target_size"] = "%dx%d" % [int(rt.x), int(rt.y)]
+		_meta["render_target_size_v2"] = str(rt)
+	_meta["render_scale_multiplier"] = str(ProjectSettings.get_setting("xr/openxr/render_target_size_multiplier", 1.0))
+	_meta["msaa_3d"] = str(ProjectSettings.get_setting("rendering/anti_aliasing/quality/msaa_3d", 0))
+	_meta["physics_ticks_per_second"] = str(ProjectSettings.get_setting("physics/common/physics_ticks_per_second", 0))
+	_meta["physics_engine"] = str(ProjectSettings.get_setting("physics/3d/physics_engine", ""))
+	_meta["foveation_level"] = str(ProjectSettings.get_setting("xr/openxr/foveation_level", 0))
+	_meta["viewport_size"] = str(get_viewport().get_visible_rect().size)
 	_meta["video_adapter"] = RenderingServer.get_video_adapter_name()
 	vr.log_info("BENCH: start flag=%s" % flag_path)
 	
@@ -297,6 +312,8 @@ func _process(delta: float) -> void:
 	_deltas.append(now - _prev_usec)
 	_prev_usec = now
 	_proc_deltas.append(int(delta * 1000000.0))
+	_proc_times.append(int(Performance.get_monitor(Performance.TIME_PROCESS) * 1000000.0))
+	_phys_times.append(int(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000000.0))
 	_song_pos.append(int(_song_player.get_playback_position() * 1000000.0))
 	_drawn.append(Engine.get_frames_drawn())
 	_focus_col.append(1 if _focused else 0)
@@ -483,10 +500,11 @@ func _write_csv() -> void:
 	rows.resize(_ticks.size() + 1)
 	rows[0] = CSV_HEADER
 	for i in _ticks.size():
-		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
+		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
 			i, _ticks[i], _deltas[i], _proc_deltas[i],
 			_song_pos[i], _drawn[i], _focus_col[i],
-			_col_cubes[i], _col_links[i], _col_debris[i], _col_bursts[i]]
+			_col_cubes[i], _col_links[i], _col_debris[i], _col_bursts[i],
+			_proc_times[i], _phys_times[i]]
 	f.store_string("\n".join(rows) + "\n")
 	f.close()
 	vr.log_info("BENCH: csv=%s" % path)
@@ -516,3 +534,4 @@ func _peak_of(values: PackedInt32Array) -> int:
 		if v > peak:
 			peak = v
 	return peak
+
