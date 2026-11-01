@@ -185,6 +185,19 @@ plus 10 consecutive song load/unload cycles.
   frame in this workload is a spike (shader/pipeline compile, node spawn/free, per-frame
   allocation, audio decode or file IO on the main thread) rather than a slow mean.
   *(Added at G2.)*
+- **FR-034**: The reference workload MUST be a deterministic in-engine bot that plays the map
+  (crossing each note at its hit time in the required cut direction through the real swept
+  collision path), not a static or non-cutting scene and not a human. A workload that never
+  cuts leaves debris, slice particles, scoring and rumble idle and flatters every build.
+  *(Added at G2 on user request, 2026-11-01.)*
+- **FR-035**: The synthetic workload MUST be calibrated against real play and MUST fail closed:
+  it is only accepted if its CPU&GPU mean and p95 are each at least the median of the worn
+  calibration runs, and its peak debris/particle load is at least the worn peak. Any later worn
+  run that exceeds the synthetic p95 invalidates the workload until it is fixed.
+  *(Added at G2.)*
+- **FR-036**: A human is required only for (a) the one-time calibration runs, (b) recalibration
+  after a renderer or effects change that alters cost per cut, and (c) final release sign-off.
+  Every other gate runs on the bot. *(Added at G2.)*
 - **FR-022**: The "before" in every comparison MUST be the unmodified upstream commit built
   with the pinned toolchain — not the APK currently installed on the headset. The installed
   build may differ in engine version and export settings, so it is a reference point only.
@@ -377,5 +390,6 @@ requirements below; they are facts, not hypotheses.
 | G2 | Headroom criterion | Zero stale frames; p99 CPU and GPU each ≤75% of budget, max ≤90%; start at 72 Hz (13.9 ms), step to 90 Hz (11.1 ms) only when that holds | SC-010, SC-011 |
 | G2 | Dynamic resolution / spacewarp | Keep both off; they mask instability and spacewarp artifacts on fast thin sabers | FR-032 |
 | G2 | First five steps | (1) OpenXR in the fork APK — **DONE 2026-11-01**, `libopenxr_loader.so` packaged, runtime confirmed; (2) capture script across VrApi + OVR Metrics + in-engine timings; (3) baseline the installed 4.3 build; (4) Compatibility vs Mobile three-column run; (5) attribute every spike | T0013 onwards |
+| G2 | User rejected worn/human baseline runs as too variable; asked for a standardized scripted workload that genuinely loads GPU and CPU | **APPROVED with one change**: the bot must actually cut notes (a non-cutting path is a flattering microbenchmark) | FR-034/035/036 added; `game/scripts/BotDriver.gd` implemented; head sway on `XROrigin3D` only (timewarp runs regardless of motion, so sway affects culling/overdraw, not compositor cost); human needed only for calibration, recalibration and release sign-off |
 | G1 | Benchmark-mode implementation (delegated to `coder`, its own consult) | **GO WITH CHANGES**, all applied: flag read from `user://` then external app dir, renamed `.consumed` before the run, proximity/focus documented plus a `focused` CSV column, `song_end` only after playback was seen, separate `process_delta_usec` column, verified with a 3-second headless run | `game/scripts/BenchmarkRunner.gd` + a 9-line guarded hook in `BeepSaber_Game._ready()`; 437 samples at 3 s, mean 6.87 ms, p99 10.03 ms, max 14.62 ms on desktop headless |
 

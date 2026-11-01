@@ -85,17 +85,39 @@ VrApi: FPS=73/72, Stale=0, Stale2/5/10/max=0/0/0/0, App=5.94ms, CPU&GPU=9.22ms,
 **This is a menu, not gameplay, so it is not the baseline.** It proves the pipeline works and
 that the headset is nowhere near GPU-bound when idle. Gameplay is where spikes will live.
 
-## Blocker on the baseline
+### First bot workload run (2026-11-01) — harness validated, not yet a baseline
 
-There is no deterministic way to start a song over `adb`: the main menu is a VR UI, and using a
-human player would make every run non-reproducible. Before any tuning number is trusted we need
-one of:
+Release build, Godot 4.6.3, Vulkan Forward Mobile, Adreno 740, 72 Hz, charging, cold
+(thermal status 0), headset unworn, **bot autoplay with zero deliberately-missed notes**.
 
-- an in-engine benchmark mode (CLI flag that loads the reference map at a fixed difficulty,
-  auto-hits notes so debris/particles are included, and exits at the end), or
-- a recorded pose replay driving the sabers, which is also what FR-024 needs.
+Workload proof (this is what makes the run meaningful):
+`bot_notes_queued=180 bot_swings=120 bot_skipped=0 bot_score_right_notes=120
+bot_score_wrong_notes=0 bot_score_full_combo=true slice_bursts_total=100 debris_peak=4`.
 
-Until one exists, every "after" number would be unverifiable against a "before".
+| Metric | Value | Budget (13.89 ms) |
+|---|---|---|
+| Frames delivered on vsync | 8637 / 8639 = **99.977 %** | — |
+| Dropped-frame events (>=1.5x period) | **2** (both 1 frame) | 0 |
+| p50 / p95 / p99 / max interval | 13.89 / 15.01 / 15.79 / 30.51 ms | — |
+| `App=` GPU+CPU, mean / p95 / max | **3.79 / 6.24 / 6.96 ms** | 27 % at mean |
+| `CPU&GPU=`, mean / p95 / max | 7.68 / 10.92 / 11.80 ms | 55 % / 79 % |
+| VrApi stale samples | 11 over 80 samples | — |
+
+**Reading:** the app is *not* GPU-bound on this workload — roughly 70 % of the GPU budget is
+unused. The tighter constraint is the combined CPU side (p95 79 % of budget). So the wins
+available here are spending GPU headroom on clarity, and removing the two hitches.
+
+**Why this is not yet the baseline:** the bundled demo map is Easy and short on notes (180 over
+2 minutes). FR-035 requires the reference workload to be a dense map (>= 6 notes/s, chains and
+arcs) plus a walls/bombs stress map, calibrated against worn runs. This row validates the
+harness, not the game.
+
+## Blocker on the baseline — resolved 2026-11-01
+
+The earlier blocker (no way to start a song without a human) is gone: `BotDriver` starts the
+map, plays it through the real collision path on the song clock, and quits itself. What remains
+before a true baseline is a dense reference map and the FR-035 calibration against worn runs.
+
 
 
 ## Optimizations

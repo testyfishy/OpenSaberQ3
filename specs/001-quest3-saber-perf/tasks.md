@@ -47,6 +47,12 @@ Ordered. Each task names the requirement it serves. `[P]` = parallelisable withi
 - [ ] T020 Miss logger: closest approach per miss (FR-025)
 - [ ] T020b Build an "instrumented-before" = pinned commit + recorder/logger only; prove
   instrumentation does not change behaviour (identical hit set with and without it) (FR-024)
+- [ ] T019b Bot workload (FR-034): `game/scripts/BotDriver.gd` drives head sway on `XROrigin3D`
+  and swings each saber through the real `SwingableRayCast` at each note's hit time, from the
+  song clock, with a deterministic `miss_percent` pass. Implemented and headless-verified;
+  **on-device cut verification pending** (check `bot_score_good` > 0)
+- [ ] T019c Calibration (FR-035): 3 worn runs on a dense map; accept the bot only if its CPU&GPU
+  mean/p95 and peak debris load meet or exceed the worn medians
 - [ ] T020c Capture the **baseline miss rate** before touching any setting (FR-025)
 - [ ] T018 THEN replace inert `common/physics_fps` with `physics/common/physics_ticks_per_second`;
   log the actual tick to prove it changed (FR-009)

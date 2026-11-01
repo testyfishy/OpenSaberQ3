@@ -110,6 +110,9 @@ if ($Logcat -and (Test-Path $Logcat)) {
     $lines = Get-Content $Logcat
     $app = @(); $sub = @(); $stale = 0; $staleSamples = 0
     foreach ($l in $lines) {
+        # Only VrApi's own periodic sample lines carry these fields. Other tags contain
+        # "App=" in unrelated text and previously poisoned the mean.
+        if ($l -notmatch 'FPS=\d+/\d+') { continue }
         if ($l -match 'App=([\d.]+)ms') { $app += [double]$matches[1] }
         if ($l -match 'CPU&GPU=([\d.]+)ms') { $sub += [double]$matches[1] }
         if ($l -match 'Stale=(\d+)') { $stale += [int]$matches[1]; $staleSamples++ }
@@ -133,8 +136,11 @@ if ($Logcat -and (Test-Path $Logcat)) {
 "verdict"
 $sc010 = ($dropped.Count -eq 0)
 "  SC-010 (zero dropped frames): {0}" -f $(if ($sc010) { 'PASS' } else { "FAIL - $($dropped.Count) dropped-frame events" })
-if ($procMs.Count -gt 0) {
-    $p99 = Pct $procMs 0.99
-    "  SC-011 (p99 CPU <= 75% of period): {0} ({1:N1}%)" -f $(if ($p99 -le 0.75 * $period) { 'PASS' } else { 'FAIL' }), (100.0 * $p99 / $period)
+# SC-011 must use VrApi (not vsync-clamped) when available; the interval cannot show headroom.
+if ($sub.Count -gt 0) {
+    $p95 = Pct $sub 0.95
+    "  SC-011 (p95 CPU&GPU <= 75% of period): {0} ({1:N1}%)" -f $(if ($p95 -le 0.75 * $period) { 'PASS' } else { 'FAIL' }), (100.0 * $p95 / $period)
+} elseif ($procMs.Count -gt 0) {
+    "  SC-011: cannot be judged - no VrApi samples; process delta alone is vsync-clamped"
 }
 "  note: headroom needs the VrApi columns above; interval alone cannot show it."
