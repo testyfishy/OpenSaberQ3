@@ -342,4 +342,5 @@ requirements below; they are facts, not hypotheses.
 | G1 | Tasks to add | Applied | T003b (renderer + vendors plugin), T011b (distinct package for the baseline too), T020b (instrumented-before, prove inert), T020c (baseline miss rate), T025 rewritten as replay-harness parity |
 | G1 | Task fixes | Applied | T029 typo fixed to ≤85%; T035 simplified to presets + fallback on sustained frame time |
 | Post-G1 | User IP concern | Constraint added | FR-028 (no Beat Saber branding/affiliation), FR-029 (asset provenance, no decompilation) |
+| G2 | Engine migration: pinned 4.3 cannot import its own assets on a clean clone (LOD-generation crash, 1-byte meshes); user pre-approved an engine upgrade | **MIGRATE** to Godot 4.6.3-stable | D-2 amended; baseline is now "upstream commit built on 4.6.3"; migration is its own commit (D-7); 4.7.2 deferred to an optional measured change (D-8). 4.6.3 also unlocks the ≥4.5 Meta fragment-density path, which weakens the earlier P-2 conclusion that foveation was unreachable |
 

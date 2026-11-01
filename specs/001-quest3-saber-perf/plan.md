@@ -21,7 +21,10 @@ tick would produce a build that looks better and feels worse.
 | # | Decision | Basis |
 |---|----------|-------|
 | D-1 | Base = the repository identified by FR-003 detection; arpruss changes are cherry-picked individually, never merged wholesale | G0 verdict; arpruss targets Godot 4.6 vs upstream 4.3, so a wholesale base swap invalidates every before/after pair |
-| D-2 | Keep the base's engine version for the baseline build; any engine upgrade is a separate, separately measured change | Same reason; also R-2 |
+| D-2 | **Amended 2026-11-01 (user pre-approved migration).** Baseline engine = **Godot 4.6.3-stable**, not 4.3. Reason: the pinned 4.3 commit cannot import its own assets on a clean clone (crash in LOD generation on degenerate meshes; all mesh imports land as 1-byte files), so 4.3 yields no buildable baseline at all. 4.6.3 is also the line `arpruss/OpenSaberPlus` ships, giving a known-good import of this asset lineage, and is ≥4.5 where Meta fragment-density/foveation exists. The engine bump is its own commit and its own measured row, so it is attributable. | Evidence: `%TEMP%\toolchain\godot-import3.log` crash `generate_lods`; 4.3 CLI and GUI imports both failed |
+| D-7 | `.import` file churn from the version bump is committed as a separate migration commit, never mixed with a performance change | keeps every perf row attributable |
+| D-8 | Latest stable is 4.7.2; deliberately **not** chosen first. 4.7.2 is tested only as an optional later change if 4.6.3 leaves a measurable gap | unproven on this project; avoid two unknowns at once |
+
 | D-3 | arpruss code is usable: his `LICENSE` shows MIT for code ("Copyright (c) 2020-25 Holger Dammertz and Alexander Pruss") with one CC-BY-4.0 image (Nightsky) | Resolves the G0 license concern; attribution text must travel with any cherry-pick |
 | D-4 | The "before" build = unmodified pinned upstream commit on the pinned toolchain (FR-022), not the installed APK | G0 |
 | D-5 | Host-side metrics (logcat `VrApi`/OVR Metrics) are the primary numbers; in-app instrumentation is secondary | FR-023; in-app code cannot measure the installed APK |

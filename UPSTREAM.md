@@ -55,8 +55,8 @@ setting would contaminate every comparison.
 
 | Component | Version | Location |
 |---|---|---|
-| Godot | 4.3-stable (win64) | `%LOCALAPPDATA%\Godot\Godot_v4.3-stable_win64.exe` |
-| Export templates | 4.3.stable | `%APPDATA%\Godot\export_templates\4.3.stable` |
+| Godot | **4.6.3-stable** (win64) | `%LOCALAPPDATA%\Godot\4.6.3\Godot_v4.6.3-stable_win64.exe` |
+| Export templates | **4.6.3.stable** | `%APPDATA%\Godot\export_templates\4.6.3.stable` |
 | JDK | Temurin 17.0.20.1 | `%LOCALAPPDATA%\JDK\jdk-17` |
 | Android SDK platform | 34 | `%LOCALAPPDATA%\Android\platforms\android-34` |
 | Build-tools | 34.0.0 | `%LOCALAPPDATA%\Android\build-tools\34.0.0` |
@@ -64,9 +64,30 @@ setting would contaminate every comparison.
 | platform-tools | 37.0.1 | `%LOCALAPPDATA%\Android\platform-tools` |
 | Debug keystore | `CN=Android Debug` | `%USERPROFILE%\debug.keystore` |
 
-Engine pinned to 4.3 because the pinned upstream commit declares
-`config/features=PackedStringArray("4.3")`. The `arpruss/OpenSaberPlus` fork declares 4.6 and is
-therefore not a drop-in base (plan D-1, D-2).
+## Engine migration (deviation from upstream)
+
+Upstream declares `config/features=PackedStringArray("4.3")`, but **4.3 cannot build this
+repository on a clean clone**. On a fresh `git clone` the 4.3 importers crash inside
+`ImporterMesh::generate_lods` on meshes with degenerate faces, and every mesh destination is
+left as a **1-byte** file. Reproduced with both the 4.3 editor CLI (`--import`) and the 4.3 GUI.
+
+This fork therefore builds on **Godot 4.6.3-stable**, recorded as plan decision D-2 (amended),
+in commit `3f68a02`, as its own reviewable change. Rationale beyond "4.3 is broken":
+
+- 4.6.3 imports the identical asset set cleanly (exit 0; meshes 6854 / 9837 / 1360 / 8828 bytes).
+- 4.6 is the engine line `arpruss/OpenSaberPlus` ships, so this asset lineage is known-good there.
+- 4.5+ is where Meta's fragment-density / foveation path exists, which matters for FR-012.
+
+Because of this, the "before" build (FR-022) is **upstream `64200ad` built on 4.6.3**, not the
+APK installed on the headset (that one was built by the author on 4.3). 4.7.2 is deliberately
+deferred: it is tested only as an optional later change if 4.6.3 leaves a measurable gap.
+
+As of Godot 4.4+, `.uid` sidecar files for scripts and shaders are generated and **are
+committed**; they are not build artefacts.
+
+The `arpruss/OpenSaberPlus` fork declares 4.6 and is still not a drop-in base, because a
+wholesale base swap would invalidate every before/after pair (plan D-1).
+
 
 ## Known reproducibility gaps
 
