@@ -8,6 +8,9 @@ src_data
 android/build/*
 /addons/godotopenxrvendors
 
+# Spec Kit state is machine-local agent tooling, not project source
+.specify/
+
 # performance captures: raw logcat is local-only, summary*.json is the evidence that ships
 perf/captures/*.logcat.txt
 perf/captures/*.txt
