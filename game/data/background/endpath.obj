@@ -1,6 +1,6 @@
 # Blender 3.6.0
 # www.blender.org
-mtllib endpath.mtl.mtl
+mtllib endpath.mtl
 o Plane
 v -10.000000 1.981084 0.296609
 v 10.000000 0.000000 1.000000
