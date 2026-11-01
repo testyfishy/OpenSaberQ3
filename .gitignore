@@ -7,3 +7,7 @@ src_data
 .godot/
 android/build/*
 /addons/godotopenxrvendors
+
+# performance captures: raw logcat is local-only, summary*.json is the evidence that ships
+perf/captures/*.logcat.txt
+perf/captures/*.txt
