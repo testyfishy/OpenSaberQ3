@@ -5,6 +5,10 @@
 extends Node3D
 class_name BeepSaber_Game
 
+# Benchmark mode is its own script; preloaded by path so it does not depend on the
+# editor's global class cache being up to date on a clean clone.
+const BenchmarkRunnerScript := preload("res://game/scripts/BenchmarkRunner.gd")
+
 var version := "0.5.0"
 
 var gamestate_bootup := GameState.new()
@@ -213,6 +217,11 @@ func _ready() -> void:
 	($pre_renderer as Node3D).queue_free()
 	
 	recenter()
+	
+	# Deterministic benchmark mode. Only created when a bench flag file exists, so a
+	# normal launch behaves exactly as before. See game/scripts/BenchmarkRunner.gd.
+	if BenchmarkRunnerScript.has_bench_flag():
+		add_child(BenchmarkRunnerScript.new(self))
 
 func on_settings_changed(key: StringName) -> void:
 	# ensures proper initialization of tree for proper first frame setting loading

@@ -41,6 +41,17 @@ Frame budget at 72 Hz is **13.9 ms** (SC-002/SC-003).
 4. **Hot state only for pass/fail.** A cold headset flatters every build.
 5. Wi-Fi `adb` stays connected for convenience, but a run is marked invalid if the transport
    dropped mid-capture.
+6. **Measure release builds, never debug.** A Godot debug export carries runtime checks and is
+   slower than release, so timing a debug APK would invent a performance problem. Debug builds
+   are for functional verification only; every number in the tables below comes from a release
+   export.
+7. **The headset is idle except while capturing.** Force-stop the app before and after every run
+   (`adb shell am force-stop <pkg>`), and let it sleep when not measuring. A headset left
+   rendering the menu builds heat and shifts every subsequent measurement.
+8. **All compilation happens on the host.** The APK is arm64-v8a only; engine code comes from
+   prebuilt Android export templates and GDScript is compiled to bytecode at export time.
+   Nothing is compiled on the device, so the device's CPU is never spent on the build.
+
 
 ## Reference scenario
 
