@@ -53,11 +53,39 @@ Frame budget at 72 Hz is **13.9 ms** (SC-002/SC-003).
 
 ## Baseline
 
-Not yet captured — blocked on the first buildable APK.
+Not yet captured — currently blocked on a deterministic gameplay scenario (see below).
 
-| Run | Build | Charging | Thermal | Mean FPS | Min FPS | P5 FPS | On-target % | Stale | Notes |
-|---|---|---|---|---|---|---|---|---|---|
-| — | upstream `64200ad` @ 4.6.3 | — | — | — | — | — | — | — | — |
+### First trustworthy data point (2026-11-01, menu screen, not gameplay)
+
+Fork build `build/OpenSaberQ3-gradle.apk`, Godot 4.6.3, **Vulkan 1.3 / Forward Mobile**, OpenXR
+runtime `Oculus 209.166.0`, 72 Hz, charging, cold (31.0 °C).
+
+```
+VrApi: FPS=73/72, Stale=0, Stale2/5/10/max=0/0/0/0, App=5.94ms, CPU&GPU=9.22ms,
+       GPU%=0.52, CPU%=0.12, CPU4/GPU=2/2, 1382/456MHz, DpuScale=1.00
+```
+
+| Metric | Value | Budget | Used |
+|---|---|---|---|
+| App GPU+CPU | 5.94 ms | 13.9 ms | 43% |
+| Subsystem | 9.22 ms | 13.9 ms | 66% |
+| Stale frames | 0 | 0 | ok |
+
+**This is a menu, not gameplay, so it is not the baseline.** It proves the pipeline works and
+that the headset is nowhere near GPU-bound when idle. Gameplay is where spikes will live.
+
+## Blocker on the baseline
+
+There is no deterministic way to start a song over `adb`: the main menu is a VR UI, and using a
+human player would make every run non-reproducible. Before any tuning number is trusted we need
+one of:
+
+- an in-engine benchmark mode (CLI flag that loads the reference map at a fixed difficulty,
+  auto-hits notes so debris/particles are included, and exits at the end), or
+- a recorded pose replay driving the sabers, which is also what FR-024 needs.
+
+Until one exists, every "after" number would be unverifiable against a "before".
+
 
 ## Optimizations
 

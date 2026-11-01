@@ -173,6 +173,18 @@ plus 10 consecutive song load/unload cycles.
   measurement, not assumption, because the build currently installed on the user's headset runs
   Compatibility while `project.godot` declares Mobile. *(Added 2026-11-01 after on-device
   verification.)*
+- **FR-031**: Frame pacing MUST be owned by the XR compositor. The app MUST NOT impose an
+  in-engine frame limiter (`Engine.max_fps` stays 0); the refresh rate MUST instead be selected
+  through OpenXR (`OpenXRInterface.display_refresh_rate`, XR_FB_display_refresh_rate), and
+  `adb setprop debug.oculus.refreshRate` used only to pin conditions during measurement.
+  *(Added at G2, 2026-11-01.)*
+- **FR-032**: Meta dynamic resolution and application spacewarp MUST remain disabled unless a
+  measurement proves they fix a specific class of missed frame; both mask instability rather than
+  remove it, and spacewarp produces artifacts on fast thin geometry. *(Added at G2.)*
+- **FR-033**: Spike sources MUST be attributed before averages are optimized, because a missed
+  frame in this workload is a spike (shader/pipeline compile, node spawn/free, per-frame
+  allocation, audio decode or file IO on the main thread) rather than a slow mean.
+  *(Added at G2.)*
 - **FR-022**: The "before" in every comparison MUST be the unmodified upstream commit built
   with the pinned toolchain — not the APK currently installed on the headset. The installed
   build may differ in engine version and export settings, so it is a reference point only.
@@ -282,6 +294,15 @@ requirements below; they are facts, not hypotheses.
   sharper and more stable in blind play compared with the installed app, and can state which
   build they were playing without being told. Reported, not gating, because it is one
   subjective observer.
+- **SC-010**: Zero stale frames during gameplay across a hot 15-minute run at the selected
+  refresh rate. *(Added at G2 — this, not average FPS, is the user's real complaint.)*
+- **SC-011**: Headroom: during gameplay in a hot 15-minute run, the 99th-percentile GPU time and
+  the 99th-percentile CPU time (main and render threads) are each **≤ 75%** of the frame budget,
+  with a maximum of **≤ 90%**. At 72 Hz the budget is 13.9 ms; at 90 Hz, 11.1 ms.
+  *(Added at G2.)*
+- **SC-012**: If Mobile/Vulkan wins the renderer comparison, it wins by measurement: zero compile
+  hitches and a p99 CPU time at least as good as Compatibility over three hot runs. Otherwise
+  Compatibility remains the base. *(Added at G2, operationalises FR-030.)*
 
 ## Assumptions
 
@@ -349,4 +370,11 @@ requirements below; they are facts, not hypotheses.
 | G1 | Task fixes | Applied | T029 typo fixed to ≤85%; T035 simplified to presets + fallback on sustained frame time |
 | Post-G1 | User IP concern | Constraint added | FR-028 (no Beat Saber branding/affiliation), FR-029 (asset provenance, no decompilation) |
 | G2 | Engine migration: pinned 4.3 cannot import its own assets on a clean clone (LOD-generation crash, 1-byte meshes); user pre-approved an engine upgrade | **MIGRATE** to Godot 4.6.3-stable | D-2 amended; baseline is now "upstream commit built on 4.6.3"; migration is its own commit (D-7); 4.7.2 deferred to an optional measured change (D-8). 4.6.3 also unlocks the ≥4.5 Meta fragment-density path, which weakens the earlier P-2 conclusion that foveation was unreachable |
+| G2 | User restated the end goal: super-stable frame times with headroom, paced to the panel refresh rate. Asked for the ordered path, renderer call, headroom criterion, and whether dynamic-res/spacewarp belong | **DECISIVE PLAN** (see below) | FR-031/032/033 and SC-010/011/012 added |
+| G2 | Order of work | Spikes before averages | FR-033: attribute spikes (shader/pipeline compile, node spawn, per-frame allocation, audio/IO on main thread) before optimizing averages |
+| G2 | Renderer | **Compatibility (GLES3) is the base**; Mobile/Vulkan is the challenger, decided by a three-column capture (installed 4.3 GLES, fork 4.6.3 GLES, fork 4.6.3 Mobile), ranked by stale frames then p99 CPU then p99 GPU | FR-030 operationalised as SC-012; a Mobile win requires zero compile hitches and p99 CPU at least equal |
+| G2 | Frame pacing to the panel | No in-engine limiter: `xrWaitFrame` paces, `OpenXRInterface.display_refresh_rate` selects the rate, `Engine.max_fps` stays 0; `setprop` only to pin conditions while measuring | FR-031 |
+| G2 | Headroom criterion | Zero stale frames; p99 CPU and GPU each ≤75% of budget, max ≤90%; start at 72 Hz (13.9 ms), step to 90 Hz (11.1 ms) only when that holds | SC-010, SC-011 |
+| G2 | Dynamic resolution / spacewarp | Keep both off; they mask instability and spacewarp artifacts on fast thin sabers | FR-032 |
+| G2 | First five steps | (1) OpenXR in the fork APK — **DONE 2026-11-01**, `libopenxr_loader.so` packaged, runtime confirmed; (2) capture script across VrApi + OVR Metrics + in-engine timings; (3) baseline the installed 4.3 build; (4) Compatibility vs Mobile three-column run; (5) attribute every spike | T0013 onwards |
 

@@ -4,6 +4,8 @@ src_data
 
 # ignore exported APKs
 *.apk
+*.idsig
+/build/
 .godot/
 android/build/*
 /addons/godotopenxrvendors
