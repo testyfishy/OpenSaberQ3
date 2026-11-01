@@ -94,7 +94,7 @@ wholesale base swap would invalidate every before/after pair (plan D-1).
 | # | Gap | Consequence |
 |---|---|---|
 | G-1 | `.gitignore` excludes `/addons/godotopenxrvendors`, so the OpenXR vendor plugin is not in the repo and its version is unpinned | A clean clone may not produce an identical APK (FR-004/FR-005). Must be resolved before the baseline is declared valid — either pin the plugin as a submodule/subdirectory or prove the export does not need it |
-| G-2 | `export_presets.cfg` uses `gradle_build/use_gradle_build=true` with empty gradle build directory | Requires a working SDK/JDK on the build machine; no gradle wrapper is shipped |
+| G-2 | `export_presets.cfg` uses `gradle_build/use_gradle_build=true` with empty gradle build directory | Upstream ships no gradle wrapper and the custom-build path additionally needs SDK 36 / build-tools 36.1.0 / NDK 29 plus a build template Godot cannot version-check when hand-extracted. **Resolved for this fork by building with the prebuilt template** (plan D-9): the DEBUG preset now sets `use_gradle_build=false` and produces a signed APK. The RELEASE preset is untouched |
 | G-3 | No CI build exists upstream | Reproducibility (SC-001) is currently a claim, not a test |
 
 ## Dead configuration inherited from upstream

@@ -30,6 +30,9 @@ Ordered. Each task names the requirement it serves. `[P]` = parallelisable withi
 - [ ] T015 Pin CPU/GPU/refresh via `debug.oculus.*`; record method (FR-026)
 - [ ] T016 Three baseline runs; compute run-to-run noise band (FR-026)
 - [ ] T017 `PERF.md` baseline table (FR-019)
+- [ ] T017c Build the same pinned commit **twice** — Mobile/Vulkan and Compatibility/GLES3 — and
+  measure both, because the installed app runs Compatibility while `project.godot` declares
+  Mobile (T-10). The winner becomes the baseline renderer (FR-030)
 - [ ] T017b Fix the inert MSAA key **alone** and measure it as the first change — a
   known-direction change that validates the whole measurement rig before the hard diagnostic
   work (FR-011, FR-021)

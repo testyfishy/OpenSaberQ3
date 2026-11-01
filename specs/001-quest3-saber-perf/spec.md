@@ -169,6 +169,10 @@ plus 10 consecutive song load/unload cycles.
 - **FR-021**: All OpenXR rendering levers (render target size multiplier, fixed foveated
   rendering level, VRS, MSAA mode) MUST be explicit, documented settings rather than engine
   defaults, and MUST be validated on-device before being called an optimization.
+- **FR-030**: The rendering backend (Compatibility/GLES3 vs Mobile/Vulkan) MUST be chosen by
+  measurement, not assumption, because the build currently installed on the user's headset runs
+  Compatibility while `project.godot` declares Mobile. *(Added 2026-11-01 after on-device
+  verification.)*
 - **FR-022**: The "before" in every comparison MUST be the unmodified upstream commit built
   with the pinned toolchain — not the APK currently installed on the headset. The installed
   build may differ in engine version and export settings, so it is a reference point only.
@@ -233,6 +237,8 @@ requirements below; they are facts, not hypotheses.
 | T-5 | `quality/filters/msaa=6` is a **Godot 3** key; Godot 4 reads `rendering/anti_aliasing/quality/msaa_3d` and ignores it | `project.godot` `quality/filters/msaa=6` vs Godot 4 setting name | **MSAA is off.** Edges are aliased, which reads as "low resolution" and is a large part of the user's clarity complaint. Certain win once enabled and cost-measured. |
 | T-6 | `3d/physics_engine="Bullet"` is a **Godot 3** key; Godot 4 accepts `GodotPhysics3D`/`Jolt` and ignores the old value | `project.godot` `3d/physics_engine="Bullet"` vs Godot 4 `physics/3d/physics_engine` | Silently falls back to the default engine. No Bullet tuning is in effect; raycast cost and reliability are unexamined. |
 | T-9 | All three above are Godot 3 leftovers in a Godot 4 project | `project.godot` as shipped by upstream and by `arpruss/OpenSaberPlus` | The fork inherits dead configuration. Any claimed "tuned" build before this is corrected was tuned by string, not by effect. Measurement must precede tuning. |
+| T-10 | The installed 0.5.0 build runs the **Compatibility (GLES3)** renderer on Adreno 740, not the Mobile/Vulkan renderer `project.godot` declares | `adb logcat` stdout: `OpenGL API OpenGL ES 3.2 … Compatibility`; `files/shader_cache` is 12/12 `*GLES3*` | Renderer is an unvalidated unknown (FR-030). Compatibility is also the renderer where `xr/openxr/foveation_level` is known to work, so the earlier "foveation is unreachable" conclusion (P-2) is reversed unless Mobile wins measurably |
+| T-11 | Installed app is at pure defaults: `files/config.ini` is 0 bytes; 10 songs installed; maps live in `user://OpenSaber/Songs` | `adb run-as` on the debug-signed APK | The user's complaint is about an untuned build. Baseline reference scenario can use the bundled `TheFatRat_Timelapse` |
 | T-7 | Both candidates are the same Godot 4 lineage; arpruss is a superset with 16 months more work | repo metadata, `git log` | Base choice is a real fork decision (see OQ-1), not a formality. |
 | T-8 | Nearest competing fork (`arpruss/OpenSaberPlus`) shares identical physics and rendering settings | `arpruss/project.godot` | No fork on this lineage has done the XR render-tuning work. The niche is genuinely open. |
 
