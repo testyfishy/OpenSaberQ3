@@ -198,6 +198,17 @@ plus 10 consecutive song load/unload cycles.
 - **FR-036**: A human is required only for (a) the one-time calibration runs, (b) recalibration
   after a renderer or effects change that alters cost per cut, and (c) final release sign-off.
   Every other gate runs on the bot. *(Added at G2.)*
+- **FR-037**: Every measurement run MUST record CPU/GPU performance levels, clock MHz, `GPU%`,
+  `CPU%` and temperature, because Quest 3 moves these dynamically and a cheap frame can read as
+  expensive at a low clock. Comparisons MUST pin the levels or state that they were not pinned.
+  *(Added at G2 — corrected the baseline reading.)*
+- **FR-038**: All note, debris, chain and wall materials/shaders MUST be prewarmed off-screen
+  during load, so the first note of a song cannot produce a multi-hundred-millisecond
+  shader/pipeline compilation hitch. *(Added at G2.)*
+- **FR-039**: Clarity levers MUST be applied in the measured order MSAA → render-target scale →
+  anisotropy → fixed foveation, and glow, post-processing and shadows MUST NOT be increased for
+  perceived sharpness, since full-screen passes break tiling without adding sharpness.
+  *(Added at G2.)*
 - **FR-022**: The "before" in every comparison MUST be the unmodified upstream commit built
   with the pinned toolchain — not the APK currently installed on the headset. The installed
   build may differ in engine version and export settings, so it is a reference point only.
@@ -316,6 +327,9 @@ requirements below; they are facts, not hypotheses.
 - **SC-012**: If Mobile/Vulkan wins the renderer comparison, it wins by measurement: zero compile
   hitches and a p99 CPU time at least as good as Compatibility over three hot runs. Otherwise
   Compatibility remains the base. *(Added at G2, operationalises FR-030.)*
+- **SC-013**: After the clarity sweep, on a cold run of the reference workload, `App=` (GPU) p95
+  is ≤ 9 ms (~65% of the 13.89 ms budget) and dropped-frame events plus stale samples do not
+  exceed the Baseline v0 median plus its measured spread. *(Added at G2.)*
 
 ## Assumptions
 
@@ -391,5 +405,14 @@ requirements below; they are facts, not hypotheses.
 | G2 | Dynamic resolution / spacewarp | Keep both off; they mask instability and spacewarp artifacts on fast thin sabers | FR-032 |
 | G2 | First five steps | (1) OpenXR in the fork APK — **DONE 2026-11-01**, `libopenxr_loader.so` packaged, runtime confirmed; (2) capture script across VrApi + OVR Metrics + in-engine timings; (3) baseline the installed 4.3 build; (4) Compatibility vs Mobile three-column run; (5) attribute every spike | T0013 onwards |
 | G2 | User rejected worn/human baseline runs as too variable; asked for a standardized scripted workload that genuinely loads GPU and CPU | **APPROVED with one change**: the bot must actually cut notes (a non-cutting path is a flattering microbenchmark) | FR-034/035/036 added; `game/scripts/BotDriver.gd` implemented; head sway on `XROrigin3D` only (timewarp runs regardless of motion, so sway affects culling/overdraw, not compositor cost); human needed only for calibration, recalibration and release sign-off |
+| G2 | User asked: where should GPU optimization go to look better efficiently, and what is eating CPU | **GO WITH CHANGES** — see rows below | Baseline reading corrected; plan in PERF.md / tasks |
+| G2 | `App=` semantics | **`App=` is GPU time only**; `CPU&GPU=` is frame-to-GPU-completion latency, not cost. The ~4 ms gap is main+render thread + sync, not the compositor | Judge runs on Stale count, dropped-frame events and p99; stop using `CPU&GPU=` as a budget figure |
+| G2 | Clock drift | Quest moves CPU/GPU clock levels dynamically, so a cheap frame can still read ~86% | FR-037: record CPU/GPU levels, MHz, `GPU%`, `CPU%`, `Temp` per run; pin levels when comparing |
+| G2 | Physics 60 Hz vs 72 Hz display | Aliases: some frames get 0 ticks, some 2 — a hit-registration issue before a cost issue | E2 makes the tick 72 Hz and proves an identical hit set |
+| G2 | The 459 ms spike | Missing warm-up, not slowness — first-note shader/pipeline compilation | FR-038: prewarm every note/debris/chain/wall material during load |
+| G2 | Clarity lever order and cost | MSAA 4× (~3-7%) → render scale 1.2/1.3/1.4 (+10/16/24%) → aniso 4× (<1%) → fixed foveation (saves 5-10%, spend on scale). Skip glow, post, shadows | FR-039; stop rule `App=` p95 ≤ ~65% (9 ms) cold, no regression in dropped events/Stale |
+| G2 | Renderer before clarity | Compatibility/GLES3 gets cheap MSAA + Qualcomm foveation and less CPU on Quest; costs differ per backend, so do not tune clarity twice | E1 (renderer A/B) runs before the clarity sweep |
+| G2 | Raycast CPU suspicion | 18 rays × 60 ticks ≈ 1k queries/s against a few dozen Area3Ds ≈ 0.1-0.3 ms/tick — probably a rounding error | Measure with `Time.get_ticks_usec()` before optimizing anything |
+
 | G1 | Benchmark-mode implementation (delegated to `coder`, its own consult) | **GO WITH CHANGES**, all applied: flag read from `user://` then external app dir, renamed `.consumed` before the run, proximity/focus documented plus a `focused` CSV column, `song_end` only after playback was seen, separate `process_delta_usec` column, verified with a 3-second headless run | `game/scripts/BenchmarkRunner.gd` + a 9-line guarded hook in `BeepSaber_Game._ready()`; 437 samples at 3 s, mean 6.87 ms, p99 10.03 ms, max 14.62 ms on desktop headless |
 
