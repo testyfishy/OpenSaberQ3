@@ -94,15 +94,56 @@ $proc = Start-Process -FilePath $Adb -ArgumentList @('-s', $Serial, 'logcat', '-
     -RedirectStandardOutput "$base.logcat.txt" -PassThru -WindowStyle Hidden
 A "am start -n $AppId/$LaunchActivity" | Out-Null
 
-$deadline = (Get-Date).AddSeconds($DurationSec + 90)
-$done = $false; $reason = ''
+# Keep the headset awake. Without the PIN-gated disable_autosleep, an unworn headset sleeps
+# within ~10 s, which pauses the process and freezes the benchmark clock. The documented
+# proximity broadcast must be repeated because VrPowerManagerService re-sleeps ~17 s after
+# the last one. Started AFTER launch so it cannot disturb activity start.
+$keepAwakeJob = $null
+if ($KeepAwake -or -not $Pin) {
+    Write-Host "  keep-awake: prox_close broadcast every 2 s"
+    $keepAwakeJob = Start-Job -ArgumentList $Adb, $Serial -ScriptBlock {
+        param($a, $dd)
+        for ($i = 0; $i -lt 200; $i++) {
+            & $a -s $dd shell "am broadcast -a com.oculus.vrpowermanager.prox_close" 2>&1 | Out-Null
+            Start-Sleep -Milliseconds 2000
+        }
+    }
+}
+
+# Wait for the process to actually exist before judging it dead (launch is asynchronous).
+$seenProcess = $false
+$spawnDeadline = (Get-Date).AddSeconds(60)
+while ((Get-Date) -lt $spawnDeadline) {
+    Start-Sleep -Seconds 2
+    if ((A "pidof $AppId").Trim() -ne '') { $seenProcess = $true; break }
+}
+if (-not $seenProcess) {
+    if ($keepAwakeJob) { Stop-Job $keepAwakeJob -ErrorAction SilentlyContinue; Remove-Job $keepAwakeJob -Force -ErrorAction SilentlyContinue }
+    if (-not $KeepAwake) { [void](SetProps $false) }
+    Fail "process never started within 60 s"
+}
+
+$deadline = (Get-Date).AddSeconds($DurationSec + 120)
+$done = $false; $reason = ''; $missedFocus = $false
 while ((Get-Date) -lt $deadline) {
     Start-Sleep -Seconds 5
     $log = Get-Content "$base.logcat.txt" -ErrorAction SilentlyContinue
     if ($log -match 'BENCH: done') { $done = $true; $reason = (($log | Select-String 'BENCH: done' | Select-Object -Last 1).Line); break }
-    if (A "pidof $AppId" -eq '') { $reason = 'process exited without BENCH: done'; break }
+    if ($log -match 'BENCH: focus=false') { $missedFocus = $true }
+    if ($seenProcess -and (A "pidof $AppId").Trim() -eq '') { $reason = 'process exited without BENCH: done'; break }
 }
+
+if ($keepAwakeJob) { Stop-Job $keepAwakeJob -ErrorAction SilentlyContinue; Remove-Job $keepAwakeJob -Force -ErrorAction SilentlyContinue }
 Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+
+# A run that lost focus is not a slow run, it is an invalid run: the app was paused, so the
+# numbers describe a suspended process rather than gameplay.
+if ($missedFocus) {
+    Step "diagnostics"
+    Write-Host "  BENCH: focus=false was logged during this run"
+    if (-not $KeepAwake) { [void](SetProps $false) }
+    Fail "invalid run: app lost focus mid-run (paused), no number accepted"
+}
 
 if (-not $done) {
     Step "diagnostics"

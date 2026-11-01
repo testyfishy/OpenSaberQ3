@@ -105,3 +105,55 @@ selection, CSV shape, flag consumption, clean quit).
 If a run is not stopped by `duration`, it reaches the engine's normal song-end path, which
 increments the map's play count and can record a zero-score highscore. That is existing game
 behaviour and is deliberately not modified by benchmark mode.
+
+## Bot (deterministic autoplay workload)
+
+The advisor's rule: a workload that never cuts is a flattering microbenchmark, because debris,
+slice particles, scoring and rumble all stay idle. So the bot **plays** the map. It drives the
+real `SwingableRayCast` sweep; it never calls `note.cut()` directly.
+
+`SwingableRayCast` samples the saber node's own transform (blade along local +Y), and
+`LightSaber._physics_process` overwrites its own position/rotation every tick from
+`offset_pos + extra_offset_pos` / `offset_rot + extra_offset_rot`. The bot therefore writes
+`extra_offset_pos` / `extra_offset_rot`, converting its world-space target through the
+controller's inverse transform, with `process_priority = -50` so it runs before the saber
+consumes the offsets.
+
+Note hit time is derived from the song's audio clock, not wall time, so a dropped frame produces
+a real swept gap rather than being smoothed over.
+
+```ini
+[bench]
+map="<substring of song name>"
+duration=180
+max_duration=240
+
+[bot]
+enabled=true        ; default false
+miss_percent=0      ; deterministic stride of notes deliberately not swung (0..100)
+sway=true           ; head sway on XROrigin3D (default true)
+```
+
+Head sway animates `XROrigin3D`, **not** `XRCamera3D`, because OpenXR tracking overwrites the
+camera pose. Sway is yaw ±15° @0.2 Hz, pitch ±5° @0.13 Hz, lateral ±10 cm. On Quest, timewarp
+runs every frame regardless of head motion, so sway changes culling/overdraw rather than adding
+compositor cost — do not claim more for it than that.
+
+### Extra CSV columns (bot workload)
+
+`cubes_in_use`, `links_in_use`, `debris_live`, `slice_bursts`, plus `bot_score_*` keys in the
+meta file. `slice_bursts` counts slice-particle bursts started since the previous sample; it
+replaces a live particle count, which is not available on Android.
+
+The calibration test depends on these: the synthetic run is only accepted if its CPU&GPU mean
+and p95 are each >= the median of the worn calibration runs, and its peak debris/particle load
+is >= the worn peak.
+
+### Fidelity gaps (documented, not hidden)
+
+- Chain links are not modelled individually; the bot cuts the head note only, so chain-link load
+  is understated.
+- The pose check validates origin error, not blade orientation.
+- The bundled demo map starts its music late, so a short run reaches few notes; use a dense map
+  and a long window (3 min) for a real workload.
+

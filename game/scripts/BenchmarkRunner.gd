@@ -21,6 +21,14 @@
 #   duration = 60             ; optional. seconds of gameplay to record; 0/absent = until the song ends
 #   max_duration = 180        ; optional. hard cap in seconds (default 180)
 #
+#   [bot]
+#   enabled = true            ; optional. deterministic autoplay workload; absent/false = no bot
+#   miss_percent = 0          ; optional. deterministic fraction of notes deliberately not swung at
+#   sway = true               ; optional. head sway on the XROrigin3D (default true)
+#
+#   See game/scripts/BotDriver.gd for the workload's geometry and tools/perf/benchmark.md
+#   for the device recipe.
+#
 #   ConfigFile (standard INI) rules apply: string values MUST be double-quoted, numbers
 #   bare, `;` or `#` start a comment line. The section name is required.
 #
@@ -29,8 +37,24 @@
 #
 # ── Output ────────────────────────────────────────────────────────────────────
 #   bench.csv       one header row, then one row per rendered frame:
-#                   frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused
+#                   frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,
+#                   cubes_in_use,links_in_use,debris_live,slice_bursts
 #   bench_meta.txt  key=value block describing the run (map, difficulty, samples, exit reason, device)
+#
+#   The four workload columns are what makes a run comparable to real play:
+#     cubes_in_use / links_in_use  pool in-use counts = notes and chain links currently spawned
+#     debris_live                  CutPiece nodes with visible = true, i.e. live cut debris
+#                                  (0.3 s lifetime, BeepCube_CutPiece.gd:64)
+#     slice_bursts                 slice-particle bursts started since the previous sample
+#   These are sampled every COUNTER_STRIDE rendered frames, not every frame, so the
+#   counter itself stays off the measured frame path; the peak is still caught because
+#   debris lives ~27 frames at 90 Hz.
+#
+#   There is deliberately no "live particle count": GPUParticles3D has no live count,
+#   the game never clears `slice_particles.visible`/`c1.emitting` after a burst (only
+#   the next spawn's reset() does), and on Android the GPUParticles3D is freed at
+#   startup (BeepCube_SliceParticles.gd:9-10). A burst counter is the honest measure
+#   of particle load, and it works on device because the wrapper Node3D still toggles.
 #
 #   The flag is renamed to bench.flag.consumed before the run starts, so a crash in
 #   the middle of a benchmark cannot trap every later launch in benchmark mode.
@@ -51,11 +75,19 @@ const CONSUMED_NAME := "bench.flag.consumed"
 const CSV_NAME := "bench.csv"
 const META_NAME := "bench_meta.txt"
 const DEFAULT_MAX_DURATION_S := 180.0
+# Workload counters are sampled every Nth rendered frame; see the Output notes.
+const COUNTER_STRIDE := 4
 
-const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused"
+const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,cubes_in_use,links_in_use,debris_live,slice_bursts"
+
+# Preloaded by path so benchmark mode does not depend on the editor's global
+# class cache being up to date on a clean clone (same reason as BenchmarkRunner).
+const BotDriverScript := preload("res://game/scripts/BotDriver.gd")
 
 var _game: Node3D
 var _song_player: AudioStreamPlayer
+var _track: Node3D
+var _bot: Node = null
 
 var _out_dir := "user://"
 var _meta: Dictionary = {}
@@ -75,6 +107,21 @@ var _proc_deltas := PackedInt64Array()
 var _song_pos := PackedInt64Array()
 var _drawn := PackedInt32Array()
 var _focus_col := PackedByteArray()
+
+# Workload counters (see CSV_HEADER). Last sampled value is repeated on the
+# rows in between, so the columns are always aligned with their frame.
+var _col_cubes := PackedInt32Array()
+var _col_links := PackedInt32Array()
+var _col_debris := PackedInt32Array()
+var _col_bursts := PackedInt32Array()
+var _last_cubes := 0
+var _last_links := 0
+var _last_debris := 0
+var _last_bursts := 0
+var _bursts_total := 0
+var _burst_state: Dictionary = {}
+var _cube_cache: Array[BeepCube] = []
+var _cube_cache_children := -1
 
 func _init(game: Node3D) -> void:
 	_game = game
@@ -165,6 +212,8 @@ func _begin() -> void:
 	var menu: MainMenu = _game.menu
 	@warning_ignore("unsafe_property_access")
 	_song_player = _game.song_player
+	@warning_ignore("unsafe_property_access")
+	_track = _game.track
 	if menu == null or _song_player == null:
 		vr.log_error("BENCH: main scene is missing its menu or song player")
 		_abort("no_scene_refs")
@@ -216,7 +265,22 @@ func _begin() -> void:
 		_abort("start_failed")
 		return
 	
+	_start_bot(cfg)
 	_start_recording()
+
+# The bot is created here, in the same call stack as start_map(), i.e. before the
+# first physics tick can pop notes off Map.note_stack: it snapshots them itself.
+func _start_bot(cfg: ConfigFile) -> void:
+	var enabled := bool(cfg.get_value("bot", "enabled", false))
+	_meta["bot_enabled"] = "true" if enabled else "false"
+	_meta["counter_stride"] = str(COUNTER_STRIDE)
+	if not enabled:
+		return
+	var miss_percent := float(cfg.get_value("bot", "miss_percent", 0.0))
+	var sway := bool(cfg.get_value("bot", "sway", true))
+	_bot = BotDriverScript.new(_game, miss_percent, sway)
+	_game.add_child(_bot)
+	vr.log_info("BENCH: bot enabled miss_percent=%.1f sway=%s" % [miss_percent, str(sway)])
 
 func _start_recording() -> void:
 	_recording = true
@@ -237,6 +301,13 @@ func _process(delta: float) -> void:
 	_drawn.append(Engine.get_frames_drawn())
 	_focus_col.append(1 if _focused else 0)
 	
+	if _ticks.size() % COUNTER_STRIDE == 1:
+		_sample_counters()
+	_col_cubes.append(_last_cubes)
+	_col_links.append(_last_links)
+	_col_debris.append(_last_debris)
+	_col_bursts.append(_last_bursts)
+	
 	if _song_player.playing:
 		_saw_playing = true
 	elif _saw_playing:
@@ -245,6 +316,46 @@ func _process(delta: float) -> void:
 	
 	if now - _start_usec >= _limit_usec:
 		_finish(_limit_reason)
+
+# ── workload counters ────────────────────────────────────────────────────────
+func _sample_counters() -> void:
+	_last_cubes = _pool_in_use(GlobalReferences.cube_pool)
+	_last_links = _pool_in_use(GlobalReferences.link_pool)
+	_last_debris = 0
+	_last_bursts = 0
+	if _track == null:
+		return
+	if _track.get_child_count() != _cube_cache_children:
+		_refresh_cube_cache()
+	for cube in _cube_cache:
+		if cube.piece_left != null and cube.piece_left.visible:
+			_last_debris += 1
+		if cube.piece_right != null and cube.piece_right.visible:
+			_last_debris += 1
+		# Count slice-particle bursts started since the last sample: fire() sets
+		# the wrapper visible, the next spawn's reset() clears it. Guarded
+		# because the inner GPUParticles3D is freed on Android.
+		if not is_instance_valid(cube.slice_particles):
+			continue
+		var fired := cube.slice_particles.visible
+		if fired and not bool(_burst_state.get(cube, false)):
+			_last_bursts += 1
+			_bursts_total += 1
+		_burst_state[cube] = fired
+
+func _refresh_cube_cache() -> void:
+	_cube_cache.clear()
+	_cube_cache_children = _track.get_child_count()
+	for child in _track.get_children():
+		if child is BeepCube:
+			_cube_cache.append(child as BeepCube)
+
+# A pool's in-use count is the number of notes/links currently spawned, i.e. the
+# live workload. O(1), so it is cheap enough to read every sampled frame.
+func _pool_in_use(pool: ScenePool) -> int:
+	if pool == null:
+		return 0
+	return pool.total_count() - pool.free_count()
 
 func _notification(what: int) -> void:
 	match what:
@@ -333,6 +444,12 @@ func _finish(reason: String) -> void:
 	_meta["samples"] = _ticks.size()
 	_meta["elapsed_s"] = "%.3f" % (elapsed_usec / 1000000.0)
 	_meta["exit_reason"] = reason
+	_meta["debris_peak"] = str(_peak_of(_col_debris))
+	_meta["slice_bursts_total"] = str(_bursts_total)
+	_meta["cubes_peak"] = str(_peak_of(_col_cubes))
+	if _bot != null:
+		@warning_ignore("unsafe_method_access")
+		_meta.merge(_bot.get_stats(), true)
 	_write_csv()
 	_write_meta()
 	vr.log_info("BENCH: samples=%d elapsed=%.3fs exit=%s" % [
@@ -366,9 +483,10 @@ func _write_csv() -> void:
 	rows.resize(_ticks.size() + 1)
 	rows[0] = CSV_HEADER
 	for i in _ticks.size():
-		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d" % [
+		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
 			i, _ticks[i], _deltas[i], _proc_deltas[i],
-			_song_pos[i], _drawn[i], _focus_col[i]]
+			_song_pos[i], _drawn[i], _focus_col[i],
+			_col_cubes[i], _col_links[i], _col_debris[i], _col_bursts[i]]
 	f.store_string("\n".join(rows) + "\n")
 	f.close()
 	vr.log_info("BENCH: csv=%s" % path)
@@ -391,3 +509,10 @@ func _pct(sorted_values: PackedInt64Array, p: float) -> int:
 	if n == 0:
 		return 0
 	return sorted_values[clampi(int(round(float(n - 1) * p)), 0, n - 1)]
+
+func _peak_of(values: PackedInt32Array) -> int:
+	var peak := 0
+	for v in values:
+		if v > peak:
+			peak = v
+	return peak

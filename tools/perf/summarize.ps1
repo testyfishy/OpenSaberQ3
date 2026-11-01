@@ -1,110 +1,140 @@
 <#
 .SYNOPSIS
-  Summarise a bench.csv produced by game/scripts/BenchmarkRunner.gd.
+  Score a bench.csv (and optionally the VrApi logcat from the same run) against this project's
+  frame-pacing criteria.
 
 .DESCRIPTION
-  Reports the criteria this project is judged on (spec SC-002/003/010/011) rather than a
-  friendly average:
+  Two things are being measured and they must not be confused:
 
-    - percentiles of wall-clock frame interval and process delta
-    - frames over the 13.9 ms (72 Hz) / 11.1 ms (90 Hz) budget
-    - spike clusters, because a missed frame in this workload is a spike, not a slow mean
-    - whether the run was focused (a backgrounded app renders slower and would poison the numbers)
+  * Frame INTERVAL from the CSV is vsync-locked. A healthy app sitting at 72 Hz reports
+    ~13.89 ms every frame, with half of them a hair above the period purely from jitter.
+    Counting "interval > period" as a failure would fail every healthy VR app, so a missed
+    frame is defined as ONE OR MORE SKIPPED VSYNC INTERVALS (>= 1.5x period).
+
+  * HEADROOM (SC-011) cannot come from the interval at all, because the interval is clamped to
+    the panel rate. It comes from VrApi's own GPU/CPU timing (`App=` and `CPU&GPU=`), parsed
+    from the logcat captured alongside the run.
 
 .EXAMPLE
-  pwsh -File tools/perf/summarize.ps1 -Csv bench.csv -Hz 72
+  pwsh -File tools/perf/summarize.ps1 -Csv perf\captures\r1.bench.csv -Hz 72 `
+       -Logcat perf\captures\r1.logcat.txt
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$Csv,
     [ValidateSet(72, 80, 90, 120)][int]$Hz = 72,
-    [double]$SpikeMs = 0
+    [string]$Logcat = ''
 )
 
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path $Csv)) { throw "not found: $Csv" }
-
 $rows = Import-Csv $Csv
 if (-not $rows -or $rows.Count -eq 0) { throw "empty csv: $Csv" }
 
-$budgetMs = 1000.0 / $Hz
+$period = 1000.0 / $Hz
+$dropThreshold = 1.5 * $period   # one or more skipped vsync intervals
+$severeThreshold = 2.5 * $period # two or more
 
 function Pct($values, $p) {
     if (-not $values -or $values.Count -eq 0) { return $null }
-    $s = $values | Sort-Object
+    $s = @($values | Sort-Object)
     $i = [math]::Floor($s.Count * $p)
     if ($i -ge $s.Count) { $i = $s.Count - 1 }
     return $s[$i]
 }
 
-# tolerate either column name the runner may emit
 $deltaCol = 'delta_usec'
 if (-not ($rows[0].PSObject.Properties.Name -contains $deltaCol)) { $deltaCol = 'frame_usec' }
 if (-not ($rows[0].PSObject.Properties.Name -contains $deltaCol)) {
     throw "no delta column found; columns are: $($rows[0].PSObject.Properties.Name -join ', ')"
 }
 
-$deltaMs = @($rows | ForEach-Object { [double]$_.$deltaCol / 1000.0 })
+$ms = @($rows | ForEach-Object { [double]$_.$deltaCol / 1000.0 })
 $procMs = @()
 if ($rows[0].PSObject.Properties.Name -contains 'process_delta_usec') {
     $procMs = @($rows | Where-Object { $_.process_delta_usec } | ForEach-Object { [double]$_.process_delta_usec / 1000.0 })
 }
 
-$over = @($deltaMs | Where-Object { $_ -gt $budgetMs })
-$focusedVals = @()
+$dropped = @($ms | Where-Object { $_ -ge $dropThreshold })
+$severe = @($ms | Where-Object { $_ -ge $severeThreshold })
+$onVsync = $ms.Count - $dropped.Count
+$focusedRows = 0
 if ($rows[0].PSObject.Properties.Name -contains 'focused') {
-    $focusedVals = @($rows | ForEach-Object { $_.focused })
+    $focusedRows = @($rows | Where-Object { $_.focused -eq '1' -or $_.focused -eq 'true' }).Count
 }
 
-$mean = ($deltaMs | Measure-Object -Average).Average
-
 "file        : $Csv"
-"target      : $Hz Hz  (budget {0:N2} ms)" -f $budgetMs
-"samples     : $($rows.Count)"
+"target      : $Hz Hz  (period {0:N2} ms, dropped-frame threshold {1:N2} ms)" -f $period, $dropThreshold
+"samples     : $($ms.Count)"
 ""
-"wall frame interval (ms)"
-"  mean      : {0:N2}   ({1:N1}% of budget)" -f $mean, (100.0 * $mean / $budgetMs)
-"  p50       : {0:N2}" -f (Pct $deltaMs 0.50)
-"  p95       : {0:N2}" -f (Pct $deltaMs 0.95)
-"  p99       : {0:N2}   ({1:N1}% of budget)" -f (Pct $deltaMs 0.99), (100.0 * (Pct $deltaMs 0.99) / $budgetMs)
-"  max       : {0:N2}" -f (($deltaMs | Measure-Object -Maximum).Maximum)
+"frame interval"
+"  mean      : {0:N2} ms" -f ($ms | Measure-Object -Average).Average
+"  p50       : {0:N2} ms" -f (Pct $ms 0.50)
+"  p95       : {0:N2} ms" -f (Pct $ms 0.95)
+"  p99       : {0:N2} ms" -f (Pct $ms 0.99)
+"  max       : {0:N2} ms" -f (($ms | Measure-Object -Maximum).Maximum)
 ""
-"over budget : {0} frames ({1:N2}%)" -f $over.Count, (100.0 * $over.Count / $deltaMs.Count)
+"frames delivered on vsync : {0} of {1} ({2:N3}%)" -f $onVsync, $ms.Count, (100.0 * $onVsync / $ms.Count)
+"dropped-frame events      : {0} ({1:N3}% of frames missed at least one vsync)" -f $dropped.Count, (100.0 * $dropped.Count / $ms.Count)
+"severe events (>=2 vsync) : {0}" -f $severe.Count
+
+if ($focusedRows -gt 0 -or ($rows[0].PSObject.Properties.Name -contains 'focused')) {
+    ""
+    "focused     : $focusedRows of $($ms.Count) rows"
+    if ($focusedRows -lt $ms.Count) { "  <-- INVALID RUN: app lost focus; numbers describe a paused process" }
+}
 
 if ($procMs.Count -gt 0) {
     ""
-    "process delta (ms)"
+    "process delta (ms)   [CPU-side, not vsync-clamped]"
     "  mean      : {0:N2}" -f ($procMs | Measure-Object -Average).Average
     "  p99       : {0:N2}" -f (Pct $procMs 0.99)
     "  max       : {0:N2}" -f (($procMs | Measure-Object -Maximum).Maximum)
 }
 
-if ($focusedVals.Count -gt 0) {
-    $notFocused = @($focusedVals | Where-Object { $_ -eq '0' -or $_ -eq 'false' }).Count
-    ""
-    "focused     : {0} of {1} rows focused{2}" -f ($focusedVals.Count - $notFocused), $focusedVals.Count,
-        $(if ($notFocused -gt 0) { "  <-- INVALID RUN: app lost focus, numbers are not comparable" } else { "" })
+# hitch clusters: consecutive dropped frames are one hitch, not N
+$clusters = @(); $run = 0
+foreach ($v in $ms) {
+    if ($v -ge $dropThreshold) { $run++ } elseif ($run -gt 0) { $clusters += $run; $run = 0 }
 }
-
-# spike clusters: consecutive frames over budget are one hitch, not N
-$threshold = if ($SpikeMs -gt 0) { $SpikeMs } else { $budgetMs }
-$clusters = @(); $current = 0
-foreach ($ms in $deltaMs) {
-    if ($ms -gt $threshold) { $current++ }
-    elseif ($current -gt 0) { $clusters += $current; $current = 0 }
-}
-if ($current -gt 0) { $clusters += $current }
-
+if ($run -gt 0) { $clusters += $run }
 ""
-"hitches over {0:N2} ms : {1} clusters" -f $threshold, $clusters.Count
+"hitches (>= {0:N2} ms) : {1} clusters" -f $dropThreshold, $clusters.Count
 if ($clusters.Count -gt 0) {
     "  longest   : {0} consecutive frames" -f (($clusters | Measure-Object -Maximum).Maximum)
     "  sizes     : {0}" -f (($clusters | Sort-Object -Descending | Select-Object -First 12) -join ', ')
 }
 
+# ---- headroom from VrApi (the only source that is not vsync-clamped) ----
+if ($Logcat -and (Test-Path $Logcat)) {
+    $lines = Get-Content $Logcat
+    $app = @(); $sub = @(); $stale = 0; $staleSamples = 0
+    foreach ($l in $lines) {
+        if ($l -match 'App=([\d.]+)ms') { $app += [double]$matches[1] }
+        if ($l -match 'CPU&GPU=([\d.]+)ms') { $sub += [double]$matches[1] }
+        if ($l -match 'Stale=(\d+)') { $stale += [int]$matches[1]; $staleSamples++ }
+    }
+    ""
+    "VrApi (1 sample/second, not vsync-clamped)"
+    if ($app.Count -gt 0) {
+        "  App GPU+CPU ms : mean {0:N2}  p95 {1:N2}  max {2:N2}  ({3:N1}% of period at mean)" -f `
+            ($app | Measure-Object -Average).Average, (Pct $app 0.95), (($app | Measure-Object -Maximum).Maximum),
+            (100.0 * ($app | Measure-Object -Average).Average / $period)
+    }
+    if ($sub.Count -gt 0) {
+        "  CPU&GPU ms     : mean {0:N2}  p95 {1:N2}  max {2:N2}  ({3:N1}% of period at mean)" -f `
+            ($sub | Measure-Object -Average).Average, (Pct $sub 0.95), (($sub | Measure-Object -Maximum).Maximum),
+            (100.0 * ($sub | Measure-Object -Average).Average / $period)
+    }
+    "  Stale samples  : $stale (over $staleSamples VrApi samples)"
+}
+
 ""
 "verdict"
-if ($over.Count -eq 0) { "  SC-010 (zero stale/over-budget frames): PASS" }
-else { "  SC-010: FAIL - $($over.Count) frames over budget" }
-"  SC-011 (p99 <= 75% of budget): {0}" -f $(if ((Pct $deltaMs 0.99) -le 0.75 * $budgetMs) { 'PASS' } else { 'FAIL' })
-"  hard ceiling (max <= 90% of budget): {0}" -f $(if ((($deltaMs | Measure-Object -Maximum).Maximum) -le 0.90 * $budgetMs) { 'PASS' } else { 'FAIL' })
+$sc010 = ($dropped.Count -eq 0)
+"  SC-010 (zero dropped frames): {0}" -f $(if ($sc010) { 'PASS' } else { "FAIL - $($dropped.Count) dropped-frame events" })
+if ($procMs.Count -gt 0) {
+    $p99 = Pct $procMs 0.99
+    "  SC-011 (p99 CPU <= 75% of period): {0} ({1:N1}%)" -f $(if ($p99 -le 0.75 * $period) { 'PASS' } else { 'FAIL' }), (100.0 * $p99 / $period)
+}
+"  note: headroom needs the VrApi columns above; interval alone cannot show it."
