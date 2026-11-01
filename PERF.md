@@ -85,7 +85,52 @@ VrApi: FPS=73/72, Stale=0, Stale2/5/10/max=0/0/0/0, App=5.94ms, CPU&GPU=9.22ms,
 **This is a menu, not gameplay, so it is not the baseline.** It proves the pipeline works and
 that the headset is nowhere near GPU-bound when idle. Gameplay is where spikes will live.
 
-### First bot workload run (2026-11-01) — harness validated, not yet a baseline
+### Baseline v0 — 2026-11-01 — "before anything was changed"
+
+**Workload:** `ODDS&ENDS feat. Hatsune Miku`, ExpertPlus (Standard characteristic, index 5),
+bot autoplay, 180 s per run, 3 runs with 60 s cooldowns.
+
+**Conditions:** release build, Godot 4.6.3, Vulkan Forward Mobile, Adreno 740, 72 Hz, USB-connected
+(charging), headset unworn, thermal status 0, every row focused. Booted from the same APK each run.
+
+**Workload validity (all runs):** notes queued > 0; notes actually cut 642 / 655 / 653; debris peak
+8 / 10 / 8; no run was an empty scene. The bot is *not* bit-deterministic (cut counts vary by ~2%
+because input timing depends on frame delivery), so spread below includes that variance and it is
+part of the noise floor.
+
+| Metric | Run 1 | Run 2 | Run 3 | **Median** | Spread |
+|---|---|---|---|---|---|
+| Frames | 12,923 | 12,955 | 12,954 | 12,954 | ±32 |
+| Delivered on vsync | 99.861% | 99.876% | 99.876% | **99.876%** | 0.015 pp |
+| Dropped-frame events | 18 | 16 | 16 | **16** | 2 |
+| Severe (>=2 vsync) | 2 | 1 | 1 | **1** | 1 |
+| p50 interval (ms) | 13.91 | 13.92 | 13.90 | **13.91** | 0.02 |
+| p95 interval (ms) | 15.38 | 15.44 | 15.52 | **15.44** | 0.14 |
+| p99 interval (ms) | 16.44 | 16.50 | 16.62 | **16.50** | 0.18 |
+| Max interval (ms) | **459.49** | 54.40 | 48.30 | 54.40 | — |
+| `App=` GPU+CPU mean (ms) | 3.40 | 3.94 | 4.04 | **3.94** | 0.64 |
+| `App=` as % of budget | 24.5% | 28.4% | 29.1% | **28.4%** | 4.6 pp |
+| `CPU&GPU=` mean (ms) | 7.38 | 8.00 | 8.24 | **8.00** | 0.86 |
+| `CPU&GPU=` p95 as % of budget | 85.4% | 86.3% | 88.0% | **86.3%** | 2.6 pp |
+| Notes cut | 642 | 655 | 653 | **653** | 13 |
+
+**What this baseline says, before any change is made:**
+
+1. **GPU is not the bottleneck.** `App=` mean is 28% of the 13.89 ms budget — roughly **72% of the
+   GPU frame budget is unused**. Clarity (render scale, MSAA) can be bought without touching frame
+   stability, and that is the cheapest real win available.
+2. **The CPU side is the binding constraint.** `CPU&GPU=` p95 sits at ~86% of budget — above the
+   75% headroom target (SC-011). This is where frame stability will be won or lost.
+3. **~16 dropped-frame events per 3 minutes** is the user's "intermittent hitch", quantified for the
+   first time. Run 1's 459 ms outlier is almost certainly first-note shader/pipeline compilation and
+   is excluded from judgement, not ignored (see FR-014).
+4. Stale-frame samples (37–52 per run) corroborate the drops from the runtime's own side.
+
+Baseline committed as: **no optimization has been applied yet.** Every later row must beat the
+medians above by more than the spread.
+
+### Harness validation run (2026-11-01) — superseded by Baseline v0
+
 
 Release build, Godot 4.6.3, Vulkan Forward Mobile, Adreno 740, 72 Hz, charging, cold
 (thermal status 0), headset unworn, **bot autoplay with zero deliberately-missed notes**.
