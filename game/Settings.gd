@@ -125,6 +125,41 @@ var foveation_level: int:
 		foveation_level = value
 		set_and_emit(&"foveation_level", value)
 
+# --- BeatSaver browser state (specs/005-beatsaver-browser, FR-011). Only the sort and the filter
+# set are remembered; the search text and the current page are deliberately not.
+var beatsaver_order: String:
+	set(value):
+		beatsaver_order = value
+		set_and_emit(&"beatsaver_order", value)
+var beatsaver_curated: bool:
+	set(value):
+		beatsaver_curated = value
+		set_and_emit(&"beatsaver_curated", value)
+var beatsaver_verified: bool:
+	set(value):
+		beatsaver_verified = value
+		set_and_emit(&"beatsaver_verified", value)
+var beatsaver_ranked: bool:
+	set(value):
+		beatsaver_ranked = value
+		set_and_emit(&"beatsaver_ranked", value)
+var beatsaver_playable_only: bool:
+	set(value):
+		beatsaver_playable_only = value
+		set_and_emit(&"beatsaver_playable_only", value)
+var beatsaver_duration: int:
+	set(value):
+		beatsaver_duration = value
+		set_and_emit(&"beatsaver_duration", value)
+var beatsaver_nps: int:
+	set(value):
+		beatsaver_nps = value
+		set_and_emit(&"beatsaver_nps", value)
+var beatsaver_difficulties: String:
+	set(value):
+		beatsaver_difficulties = value
+		set_and_emit(&"beatsaver_difficulties", value)
+
 
 
 func _ready() -> void:
@@ -180,7 +215,15 @@ var default_values = {
 	display_refresh_rate = 120.0,
 	render_scale = 1.2546,
 	msaa_3d = 2,
-	foveation_level = 0
+	foveation_level = 0,
+	beatsaver_order = "Latest",
+	beatsaver_curated = false,
+	beatsaver_verified = false,
+	beatsaver_ranked = false,
+	beatsaver_playable_only = false,
+	beatsaver_duration = 0,
+	beatsaver_nps = 0,
+	beatsaver_difficulties = ""
 }
 
 func cast_or_default(key: String, to_type: int = -1) -> Variant:

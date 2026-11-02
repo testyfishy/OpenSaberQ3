@@ -1,436 +1,1036 @@
 extends Panel
 class_name BeatSaverPanel
 
-class BeatSaverSongInfo extends RefCounted:
-	var name: String
-	var description: String
-	var song_name: String
-	var song_author_name: String
-	var level_author_name: String
-	var duration: float
-	var versions: Array
-	var uploader_id: int
-	
-	func _init(song_info: Dictionary) -> void:
-		name = Utils.get_str(song_info, "name", "")
-		description = Utils.get_str(song_info, "description", "")
-		versions = Utils.get_array(song_info, "versions", [])
-		uploader_id = int(Utils.get_float(Utils.get_dict(song_info, "uploader", {}), "id", -1))
-		var metadata := Utils.get_dict(song_info, "metadata", {})
-		song_name = Utils.get_str(metadata, "songName", "")
-		song_author_name = Utils.get_str(metadata, "songAuthorName", "")
-		level_author_name = Utils.get_str(metadata, "levelAuthorName", "")
-		duration = Utils.get_float(metadata, "duration", 0.0)
+## The in-VR BeatSaver browser, rebuilt on `https://api.beatsaver.com/search/text/{page}`.
+##
+## Contract: `specs/005-beatsaver-browser/spec.md`; API: `specs/003-beatsaver-api-research/`.
+## Kept from the old panel: the OQ_UI2D canvas hiding, the details pane with preview audio, the
+## download/unzip path and the entry points `MapDownloadPanel` and `BeepSaberMainMenu` use.
 
-var song_data: Array[BeatSaverSongInfo] = []
-var current_list := 0
+const BeatSaverApi := preload("res://game/ui/BeatSaverPanel/BeatSaverApi.gd")
+const BeatSaverCoversScript := preload("res://game/ui/BeatSaverPanel/BeatSaverCovers.gd")
+const MapCardScript := preload("res://game/ui/BeatSaverPanel/BeatSaverMapCard.gd")
+const HTTP_REQUEST_POOL := preload("res://game/scripts/HTTPRequestPool.tscn")
+const VR_SLIDER := preload("res://game/vr_slider.tscn")
+const PLACEHOLDER_COVER := preload("res://game/data/beepsaber_logo.png")
+
+## Must match BeatSaverApi.PAGE_SIZE (kept as a literal so it is a compile-time constant here).
+const PAGE_SIZE := 20
+## Client-side filters can thin a server page out; keep fetching until the display page is full
+## (reference 3.3), but never spend more than this many server pages on one display page.
+const MAX_SERVER_PAGES_PER_PAGE := 4
+const SEARCH_DEBOUNCE_SECONDS := 0.4
+const SETTINGS_SAVE_DELAY := 1.0
+const MAX_HISTORY := 10
+
+const DURATION_LABELS: Array[String] = ["Any length", "<2 min", "2-4 min", "4+ min"]
+const DURATION_MIN: Array[int] = [-1, -1, 120, 241]
+const DURATION_MAX: Array[int] = [-1, 119, 240, -1]
+const NPS_LABELS: Array[String] = ["Any NPS", "Slow <4", "4-7 NPS", "7-10 NPS", "10+ NPS"]
+const NPS_MIN: Array[float] = [-1.0, -1.0, 4.0, 7.0, 10.0]
+const NPS_MAX: Array[float] = [-1.0, 4.0, 7.0, 10.0, -1.0]
+const SORT_WITH_QUERY: Array[String] = ["Latest", "Rating", "Curated", "Relevance"]
+const SORT_WITHOUT_QUERY: Array[String] = ["Latest", "Rating", "Curated"]
+
+const CHAR_TAG_NAMES := {
+	"OneSaber": "1S",
+	"90Degree": "90",
+	"360Degree": "360",
+	"NoArrows": "NA",
+	"Lightshow": "LS",
+}
+
+# Settings keys (FR-011). Declared as literals so Settings.gd and this file cannot drift apart
+# silently - `tools/tests/beatsaver_browser_test.gd` asserts they exist in Settings.default_values.
+const SETTING_ORDER := "beatsaver_order"
+const SETTING_CURATED := "beatsaver_curated"
+const SETTING_VERIFIED := "beatsaver_verified"
+const SETTING_RANKED := "beatsaver_ranked"
+const SETTING_PLAYABLE := "beatsaver_playable_only"
+const SETTING_DURATION := "beatsaver_duration"
+const SETTING_NPS := "beatsaver_nps"
+const SETTING_DIFFICULTIES := "beatsaver_difficulties"
+
 # reference to the main main node (used for playing downloadable song previews)
 @export var main_menu_ref: MainMenu
-# the next requestable pages for the current list; -1 if prev/next page is
-# not requestable (ie. reached end of the list)
-var prev_page_available := -1
-var next_page_available := -1
-# Older API used to support more lists. temporarily limiting to ones that still work
-#var list_modes = ["hot","rating","latest","downloads","plays"]
-var list_modes: Array[String] = ["plays"]
-var search_word := ""
-var item_selected := -1
-var downloading := []#[["name","version_info"]]
-
-@onready var item_list := $ItemList as ItemList
-@onready var mode_button := $mode as Button
-@onready var label := $Label as Label
-@onready var httpreq := $HTTPReq as HTTPRequest
-@onready var httpdownload := $HTTPDownload as HTTPRequest
-@onready var httpcoverdownload := $CoverDownload as HTTPRequest
-@onready var httppreviewdownload := $PreviewDownload as HTTPRequest
-@onready var placeholder_cover := preload("res://game/data/beepsaber_logo.png")
-@onready var goto_maps_by := $gotoMapsBy as Button
-@onready var v_scroll := item_list.get_v_scroll_bar()
-
-const MAX_BACK_STACK_DEPTH := 10
-# series of previous requests that you can go back to
-var back_stack: Array[BeatSaverRequest] = []
-
-# structure representing the previous HTTP request we made to beatsaver
-class BeatSaverRequest extends RefCounted:
-	var page: int
-	var type: String
-	var data: String
-var prev_request: BeatSaverRequest
-
 @export var keyboard: OQ_UI2DKeyboard
 
+# --- query and paging state ---
+var _query := {}
+var _seq := 0
+var _loading := false
+var _error_message := ""
+# Rows currently on screen, and the rows being assembled for the next page. Kept apart so a
+# failed page leaves the previous page on screen (spec edge case).
+var _rows: Array = []
+var _rejected := 0
+var _pending_rows: Array = []
+var _pending_rejected := 0
+var _pending_docs_seen := 0
+var _page_index := 0
+var _page_starts: Array = []
+var _cursor_page := 0
+var _cursor_doc := 0
+var _served_pages := 0
+var _exhausted := true
+var _has_more := false
+var _total := 0
+var _cached_server_page := -1
+var _cached_docs: Array = []
+var _prefetch_url := ""
+var _selected_index := -1
+var _history: Array = []
+var _download_queue := []
+
+# --- runtime nodes ---
+var _covers: Node
+var _search_pool: Node
+var _prefetch_pool: Node
+var _preview_request: HTTPRequest
+var _download_request: HTTPRequest
+var _debounce: Timer
+var _save_timer: Timer
+
+# --- ui ---
+var _search_button: Button
+var _query_label: Label
+var _sort_button: Button
+var _back_button: Button
+var _prev_button: Button
+var _next_button: Button
+var _page_label: Label
+var _curated_toggle: Button
+var _verified_toggle: Button
+var _ranked_toggle: Button
+var _playable_toggle: Button
+var _duration_button: Button
+var _nps_button: Button
+var _difficulty_toggles: Array[Button] = []
+var _scroll: ScrollContainer
+var _card_list: VBoxContainer
+var _cards: Array = []
+var _status_label: Label
+var _retry_button: Button
+var _details_cover: TextureRect
+var _song_data: RichTextLabel
+var _download_button: Button
+var _maps_by_button: Button
+var _status_bar: Label
+
+var _is_first_show := true
+
+
 func _ready() -> void:
+	_build_ui()
+	_build_runtime_nodes()
+	_load_query_from_settings()
+	_update_controls()
 	UI_AudioEngine.attach_children(self)
-	($back as Button).visible = false
-	v_scroll.value_changed.connect(_on_ListV_Scroll_value_changed)
-	
-	var is_web := OS.get_name() == "Web"
-	
-	if not is_web:
-		httpreq.use_threads = true
-		httpdownload.use_threads = true
-		httpcoverdownload.use_threads = true
-		httppreviewdownload.use_threads = true
-	
+
+	var canvas := _find_canvas()
+	if canvas != null:
+		canvas.visibility_changed.connect(_on_visibility_changed)
+
 	if keyboard != null:
-		keyboard.text_input_enter.connect(_text_input_enter)
-		keyboard.text_input_cancel.connect(_text_input_cancel)
-	
-	var parent_canvas: Node = self
-	while parent_canvas != null:
-		if parent_canvas is OQ_UI2DCanvas:
-			(parent_canvas as OQ_UI2DCanvas).visibility_changed.connect(_on_BeatSaverPanel_visibility_changed)
-			break
-		parent_canvas = parent_canvas.get_parent()
+		# The keyboard's TextEdit (and its `text_changed`) only exists once that node is ready.
+		await keyboard.ready
+		keyboard.text_input_enter.connect(_on_text_enter)
+		keyboard.text_input_cancel.connect(_on_text_cancel)
+		keyboard._text_edit.text_changed.connect(_on_text_changed)
+
+
+# --- OQ_UI2D plumbing (unchanged behaviour) ----------------------------------------------------
+
+func _find_canvas() -> OQ_UI2DCanvas:
+	var node: Node = self
+	while node != null:
+		if node is OQ_UI2DCanvas:
+			return node as OQ_UI2DCanvas
+		node = node.get_parent()
+	return null
+
+
+func _canvas_input_update() -> void:
+	var canvas := _find_canvas()
+	if canvas != null:
+		canvas._input_update()
+
 
 # override hide() method to handle case where UI is inside a OQ_UI2DCanvas
 func _hide() -> void:
-	var parent_canvas: Node = self
-	while parent_canvas != null:
-		if parent_canvas is OQ_UI2DCanvas:
-			(parent_canvas as OQ_UI2DCanvas).hide()
-			break
-		parent_canvas = parent_canvas.get_parent()
-		
-	if parent_canvas == null:
-		self.visible = false
+	var canvas := _find_canvas()
+	if canvas != null:
+		canvas.hide()
+	else:
+		visible = false
+	if keyboard != null:
+		keyboard._hide()
+
 
 # override show() method to handle case where UI is inside a OQ_UI2DCanvas
 func _show() -> void:
-	var parent_canvas: Node = self
-	while parent_canvas != null:
-		if parent_canvas is OQ_UI2DCanvas:
-			(parent_canvas as OQ_UI2DCanvas).show()
-			break
-		parent_canvas = parent_canvas.get_parent()
-		
-	if parent_canvas == null:
-		self.visible = true
-	_on_BeatSaverPanel_visibility_changed()
-
-func update_list(req: BeatSaverRequest) -> void:
-	mode_button.disabled = true
-	if req.page == 0:
-		# brand new request, clear list to prep for reload
-		item_list.clear()
-		if goto_maps_by:
-			goto_maps_by.visible = false
-		song_data = []
-		item_selected = -1
-	if not httpcoverdownload:
-		return
-	httpcoverdownload.cancel_request()
-	httpreq.cancel_request()
-	prev_page_available = req.page
-	next_page_available = -1
-	
-	match req.type:
-		"list":
-			var list := req.data
-			mode_button.text = list.substr(0,1).capitalize() + list.substr(1)
-			httpreq.request("https://beatsaver.com/api/maps/%s/%s" % [list,req.page])
-		"text_search":
-			var search_text := req.data
-			mode_button.text = search_text
-			httpreq.request("https://beatsaver.com/api/search/text/%s?q=%s&sortOrder=Relevance&automapper=true" % [req.page,search_text.uri_encode()])
-		"uploader":
-			var uploader_id := req.data
-			mode_button.text = "Uploader"
-			httpreq.request("https://beatsaver.com/api/maps/uploader/%s/%s" % [uploader_id,req.page])
-		_:
-			vr.log_warning("Unsupported request type '%s'" % req.type)
-
-func _add_to_back_stack(request: BeatSaverRequest) -> void:
-	if request == null: return
-	back_stack.push_back(request)
-	if back_stack.size() > MAX_BACK_STACK_DEPTH:
-		back_stack.pop_front()
-
-# return the selected song's data, or null if not song is selected
-func _get_selected_song() -> BeatSaverSongInfo:
-	if item_selected >= 0 && song_data.size():
-		return song_data[item_selected]
-	return null
-
-func _on_HTTPRequest_request_completed(result: int, _response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-	if result == 0:
-		var json_data: Variant = JSON.parse_string(body.get_string_from_utf8())
-		if json_data is Dictionary:
-			var json_dict := json_data as Dictionary
-			next_page_available = prev_page_available + 1
-			
-			if json_dict.has("docs"):
-				var docs: Variant = json_dict["docs"]
-				if docs is Array:
-					var docs_array := docs as Array
-					_current_cover_to_download = song_data.size()
-					for i: Variant in docs_array:
-						if not i is Dictionary: continue
-						var parsed_song := BeatSaverSongInfo.new(i as Dictionary)
-						var index := item_list.add_item(parsed_song.name)
-						item_list.set_item_icon(index, placeholder_cover)
-						var tooltip := "Map author: %s" % parsed_song.level_author_name
-						item_list.set_item_tooltip(index, tooltip)
-						song_data.append(parsed_song)
+	var canvas := _find_canvas()
+	if canvas != null:
+		canvas.show()
 	else:
-		vr.log_error("request error "+str(result))
-	mode_button.disabled = false
-	($back as Button).visible = back_stack.size() > 0
-	_scroll_page_request_pending = false
-	
-	var canvas := get_parent().get_parent()
-	if canvas is OQ_UI2DCanvas: (canvas as OQ_UI2DCanvas)._input_update()
-	
-	_update_all_covers()
+		visible = true
+	if _is_first_show:
+		_is_first_show = false
+		_new_search()
 
 
-func _on_mode_button_up() -> void:
-	current_list += 1
-	current_list %= list_modes.size()
-	mode_button.text = list_modes[current_list].capitalize()
-	_add_to_back_stack(prev_request)
-	prev_request = BeatSaverRequest.new()
-	prev_request.page = 0
-	prev_request.type = "list"
-	prev_request.data = list_modes[current_list]
-	update_list(prev_request)
+func _on_visibility_changed() -> void:
+	if _is_first_show and is_visible_in_tree():
+		_is_first_show = false
+		_new_search()
 
 
-func _on_ItemList_item_selected(index: int) -> void:
-	item_selected = index
-	var selected_data := _get_selected_song()
-	var dur_s := int(selected_data.duration)
-	var version = selected_data.versions[0]
-	goto_maps_by.text = "Maps by %s" % selected_data.level_author_name
-	goto_maps_by.visible = true
-	var difficulties := ""
-	for diff in version['diffs']:
-		difficulties += " %s" % diff['difficulty']
-	var text := """[center]%s By %s[/center]
+# --- UI construction ---------------------------------------------------------------------------
 
-Map author: %s
-Duration: %dm %ds
-Difficulties:%s
+func _build_ui() -> void:
+	# Row 1: search, sort, history, pager.
+	_search_button = _make_button(Rect2(16, 14, 220, 54), "Search maps…")
+	_search_button.pressed.connect(_on_search_button_pressed)
 
-[center]Description:[/center]
-%s""" % [
-		selected_data.song_name,
-		selected_data.song_author_name,
-		selected_data.level_author_name,
-		dur_s/60,dur_s%60,
-		difficulties,
-		selected_data.description,
-	]
-	($song_data as RichTextLabel).text = text
-	
-	($TextureRect as TextureRect).texture = item_list.get_item_icon(index)
+	_query_label = _make_label(Rect2(248, 14, 280, 54), "", 18, Color(1, 1, 1, 1))
+	_query_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_query_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 
-	httppreviewdownload.request(version['previewURL'])
+	_sort_button = _make_button(Rect2(540, 14, 200, 54), "Sort: Latest")
+	_sort_button.pressed.connect(_on_sort_pressed)
 
-func _on_download_button_up() -> void:
+	_back_button = _make_button(Rect2(752, 14, 100, 54), "Back")
+	_back_button.pressed.connect(_on_back_pressed)
+
+	_prev_button = _make_button(Rect2(864, 14, 80, 54), "<")
+	_prev_button.pressed.connect(_on_prev_pressed)
+
+	_page_label = _make_label(Rect2(952, 14, 224, 54), "Page 1", 18, Color(1, 1, 1, 1))
+	_page_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_page_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+	_next_button = _make_button(Rect2(1184, 14, 80, 54), ">")
+	_next_button.pressed.connect(_on_next_pressed)
+
+	var source_label := _make_label(Rect2(1280, 14, 240, 54), "From beatsaver.com", 16, Color(0.75, 0.75, 0.75, 1))
+	source_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	source_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+	# Row 2: server-side filters.
+	_curated_toggle = _make_toggle(Rect2(16, 76, 180, 54), "Curated")
+	_curated_toggle.toggled.connect(_on_filter_toggled)
+	_verified_toggle = _make_toggle(Rect2(204, 76, 180, 54), "Verified")
+	_verified_toggle.toggled.connect(_on_filter_toggled)
+	_ranked_toggle = _make_toggle(Rect2(392, 76, 180, 54), "Ranked")
+	_ranked_toggle.toggled.connect(_on_filter_toggled)
+	_playable_toggle = _make_toggle(Rect2(580, 76, 220, 54), "Playable only")
+	_playable_toggle.toggled.connect(_on_filter_toggled)
+
+	_duration_button = _make_button(Rect2(812, 76, 232, 54), "Length: Any")
+	_duration_button.pressed.connect(_on_duration_pressed)
+	_nps_button = _make_button(Rect2(1052, 76, 232, 54), "NPS: Any")
+	_nps_button.pressed.connect(_on_nps_pressed)
+
+	# Row 3: client-side difficulty chips + status.
+	var diff_label := _make_label(Rect2(16, 138, 124, 54), "Difficulty", 18, Color(0.85, 0.85, 0.85, 1))
+	diff_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	for i in BeatSaverApi.DIFFICULTIES.size():
+		var chip := _make_toggle(Rect2(144 + i * 88, 138, 80, 54), BeatSaverApi.DIFFICULTY_SHORT[i])
+		chip.toggled.connect(_on_difficulty_toggled)
+		_difficulty_toggles.append(chip)
+
+	_status_label = _make_label(Rect2(600, 138, 776, 54), "", 16, Color(0.8, 0.8, 0.8, 1))
+	_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_status_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+
+	_retry_button = _make_button(Rect2(1392, 138, 120, 54), "Retry")
+	_retry_button.pressed.connect(_on_retry_pressed)
+	_retry_button.visible = false
+
+	# Cards.
+	_scroll = ScrollContainer.new()
+	_scroll.name = "CardsScroll"
+	_scroll.position = Vector2(16, 204)
+	_scroll.size = Vector2(864, 636)
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	add_child(_scroll)
+
+	_card_list = VBoxContainer.new()
+	_card_list.name = "CardList"
+	_card_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_card_list.add_theme_constant_override("separation", 8)
+	_scroll.add_child(_card_list)
+
+	for i in PAGE_SIZE:
+		var card = MapCardScript.new()
+		card.name = "MapCard%d" % i
+		card.visible = false
+		_card_list.add_child(card)
+		card.pressed.connect(_on_card_pressed.bind(i))
+		_cards.append(card)
+
+	# Details pane.
+	_details_cover = TextureRect.new()
+	_details_cover.position = Vector2(904, 204)
+	_details_cover.size = Vector2(616, 264)
+	_details_cover.texture = PLACEHOLDER_COVER
+	_details_cover.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_details_cover.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_details_cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_details_cover)
+
+	_song_data = RichTextLabel.new()
+	_song_data.name = "SongData"
+	_song_data.position = Vector2(904, 478)
+	_song_data.size = Vector2(616, 308)
+	_song_data.bbcode_enabled = true
+	_song_data.scroll_active = false
+	_song_data.text = "Select a map to see the details.\n\nPress Download to add it to your library."
+	add_child(_song_data)
+
+	_download_button = _make_button(Rect2(904, 796, 296, 56), "Download")
+	_download_button.pressed.connect(_on_download_pressed)
+
+	_maps_by_button = _make_button(Rect2(1216, 796, 304, 56), "Maps by…")
+	_maps_by_button.pressed.connect(_on_maps_by_pressed)
+	_maps_by_button.disabled = true
+
+	_status_bar = _make_label(Rect2(16, 868, 1264, 60), "", 16, Color(0.9, 0.9, 0.9, 1))
+	_status_bar.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+	var close_button := _make_button(Rect2(1312, 868, 208, 60), "Close")
+	close_button.pressed.connect(_hide)
+
+	# The existing thumbstick / drag scroller, pointed at the new list.
+	var slider := VR_SLIDER.instantiate()
+	slider.name = "list_slider"
+	slider.scroll_node_path = NodePath("../CardsScroll")
+	add_child(slider)
+
+
+func _make_button(rect: Rect2, text: String) -> Button:
+	var button := Button.new()
+	button.position = rect.position
+	button.size = rect.size
+	button.text = text
+	button.clip_text = true
+	add_child(button)
+	return button
+
+
+func _make_toggle(rect: Rect2, text: String) -> Button:
+	var button := _make_button(rect, text)
+	button.toggle_mode = true
+	var on := StyleBoxFlat.new()
+	on.bg_color = Color(1, 1, 1, 1)
+	on.border_color = Color(1, 1, 1, 1)
+	on.set_border_width_all(5)
+	button.add_theme_stylebox_override("pressed", on)
+	button.add_theme_stylebox_override("hover_pressed", on)
+	button.add_theme_color_override("font_pressed_color", Color(0.04, 0.04, 0.04, 1))
+	button.add_theme_color_override("font_hover_pressed_color", Color(0.04, 0.04, 0.04, 1))
+	return button
+
+
+func _make_label(rect: Rect2, text: String, font_size: int, color: Color) -> Label:
+	var label := Label.new()
+	label.position = rect.position
+	label.size = rect.size
+	label.text = text
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.clip_text = true
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(label)
+	return label
+
+
+func _build_runtime_nodes() -> void:
+	_search_pool = _make_pool("SearchRequestPool", 1, _on_search_complete)
+	_prefetch_pool = _make_pool("PrefetchRequestPool", 1, _on_prefetch_complete)
+
+	_preview_request = HTTPRequest.new()
+	_preview_request.name = "PreviewRequest"
+	_preview_request.timeout = 8.0
+	add_child(_preview_request)
+	_preview_request.request_completed.connect(_on_preview_completed)
+
+	_download_request = HTTPRequest.new()
+	_download_request.name = "DownloadRequest"
+	_download_request.timeout = 0.0
+	add_child(_download_request)
+	_download_request.request_completed.connect(_on_download_completed)
+
+	_covers = BeatSaverCoversScript.new()
+	_covers.name = "CoverLoader"
+	add_child(_covers)
+
+	_debounce = Timer.new()
+	_debounce.name = "SearchDebounce"
+	_debounce.one_shot = true
+	_debounce.wait_time = SEARCH_DEBOUNCE_SECONDS
+	add_child(_debounce)
+	_debounce.timeout.connect(_on_debounce_timeout)
+
+	_save_timer = Timer.new()
+	_save_timer.name = "SettingsSaveTimer"
+	_save_timer.one_shot = true
+	_save_timer.wait_time = SETTINGS_SAVE_DELAY
+	add_child(_save_timer)
+	_save_timer.timeout.connect(_on_settings_save_timeout)
+
+
+func _make_pool(node_name: String, concurrency: int, handler: Callable) -> Node:
+	var pool := HTTP_REQUEST_POOL.instantiate()
+	pool.name = node_name
+	pool.max_simultaneous_request = concurrency
+	pool.request_timeout = 8.0
+	pool.default_headers = PackedStringArray(["User-Agent: " + BeatSaverApi.USER_AGENT])
+	add_child(pool)
+	pool.request_complete.connect(handler)
+	return pool
+
+
+# --- settings ----------------------------------------------------------------------------------
+
+func _load_query_from_settings() -> void:
+	var order := String(Settings.beatsaver_order)
+	if not BeatSaverApi.ORDERS.has(order) or order == "Relevance":
+		# Relevance needs a query; never start in it (FR-003).
+		order = BeatSaverApi.DEFAULT_ORDER
+	_query = {
+		"q": "",
+		"order": order,
+		"curated": bool(Settings.beatsaver_curated),
+		"verified": bool(Settings.beatsaver_verified),
+		"ranked": bool(Settings.beatsaver_ranked),
+		"playable_only": bool(Settings.beatsaver_playable_only),
+		"duration_index": clampi(int(Settings.beatsaver_duration), 0, DURATION_LABELS.size() - 1),
+		"nps_index": clampi(int(Settings.beatsaver_nps), 0, NPS_LABELS.size() - 1),
+		"difficulties": _parse_difficulties(String(Settings.beatsaver_difficulties)),
+		"min_duration": -1,
+		"max_duration": -1,
+		"min_nps": -1.0,
+		"max_nps": -1.0,
+	}
+	_apply_preset_bounds()
+
+
+func _apply_preset_bounds() -> void:
+	var duration_index: int = clampi(int(_query.get("duration_index", 0)), 0, DURATION_LABELS.size() - 1)
+	var nps_index: int = clampi(int(_query.get("nps_index", 0)), 0, NPS_LABELS.size() - 1)
+	_query["min_duration"] = DURATION_MIN[duration_index]
+	_query["max_duration"] = DURATION_MAX[duration_index]
+	_query["min_nps"] = NPS_MIN[nps_index]
+	_query["max_nps"] = NPS_MAX[nps_index]
+
+
+func _parse_difficulties(text: String) -> Array:
+	var out: Array = []
+	if text.strip_edges().is_empty():
+		return out
+	for part in text.split(",", false):
+		var index := int(part)
+		if index >= 0 and index < BeatSaverApi.DIFFICULTIES.size():
+			out.append(BeatSaverApi.DIFFICULTIES[index])
+	return out
+
+
+func _difficulties_to_setting() -> String:
+	var picked: Array = _query.get("difficulties", [])
+	var parts: PackedStringArray = PackedStringArray()
+	for i in BeatSaverApi.DIFFICULTIES.size():
+		if picked.has(BeatSaverApi.DIFFICULTIES[i]):
+			parts.append(str(i))
+	return ",".join(parts)
+
+
+## Writes the sort + filter state into Settings and coalesces the file write, so a burst of
+## button presses costs at most one config save.
+func _save_settings() -> void:
+	Settings.beatsaver_order = String(_query.get("order", BeatSaverApi.DEFAULT_ORDER))
+	Settings.beatsaver_curated = bool(_query.get("curated", false))
+	Settings.beatsaver_verified = bool(_query.get("verified", false))
+	Settings.beatsaver_ranked = bool(_query.get("ranked", false))
+	Settings.beatsaver_playable_only = bool(_query.get("playable_only", false))
+	Settings.beatsaver_duration = int(_query.get("duration_index", 0))
+	Settings.beatsaver_nps = int(_query.get("nps_index", 0))
+	Settings.beatsaver_difficulties = _difficulties_to_setting()
+	_save_timer.start()
+
+
+func _on_settings_save_timeout() -> void:
+	Settings.save()
+
+
+func _update_controls() -> void:
+	_sort_button.text = "Sort: %s" % String(_query.get("order", BeatSaverApi.DEFAULT_ORDER))
+	var text := String(_query.get("q", ""))
+	_query_label.text = text if not text.is_empty() else "All maps"
+	_curated_toggle.set_pressed_no_signal(bool(_query.get("curated", false)))
+	_verified_toggle.set_pressed_no_signal(bool(_query.get("verified", false)))
+	_ranked_toggle.set_pressed_no_signal(bool(_query.get("ranked", false)))
+	_playable_toggle.set_pressed_no_signal(bool(_query.get("playable_only", false)))
+	_duration_button.text = "Length: %s" % DURATION_LABELS[int(_query.get("duration_index", 0))]
+	_nps_button.text = "NPS: %s" % NPS_LABELS[int(_query.get("nps_index", 0))]
+	var picked: Array = _query.get("difficulties", [])
+	for i in _difficulty_toggles.size():
+		_difficulty_toggles[i].set_pressed_no_signal(picked.has(BeatSaverApi.DIFFICULTIES[i]))
+	_back_button.visible = not _history.is_empty()
+
+
+# --- control handlers ---------------------------------------------------------------------------
+
+func _on_search_button_pressed() -> void:
+	if keyboard == null:
+		return
+	keyboard._show()
+	keyboard._text_edit.grab_focus()
+
+
+func _on_text_changed() -> void:
+	# The keyboard clears its TextEdit after Enter/Cancel, which would otherwise fire a second,
+	# blank search; only live-type while the keyboard is actually open.
+	if keyboard == null or not keyboard.visible:
+		return
+	_debounce.start()
+
+
+func _on_debounce_timeout() -> void:
+	if keyboard == null:
+		return
+	_apply_query_text(keyboard._text_edit.text)
+
+
+func _on_text_enter(text: String) -> void:
+	if keyboard != null:
+		keyboard._hide()
+	_debounce.stop()
+	_apply_query_text(text)
+
+
+func _on_text_cancel() -> void:
+	if keyboard != null:
+		keyboard._hide()
+	_debounce.stop()
+
+
+func _apply_query_text(text: String) -> void:
+	var cleaned := text.strip_edges()
+	if cleaned == String(_query.get("q", "")):
+		return
+	_query["q"] = cleaned
+	if cleaned.is_empty() and String(_query.get("order", "")) == "Relevance":
+		# Blank query + Relevance is at best a silent Latest, at worst a 500; drop to Latest.
+		_query["order"] = BeatSaverApi.DEFAULT_ORDER
+	_update_controls()
+	_save_settings()
+	_new_search()
+
+
+func _sort_options() -> Array:
+	if String(_query.get("q", "")).strip_edges().is_empty():
+		return SORT_WITHOUT_QUERY
+	return SORT_WITH_QUERY
+
+
+func _on_sort_pressed() -> void:
+	var options := _sort_options()
+	var index := options.find(String(_query.get("order", BeatSaverApi.DEFAULT_ORDER)))
+	index = (index + 1) % options.size()
+	_query["order"] = options[index]
+	_update_controls()
+	_save_settings()
+	_new_search()
+
+
+func _on_filter_toggled(_pressed: bool) -> void:
+	_query["curated"] = _curated_toggle.button_pressed
+	_query["verified"] = _verified_toggle.button_pressed
+	_query["ranked"] = _ranked_toggle.button_pressed
+	_query["playable_only"] = _playable_toggle.button_pressed
+	_update_controls()
+	_save_settings()
+	_new_search()
+
+
+func _on_difficulty_toggled(_pressed: bool) -> void:
+	var picked: Array = []
+	for i in _difficulty_toggles.size():
+		if _difficulty_toggles[i].button_pressed:
+			picked.append(BeatSaverApi.DIFFICULTIES[i])
+	_query["difficulties"] = picked
+	_update_controls()
+	_save_settings()
+	_new_search()
+
+
+func _on_duration_pressed() -> void:
+	var index: int = (int(_query.get("duration_index", 0)) + 1) % DURATION_LABELS.size()
+	_query["duration_index"] = index
+	_apply_preset_bounds()
+	_update_controls()
+	_save_settings()
+	_new_search()
+
+
+func _on_nps_pressed() -> void:
+	var index: int = (int(_query.get("nps_index", 0)) + 1) % NPS_LABELS.size()
+	_query["nps_index"] = index
+	_apply_preset_bounds()
+	_update_controls()
+	_save_settings()
+	_new_search()
+
+
+func _on_retry_pressed() -> void:
+	_start_display_page(_page_starts[_page_index] if _page_index < _page_starts.size() else {"page": 0, "doc": 0})
+
+
+func _on_back_pressed() -> void:
+	if _history.is_empty():
+		return
+	_query = _history.pop_back()
+	_update_controls()
+	_new_search()
+
+
+func _push_history() -> void:
+	_history.append(_query.duplicate(true))
+	if _history.size() > MAX_HISTORY:
+		_history.pop_front()
+	_update_controls()
+
+
+func _on_prev_pressed() -> void:
+	if _loading or _page_index == 0 or _page_starts.is_empty():
+		return
+	_page_index -= 1
+	_page_starts.pop_back()
+	_start_display_page(_page_starts[_page_index])
+	_canvas_input_update()
+
+
+func _on_next_pressed() -> void:
+	if _loading or not _has_more:
+		return
+	_page_index += 1
+	var cursor := {"page": _cursor_page, "doc": _cursor_doc}
+	_page_starts.append(cursor)
+	_start_display_page(cursor)
+	_canvas_input_update()
+
+
+# --- browse flow --------------------------------------------------------------------------------
+
+func _new_search() -> void:
+	_seq += 1
+	_loading = true
+	_error_message = ""
+	_search_pool.cancel_all()
+	_prefetch_pool.cancel_all()
+	_prefetch_url = ""
+	_cached_server_page = -1
+	_cached_docs.clear()
+	_page_index = 0
+	_page_starts = [{"page": 0, "doc": 0}]
+	_rows.clear()
+	_rejected = 0
+	_total = 0
+	_has_more = false
+	_selected_index = -1
+	_clear_details()
+	for card: Variant in _cards:
+		card.clear()
+	_update_pager()
+	_start_display_page({"page": 0, "doc": 0})
+
+
+func _start_display_page(cursor: Dictionary) -> void:
+	_cursor_page = maxi(0, int(cursor.get("page", 0)))
+	_cursor_doc = maxi(0, int(cursor.get("doc", 0)))
+	_served_pages = 0
+	_exhausted = false
+	_pending_rows.clear()
+	_pending_rejected = 0
+	_pending_docs_seen = 0
+	_loading = true
+	_error_message = ""
+	_selected_index = -1
+	_update_pager()
+	_fetch_chunk(_seq)
+	_canvas_input_update()
+
+
+func _fetch_chunk(seq: int) -> void:
+	if seq != _seq:
+		return
+	if _pending_rows.size() >= PAGE_SIZE or _served_pages >= MAX_SERVER_PAGES_PER_PAGE or _exhausted:
+		_finish_page(seq)
+		return
+	_served_pages += 1
+	if _cached_server_page == _cursor_page:
+		var cached := _cached_docs
+		_on_docs.call_deferred(seq, _cursor_page, cached)
+		return
+	_search_pool.request(BeatSaverApi.build_search_url(_query, _cursor_page), {"seq": seq, "page": _cursor_page})
+
+
+func _on_docs(seq: int, page: int, docs: Array) -> void:
+	if seq != _seq:
+		# Stale: a newer query owns the panel. Drop before parsing or repainting anything.
+		return
+	if docs.is_empty():
+		_exhausted = true
+		_finish_page(seq)
+		return
+	var budget: int = PAGE_SIZE - _pending_rows.size()
+	var result := BeatSaverApi.consume_docs(docs, _cursor_doc, _query, budget)
+	for row: Variant in result["rows"]:
+		_pending_rows.append(row)
+	_pending_rejected += int(result["rejected"])
+	_pending_docs_seen += docs.size()
+	_cursor_doc = int(result["doc"])
+	if bool(result["done_with_page"]):
+		_cursor_page = page + 1
+		_cursor_doc = 0
+	_fetch_chunk(seq)
+
+
+func _finish_page(seq: int) -> void:
+	if seq != _seq:
+		return
+	_loading = false
+	_rows = _pending_rows.duplicate()
+	_rejected = _pending_rejected
+	# Docs were still available when we stopped only if the last server page was not exhausted.
+	_has_more = not _exhausted
+	_render_rows()
+	_update_pager()
+	_start_prefetch()
+	_canvas_input_update()
+
+
+func _render_rows() -> void:
+	for i in _cards.size():
+		var card = _cards[i]
+		if i < _rows.size():
+			card.set_map(_rows[i], i)
+			_covers.request(_rows[i].cover_url, _on_cover_ready.bind(card, _rows[i].cover_url))
+		else:
+			card.clear()
+
+
+func _on_cover_ready(texture: Texture2D, card: Variant, url: String) -> void:
+	if not is_instance_valid(card):
+		return
+	card.apply_cover(url, texture)
+
+
+func _start_prefetch() -> void:
+	if not _has_more:
+		return
+	if _cached_server_page == _cursor_page:
+		return
+	var url := BeatSaverApi.build_search_url(_query, _cursor_page)
+	if url == _prefetch_url:
+		return
+	_prefetch_url = url
+	_prefetch_pool.request(url, {"seq": _seq, "page": _cursor_page})
+
+
+func _on_prefetch_complete(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, _token: int, user_data: Dictionary) -> void:
+	if int(user_data.get("seq", -1)) != _seq:
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		return
+	var parsed := BeatSaverApi.parse_search(body)
+	if not parsed.ok or not parsed.redirect.is_empty():
+		return
+	_cached_server_page = int(user_data.get("page", -1))
+	_cached_docs = parsed.docs
+	# Warm the covers for the page the player is about to ask for.
+	for doc: Variant in parsed.docs:
+		_covers.prefetch(doc.cover_url)
+
+
+func _on_search_complete(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, _token: int, user_data: Dictionary) -> void:
+	var seq := int(user_data.get("seq", -1))
+	if seq != _seq:
+		return
+	if result != HTTPRequest.RESULT_SUCCESS:
+		_fail_page("Could not reach BeatSaver. Check the connection and retry.")
+		return
+	if response_code != 200:
+		_fail_page("BeatSaver returned HTTP %d." % response_code)
+		return
+	if bool(user_data.get("redirect", false)):
+		_show_single_map(body)
+		return
+	var parsed := BeatSaverApi.parse_search(body)
+	if not parsed.ok:
+		_fail_page(parsed.error)
+		return
+	if not parsed.redirect.is_empty():
+		_open_map_by_id(parsed.redirect)
+		return
+	var page := int(user_data.get("page", 0))
+	_total = parsed.total
+	_cached_server_page = page
+	_cached_docs = parsed.docs
+	_on_docs(seq, page, parsed.docs)
+	_canvas_input_update()
+
+
+## A pasted map key comes back as `{"redirect": "<id>"}` instead of docs (FR-014).
+func _open_map_by_id(map_id: String) -> void:
+	_seq += 1
+	_search_pool.cancel_all()
+	_search_pool.request(BeatSaverApi.map_url(map_id), {"seq": _seq, "redirect": true})
+
+
+func _show_single_map(body: PackedByteArray) -> void:
+	var map = BeatSaverApi.parse_map(body)
+	if map == null:
+		_fail_page("That map key could not be loaded.")
+		return
+	_loading = false
+	_error_message = ""
+	_total = 1
+	_exhausted = true
+	_has_more = false
+	_page_index = 0
+	_page_starts = [{"page": 0, "doc": 0}]
+	_cursor_page = 0
+	_cursor_doc = 0
+	_rows = [map]
+	_rejected = 0
+	_pending_docs_seen = 1
+	_render_rows()
+	_update_pager()
+	_on_card_pressed(0)
+	_canvas_input_update()
+
+
+func _fail_page(message: String) -> void:
+	_loading = false
+	_error_message = message
+	# The previous page stays on screen; Retry re-runs the same query.
+	_update_pager()
+	_canvas_input_update()
+
+
+func _update_pager() -> void:
+	var picked: Array = _query.get("difficulties", [])
+	var filtered := bool(_query.get("playable_only", false)) or not picked.is_empty()
+	if _loading:
+		_page_label.text = "Loading…"
+	elif filtered:
+		# `total` counts server pages, so "of m" would be a lie while client filters are on.
+		_page_label.text = "Page %d" % (_page_index + 1)
+	else:
+		_page_label.text = "Page %d of %d" % [_page_index + 1, BeatSaverApi.total_pages(_total)]
+	_prev_button.disabled = _loading or _page_index == 0
+	_next_button.disabled = _loading or not _has_more
+
+	if not _error_message.is_empty():
+		_status_label.text = _error_message
+		_retry_button.visible = true
+		return
+	_retry_button.visible = false
+	if _loading:
+		_status_label.text = "Loading maps…"
+		return
+	if _rows.is_empty():
+		var scope := "these filters" if String(_query.get("q", "")).is_empty() else "\"%s\"" % String(_query.get("q", ""))
+		_status_label.text = "No maps matched %s." % scope
+		return
+	var text := "%d maps" % _rows.size()
+	if _rejected > 0:
+		text += "  (%d hidden by Playable/Difficulty filters)" % _rejected
+	if _pending_docs_seen > _rows.size() and not _has_more:
+		text += "  - end of results"
+	_status_label.text = text
+
+
+# --- selection, details and download -----------------------------------------------------------
+
+func _on_card_pressed(index: int) -> void:
+	if index < 0 or index >= _rows.size():
+		return
+	_selected_index = index
+	_show_details(_rows[index])
+	_canvas_input_update()
+
+
+func _clear_details() -> void:
+	_song_data.text = "Select a map to see the details.\n\nPress Download to add it to your library."
+	_details_cover.texture = PLACEHOLDER_COVER
+	_maps_by_button.text = "Maps by…"
+	_maps_by_button.disabled = true
+
+
+func _show_details(map) -> void:
+	_details_cover.texture = PLACEHOLDER_COVER
+	_covers.request(map.cover_url, _on_details_cover_ready)
+	_maps_by_button.text = "Maps by %s" % map.mapper
+	_maps_by_button.disabled = map.uploader_name.is_empty() and map.mapper.is_empty()
+	_song_data.text = _details_text(map)
+	if _preview_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+		_preview_request.cancel_request()
+	if not map.preview_url.is_empty():
+		_preview_request.request(map.preview_url, PackedStringArray(["User-Agent: " + BeatSaverApi.USER_AGENT]))
+
+
+func _on_details_cover_ready(texture: Texture2D) -> void:
+	if texture != null:
+		_details_cover.texture = texture
+
+
+func _bb(text: String) -> String:
+	return text.replace("[", "[lb]")
+
+
+func _details_text(map) -> String:
+	var lines: PackedStringArray = PackedStringArray()
+	lines.append("[center][b]%s[/b][/center]" % _bb(map.name))
+	lines.append("")
+	lines.append("Song: %s - %s" % [_bb(map.song_name), _bb(map.song_author)])
+	var verified := " (verified mapper)" if map.uploader_verified else ""
+	lines.append("Mapper: %s%s" % [_bb(map.mapper), verified])
+	lines.append("Length: %s    BPM: %d    Key: %s" % [
+		BeatSaverApi.format_duration(map.duration), roundi(map.bpm), map.id])
+	if map.upvotes >= 0 and map.downvotes >= 0:
+		lines.append("Rating: %s    %d up / %d down" % [
+			BeatSaverApi.vote_percent(map), map.upvotes, map.downvotes])
+	else:
+		lines.append("Rating: %s" % BeatSaverApi.vote_percent(map))
+
+	var mods: Array = map.required_mods()
+	if not mods.is_empty():
+		lines.append("Requires: %s" % " ".join(PackedStringArray(mods)))
+	if map.curated:
+		lines.append("Curated by BeatSaver")
+	if not map.tags.is_empty():
+		var tag_parts: PackedStringArray = PackedStringArray()
+		for tag: Variant in map.tags:
+			tag_parts.append(String(tag))
+		lines.append("Tags: %s" % ", ".join(tag_parts))
+
+	lines.append("")
+	lines.append("[b]Difficulties[/b]")
+	for diff: Variant in map.diffs:
+		var stars := "not ranked"
+		if diff.stars > 0.0:
+			stars = "%.2f★ ScoreSaber" % diff.stars
+		elif diff.bl_stars > 0.0:
+			stars = "%.2f★ BeatLeader" % diff.bl_stars
+		lines.append("  %s %s   %.1f NPS   %s   %s" % [
+			String(diff.characteristic),
+			BeatSaverApi.short_difficulty(diff.difficulty),
+			diff.nps,
+			BeatSaverApi.format_duration(int(diff.seconds)),
+			stars,
+		])
+
+	if not map.description.strip_edges().is_empty():
+		lines.append("")
+		lines.append("[center]%s[/center]" % _bb(map.description))
+	return "\n".join(lines)
+
+
+func _on_preview_completed(result: int, _response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	if result == HTTPRequest.RESULT_SUCCESS and main_menu_ref != null:
+		# request preview to be played by the main menu node
+		main_menu_ref.play_preview(body, 0, -1, "mp3")
+
+
+func _on_maps_by_pressed() -> void:
+	if _selected_index < 0 or _selected_index >= _rows.size():
+		return
+	var map = _rows[_selected_index]
+	var name: String = map.uploader_name if not map.uploader_name.is_empty() else map.mapper
+	if name.is_empty():
+		return
+	_push_history()
+	_query["q"] = "mapper:\"%s\"" % name.replace("\"", "")
+	_query["order"] = "Rating"
+	_update_controls()
+	_save_settings()
+	_new_search()
+
+
+func _on_download_pressed() -> void:
 	OS.request_permissions()
-	if item_selected == -1: return
-	var version_info = song_data[item_selected].versions[0]
-	downloading.insert(downloading.size(),[song_data[item_selected].name,version_info])
-	download_next()
+	if _selected_index < 0 or _selected_index >= _rows.size():
+		return
+	var map = _rows[_selected_index]
+	if map.download_url.is_empty():
+		return
+	_download_queue.append([map.name, map.download_url])
+	_download_next()
 
-func download_next() -> void:
-	if downloading.size() > 0:
-		httpdownload.request(downloading[0][1]['downloadURL'])
-		label.text = "Downloading: %s - %d left" % [str(downloading[0][0]),downloading.size()-1]
-		label.visible = true
 
-func _on_HTTPRequest_download_completed(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray) -> void:
-#	$download.disabled = false
+func _download_next() -> void:
+	if _download_queue.is_empty():
+		return
+	_download_request.request(_download_queue[0][1], PackedStringArray(["User-Agent: " + BeatSaverApi.USER_AGENT]))
+	_status_bar.text = "Downloading: %s - %d left" % [str(_download_queue[0][0]), _download_queue.size() - 1]
+
+
+func _on_download_completed(result: int, _response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	if body.slice(0, 10) == "<!DOCTYPE html>".to_utf8_buffer().slice(0, 10):
 		result = -1
-	if result == 0:
+	if result == HTTPRequest.RESULT_SUCCESS:
 		var has_error := false
-		var tempdir := Constants.APPDATA_PATH+"temp"
+		var tempdir := Constants.APPDATA_PATH + "temp"
 		var error := DirAccess.make_dir_recursive_absolute(tempdir)
-		if error != OK: 
+		if error != OK:
 			vr.log_error(
-				"_on_HTTPRequest_download_completed - " +
+				"_on_download_completed - " +
 				"Failed to create temp directory '%s'" % tempdir)
 			has_error = true
-		
+
 		# sanitize path separators from song directory name
-		var song_dir_name: String = downloading[0][0].replace('/','')
-		
-		var zippath := Constants.APPDATA_PATH+"temp/%s.zip"%song_dir_name
+		var song_dir_name: String = str(_download_queue[0][0]).replace("/", "")
+
+		var zippath := Constants.APPDATA_PATH + "temp/%s.zip" % song_dir_name
 		if not has_error:
-			var file := FileAccess.open(zippath,FileAccess.WRITE)
+			var file := FileAccess.open(zippath, FileAccess.WRITE)
 			if file:
 				file.store_buffer(body)
 				file.close()
 			else:
-				vr.log_file_error(FileAccess.get_open_error(), zippath, "BeatSaverPanel.gd at line 261")
+				vr.log_file_error(FileAccess.get_open_error(), zippath, "BeatSaverPanel.gd download")
 				has_error = true
-		
-		var song_out_dir := Constants.APPDATA_PATH+("Songs/%s/"%song_dir_name)
+
+		var song_out_dir := Constants.APPDATA_PATH + ("Songs/%s/" % song_dir_name)
 		if not has_error:
 			error = DirAccess.make_dir_recursive_absolute(song_out_dir)
-			if error != OK: 
+			if error != OK:
 				vr.log_error(
-					"_on_HTTPRequest_download_completed - " +
+					"_on_download_completed - " +
 					"Failed to create song output dir '%s'" % song_out_dir)
 				has_error = true
-		
+
 		if not has_error:
-			Utils.unzip(zippath,song_out_dir)
-		
+			Utils.unzip(zippath, song_out_dir)
+
 		DirAccess.remove_absolute(zippath)
-		
-		downloading.remove_at(0)
-		
-		if not downloading.size() > 0:
-			main_menu_ref._on_LoadPlaylists_Button_pressed()
-			label.text = "All downloaded"
+
+		_download_queue.remove_at(0)
+
+		if _download_queue.is_empty():
+			if main_menu_ref != null:
+				main_menu_ref._on_LoadPlaylists_Button_pressed()
+			_status_bar.text = "All downloaded"
 	else:
-		label.text = "Download error "+str(result)
+		_status_bar.text = "Download error %d" % result
 		if result == -1:
-			label.text += "\nInvalid URL or server is down"
-		vr.log_info("download error "+str(result))
-		downloading.remove_at(0)
-	
-	var canvas := get_parent().get_parent()
-	if canvas is OQ_UI2DCanvas:
-		(canvas as OQ_UI2DCanvas)._input_update()
-	download_next()
+			_status_bar.text += "\nInvalid URL or server is down"
+		vr.log_info("download error %d" % result)
+		_download_queue.remove_at(0)
 
-func _on_preview_download_completed(result: int, _response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-	if result == 0:
-		# request preview to be played by the main menu node
-		main_menu_ref.play_preview(
-			body, # song data buffer
-			0,    # start previous at time 0
-			-1,   # play preview song for entire duration
-			'mp3')# bsaver has all it's previews in mp3 format for now
-
-func _on_search_button_up() -> void:
-	keyboard._show()
-	keyboard._text_edit.grab_focus()
-
-func _text_input_enter(text: String) -> void:
-	keyboard._hide()
-	search_word = text
-	mode_button.text = search_word
-	current_list = -1
-	_add_to_back_stack(prev_request)
-	prev_request = BeatSaverRequest.new()
-	prev_request.page = 0
-	prev_request.type = "text_search"
-	prev_request.data = search_word
-	update_list(prev_request)
-
-func _text_input_cancel() -> void:
-	keyboard._hide()
-
-
-var _current_cover_to_download := 0
-
-func _update_all_covers() -> void:
-	httpcoverdownload.cancel_request()
-	update_next_cover()
-
-func update_next_cover() -> void:
-	if _current_cover_to_download < song_data.size():
-		var cover_url := _get_cover_url_from_song_data(song_data[_current_cover_to_download])
-		
-		if cover_url == "":
-			# song didn't have a cover. skip this cover and move to next one
-			_current_cover_to_download += 1
-			update_next_cover()
-		else:
-			httpcoverdownload.request(cover_url)
-
-func _update_cover(result: int, _response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-	if result == 0:
-		var img := Image.new()
-		if not img.load_jpg_from_buffer(body) == 0:
-			img.load_png_from_buffer(body)
-		var img_tex := ImageTexture.create_from_image(img)
-		item_list.set_item_icon(_current_cover_to_download,img_tex)
-	_current_cover_to_download += 1
-	
-	var canvas := get_parent().get_parent()
-	if canvas is OQ_UI2DCanvas: (canvas as OQ_UI2DCanvas)._input_update()
-	
-	update_next_cover()
-
-func _on_gotoMapsBy_pressed() -> void:
-	var selected_song := _get_selected_song()
-	if selected_song.uploader_id == -1: return
-	_add_to_back_stack(prev_request)
-	prev_request = BeatSaverRequest.new()
-	prev_request.page = 0
-	prev_request.type = "uploader"
-	prev_request.data = str(selected_song.uploader_id)
-	update_list(prev_request)
-	
-# SCROLL_TO_FETCH_THRESHOLD
-# Range: 0.0 to 1.0
-# Description: Used to request the next page of songs from the current list
-# once the user scrolls past this threshold
-const SCROLL_TO_FETCH_THRESHOLD := 0.9
-var _scroll_page_request_pending := false
-
-func _on_ListV_Scroll_value_changed(new_value: float) -> void:
-	var scroll_range := v_scroll.max_value - v_scroll.min_value
-	var scroll_ratio := (new_value + v_scroll.page) / scroll_range
-	if scroll_ratio > SCROLL_TO_FETCH_THRESHOLD:
-		if next_page_available == -1:
-			# no next page to load
-			return
-		
-		# prevent back to back requests
-		if _scroll_page_request_pending:
-			return
-		
-		# request next page and update list
-		prev_request.page += 1
-		update_list(prev_request)
-		_scroll_page_request_pending = true
-
-func _on_back_pressed() -> void:
-	if back_stack.is_empty():
-		return
-	
-	# re-request latest entry
-	prev_request = back_stack.back()
-	prev_request.page = 0
-	back_stack.pop_back()
-	update_list(prev_request)
-	
-	($back as Button).visible = back_stack.size() > 0
-
-func _get_cover_url_from_song_data(song_info: BeatSaverSongInfo) -> String:
-	var song_versions := song_info.versions
-	var version_data := {}
-	if len(song_versions) == 1:
-		version_data = song_versions[0]# is there always 1 version?!?
-	elif len(song_versions) > 1:
-		vr.log_warning("The are %d versions for this song, but only getting cover for the first. song_data = %s" % [len(song_versions),song_data])
-		version_data = song_versions[0]
-	else:
-		vr.log_warning("No version info available in song_data: %s" % song_data)
-		return ""
-		
-	return version_data['coverURL']
-
-func _on_CloseButton_pressed() -> void:
-	self._hide()
-
-var _is_first_show := true
-func _on_BeatSaverPanel_visibility_changed() -> void:
-	if _is_first_show:
-		# populate initial list of songs with most played on BeatSaver
-		var first_req := BeatSaverRequest.new()
-		first_req.page = 0
-		first_req.type = "list"
-		first_req.data = "plays"
-		prev_request = first_req
-		update_list(prev_request)
-		_is_first_show = false
+	_canvas_input_update()
+	_download_next()
