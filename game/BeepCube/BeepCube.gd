@@ -10,6 +10,12 @@ signal cutted(correct_saber: bool)
 @onready var collision_small := $BeepCube_Small/CollisionSmall as CollisionShape3D
 @onready var slice_particles := $SliceParticles as BeepCubeSliceParticles
 
+# Visual-only additions (FR-046, FR-047). Both are plain MeshInstance3D nodes: no Area3D,
+# no CollisionShape3D and no script, so Cuttable._register_hit (which only ever walks Area3D
+# children) and the physics server cannot see either of them.
+@onready var halo := $BeepCubeMesh/Halo as MeshInstance3D
+@onready var mirror := $Mirror as MeshInstance3D
+
 var which_saber: int
 var is_dot: bool
 
@@ -17,14 +23,32 @@ var is_dot: bool
 # reuse it when we create the cut cube pieces
 var _mesh: Mesh
 var _mat: ShaderMaterial
+var _halo_mat: ShaderMaterial
+var _mirror_mat: ShaderMaterial
 @export var min_speed := 0.5
+
+# The mirror is a flip about the world y = 0 plane, applied in the cube's own parent frame.
+# The note's transform only changes in z after spawn, and a z shift commutes with a flip in
+# y, so this composes to a constant local transform: one write per spawn, none per frame.
+const MIRROR_FLIP := Transform3D(Vector3(1, 0, 0), Vector3(0, -1, 0), Vector3(0, 0, 1), Vector3.ZERO)
+# BeepCubeMesh's own scale, which the mirror has to reproduce because the flip is applied to
+# the cube root and this node is its sibling, not its child.
+const MIRROR_MESH_SCALE := 0.8
 
 var piece_left : CutPiece = null
 var piece_right : CutPiece = null
 
 func _ready() -> void:
 	_mat = mi.material_override as ShaderMaterial
+	_halo_mat = halo.material_override as ShaderMaterial
+	_mirror_mat = mirror.material_override as ShaderMaterial
 	_mesh = mi.mesh
+	# The halos share the cube's own mesh instead of duplicating it: same vertices, same
+	# vertex budget, one extra draw call per note and nothing else.
+	halo.mesh = _mesh
+	mirror.mesh = _mesh
+	_halo_mat.set_shader_parameter(&"half_extent", _mesh.get_aabb().size * 0.5)
+	mirror.visible = false
 	
 	if bool(ProjectSettings.get_setting(SETTING_ISOLATE_SHAPES, false)):
 		# One-time, per instance: from here on spawn() only edits our own shapes.
@@ -64,6 +88,8 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	piece_left.set_color(color)
 	piece_right.set_color(color)
 	_mat.set_shader_parameter(&"color", color)
+	_halo_mat.set_shader_parameter(&"color", color)
+	_mirror_mat.set_shader_parameter(&"color", color)
 	_mat.set_shader_parameter(&"is_dot", is_dot)
 	# since cube instances get recycled, we gotta reset cubes that were chain
 	# heads in a past life
@@ -93,6 +119,21 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	
 	slice_particles.reset()
 	mi.visible = true
+	halo.visible = Settings.note_halo
+	_update_mirror()
+	mirror.visible = Settings.mirror_reflections
+
+# One write per spawn, for the reason in the MIRROR_FLIP comment above.
+func _update_mirror() -> void:
+	var local := transform.affine_inverse() * (MIRROR_FLIP * transform)
+	local.basis = local.basis.scaled(Vector3.ONE * MIRROR_MESH_SCALE)
+	mirror.transform = local
+
+# FR-038: the mirrored copy ships off, so without this its material would compile the first
+# time the setting is switched on - i.e. mid-song. The pool shows each cube for one frame at
+# load; this puts the mirror on screen for that same frame, under the opaque floor.
+func warm_mirror() -> void:
+	mirror.visible = true
 
 # call this when clearing the track
 func clear_from_track() -> void:
@@ -104,6 +145,9 @@ func clear_from_track() -> void:
 
 func hide_cube() -> void:
 	mi.visible = false
+	# The mirror is a sibling of the mesh, not its child, so hiding the mesh does not
+	# hide it: without this a cut cube would leave its reflection behind.
+	mirror.visible = false
 	set_collision_enabled(false)
 	# disable processing on this node and all children to help with performance
 	process_mode = Node.PROCESS_MODE_DISABLED

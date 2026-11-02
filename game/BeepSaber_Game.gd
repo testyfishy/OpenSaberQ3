@@ -379,6 +379,10 @@ func on_settings_changed(key: StringName) -> void:
 			_apply_msaa()
 		&"foveation_level":
 			_apply_foveation_level()
+		# Visual additions. The saber halo lives on the saber visual, which listens for its
+		# own key; these two only change how the floor is drawn.
+		&"floor_light", &"mirror_reflections":
+			standing_ground.apply_visual_settings()
 
 func set_colors_from_settings() -> void:
 	update_left_color(Settings.color_left)
@@ -671,6 +675,10 @@ func _on_ScenePool_new_scene_instanced(obj: Node3D, during_presizing: bool) -> v
 	# make obj visible and wait for a frame to be processed. this tricks
 	# shaders to be loaded at startup time.
 	if during_presizing:
+		# FR-038: cube/wall/bomb/arc materials compile on this frame. The mirrored copy is a
+		# child of the cube and ships switched off, so it needs asking (see BeepCube.warm_mirror).
+		if obj is BeepCube:
+			obj.warm_mirror()
 		obj.position.z = -2.0
 		await get_tree().process_frame
 		

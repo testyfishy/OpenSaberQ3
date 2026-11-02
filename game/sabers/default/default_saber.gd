@@ -85,6 +85,12 @@ var is_extended := false
 @onready var tail := $tail as SaberTail
 @onready var hitsound := $hitsound as AudioStreamPlayer3D
 
+# Emissive halo shell (FR-046): a slightly enlarged MeshInstance3D that shares this
+# saber's CapsuleMesh resource, so the Show/Hide animation drives its length and radius
+# too. Unshaded, additive, no depth write — it adds light and cannot occlude anything.
+@onready var _halo := $LightSaber_Mesh/Halo as MeshInstance3D
+@onready var _halo_mat := _halo.material_override as ShaderMaterial
+
 # The polyphonic playback, obtained once from the player. Every later hit is a
 # `play_stream` on this object; the player itself is never played again, because
 # a second play()/stop() creates a new playback and silences every live voice.
@@ -110,6 +116,7 @@ var _pending_hits: Array[Dictionary] = []
 func _ready() -> void:
 	set_process(false)
 	quickhide()
+	set_halo_enabled(Settings.saber_halo)
 	# Exactly one play() for the lifetime of this node, then cache the playback.
 	if hitsound.stream is AudioStreamPolyphonic:
 		hitsound.play()
@@ -131,11 +138,16 @@ func _process(delta: float) -> void:
 
 func set_color(color: Color) -> void:
 	_mat.set_shader_parameter(&"color", color)
+	_halo_mat.set_shader_parameter(&"color", color)
 	tail.set_color(color)
 
 func set_thickness(value: float) -> void:
 	light_mesh.scale.x = value
 	light_mesh.scale.z = value
+
+# FR-046 / FR-049: the halo is a setting, so it must be switchable at runtime.
+func set_halo_enabled(value: bool) -> void:
+	_halo.visible = value
 
 func set_trail(enabled: bool = true) -> void:
 	tail.visible = enabled

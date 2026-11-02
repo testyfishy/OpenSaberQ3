@@ -234,6 +234,20 @@ plus 10 consecutive song load/unload cycles.
   whatever offset the game applied at startup.
   *(Added 2026-11-01 from play-testing: the menu sat ~45° to the left after pressing the Meta
   button, and looking 45° right before pressing it appeared to fix it.)*
+- **FR-045**: An analytic saber light MUST be drawn on the floor from the two blade segments,
+  fed as global shader parameters, with no extra render pass and no per-frame scene queries.
+  *(Added 2026-11-02; hardware ray tracing was evaluated and rejected — Godot 4.6 has no RT API,
+  Quest 3 lacks `VK_KHR_ray_tracing_pipeline`, and Forward Mobile has no TAA to denoise it.)*
+- **FR-046**: Sabers and notes MUST gain unshaded, additive emissive halo shells so that neon
+  reads as light without relying on a full-screen post pass.
+- **FR-047**: A mirrored emissive copy of the movers MAY be drawn under a translucent floor to
+  give exact planar reflection at low cost; mirrored copies MUST NOT carry `Area3D` nodes, so the
+  hit-test registry can never see them.
+- **FR-048**: Real bloom/glow MUST be available as a switchable setting, and turning it on MUST be
+  measured against the frame budget rather than assumed affordable.
+- **FR-049**: Every visual addition MUST default to a state the user can turn off in settings, and
+  MUST be gated on measurement: vsync hit rate ≥ 99.5 %, GPU `App=` p99 ≤ 6.5 ms, and a
+  main-thread p95 rise ≤ 0.2 ms.
 - **FR-022**: The "before" in every comparison MUST be the unmodified upstream commit built
   with the pinned toolchain — not the APK currently installed on the headset. The installed
   build may differ in engine version and export settings, so it is a reference point only.
@@ -364,6 +378,9 @@ requirements below; they are facts, not hypotheses.
   version string matches the release tag. *(Added 2026-11-01.)*
 - **SC-017**: Pressing the headset's recenter leaves the menu and play area directly in front of
   the player, with no manual "look 45° right first" workaround. *(Added 2026-11-01.)*
+- **SC-018**: With all visual additions enabled, the reference workload still holds ≥ 99.5 % of
+  frames on vsync at 120 Hz, GPU `App=` p99 ≤ 6.5 ms, and main-thread p95 rises by no more than
+  0.2 ms versus the same build with the additions disabled. *(Added 2026-11-02.)*
 
 ## Assumptions
 

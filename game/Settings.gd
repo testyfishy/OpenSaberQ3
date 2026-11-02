@@ -125,6 +125,26 @@ var foveation_level: int:
 		foveation_level = value
 		set_and_emit(&"foveation_level", value)
 
+# --- Visual additions (FR-045..FR-048). Each is switchable because FR-049 gates every one
+# of them on measurement rather than on intent: the defaults are the state the user asked to
+# judge first, and the panel is the A/B switch. `glare` above is the bloom switch (FR-048).
+var floor_light: bool:
+	set(value):
+		floor_light = value
+		set_and_emit(&"floor_light", value)
+var saber_halo: bool:
+	set(value):
+		saber_halo = value
+		set_and_emit(&"saber_halo", value)
+var note_halo: bool:
+	set(value):
+		note_halo = value
+		set_and_emit(&"note_halo", value)
+var mirror_reflections: bool:
+	set(value):
+		mirror_reflections = value
+		set_and_emit(&"mirror_reflections", value)
+
 # --- BeatSaver browser state (specs/005-beatsaver-browser, FR-011). Only the sort and the filter
 # set are remembered; the search text and the current page are deliberately not.
 var beatsaver_order: String:
@@ -193,7 +213,10 @@ var default_values = {
 	color_left = Color("ff1a1a"),
 	color_right = Color("1a1aff"),
 	saber_tail = true,
-	glare = true,
+	# FR-048: bloom is a measured, switchable setting, not a default. It costs ~1-2.5 ms on
+	# Quest 3 and its full-screen resolve is what makes fixed foveated rendering unattractive
+	# later, so it ships off until a run says otherwise.
+	glare = false,
 	show_debug_info = false,
 	bombs_enabled = true,
 	events = true,
@@ -216,6 +239,11 @@ var default_values = {
 	render_scale = 1.2546,
 	msaa_3d = 2,
 	foveation_level = 0,
+	# Visual (FR-045..FR-047). 1 and 2 on, 3 and 4 off: the user judges those two visually.
+	floor_light = true,
+	saber_halo = true,
+	note_halo = false,
+	mirror_reflections = false,
 	beatsaver_order = "Latest",
 	beatsaver_curated = false,
 	beatsaver_verified = false,

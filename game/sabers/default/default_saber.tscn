@@ -1,10 +1,11 @@
-[gd_scene load_steps=15 format=3 uid="uid://bw3rjal5qlu0p"]
+[gd_scene load_steps=17 format=3 uid="uid://bw3rjal5qlu0p"]
 
 [ext_resource type="Material" uid="uid://chqutrqmle57g" path="res://game/LightSaber.material" id="1"]
 [ext_resource type="AudioStream" uid="uid://bkuquwclng0k" path="res://game/data/lightsaber.ogg" id="2"]
 [ext_resource type="Script" path="res://game/sabers/default/default_saber.gd" id="3"]
 [ext_resource type="Texture2D" uid="uid://drc5tdiltfqnk" path="res://game/BeepCube/BeepCubeEmission.png" id="3_b1nd4"]
 [ext_resource type="PackedScene" uid="uid://buhdimf18mwbo" path="res://game/sabers/default/tail.tscn" id="6_wpbvo"]
+[ext_resource type="Shader" path="res://game/shaders/neon_halo.gdshader" id="7_halo"]
 
 [sub_resource type="CapsuleMesh" id="1"]
 resource_local_to_scene = true
@@ -292,6 +293,15 @@ _data = {
 [sub_resource type="AudioStreamPolyphonic" id="AudioStreamPolyphonic_hit"]
 polyphony = 10
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_halo"]
+resource_local_to_scene = true
+shader = ExtResource("7_halo")
+shader_parameter/color = Color(1, 1, 1, 1)
+shader_parameter/energy = 0.45
+shader_parameter/rim_power = 1.5
+shader_parameter/box_edges = false
+shader_parameter/half_extent = Vector3(0.5, 0.5, 0.5)
+
 [node name="default_saber" type="Node3D"]
 script = ExtResource("3")
 
@@ -299,6 +309,12 @@ script = ExtResource("3")
 transform = Transform3D(1, 0, 0, 0, -1, -1.33118e-07, 0, 1.33118e-07, -1, 0, 0.65, 0)
 layers = 3
 material_override = ExtResource("1")
+mesh = SubResource("1")
+
+[node name="Halo" type="MeshInstance3D" parent="LightSaber_Mesh"]
+transform = Transform3D(2.4, 0, 0, 0, 1.02, 0, 0, 0, 2.4, 0, 0, 0)
+layers = 3
+material_override = SubResource("ShaderMaterial_halo")
 mesh = SubResource("1")
 
 [node name="Hilt_Mesh" type="MeshInstance3D" parent="."]

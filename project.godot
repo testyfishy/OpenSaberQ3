@@ -173,6 +173,14 @@ right_saber={
 "type": "vec3",
 "value": Vector3(0.5, 0, 0)
 }
+left_saber_base={
+"type": "vec3",
+"value": Vector3(-0.5, 1, 0)
+}
+right_saber_base={
+"type": "vec3",
+"value": Vector3(0.5, 1, 0)
+}
 
 [xr]
 

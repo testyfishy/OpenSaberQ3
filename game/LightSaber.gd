@@ -72,6 +72,9 @@ func on_settings_changed(key: StringName) -> void:
 			saber_visual.set_trail(Settings.saber_tail)
 		&"saber_visual":
 			set_saber(Settings.SABER_VISUALS[Settings.saber_visual][1])
+		&"saber_halo":
+			# FR-046. Lives on the visual so a saber swap picks the setting up again.
+			saber_visual.set_halo_enabled(Settings.saber_halo)
 		&"left_saber_offset_pos":
 			if type == 0:
 				extra_offset_pos = Settings.left_saber_offset_pos
@@ -134,7 +137,20 @@ func _physics_process(delta: float) -> void:
 			floor_body.burn_mark(colipoint,type)
 		if probe:
 			Cost.floor_ray_usec += Time.get_ticks_usec() - t0
-	RenderingServer.global_shader_parameter_set(&"left_saber" if type == 0 else &"right_saber", saber_end)
+	# FR-045: the floor shader needs both ends of the blade, not just the tip. The base is
+	# the swing cast's origin, which every saber visual has (the particle saber has no
+	# `base` marker), so the streak tracks any saber the player selects.
+	# A retracted saber must not leave a glowing streak parked on the floor, so park both
+	# ends far below the world instead of publishing the last known pose.
+	var tip_key := &"left_saber" if type == 0 else &"right_saber"
+	var base_key := &"left_saber_base" if type == 0 else &"right_saber_base"
+	if is_extended():
+		RenderingServer.global_shader_parameter_set(tip_key, saber_end)
+		RenderingServer.global_shader_parameter_set(base_key, blade_base)
+	else:
+		var away := Vector3(0.0, -1000.0, 0.0)
+		RenderingServer.global_shader_parameter_set(tip_key, away)
+		RenderingServer.global_shader_parameter_set(base_key, away)
 
 func set_saber(saber_path: String) -> void:
 	var newsaber := (load(saber_path) as PackedScene).instantiate()
