@@ -152,4 +152,5 @@ First launch after the update, with only `user://highscores.json` on disk.
 
 | Gate | Question | Verdict | Follow-up |
 |------|----------|---------|-----------|
-| G0+G1 PLAN CONSULT | spec + implementation plan review | pending | — |
+| G0+G1 PLAN CONSULT | spec + implementation plan review | **GO WITH CHANGES** | `ProfileManager` repairs a stale `current`, treats wrong-shape JSON as corrupt, ids `u<max+1>` never reused; `move_record` returns the stored record and the game adopts it; choosing the already-current profile closes the panel and changes nothing; EndScore collisions disabled while the panel is open; `Profile_canvas` hidden in every GameState; menu text-input guarded so `+ New` typing cannot filter the song list; `NewHighscore`/`NameSelector` kept for new users only. |
+| G4 (implementation) | Does the finished feature meet the FRs, and is anything unverified? | **SHIP, device items open** | Data layer (`ProfileManager`, `HighscoreTable` return/move/recency), end-of-song auto-save with `Saved as`, Users button, badge and panel are implemented; `users_requested` had to be declared (the scene wired it before it existed). Headless parse clean. **Unverified without hands-on:** collision/raycast behaviour of the new Switch button, click counts, badge legibility, and the on-device Switch re-homing flow. |

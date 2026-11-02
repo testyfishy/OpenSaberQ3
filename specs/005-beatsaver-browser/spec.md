@@ -178,4 +178,6 @@ and requirement badges for Noodle, Mapping Extensions, Chroma, Vivify.
 
 | Gate | Question | Verdict | Follow-up |
 |------|----------|---------|-----------|
-| G0+G1 PLAN CONSULT | spec + plan review before implementation | pending | — |
+| G0+G1 PLAN CONSULT | spec + plan review before implementation | **GO WITH CHANGES** | Fixed pool of 20 reused cards instead of rebuilding nodes; paging cursors instead of whole server pages; `Page n` without "of m" while client filters run; Relevance collapses to Latest when `q` is blank; covers delivered deferred with `wait_for_task_completion` once per task; Settings writes coalesced; votes as percentage plus raw counts. |
+| G4 (implementation) | Is the rebuild correct against the verified API, and does the async cover path deliver? | **SHIP** | Unit tests: 76 checks OK. Live smoke: 20 rows of 124,432 total (6,222 pages), Noodle badge correct on `557f4`, and **20/20 covers decoded and cached** after a 4 s wait — the earlier 0/20 reading was taken before the deferred delivery ran, and the test now waits for it. Server-side filters: `q`, `order`, `curated`, `verified`, `leaderboard=Ranked`, `min/maxDuration`, `min/maxNps`, `pageSize`. Client-side: Playable-only (the server accepts only one `X=false` mod filter per request — verified that `noodle=false&me=false` returns the me result set), difficulty chips, characteristic pills. |
+
