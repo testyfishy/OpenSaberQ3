@@ -78,7 +78,12 @@ const DEFAULT_MAX_DURATION_S := 180.0
 # Workload counters are sampled every Nth rendered frame; see the Output notes.
 const COUNTER_STRIDE := 4
 
-const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,cubes_in_use,links_in_use,debris_live,slice_bursts,process_usec,physics_usec"
+const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,cubes_in_use,links_in_use,debris_live,slice_bursts,process_usec,physics_usec,phys_ticks,swing_usec,cuttable_usec,floor_ray_usec,spawn_usec,shape_reenable,notes_live"
+
+# Per-path self-time instrumentation (FR-033). A total physics time is not an
+# attribution: `physics_usec` is the whole tick, so the columns below split it
+# into the paths that were actually suspects. See game/scripts/CostProbe.gd.
+const Cost := preload("res://game/scripts/CostProbe.gd")
 
 # Preloaded by path so benchmark mode does not depend on the editor's global
 # class cache being up to date on a clean clone (same reason as BenchmarkRunner).
@@ -106,6 +111,13 @@ var _deltas := PackedInt64Array()
 var _proc_deltas := PackedInt64Array()
 var _proc_times := PackedInt64Array()
 var _phys_times := PackedInt64Array()
+var _phys_ticks := PackedInt32Array()
+var _swing_usec := PackedInt64Array()
+var _cuttable_usec := PackedInt64Array()
+var _floor_usec := PackedInt64Array()
+var _spawn_usec := PackedInt64Array()
+var _reenable := PackedInt32Array()
+var _notes_live := PackedInt32Array()
 var _song_pos := PackedInt64Array()
 var _drawn := PackedInt32Array()
 var _focus_col := PackedByteArray()
@@ -222,10 +234,16 @@ func _begin() -> void:
 		var want_hz := float(cfg.get_value("bench", "refresh_hz", 0.0))
 		if want_hz > 0.0 and xr.has_method("set_display_refresh_rate"):
 			xr.set_display_refresh_rate(want_hz)
-			Engine.physics_ticks_per_second = int(round(want_hz))
 			_meta["refresh_rate_requested"] = str(want_hz)
 		_meta["refresh_rate_after"] = str(xr.get_display_refresh_rate()) if xr.has_method("get_display_refresh_rate") else "unknown"
+		# Pin physics to what the display ACTUALLY runs at, not what we asked for.
+		# Requesting 90 on a runtime that only offers 72 must not leave physics at 90 -
+		# that is strictly worse than the default because it burns CPU for no visual gain.
+		var actual_hz := float(_meta["refresh_rate_after"]) if _meta["refresh_rate_after"].is_valid_float() else 0.0
+		if actual_hz > 0.0:
+			Engine.physics_ticks_per_second = int(round(actual_hz))
 	_meta["physics_ticks_effective"] = str(Engine.physics_ticks_per_second)
+	_apply_overrides(cfg)
 
 	var requested := float(cfg.get_value("bench", "duration", 0.0))
 	var max_duration := float(cfg.get_value("bench", "max_duration", DEFAULT_MAX_DURATION_S))
@@ -301,6 +319,32 @@ func _begin() -> void:
 
 # The bot is created here, in the same call stack as start_map(), i.e. before the
 # first physics tick can pop notes off Map.note_stack: it snapshots them itself.
+# Measurement-only switches, applied from the run's own flag so one build can
+# produce both arms of a comparison. Each one changes behaviour, so each one is
+# recorded in the meta file and each one defaults to "leave the shipped value".
+# None of them exist outside benchmark mode (FR-031: no app-imposed frame cap in
+# normal operation; `max_fps` here only pins conditions while measuring).
+func _apply_overrides(cfg: ConfigFile) -> void:
+	var applied := PackedStringArray()
+	var rays := int(cfg.get_value("bench", "rays", 0))
+	if rays > 0:
+		ProjectSettings.set_setting(&"gameplay/swing_hit/num_collision_raycasts", rays)
+		applied.append("rays=%d" % rays)
+	var once = cfg.get_value("bench", "enable_collision_once", null)
+	if once != null:
+		ProjectSettings.set_setting(&"gameplay/notes/enable_collision_once", bool(once))
+		applied.append("enable_collision_once=%s" % str(bool(once)))
+	var isolate = cfg.get_value("bench", "isolate_shapes", null)
+	if isolate != null:
+		ProjectSettings.set_setting(&"gameplay/notes/isolate_collision_shapes", bool(isolate))
+		applied.append("isolate_shapes=%s" % str(bool(isolate)))
+	var max_fps := int(cfg.get_value("bench", "max_fps", 0))
+	if max_fps > 0:
+		Engine.max_fps = max_fps
+		applied.append("max_fps=%d" % max_fps)
+	_meta["overrides"] = ", ".join(applied) if not applied.is_empty() else "none"
+	vr.log_info("BENCH: overrides %s" % _meta["overrides"])
+
 func _start_bot(cfg: ConfigFile) -> void:
 	var enabled := bool(cfg.get_value("bot", "enabled", false))
 	_meta["bot_enabled"] = "true" if enabled else "false"
@@ -317,8 +361,18 @@ func _start_recording() -> void:
 	_recording = true
 	_start_usec = Time.get_ticks_usec()
 	_prev_usec = _start_usec
+	Cost.reset()
+	Cost.enabled = true
 	vr.log_info("BENCH: recording started limit=%.1fs reason=%s" % [
 		_limit_usec / 1000000.0, _limit_reason])
+
+# Counts the physics ticks that ran before this frame's _process, so a frame
+# that absorbed two catch-up ticks can be told apart from a frame that ran one.
+# `physics_usec` sums over all of them (that is what TIME_PHYSICS_PROCESS does),
+# so without this column a render hitch looks like expensive physics.
+func _physics_process(_delta: float) -> void:
+	if _recording:
+		Cost.physics_ticks += 1
 
 func _process(delta: float) -> void:
 	if not _recording:
@@ -330,6 +384,12 @@ func _process(delta: float) -> void:
 	_proc_deltas.append(int(delta * 1000000.0))
 	_proc_times.append(int(Performance.get_monitor(Performance.TIME_PROCESS) * 1000000.0))
 	_phys_times.append(int(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000000.0))
+	_phys_ticks.append(Cost.physics_ticks)
+	_swing_usec.append(Cost.swing_usec)
+	_cuttable_usec.append(Cost.cuttable_usec)
+	_floor_usec.append(Cost.floor_ray_usec)
+	_spawn_usec.append(Cost.spawn_usec)
+	_reenable.append(Cost.shape_reenable)
 	_song_pos.append(int(_song_player.get_playback_position() * 1000000.0))
 	_drawn.append(Engine.get_frames_drawn())
 	_focus_col.append(1 if _focused else 0)
@@ -340,6 +400,9 @@ func _process(delta: float) -> void:
 	_col_links.append(_last_links)
 	_col_debris.append(_last_debris)
 	_col_bursts.append(_last_bursts)
+	_notes_live.append(_last_cubes)
+	# Readers own the reset: nothing on a hot path zeroes these.
+	Cost.reset()
 	
 	if _song_player.playing:
 		_saw_playing = true
@@ -473,6 +536,7 @@ func _finish(reason: String) -> void:
 		return
 	_recording = false
 	set_process(false)
+	Cost.enabled = false
 	var elapsed_usec := Time.get_ticks_usec() - _start_usec
 	_meta["samples"] = _ticks.size()
 	_meta["elapsed_s"] = "%.3f" % (elapsed_usec / 1000000.0)
@@ -516,16 +580,27 @@ func _write_csv() -> void:
 	rows.resize(_ticks.size() + 1)
 	rows[0] = CSV_HEADER
 	for i in _ticks.size():
-		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
+		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
 			i, _ticks[i], _deltas[i], _proc_deltas[i],
 			_song_pos[i], _drawn[i], _focus_col[i],
 			_col_cubes[i], _col_links[i], _col_debris[i], _col_bursts[i],
-			_proc_times[i], _phys_times[i]]
+			_proc_times[i], _phys_times[i],
+			_phys_ticks[i], _swing_usec[i], _cuttable_usec[i], _floor_usec[i],
+			_spawn_usec[i], _reenable[i], _notes_live[i]]
 	f.store_string("\n".join(rows) + "\n")
 	f.close()
 	vr.log_info("BENCH: csv=%s" % path)
 
 func _write_meta() -> void:
+	# Re-read the render target at the end: get_render_target_size() taken at startup can
+	# report the runtime's recommended size before the multiplier is applied.
+	var xr_end := XRServer.primary_interface
+	if xr_end != null:
+		var rtf := xr_end.get_render_target_size()
+		_meta["render_target_size_final"] = "%dx%d" % [int(rtf.x), int(rtf.y)]
+		if xr_end.has_method("get_display_refresh_rate"):
+			_meta["refresh_rate_final"] = str(xr_end.get_display_refresh_rate())
+	_meta["physics_ticks_final"] = str(Engine.physics_ticks_per_second)
 	var path := _out_dir.path_join(META_NAME)
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:

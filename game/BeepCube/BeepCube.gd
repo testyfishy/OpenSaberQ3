@@ -26,6 +26,11 @@ func _ready() -> void:
 	_mat = mi.material_override as ShaderMaterial
 	_mesh = mi.mesh
 	
+	if bool(ProjectSettings.get_setting(SETTING_ISOLATE_SHAPES, false)):
+		# One-time, per instance: from here on spawn() only edits our own shapes.
+		collision_big.shape = collision_big.shape.duplicate()
+		collision_small.shape = collision_small.shape.duplicate()
+	
 	# init our cut pieces with unique copies of our own material for reference,
 	# and enable "bouncy" physics behavior
 	piece_left = CutPiece.new(self, _mesh, _mat.duplicate(true) as ShaderMaterial, true)
@@ -99,7 +104,7 @@ func clear_from_track() -> void:
 
 func hide_cube() -> void:
 	mi.visible = false
-	set_collision_disabled(true)
+	set_collision_enabled(false)
 	# disable processing on this node and all children to help with performance
 	process_mode = Node.PROCESS_MODE_DISABLED
 

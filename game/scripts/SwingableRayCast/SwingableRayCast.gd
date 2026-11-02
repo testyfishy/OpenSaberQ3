@@ -5,6 +5,13 @@ class_name SwingableRayCast
 
 signal area_collided(area: Area3D)
 
+const Cost := preload("res://game/scripts/CostProbe.gd")
+
+# Project-setting override, default 0 = "keep the exported value". Benchmark
+# runs set it (see BenchmarkRunner) so the ray fan can be widened or narrowed
+# for an A/B without editing a scene, i.e. without rebuilding the scene cache.
+const SETTING_RAYS := &"gameplay/swing_hit/num_collision_raycasts"
+
 @export var num_collision_raycasts: int = 8
 
 const DEBUG := false
@@ -29,6 +36,12 @@ var _debug_raycast_trail := LinkedList.new()
 
 func _ready() -> void:
 	await get_tree().physics_frame
+	
+	# Benchmark override (0 = unset, keep the exported value). Clamped to 1..32:
+	# the fan divides by (count - 1), so 0 would be a division by zero.
+	var configured := int(ProjectSettings.get_setting(SETTING_RAYS, 0))
+	if configured > 0:
+		num_collision_raycasts = clampi(configured, 1, 32)
 	
 	# use discrete RayCasts for continuous collision detection between _physics_process()
 	for _i in range(num_collision_raycasts):
@@ -71,10 +84,15 @@ func _update_element_positions() -> void:
 	# generate new locations for ray casters
 	var saber_base := transform.origin
 	var saber_tip := saber_base + target_position
-	var step_dist := (saber_tip - saber_base) / (num_collision_raycasts - 1)
+	# A single cast has no "step": put it on the tip, which is where the blade
+	# does most of its cutting. Dividing by (count - 1) used to yield `inf`.
+	var count := maxi(num_collision_raycasts, 1)
+	var step_dist := (saber_tip - saber_base) / float(maxi(count - 1, 1))
 	
 	var next_local_pos := transform.origin
-	for i in range(num_collision_raycasts):
+	if count == 1:
+		next_local_pos += step_dist
+	for i in range(count):
 		var next_global_pos := global_transform * (next_local_pos)
 			
 		# update ray's newest location for next physics frame processing
@@ -88,6 +106,8 @@ func _update_element_positions() -> void:
 func _physics_process(_delta: float) -> void:
 	if not enabled: return
 	_sw.start()
+	var probe := Cost.enabled
+	var t0 := Time.get_ticks_usec() if probe else 0
 	# see if 'core' ray is colliding with anything
 	var coll := get_collider()
 	if coll is Area3D:
@@ -100,7 +120,7 @@ func _physics_process(_delta: float) -> void:
 	if adjust_segments:
 		_update_element_positions()
 	
-	for i in range(num_collision_raycasts):
+	for i in range(_rays.size()):
 		var ray: RayCast3D = _rays[i]
 			
 		# cast a ray to the newest location and check for collisions
@@ -118,11 +138,13 @@ func _physics_process(_delta: float) -> void:
 		var old_slice := _debug_raycast_trail.pop_back() as Array[RayCast3D]
 
 		# update oldest slide with newest ray casts
-		for i in range(num_collision_raycasts):
+		for i in range(_rays.size()):
 			old_slice[i].global_transform = _rays[i].global_transform
 			old_slice[i].target_position = _rays[i].target_position
 
 		_debug_raycast_trail.push_front(old_slice)
+	if probe:
+		Cost.swing_usec += Time.get_ticks_usec() - t0
 	_sw.stop()
 
 func _on_SwingableRayCast_tree_entered() -> void:

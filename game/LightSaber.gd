@@ -24,6 +24,8 @@ var saber_end := Vector3.ZERO
 var saber_end_past := Vector3.ZERO
 var last_dt := 0.0
 
+const Cost := preload("res://game/scripts/CostProbe.gd")
+
 func _show() -> void:
 	if not is_extended():
 		_anim.play(&"Show")
@@ -95,12 +97,16 @@ func _physics_process(delta: float) -> void:
 	last_dt = delta
 	if is_extended():
 		#check floor collision for burn mark
+		var probe := Cost.enabled
+		var t0 := Time.get_ticks_usec() if probe else 0
 		_ray_cast.force_raycast_update()
 		var raycoli := _ray_cast.get_collider()
 		if raycoli is Floor:
 			var floor_body := raycoli as Floor
 			var colipoint := _ray_cast.get_collision_point()
 			floor_body.burn_mark(colipoint,type)
+		if probe:
+			Cost.floor_ray_usec += Time.get_ticks_usec() - t0
 	RenderingServer.global_shader_parameter_set(&"left_saber" if type == 0 else &"right_saber", saber_end)
 
 func set_saber(saber_path: String) -> void:

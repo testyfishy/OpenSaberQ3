@@ -40,9 +40,13 @@ var wall_template := load("res://game/Wall/Wall.tscn") as PackedScene
 var arc_template := load("res://game/Arc/Arc.tscn") as PackedScene
 const BEATS_AHEAD := 4.0
 
+const Cost := preload("res://game/scripts/CostProbe.gd")
+
 func _process_map(game: BeepSaber_Game) -> void:
 	if (Map.current_info == null):
 		return
+	var probe := Cost.enabled
+	var t0 := Time.get_ticks_usec() if probe else 0
 	
 	var current_beat := game.song_player.get_playback_position() * Map.current_info.beats_per_minute * 0.016666666666666667
 	var look_ahead := current_beat + BEATS_AHEAD
@@ -100,3 +104,6 @@ func _process_map(game: BeepSaber_Game) -> void:
 	
 	while not Map.event_stack.is_empty() and Map.event_stack[-1].beat <= current_beat:
 		game.event_driver.process_event(Map.event_stack.pop_back() as EventInfo)
+	
+	if probe:
+		Cost.spawn_usec += Time.get_ticks_usec() - t0
