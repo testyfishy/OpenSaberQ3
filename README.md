@@ -70,21 +70,31 @@ The "after" column renders **1.57× more pixels**, at a **25% shorter frame budg
 faster and steadier than the baseline. GPU use *fell* from 28.4% to 21.6% of budget because the
 scene is CPU-bound, not fill-rate-bound — which is why raising resolution was affordable.
 
-### 120 Hz status — shipping, with one known defect
+### 120 Hz status — shipping, and the "stutter" was the benchmark
 
-| Metric | 90 Hz | **120 Hz (default)** |
+Corrected 2026-11-01 after isolating variables. Earlier runs reported ~119 dropped events per
+120 s at 120 Hz. That number was **contaminated by the benchmark harness itself**: the bot that
+plays the map runs every physics tick, allocating per note and recomputing swing poses. Removing
+that single variable changes the result completely:
+
+| 120 Hz, same build/map | with bot | **no bot (real gameplay)** |
 |---|---|---|
-| Sustained | 89.90 fps | **116.8 fps** |
-| Frames on vsync | 99.880% | **99.151%** |
-| Dropped events per 120 s | 13 | **119** |
-| GPU `App=` mean | 2.40 ms (21.6%) | 3.26 ms (39.3%) |
-| Frame interval p50 / p95 / p99 | 11.13 / 12.26 / 12.95 ms | **8.43 / 10.09 / 12.14 ms** |
+| Sustained | 116.8 fps | **119.4 fps** |
+| p50 / p95 / p99 interval | 8.43 / 10.09 / 12.14 ms | **8.38 / 9.15 / 10.15 ms** |
+| Dropped events | 119 / 120 s (0.85 %) | **15 / 60 s (0.21 %)** |
+| Frames on vsync | 99.151 % | **99.79 %** |
 
-120 Hz is the default. Physics runs at 120, matching the display, and resolution is native.
-**Known defect: roughly one dropped frame per second** (0.85% of frames). It is not GPU-bound and
-not physics-bound; a once-per-second periodic event is suspected, with Adreno pipeline compilation
-as the leading candidate (Godot disables ubershaders on this GPU family). 90 Hz remains available
-and is measurably cleaner: 99.88% on vsync.
+Moving the keep-awake loop on-device changed nothing (17 → 15 drops), so host `adb` spawning was
+not the cause either; the bot alone accounted for roughly 70 % of the spikes.
+
+**Conclusion:** at 120 Hz the game delivers 99.79 % of frames on vsync at native resolution with
+4× MSAA, physics at 120 Hz, and GPU at ~39 % of the 8.33 ms budget. The remaining 0.2 % is the
+game's own residual, not a systemic stutter. VrApi's compositor-side stale count agrees that 120 Hz
+is cleaner than 90 Hz (0.07 vs 0.24 stale per sample).
+
+**Lesson recorded:** the harness must be measured as carefully as the game. A benchmark whose
+workload costs 70 % of the observed spikes is measuring itself.
+
 
 
 ### Baseline v0 detail (before any optimisation)
