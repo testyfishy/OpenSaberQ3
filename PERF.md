@@ -275,6 +275,33 @@ Kept changes only. Each row must be reproducible from the commit in the last col
 |---|---|---|---|---|---|---|
 | — | *none yet* | — | — | — | — | — |
 
+### Optimizations — implemented, verification status
+
+| Change | Implemented | Verified | Pending |
+|---|---|---|---|
+| **Analytic swept hit test** (`HitResolver`, `detection = analytic\|rays`) | yes | unit parity: 26 checks pass; analytic registers 9/9 test cubes vs 7/9 for the ray fan, and the fan false-positives on a note 2 m away | **device bot A/B (rays vs analytic): cut parity and physics p95** — headset left adb before it could run |
+| **Effect prewarm** (arcs, bombs, walls instantiated per spawn) | yes | parse only | first-song hitch measurement on device |
+| **Arc pooling** (reuse instead of instantiate/free) | yes | parse only | device run; pooled reuse resets travelled Z and visibility |
+| **Residual ~0.2 % drops** | no | — | needs the per-frame timing rig (the current `Performance.TIME_PROCESS` is a once-per-second maximum) |
+
+### Stress test — NOT RUN
+
+The 15-minute sustained/thermal run and the 10× load/unload memory test are **not done**. They
+were blocked by the headset dropping off adb. Until they run, "stable 120 Hz" remains a
+**cold-start** result: all recorded rows are 60–180 s at thermal status 0, and 120 Hz is the
+first rate the runtime drops on a thermal event.
+
+The prepared configuration is committed as a flag file: 900 s, `refresh_hz=120`,
+`detection=analytic`, bot playing the reference map. Run:
+
+```powershell
+adb push <flag> /sdcard/Android/data/io.github.testyfishy.opensaberq3/files/bench.flag
+adb shell am start -n io.github.testyfishy.opensaberq3/com.godot.game.GodotAppLauncher
+```
+
+then pull `bench_meta.txt` and `bench.csv`. Watch `thermal_status`, dropped-frame counts by
+20-second bucket, and whether `refresh_rate_final` stays 120.
+
 ## Rejected
 
 Changes that were measured, did not beat the noise, and were reverted (SC-002 scenario 2).
