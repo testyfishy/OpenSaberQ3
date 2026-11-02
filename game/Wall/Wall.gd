@@ -1,6 +1,10 @@
 extends Node3D
 class_name Wall
 
+# Spike attribution (FR-033): the deferred free of a whole wall/arc/bomb tree runs
+# on the main thread, so it can be the spike rather than the spawn.
+const Cost := preload("res://game/scripts/CostProbe.gd")
+
 var despawn_z: float
 var speed: float
 
@@ -10,6 +14,7 @@ func _physics_process(delta: float) -> void:
 	
 	# remove children that go to far
 	if transform.origin.z > despawn_z:
+		if Cost.enabled: Cost.objs_freed += 1
 		queue_free()
 
 func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:

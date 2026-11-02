@@ -179,3 +179,9 @@ openxr/reference_space=2
 openxr/startup_alert=false
 openxr/render_target_size_multiplier=1.2546
 shaders/enabled=true
+
+[gameplay]
+
+notes/enable_collision_once=true
+notes/isolate_collision_shapes=true
+

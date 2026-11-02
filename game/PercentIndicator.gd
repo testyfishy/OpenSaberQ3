@@ -1,10 +1,19 @@
 extends MeshInstance3D
 class_name PercentIndicator
 
+# Spike attribution (FR-033): a TextMesh.text assignment re-triangulates the
+# glyphs and re-uploads the mesh. `update_percent` is driven by
+# Scoreboard.score_changed, i.e. once per cut, but the rendered integer only
+# changes every few cuts - so the text is only rewritten when the integer it
+# would display actually differs. The displayed value is identical either way.
+const Cost := preload("res://game/scripts/CostProbe.gd")
+
 var how_full := 0.0
 var how_full_display := 0.0
 var label: TextMesh
 var shader: ShaderMaterial
+
+var _shown_percent := -1
 
 func _ready() -> void:
 	shader = material_override as ShaderMaterial
@@ -19,13 +28,20 @@ func _process(delta: float) -> void:
 func start_map() -> void:
 	how_full = 1.0
 	how_full_display = 0.0
-	label.text = "100%"
+	_set_text(100)
 
 func endscore() -> void:
 	how_full = 0.0
 	how_full_display = 0.0
-	label.text = "0%"
+	_set_text(0)
 
 func update_percent(amount: float) -> void:
 	how_full = amount
-	label.text = "%d%%" % int(amount * 100)
+	_set_text(int(amount * 100))
+
+func _set_text(percent: int) -> void:
+	if percent == _shown_percent:
+		return
+	_shown_percent = percent
+	if Cost.enabled: Cost.text_mesh_writes += 1
+	label.text = "%d%%" % percent

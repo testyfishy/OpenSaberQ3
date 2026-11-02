@@ -60,6 +60,14 @@ var gamestate: GameState = gamestate_bootup
 
 @onready var menu := main_menu.ui_control as MainMenu
 
+# Spike attribution (FR-033): per-path counters, cheap when off.
+const Cost := preload("res://game/scripts/CostProbe.gd")
+
+# What the HUD TextMeshes currently read. -1 forces the first write after a load.
+var _shown_points := -1
+var _shown_multiplier := -1
+var _shown_combo := -1
+
 
 # There's an interesting issue where the AudioStreamPlayer's playback_position
 # doesn't immediately return to 0.0 after restarting the song_player. This
@@ -305,8 +313,19 @@ func _display_points() -> void:
 	else:
 		hit_rate = 1.0
 	
-	(point_label.mesh as TextMesh).text = "Score: %6d" % Scoreboard.points
-	(multiplier_label.mesh as TextMesh).text = "x %d\nCombo %d" % [Scoreboard.multiplier, Scoreboard.combo]
+	# FR-033: this runs once per cut (Scoreboard.score_changed) and a TextMesh.text
+	# assignment re-triangulates glyphs and re-uploads the mesh. The displayed
+	# string is unchanged when the underlying value is unchanged, so only write
+	# when it actually differs. Same rendered pixels, fewer mesh rebuilds.
+	if Scoreboard.points != _shown_points:
+		_shown_points = Scoreboard.points
+		if Cost.enabled: Cost.text_mesh_writes += 1
+		(point_label.mesh as TextMesh).text = "Score: %6d" % Scoreboard.points
+	if Scoreboard.multiplier != _shown_multiplier or Scoreboard.combo != _shown_combo:
+		_shown_multiplier = Scoreboard.multiplier
+		_shown_combo = Scoreboard.combo
+		if Cost.enabled: Cost.text_mesh_writes += 1
+		(multiplier_label.mesh as TextMesh).text = "x %d\nCombo %d" % [Scoreboard.multiplier, Scoreboard.combo]
 	percent_indicator.update_percent(hit_rate)
 
 # accessor method for the player name selector UI element

@@ -10,8 +10,29 @@ var is_extended := false
 @onready var tail := $tail as SaberTail
 @onready var hitsound := $hitsound as AudioStreamPlayer3D
 
+# Pending delayed hit sounds, in seconds remaining. A hit whose note is a little
+# in the future plays its sound when that beat arrives; this used to be an
+# `await get_tree().create_timer(...)`, i.e. a SceneTreeTimer plus a coroutine per
+# hit (FR-033: per-hit allocation on the gameplay path). A SceneTreeTimer only
+# fires on a process frame anyway, so polling here has the same timing.
+var _pending_hits: Array[float] = []
+
 func _ready() -> void:
+	set_process(false)
 	quickhide()
+
+func _process(delta: float) -> void:
+	if _pending_hits.is_empty():
+		set_process(false)
+		return
+	var i := 0
+	while i < _pending_hits.size():
+		_pending_hits[i] -= delta
+		if _pending_hits[i] <= 0.0:
+			_pending_hits.remove_at(i)
+			hitsound.play()
+		else:
+			i += 1
 
 func set_color(color: Color) -> void:
 	_mat.set_shader_parameter(&"color", color)
@@ -43,5 +64,5 @@ func hit(time_offset: float) -> void:
 		if time_offset <= 0:
 			hitsound.play(-time_offset)
 		else:
-			await get_tree().create_timer(time_offset).timeout
-			hitsound.play()
+			_pending_hits.append(time_offset)
+			set_process(true)

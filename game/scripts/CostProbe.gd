@@ -36,6 +36,31 @@ static var spawn_usec := 0
 static var shape_reenable := 0   # set_collision_disabled(false) writes
 static var physics_ticks := 0    # physics ticks started in the current frame
 
+# ── Spike attribution counters (FR-033) ──────────────────────────────────────
+# The process-step p99 is 3x the physics p99, so the spike is in something the
+# process step owns. These counters make each candidate falsifiable per frame:
+# what a spike frame did, rather than what the run averaged.
+#
+#   cuts           Scoreboard.add_points calls = notes/links that actually scored
+#                  (Scoreboard.gd). Distinguishes "spike when many notes die".
+#   labels_spawned point-label node instantiations. Expected to be 0 for a whole
+#                  run because Points_label_driver pre-pools 4 of them; the
+#                  column exists so that claim is measured, not asserted.
+#   text_mesh_writes TextMesh.text assignments. A TextMesh rebuild re-triangulates
+#                  glyphs and re-uploads the mesh, so this is the cost of the HUD.
+#   objs_spawned   wall/bomb/arc scene instantiations (Playing._process_map).
+#   objs_freed     queue_free() on a spawned wall/bomb/arc. Deferred frees run on
+#                  the main thread, so they can be the spike rather than the spawn.
+#   arcs_spawned   subset of objs_spawned: sliders, which are CSGPolygon3D nodes
+#                  whose ribbon is rebuilt on the main thread when the curve
+#                  changes. The leading suspect for a process-step spike.
+static var cuts := 0
+static var labels_spawned := 0
+static var text_mesh_writes := 0
+static var objs_spawned := 0
+static var objs_freed := 0
+static var arcs_spawned := 0
+
 static func reset() -> void:
 	swing_usec = 0
 	cuttable_usec = 0
@@ -43,3 +68,9 @@ static func reset() -> void:
 	spawn_usec = 0
 	shape_reenable = 0
 	physics_ticks = 0
+	cuts = 0
+	labels_spawned = 0
+	text_mesh_writes = 0
+	objs_spawned = 0
+	objs_freed = 0
+	arcs_spawned = 0

@@ -1,6 +1,9 @@
 extends Cuttable
 class_name Bomb
 
+# Spike attribution (FR-033): deferred free on the main thread, see Wall.gd.
+# (CostProbe/Cost is inherited from Cuttable.)
+
 @export var min_speed := 0.5
 @onready var collision_shape := $Area3D/CollisionShape3D as CollisionShape3D
 
@@ -10,9 +13,11 @@ func set_collision_disabled(value: bool) -> void:
 @warning_ignore("unused_parameter")
 func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: BeepSaberController) -> void:
 	Scoreboard.bad_cut(transform.origin)
+	if Cost.enabled: Cost.objs_freed += 1
 	queue_free()
 
 func on_miss() -> void:
+	if Cost.enabled: Cost.objs_freed += 1
 	queue_free()
 
 func spawn(info: BombInfo, current_beat: float) -> void:

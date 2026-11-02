@@ -1,6 +1,13 @@
 extends Node3D
 class_name Arc
 
+# Spike attribution (FR-033): deferred free of a CSG ribbon on the main thread.
+const Cost := preload("res://game/scripts/CostProbe.gd")
+
+# A/B switch for spike attribution: each arc spawn rebuilds a CSGPolygon3D ribbon on the main
+# thread. Set false to measure the game without arcs and prove or eliminate that cost.
+static var spawn_enabled := true
+
 static var left_material := load("res://game/Arc/Arc.material").duplicate() as ShaderMaterial
 static var right_material := left_material.duplicate() as ShaderMaterial
 
@@ -107,4 +114,5 @@ func _process(delta: float) -> void:
 	if transform.origin.z >= despawn_z:
 		if activator_cube and activator_cube.cutted.is_connected(_on_activator_cube_cutted):
 			activator_cube.cutted.disconnect(_on_activator_cube_cutted)
+		if Cost.enabled: Cost.objs_freed += 1
 		queue_free()

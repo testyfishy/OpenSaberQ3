@@ -78,7 +78,15 @@ const DEFAULT_MAX_DURATION_S := 180.0
 # Workload counters are sampled every Nth rendered frame; see the Output notes.
 const COUNTER_STRIDE := 4
 
-const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,cubes_in_use,links_in_use,debris_live,slice_bursts,process_usec,physics_usec,phys_ticks,swing_usec,cuttable_usec,floor_ray_usec,spawn_usec,shape_reenable,notes_live"
+# Spike attribution (FR-033). A frame is recorded as a spike when its process-step
+# time exceeds this. 12 ms is just over a 90 Hz budget (11.11 ms) and well below
+# the p99 the run is being judged on, so the log catches the causes, not only the
+# worst symptom. Time in the log is microsecond-resolution, so the threshold only
+# decides which frames get a line, never how they are measured.
+const SPIKE_USEC := 12000
+const MAX_SPIKE_WINDOWS := 200
+
+const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,cubes_in_use,links_in_use,debris_live,slice_bursts,process_usec,physics_usec,phys_ticks,swing_usec,cuttable_usec,floor_ray_usec,spawn_usec,shape_reenable,notes_live,cuts_this_frame,labels_spawned,objs_spawned,objs_freed,arcs_spawned,text_mesh_writes,track_children,static_mem,pipeline_compiles_total"
 
 # Per-path self-time instrumentation (FR-033). A total physics time is not an
 # attribution: `physics_usec` is the whole tick, so the columns below split it
@@ -121,6 +129,29 @@ var _notes_live := PackedInt32Array()
 var _song_pos := PackedInt64Array()
 var _drawn := PackedInt32Array()
 var _focus_col := PackedByteArray()
+
+# Spike-attribution columns (FR-033), one value per rendered frame. Everything
+# here is either a static counter from CostProbe (no allocation on the writer's
+# path) or a single O(1) engine read, so recording stays cheap next to the
+# 11 ms budget it is measuring.
+var _col_cuts := PackedInt32Array()
+var _col_labels := PackedInt32Array()
+var _col_objs := PackedInt32Array()
+var _col_objs_freed := PackedInt32Array()
+var _col_arcs := PackedInt32Array()
+var _col_tm := PackedInt32Array()
+var _col_track := PackedInt32Array()
+var _col_mem := PackedInt64Array()
+var _col_pipe := PackedInt64Array()
+
+# Rows whose process time is over SPIKE_USEC, waiting for their following frame so
+# spike-1/spike/spike+1 can all be printed. Empty on a normal run: the per-frame
+# cost is one `is_empty()` test.
+var _spike_queue: Array[int] = []
+var _spikes := 0
+var _spike_windows := 0
+var _deep_probe := false
+var _last_logged_row := -10
 
 # Workload counters (see CSV_HEADER). Last sampled value is repeated on the
 # rows in between, so the columns are always aligned with their frame.
@@ -246,6 +277,8 @@ func _begin() -> void:
 	_apply_overrides(cfg)
 
 	var requested := float(cfg.get_value("bench", "duration", 0.0))
+	_deep_probe = bool(cfg.get_value("bench", "deep_probe", false))
+	_meta["deep_probe"] = "true" if _deep_probe else "false"
 	var max_duration := float(cfg.get_value("bench", "max_duration", DEFAULT_MAX_DURATION_S))
 	if max_duration <= 0.0:
 		max_duration = DEFAULT_MAX_DURATION_S
@@ -326,6 +359,11 @@ func _begin() -> void:
 # normal operation; `max_fps` here only pins conditions while measuring).
 func _apply_overrides(cfg: ConfigFile) -> void:
 	var applied := PackedStringArray()
+	# A/B switch for the CSG arc ribbon, which is the prime suspect for the main-thread tail.
+	var arcs = cfg.get_value("bench", "arcs", null)
+	if arcs != null:
+		Arc.spawn_enabled = bool(arcs)
+		applied.append("arcs=%s" % str(bool(arcs)))
 	var rays := int(cfg.get_value("bench", "rays", 0))
 	if rays > 0:
 		ProjectSettings.set_setting(&"gameplay/swing_hit/num_collision_raycasts", rays)
@@ -364,12 +402,18 @@ func _start_recording() -> void:
 	# Settle here, immediately before recording, and pin physics to what actually applies.
 	var xr_settle := XRServer.primary_interface
 	if xr_settle != null and xr_settle.has_method("get_display_refresh_rate"):
+		# The runtime applies a refresh change late (measured: still reporting the old rate at
+		# record start, settled only later in the run), so the read-back here is not
+		# trustworthy. Pin physics to the rate we REQUESTED - that is the rate the display
+		# converges to - and let _write_meta prove whether it matched.
+		var want := float(_meta.get("refresh_rate_requested", "0"))
 		var settled := float(xr_settle.get_display_refresh_rate())
-		if settled > 0.0:
-			Engine.physics_ticks_per_second = int(round(settled))
-			_meta["refresh_rate_settled"] = str(settled)
+		var target_hz := want if want > 0.0 else settled
+		if target_hz > 0.0:
+			Engine.physics_ticks_per_second = int(round(target_hz))
+			_meta["refresh_rate_at_record_start"] = str(settled)
 			_meta["physics_ticks_settled"] = str(Engine.physics_ticks_per_second)
-			vr.log_info("BENCH: settled refresh=%.1f physics=%d" % [settled, Engine.physics_ticks_per_second])
+			vr.log_info("BENCH: physics pinned to requested %.1f Hz (read-back at start was %.1f)" % [target_hz, settled])
 	_recording = true
 	_start_usec = Time.get_ticks_usec()
 	_prev_usec = _start_usec
@@ -394,7 +438,8 @@ func _process(delta: float) -> void:
 	_deltas.append(now - _prev_usec)
 	_prev_usec = now
 	_proc_deltas.append(int(delta * 1000000.0))
-	_proc_times.append(int(Performance.get_monitor(Performance.TIME_PROCESS) * 1000000.0))
+	var proc_usec := int(Performance.get_monitor(Performance.TIME_PROCESS) * 1000000.0)
+	_proc_times.append(proc_usec)
 	_phys_times.append(int(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000000.0))
 	_phys_ticks.append(Cost.physics_ticks)
 	_swing_usec.append(Cost.swing_usec)
@@ -406,6 +451,32 @@ func _process(delta: float) -> void:
 	_drawn.append(Engine.get_frames_drawn())
 	_focus_col.append(1 if _focused else 0)
 	
+	# Spike attribution columns (FR-033).
+	_col_cuts.append(Cost.cuts)
+	_col_labels.append(Cost.labels_spawned)
+	_col_objs.append(Cost.objs_spawned)
+	_col_objs_freed.append(Cost.objs_freed)
+	_col_arcs.append(Cost.arcs_spawned)
+	_col_tm.append(Cost.text_mesh_writes)
+	_col_track.append(_track.get_child_count() if _track != null else 0)
+	# EXPENSIVE monitors. Measured cost: calling these every frame pushed main-thread
+	# TIME_PROCESS p95 from 10.2 ms to 44.2 ms - the harness measurably perturbed the thing
+	# it was measuring. They are sampled once every 30 frames and only under deep_probe.
+	if _deep_probe and (_ticks.size() % 30) == 0:
+		_col_mem.append(int(Performance.get_monitor(Performance.MEMORY_STATIC)))
+		# Cumulative engine-wide pipeline-compilation count (GPU side, cannot be timed
+		# from GDScript). Adjacent rows give the per-frame delta.
+		_col_pipe.append(int(
+			Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_CANVAS)
+			+ Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_MESH)
+			+ Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_SURFACE)
+			+ Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_DRAW)
+		+ Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_SPECIALIZATION)))
+	else:
+		# Column count must stay constant; the sampler repeats the last known value.
+		_col_mem.append(_col_mem[_col_mem.size() - 1] if _col_mem.size() > 0 else 0)
+		_col_pipe.append(_col_pipe[_col_pipe.size() - 1] if _col_pipe.size() > 0 else 0)
+	
 	if _ticks.size() % COUNTER_STRIDE == 1:
 		_sample_counters()
 	_col_cubes.append(_last_cubes)
@@ -416,6 +487,10 @@ func _process(delta: float) -> void:
 	# Readers own the reset: nothing on a hot path zeroes these.
 	Cost.reset()
 	
+	if _deep_probe:
+	
+		_check_spike(proc_usec)
+	
 	if _song_player.playing:
 		_saw_playing = true
 	elif _saw_playing:
@@ -424,6 +499,42 @@ func _process(delta: float) -> void:
 	
 	if now - _start_usec >= _limit_usec:
 		_finish(_limit_reason)
+
+# ── spike attribution (FR-033) ───────────────────────────────────────────────
+# Godot's TIME_PROCESS for frame N is only observable once frame N has finished, so
+# a spike row is held until two more rows exist. By then spike-1, spike and
+# spike+1 are all in the recorded columns and the line is printed from them, which
+# is what lets a spike be blamed on the frame that caused it (debris/CSG/text
+# rebuilds often land one frame after the spawn that dirtied them) instead of on
+# the frame that merely paid for it.
+#
+# Cost on a normal frame: one `is_empty()` test and one integer compare. Nothing is
+# formatted unless a spike fires.
+func _check_spike(proc_usec: int) -> void:
+	var n := _ticks.size() - 1
+	while not _spike_queue.is_empty() and n - _spike_queue[0] >= 2:
+		_log_spike(_spike_queue.pop_front())
+	if proc_usec > SPIKE_USEC:
+		_spikes += 1
+		if _spike_windows < MAX_SPIKE_WINDOWS:
+			_spike_queue.append(n)
+
+func _log_spike(row: int) -> void:
+	# Overlapping windows would just repeat lines, and a pathological run (or a
+	# platform where the monitor stops updating) must not be able to flood the log.
+	if row <= _last_logged_row + 1:
+		return
+	_last_logged_row = row
+	_spike_windows += 1
+	for offset in range(-1, 2):
+		var i := row + offset
+		if i < 0 or i >= _ticks.size():
+			continue
+		vr.log_info("BENCH: spike frame=%d off=%d frame_usec=%d proc_usec=%d phys_usec=%d ticks=%d spawn_usec=%d cuts=%d labels=%d objs=%d freed=%d arcs=%d tm_writes=%d debris=%d bursts=%d notes=%d track=%d mem=%d pipe=%d" % [
+			i, offset, _deltas[i], _proc_times[i], _phys_times[i], _phys_ticks[i], _spawn_usec[i],
+			_col_cuts[i], _col_labels[i], _col_objs[i], _col_objs_freed[i],
+			_col_arcs[i], _col_tm[i], _col_debris[i], _col_bursts[i],
+			_notes_live[i], _col_track[i], _col_mem[i], _col_pipe[i]])
 
 # ── workload counters ────────────────────────────────────────────────────────
 func _sample_counters() -> void:
@@ -556,6 +667,10 @@ func _finish(reason: String) -> void:
 	_meta["debris_peak"] = str(_peak_of(_col_debris))
 	_meta["slice_bursts_total"] = str(_bursts_total)
 	_meta["cubes_peak"] = str(_peak_of(_col_cubes))
+	_meta["spikes"] = str(_spikes)
+	_meta["spike_threshold_usec"] = str(SPIKE_USEC)
+	while not _spike_queue.is_empty():
+		_log_spike(_spike_queue.pop_front())
 	if _bot != null:
 		@warning_ignore("unsafe_method_access")
 		_meta.merge(_bot.get_stats(), true)
@@ -592,13 +707,15 @@ func _write_csv() -> void:
 	rows.resize(_ticks.size() + 1)
 	rows[0] = CSV_HEADER
 	for i in _ticks.size():
-		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
+		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
 			i, _ticks[i], _deltas[i], _proc_deltas[i],
 			_song_pos[i], _drawn[i], _focus_col[i],
 			_col_cubes[i], _col_links[i], _col_debris[i], _col_bursts[i],
 			_proc_times[i], _phys_times[i],
 			_phys_ticks[i], _swing_usec[i], _cuttable_usec[i], _floor_usec[i],
-			_spawn_usec[i], _reenable[i], _notes_live[i]]
+			_spawn_usec[i], _reenable[i], _notes_live[i],
+			_col_cuts[i], _col_labels[i], _col_objs[i], _col_objs_freed[i],
+			_col_arcs[i], _col_tm[i], _col_track[i], _col_mem[i], _col_pipe[i]]
 	f.store_string("\n".join(rows) + "\n")
 	f.close()
 	vr.log_info("BENCH: csv=%s" % path)
@@ -613,6 +730,11 @@ func _write_meta() -> void:
 		if xr_end.has_method("get_display_refresh_rate"):
 			_meta["refresh_rate_final"] = str(xr_end.get_display_refresh_rate())
 	_meta["physics_ticks_final"] = str(Engine.physics_ticks_per_second)
+	# Validity: physics must have run at the rate the display actually ended at.
+	var rej := float(_meta.get("refresh_rate_requested", "0"))
+	var ref := float(_meta.get("refresh_rate_final", "0"))
+	_meta["refresh_request_honoured"] = "true" if (rej <= 0.0 or abs(ref - rej) < 0.5) else "false"
+	_meta["physics_matches_display"] = "true" if (ref <= 0.0 or abs(float(Engine.physics_ticks_per_second) - ref) < 0.5) else "false"
 	var path := _out_dir.path_join(META_NAME)
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
@@ -637,4 +759,5 @@ func _peak_of(values: PackedInt32Array) -> int:
 		if v > peak:
 			peak = v
 	return peak
+
 

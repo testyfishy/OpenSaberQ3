@@ -3,6 +3,9 @@ extends Node
 signal score_changed()
 signal points_awarded(position: Vector3, amount: String)
 
+# Spike attribution (FR-033): one branch when off, one integer add when on.
+const Cost := preload("res://game/scripts/CostProbe.gd")
+
 var points: int
 var combo: int
 var multiplier: int
@@ -28,6 +31,7 @@ func reset_combo() -> void:
 	score_changed.emit()
 
 func add_points(position: Vector3, amount: int) -> void:
+	if Cost.enabled: Cost.cuts += 1
 	combo += 1
 	@warning_ignore("integer_division")
 	multiplier = 1 + mini(combo / 10, 7)

@@ -29,6 +29,17 @@ var right_color: Color
 
 @export var disabled := false
 
+# Precomputed shader-parameter names. Building "bg_%d_tint" % type allocates a
+# String per light event (dozens per second in a dense map), and
+# set_shader_parameter() has to convert it to a StringName anyway.
+const TINT_PARAMS: Array[StringName] = [
+	&"bg_0_tint", &"bg_1_tint", &"bg_2_tint", &"bg_3_tint", &"bg_4_tint"]
+const INTENSITY_PARAMS: Array[StringName] = [
+	&"bg_0_intensity", &"bg_1_intensity", &"bg_2_intensity", &"bg_3_intensity", &"bg_4_intensity"]
+
+# Reused instead of a fresh Array per fade call: this runs once per light event.
+var _fade_materials: Array[StandardMaterial3D] = []
+
 func _ready() -> void:
 	# get_rendering_device() returns null in opengl, meaning this block is skipped in vulkan
 	if not RenderingServer.get_rendering_device():
@@ -157,7 +168,7 @@ func turn_light_off(type: int) -> void:
 			floor_material.albedo_color = Color.BLACK
 
 func turn_light_on(type: int, color: Color) -> void:
-	sphere_material.set_shader_parameter("bg_%d_tint"%type, color)
+	sphere_material.set_shader_parameter(TINT_PARAMS[type], color)
 	stop_prev_tween(type)
 	_on_Tween_tween_step(color, type)
 	match type:
@@ -179,11 +190,11 @@ func turn_light_on(type: int, color: Color) -> void:
 			floor_material.albedo_color = color
 
 func flash_light_on(type: int, color: Color) -> void:
-	sphere_material.set_shader_parameter("bg_%d_tint"%type, color)
+	sphere_material.set_shader_parameter(TINT_PARAMS[type], color)
 	fade_light(type, color * 3.0, color, false, Tween.TRANS_LINEAR, Tween.EASE_OUT)
 
 func flash_light_then_fade_off(type: int, color: Color) -> void:
-	sphere_material.set_shader_parameter("bg_%d_tint"%type, color)
+	sphere_material.set_shader_parameter(TINT_PARAMS[type], color)
 	fade_light(type, color * 3.0, Color.BLACK, true, Tween.TRANS_QUAD, Tween.EASE_IN)
 
 func fade_light_from_current(type: int, to_color: Color) -> void:
@@ -205,41 +216,50 @@ func fade_light(type: int, from: Color, to: Color, turn_off_after_fade: bool, tr
 	stop_prev_tween(type)
 	
 	var group: Node3D
-	var material: Array[StandardMaterial3D] = []
+	# Reused buffer: this function runs once per light event.
+	_fade_materials.clear()
 	match type:
 		EventInfo.TYPE_DIAGONAL_LASERS:
 			group = diagonal_lasers_holder
-			material = [diagonal_lasers_material]
+			_fade_materials.append(diagonal_lasers_material)
 		EventInfo.TYPE_SQUARE_LASERS:
 			group = square_lasers_holder
-			material = [square_lasers_material]
+			_fade_materials.append(square_lasers_material)
 		EventInfo.TYPE_LEFT_WAVING_LASERS:
 			group = left_waving_lasers_holder
-			material = [left_waving_lasers_material]
+			_fade_materials.append(left_waving_lasers_material)
 		EventInfo.TYPE_RIGHT_WAVING_LASERS:
 			group = right_waving_lasers_holder
-			material = [right_waving_lasers_material]
+			_fade_materials.append(right_waving_lasers_material)
 		EventInfo.TYPE_FLOOR_LIGHTS:
 			group = track_lights_holder
-			material = [track_lights_material, floor_material]
+			_fade_materials.append(track_lights_material)
+			_fade_materials.append(floor_material)
 	
 	group.visible = true
 	
 	var tween := group.create_tween()
 	@warning_ignore("return_value_discarded")
 	tween.set_parallel().set_trans(trans_type).set_ease(ease_type)
-	for m in material:
+	for m in _fade_materials:
 		@warning_ignore("return_value_discarded")
 		tween.tween_property(m, ^"albedo_color", to, 1).from(from)
 	@warning_ignore("return_value_discarded")
 	tween.tween_method(_on_Tween_tween_step.bind(type), from, to, 1)
+	# The end-of-fade work used to be an `await tween.finished`, which allocates a
+	# coroutine and a signal connection per light event. A sequenced callback fires
+	# on the same frame the await would have resumed, and a killed tween (see
+	# stop_prev_tween) still skips it exactly as before.
+	@warning_ignore("return_value_discarded")
+	tween.set_parallel(false)
+	tween.tween_callback(_finish_fade.bind(group, turn_off_after_fade, type))
 	tween.play()
 	prev_tweeners[type] = tween
-	await tween.finished
+
+func _finish_fade(group: Node3D, turn_off_after_fade: bool, type: int) -> void:
 	if turn_off_after_fade:
 		group.visible = false
-		tween.kill()
 		_on_Tween_tween_step(Color.BLACK, type)
 
 func _on_Tween_tween_step(value: Color, id: int) -> void:
-	sphere_material.set_shader_parameter("bg_%d_intensity"%id,value.v)
+	sphere_material.set_shader_parameter(INTENSITY_PARAMS[id], value.v)

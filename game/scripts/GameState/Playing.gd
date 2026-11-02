@@ -68,17 +68,28 @@ func _process_map(game: BeepSaber_Game) -> void:
 	
 	# spawn bombs
 	while not Map.bomb_stack.is_empty() and Map.bomb_stack[-1].beat <= look_ahead:
+		if probe: Cost.objs_spawned += 1
 		var bomb := bomb_template.instantiate() as Bomb
 		bomb.spawn(Map.bomb_stack.pop_back() as BombInfo, current_beat)
 		game.track.add_child(bomb)
 	
 	# spawn obstacles (walls)
 	while not Map.obstacle_stack.is_empty() and Map.obstacle_stack[-1].beat <= look_ahead:
+		if probe: Cost.objs_spawned += 1
 		var wall := wall_template.instantiate() as Wall
 		wall.spawn(Map.obstacle_stack.pop_back() as ObstacleInfo, current_beat)
 		game.track.add_child(wall)
 	
 	while not Map.arc_stack.is_empty() and Map.arc_stack[-1].head_beat <= look_ahead:
+		if probe:
+			Cost.objs_spawned += 1
+			Cost.arcs_spawned += 1
+		# A/B kill switch: arcs rebuild a CSGPolygon3D ribbon on the main thread at every
+		# spawn. Disabling them is the cheap way to prove or eliminate that cost before
+		# rewriting them. The stack is still popped so timing/spawn order is unchanged.
+		if not Arc.spawn_enabled:
+			Map.arc_stack.pop_back()
+			continue
 		var arc := arc_template.instantiate() as Arc
 		var arc_info := Map.arc_stack.pop_back() as ArcInfo
 		
