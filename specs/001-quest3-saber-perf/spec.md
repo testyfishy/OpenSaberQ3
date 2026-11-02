@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-01
 
-**Status**: In progress — Approved (G0, 2026-11-01); plan approved (G1, 2026-11-01)
+**Status**: In progress — visual expansion implemented (unverified on hardware); stress test planned
 
 **Input**: User description: "Fork OpenSaber to a public GitHub repo and hyper-optimize it for Meta Quest 3 (clarity, frame stability, hit registration) while keeping game logic and BeatSaver map compatibility."
 
@@ -248,6 +248,13 @@ plus 10 consecutive song load/unload cycles.
 - **FR-049**: Every visual addition MUST default to a state the user can turn off in settings, and
   MUST be gated on measurement: vsync hit rate ≥ 99.5 %, GPU `App=` p99 ≤ 6.5 ms, and a
   main-thread p95 rise ≤ 0.2 ms.
+- **FR-050**: Every visual or audio addition in this project MUST have an individual user-facing
+  setting that takes effect without restarting, so a player can disable any single feature that
+  costs them frames. There MUST be no effect that can only be disabled by rebuilding the game.
+  *(Added 2026-11-02.)*
+- **FR-051**: The shipped default configuration MUST hold the frame budget with **every** setting
+  enabled. If it cannot, the defaults MUST be reduced to the largest set that does, and the reason
+  recorded. *(Added 2026-11-02.)*
 - **FR-022**: The "before" in every comparison MUST be the unmodified upstream commit built
   with the pinned toolchain — not the APK currently installed on the headset. The installed
   build may differ in engine version and export settings, so it is a reference point only.
@@ -471,3 +478,4 @@ requirements below; they are facts, not hypotheses.
 
 | G1 | Benchmark-mode implementation (delegated to `coder`, its own consult) | **GO WITH CHANGES**, all applied: flag read from `user://` then external app dir, renamed `.consumed` before the run, proximity/focus documented plus a `focused` CSV column, `song_end` only after playback was seen, separate `process_delta_usec` column, verified with a 3-second headless run | `game/scripts/BenchmarkRunner.gd` + a 9-line guarded hook in `BeepSaber_Game._ready()`; 437 samples at 3 s, mean 6.87 ms, p99 10.03 ms, max 14.62 ms on desktop headless |
 
+| G2 | Visual expansion: implement every advisor-recommended improvement, each behind a setting | **APPROVED (user instruction)**: all eleven items implemented with individual toggles; FR-050 added (no effect may require a rebuild to disable) and FR-051 (shipped defaults must hold the budget with everything on) | Stress-test protocol S1/S2/S3 written into tasks.md: S1 runs 900 s with everything on; if it fails, S2 bisects by halving the feature set in 120 s runs until one feature reproduces the drop; S3 sets defaults from the result. Device has been off adb for every attempt so far, so none of it has run |

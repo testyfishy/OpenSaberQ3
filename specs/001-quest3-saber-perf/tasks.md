@@ -83,8 +83,35 @@ Ordered. Each task names the requirement it serves. `[P]` = parallelisable withi
 - [ ] T034 10 load/unload cycles, memory sampling (SC-008)
 - [ ] T035 Quality presets + automatic fallback (FR-017)
 
-## Phase 7 — Publish
+## Phase 6b - Stress test and bisection (planned; needs the headset on adb)
 
+The headset has been off adb for every attempt so far, so none of this has run.
+
+### S1. Everything on, long run
+- Enable every visual and audio feature: floor light, halos, note emission, hit flash, per-note
+  colour, event tint, floor grid, sky, trail, wall fresnel, debris cap, mirrors, bloom.
+- Flag: 900 s, `refresh_hz=120`, `detection=analytic`, bot enabled.
+- Record: `thermal_status` start and end, dropped frames per 20-second bucket,
+  `refresh_rate_final` (does the runtime drop us to 72 Hz?), GPU `App=` mean/p95, main-thread p95.
+- PASS: >= 99.5 % of frames on vsync for the whole run, `refresh_rate_final` still 120, no crash,
+  no `SHADER ERROR`.
+
+### S2. If S1 fails - bisect in short bursts
+Do not guess which feature is expensive. Halve the suspect set, 120 s per run, ABAB order:
+1. Reproduce with everything on in 120 s to confirm the failure is repeatable.
+2. All gated features OFF (trail, wall fresnel, debris cap, mirrors, bloom), free ones still on.
+   Pass => the cost is in the gated set; fail => it is in the free set or the base build.
+3. Binary search within whichever half failed: enable half of those features, 120 s each, until a
+   single feature reproduces the drop on its own.
+4. For the guilty feature, measure it alone against baseline, then decide: off by default, reduce
+   its cost parameter, or keep it and document the trade.
+5. Record every step in `PERF.md` with the settings used and the numbers, kept or reverted.
+
+### S3. Defaults
+Whatever S2 concludes becomes the shipping default (FR-051). Anything that cannot hold the budget
+stays available but OFF, and is named in the release notes so players know why.
+
+## Phase 7 - Publish
 - [ ] T036 Clean-machine build docs (SC-001)
 - [ ] T037 Complete `PERF.md` kept/rejected table (FR-019)
 - [ ] T038 Release APK + install note (FR-019)
