@@ -105,6 +105,26 @@ var spectator_hud: bool:
 		spectator_hud = value
 		set_and_emit(&"spectator_hud", value)
 
+# --- Performance settings (FR-040). These are applied by BeepSaber_Game, not here: the XR
+# session does not exist yet while Settings loads. Defaults match the tuned project values so an
+# untouched install behaves exactly as before.
+var display_refresh_rate: float:
+	set(value):
+		display_refresh_rate = value
+		set_and_emit(&"display_refresh_rate", value)
+var render_scale: float:
+	set(value):
+		render_scale = value
+		set_and_emit(&"render_scale", value)
+var msaa_3d: int:
+	set(value):
+		msaa_3d = value
+		set_and_emit(&"msaa_3d", value)
+var foveation_level: int:
+	set(value):
+		foveation_level = value
+		set_and_emit(&"foveation_level", value)
+
 
 
 func _ready() -> void:
@@ -154,7 +174,13 @@ var default_values = {
 	audio_music = 0.8,
 	audio_sfx = 0.8,
 	spectator_view = false,
-	spectator_hud = true
+	spectator_hud = true,
+	# Performance (FR-040). render_scale 1.2546 is the Quest 3 tuning (per-eye >= native);
+	# other headsets can lower it from the settings panel.
+	display_refresh_rate = 120.0,
+	render_scale = 1.2546,
+	msaa_3d = 2,
+	foveation_level = 0
 }
 
 func cast_or_default(key: String, to_type: int = -1) -> Variant:

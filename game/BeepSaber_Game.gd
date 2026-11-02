@@ -9,7 +9,7 @@ class_name BeepSaber_Game
 # editor's global class cache being up to date on a clean clone.
 const BenchmarkRunnerScript := preload("res://game/scripts/BenchmarkRunner.gd")
 
-var version := "0.5.0"
+var version := str(ProjectSettings.get_setting("application/config/version", "0.1.0"))
 
 var gamestate_bootup := GameState.new()
 var gamestate_mapcomplete := GameStateMapComplete.new()
@@ -203,8 +203,9 @@ func _ready() -> void:
 	# Godot does not honour xr/openxr/render_target_size_multiplier from project.godot on this
 	# path: measured render_target_size stayed at the runtime's recommended 1680x1760 with the
 	# setting present in the build. Apply it explicitly so the eye buffers actually render at
-	# (or above) the panel's native resolution instead of ~81% of it.
-	_apply_render_scale()
+	# (or above) the panel's native resolution instead of ~81% of it. Same for the refresh rate,
+	# MSAA and foveation: all four now come from Settings so the panel can change them.
+	_apply_render_settings()
 
 	debug_info_label.visible = Settings.show_debug_info
 	set_colors_from_settings()
@@ -246,25 +247,98 @@ func _ready() -> void:
 	if BenchmarkRunnerScript.has_bench_flag():
 		add_child(BenchmarkRunnerScript.new(self))
 
-func _apply_render_scale() -> void:
+# Applies the four settings that decide what the headset actually renders. Called once at
+# startup, and again per setting whenever the user changes it (see on_settings_changed).
+# Everything here is a no-op when the API in question is missing, so a runtime without the
+# OpenXR FB extensions still boots.
+func _apply_render_settings() -> void:
+	_apply_display_refresh_rate()
+	_apply_render_scale(Settings.render_scale)
+	_apply_msaa()
+	_apply_foveation_level()
+
+# Refresh rate + physics cadence. Physics is pinned to the rate the panel ACTUALLY runs at, not
+# the one we asked for: requesting 90 on a runtime that only offers 72 must not leave physics
+# sampling at 90 (which would burn CPU for no visual gain, and desynchronise saber sampling).
+func _apply_display_refresh_rate() -> void:
 	var iface := XRServer.primary_interface
 	if iface == null:
 		return
-	# Refresh rate first: the runtime chooses a default (120 Hz on Quest 3 once rates are
-	# unlocked), and 120 drops ~0.9% of frames until the main-thread tail is fixed. Pin the
-	# rate we can actually hold so normal play is smooth; the benchmark can override it.
-	var want_hz := float(ProjectSettings.get_setting("xr/openxr/default_refresh_rate", 0.0))
-	if want_hz > 0.0 and iface.has_method("set_display_refresh_rate"):
-		iface.set_display_refresh_rate(want_hz)
-		vr.log_info("display refresh requested: %.0f Hz" % want_hz)
-	var scale := float(ProjectSettings.get_setting("xr/openxr/render_target_size_multiplier", 1.0))
-	if scale <= 1.0:
+	var target_hz := _resolve_refresh_rate(Settings.display_refresh_rate)
+	if target_hz <= 0.0:
 		return
-	if iface.has_method("set_render_target_size_multiplier"):
-		iface.set_render_target_size_multiplier(scale)
-		vr.log_info("render scale %.4f applied (requested per-eye >= native)" % scale)
-	else:
-		vr.log_warning("XR interface cannot set render target size multiplier; staying at recommended size")
+	if iface.has_method(&"set_display_refresh_rate"):
+		iface.call(&"set_display_refresh_rate", target_hz)
+	if target_hz > 0.0:
+		Engine.physics_ticks_per_second = int(round(target_hz))
+	vr.log_info("display refresh requested %.0f Hz -> using %.0f Hz, physics %d Hz" % [
+		Settings.display_refresh_rate, target_hz, Engine.physics_ticks_per_second])
+
+# Picks the nearest rate the headset actually offers. A stored value from another headset (e.g.
+# 120 from a Quest 3 on a 90 Hz device) must not be requested blindly.
+func _resolve_refresh_rate(want_hz: float) -> float:
+	if want_hz <= 0.0:
+		return 0.0
+	var iface := XRServer.primary_interface
+	if iface == null or not iface.has_method(&"get_available_display_refresh_rates"):
+		return want_hz
+	var avail: Array = iface.call(&"get_available_display_refresh_rates")
+	if avail.is_empty():
+		return want_hz
+	var best := 0.0
+	var best_delta := INF
+	for rate in avail:
+		var hz := absf(float(rate))
+		if hz <= 0.0:
+			continue
+		var delta := absf(hz - want_hz)
+		if delta < best_delta:
+			best_delta = delta
+			best = hz
+	return best if best > 0.0 else want_hz
+
+# OpenXR consumes render_target_size_multiplier every frame and frees/recreates its main
+# swapchains when the resulting size changes (OpenXRAPI::process), so this is live - it costs
+# one frame of hitch, which is why the slider is debounced by the caller.
+func _apply_render_scale(scale: float) -> void:
+	var iface := XRServer.primary_interface
+	if iface == null or not iface.has_method(&"set_render_target_size_multiplier"):
+		return
+	iface.call(&"set_render_target_size_multiplier", scale)
+	vr.log_info("render scale %.4f applied" % scale)
+
+var _render_scale_generation := 0
+
+# A slider drag fires value_changed on every step; each step would recreate the eye swapchains.
+# Coalesce them so the change is applied once, shortly after the user stops moving the slider.
+func _apply_render_scale_debounced(scale: float) -> void:
+	_render_scale_generation += 1
+	var generation := _render_scale_generation
+	await get_tree().create_timer(0.4).timeout
+	if generation != _render_scale_generation:
+		return
+	_apply_render_scale(scale)
+
+# MSAA regenerates render pipelines, so this is a menu-only change (the settings panel is only
+# reachable from the main menu - GameState/Playing.gd hides it). The panel warns about the hitch.
+func _apply_msaa() -> void:
+	var vp := get_viewport()
+	if vp.msaa_3d == Settings.msaa_3d:
+		return
+	vp.msaa_3d = Settings.msaa_3d
+	vr.log_info("msaa_3d set to %d" % Settings.msaa_3d)
+
+# Fixed foveated rendering (XR_FB_foveation). Applied to the live swapchain via
+# xrUpdateSwapchainFB, and re-applied by the runtime whenever the swapchains are recreated.
+func _apply_foveation_level() -> void:
+	var iface := XRServer.primary_interface
+	if iface == null:
+		return
+	if iface.has_method(&"is_foveation_supported") and not bool(iface.call(&"is_foveation_supported")):
+		return
+	if iface.has_method(&"set_foveation_level"):
+		iface.call(&"set_foveation_level", Settings.foveation_level)
+		vr.log_info("foveation level %d applied" % Settings.foveation_level)
 
 func on_settings_changed(key: StringName) -> void:
 	# ensures proper initialization of tree for proper first frame setting loading
@@ -282,6 +356,14 @@ func on_settings_changed(key: StringName) -> void:
 			($WorldEnvironment as WorldEnvironment).environment.glow_enabled = Settings.glare
 		&"player_height_offset":
 			xr_origin.transform.origin.y = Settings.player_height_offset
+		&"display_refresh_rate":
+			_apply_display_refresh_rate()
+		&"render_scale":
+			_apply_render_scale_debounced(Settings.render_scale)
+		&"msaa_3d":
+			_apply_msaa()
+		&"foveation_level":
+			_apply_foveation_level()
 
 func set_colors_from_settings() -> void:
 	update_left_color(Settings.color_left)
@@ -427,6 +509,11 @@ func _on_BeepSaberMainMenu_difficulty_changed(map_info: MapInfo, diff_rank: int)
 	highscore_panel.load_highscores(map_info,diff_rank)
 
 func _settings_button() -> void:
+	# The panel builds its rows in its own _ready(), which runs before vr.initialize() has an XR
+	# session, so it could not see the headset's refresh rates or foveation support then. Re-read
+	# the interface capabilities each time the panel opens.
+	if settings_panel != null:
+		settings_panel._set_up_performance_controls()
 	_transition_game_state(gamestate_settings)
 
 func _on_settings_Panel_apply() -> void:

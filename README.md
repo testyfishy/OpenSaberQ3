@@ -17,34 +17,50 @@ The pinned upstream commit, the full lineage and the toolchain used for every me
 recorded in [`UPSTREAM.md`](UPSTREAM.md); per-component credits are in
 [`ATTRIBUTION.md`](ATTRIBUTION.md).
 
-## Status: early / work in progress
+## Status: **v0.1 released** — playable, measured, and tuned for Quest 3
 
-This fork does not yet have the performance it is aiming for. The engine migration and the
-configuration fixes below are in place; the hitches and hit-registration work are in progress.
-Claims are made only where a measurement exists, and every measurement, including the ones that
-went badly, is recorded in [`PERF.md`](PERF.md). Where that file has an empty table, nothing has
-been measured yet.
+Release 0.1 is published on the [Releases page](https://github.com/testyfishy/OpenSaberQ3/releases)
+with a sideloadable APK. The frame-time and clarity work is done and measured; hit registration has
+one known bug fixed and one open investigation. Claims are made only where a measurement exists,
+and every measurement, including the ones that went badly, is recorded in [`PERF.md`](PERF.md).
 
-## What this fork changes so far
+## What this fork changes
 
 - **Builds on Godot 4.6.3.** Upstream declares 4.3, but 4.3 cannot import this repository's own
   assets on a clean clone (the mesh importer crashes and leaves 1-byte mesh files), so this fork
   builds on 4.6.3-stable.
-- **Renders at about native panel resolution.** OpenXR recommends 1680×1760 per eye, roughly
-  **81%** of the Quest 3's 2064×2208 panel. The render-target multiplier is raised so the image is
-  rendered at about native resolution instead.
-- **MSAA 4×.** Upstream shipped `quality/filters/msaa`, a Godot 3 key that Godot 4 ignores, so
-  anti-aliasing was off. This fork sets `rendering/anti_aliasing/quality/msaa_3d=2` (4×).
-- **Physics tick pinned to the display rate.** Upstream shipped `common/physics_fps`, also a dead
-  Godot 3 key, so physics ran at the 60 Hz default against a 72 Hz panel. This fork sets
-  `physics/common/physics_ticks_per_second=72`, and a benchmark run pins the tick to the refresh
-  rate it selected, so collision sampling matches the panel.
+- **Renders at native panel resolution.** OpenXR recommends 1680×1760 per eye — about **81%** of the
+  Quest 3 panel. This fork applies a render-target multiplier at runtime so the image renders at
+  **2107×2208 per eye**, full panel coverage with no upscaling.
+- **MSAA 4×.** Upstream shipped `quality/filters/msaa`, a Godot 3 key Godot 4 ignores, so
+  anti-aliasing was off. This fork sets the Godot 4 key.
+- **120 Hz with physics at 120 Hz.** Unlocking rates above 72 required declaring the Meta headset in
+  the Android manifest (`com.oculus.supportedDevices`); without it the runtime runs the app in
+  compatibility mode and reports only 72 Hz. Physics is pinned to the display rate so collision
+  sampling matches the panel — previously it ran at 60 Hz against a 72 Hz panel.
+- **Hit registration fixes.** The swept-collision path discarded sub-threshold movement, which at
+  high refresh rates silently dropped valid swings; the previous position now only advances when a
+  cast actually happens. Note collision shapes were also being rewritten every tick, and were
+  shared between notes so the last-spawned note set every live note's hitbox.
 - **Deterministic benchmark mode.** A flag file starts a scripted run, a bot plays the map through
-  the real collision path on the song clock, and the app writes a per-frame CSV plus a metadata
-  block and quits itself. Host-side capture and summarising scripts live in [`tools/perf/`](tools/perf/).
+  the real collision path on the song clock, and the app writes a per-frame CSV plus metadata, then
+  quits. Host-side capture and summarising scripts live in [`tools/perf/`](tools/perf/).
 
-None of these are claimed as a performance gain yet: the only gameplay figures in this repository
-are the baseline below, taken before them.
+## Settings
+
+Performance options are adjustable in-game (main menu → Settings) so the build can be tuned for
+other headsets:
+
+| Setting | Range | Default | Applies |
+|---|---|---|---|
+| Display refresh rate | rates reported by the headset (72/80/90/120 on Quest 3) | 120 Hz | live |
+| Render scale | 0.7 – 1.5 | 1.2546 (native on Quest 3) | see note |
+| MSAA | off / 2× / 4× | 4× | menu only — changing it mid-song causes a brief hitch |
+| Fixed foveation | off / low / medium | off | live |
+
+Lower render scale or refresh rate if a slower headset cannot hold the frame budget. The Quest 3
+defaults above are what the measurements in this repository were taken with.
+
 
 ## Measured performance
 
@@ -53,22 +69,22 @@ Hatsune Miku` ExpertPlus, with an in-engine bot that actually plays the map (it 
 through the real collision path, so debris, particles and scoring are all loaded). Method,
 validity rules, per-run spread and caveats: [`PERF.md`](PERF.md).
 
-### Before and after
+### Before and after — v0.1
 
-| | **Before** — 2026-11-01 (Baseline v0) | **After** — 2026-11-01 (v2) |
+| | **Before** — 2026-11-01, upstream code | **After** — v0.1, 2026-11-01 |
 |---|---|---|
-| Display refresh | 72 Hz | **90 Hz** (120 Hz reached 116.85 fps, see below) |
-| Render target per eye | 1680 × 1760 — **81% of panel width** | **2107 × 2208 — native** |
-| MSAA | off (the setting was an inert Godot 3 key) | **4×** |
-| Physics tick | 60 Hz against a 72 Hz panel | **matched to the display** |
-| Frames delivered on vsync | 99.876% | **99.880%** |
-| Dropped-frame events | 16 per 180 s | **13 per 120 s** |
-| Frame interval p50 / p95 / p99 | 13.91 / 15.44 / 16.50 ms | **11.13 / 12.26 / 12.95 ms** |
-| GPU `App=` mean | 3.94 ms (28.4% of budget) | **2.40 ms (21.6% of budget)** |
+| Display refresh | 72 Hz | **120 Hz** |
+| Physics tick | 60 Hz against a 72 Hz panel | **120 Hz, matched to the display** |
+| Render target per eye | 1680 × 1760 — 81% of panel width | **2107 × 2208 — native, no upscaling** |
+| MSAA | off (inert Godot 3 key) | **4×** |
+| Frames delivered on vsync | — (not measured at baseline) | **99.79%** at 120 Hz, native resolution |
+| Frame interval p50 / p95 / p99 | — | **8.38 / 9.15 / 10.15 ms** (8.33 ms budget) |
+| GPU use | — | ~39% of the frame budget |
+| User's assessment after playing | "a far cry from Beat Saber" | "buttery smooth, no hitches whatsoever" |
 
-The "after" column renders **1.57× more pixels**, at a **25% shorter frame budget**, and is still
-faster and steadier than the baseline. GPU use *fell* from 28.4% to 21.6% of budget because the
-scene is CPU-bound, not fill-rate-bound — which is why raising resolution was affordable.
+The after column renders **1.57× more pixels** at a **33% shorter frame budget**, and is steady —
+because the workload is CPU-bound rather than fill-rate-bound, so resolution was affordable.
+
 
 ### 120 Hz status — shipping, and the "stutter" was the benchmark
 

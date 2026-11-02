@@ -231,11 +231,16 @@ func _begin() -> void:
 		var rt := xr_iface.get_render_target_size()
 		_meta["render_target_size"] = "%dx%d" % [int(rt.x), int(rt.y)]
 		_meta["render_target_size_v2"] = str(rt)
-	_meta["render_scale_multiplier"] = str(ProjectSettings.get_setting("xr/openxr/render_target_size_multiplier", 1.0))
-	_meta["msaa_3d"] = str(ProjectSettings.get_setting("rendering/anti_aliasing/quality/msaa_3d", 0))
-	_meta["physics_ticks_per_second"] = str(ProjectSettings.get_setting("physics/common/physics_ticks_per_second", 0))
+	# Effective runtime values, not the project.godot keys: the app now applies these from
+	# Settings, and Godot 4.6 reads no project setting for the multiplier or the refresh rate
+	# at all (only foveation), so recording the project value would be recording a value the
+	# app does not use.
+	_meta["render_scale_multiplier"] = str(Settings.render_scale)
+	_meta["msaa_3d"] = str(get_viewport().msaa_3d)
+	_meta["physics_ticks_per_second"] = str(Engine.physics_ticks_per_second)
 	_meta["physics_engine"] = str(ProjectSettings.get_setting("physics/3d/physics_engine", ""))
-	_meta["foveation_level"] = str(ProjectSettings.get_setting("xr/openxr/foveation_level", 0))
+	_meta["foveation_level"] = str(Settings.foveation_level)
+	_meta["display_refresh_rate_setting"] = str(Settings.display_refresh_rate)
 	_meta["viewport_size"] = str(get_viewport().get_visible_rect().size)
 	_meta["video_adapter"] = RenderingServer.get_video_adapter_name()
 	vr.log_info("BENCH: start flag=%s" % flag_path)

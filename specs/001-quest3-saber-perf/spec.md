@@ -209,6 +209,20 @@ plus 10 consecutive song load/unload cycles.
   anisotropy → fixed foveation, and glow, post-processing and shadows MUST NOT be increased for
   perceived sharpness, since full-screen passes break tiling without adding sharpness.
   *(Added at G2.)*
+- **FR-040**: The performance-relevant settings (render-target scale, display refresh rate, MSAA
+  level) MUST be exposed in-game and applied at runtime without restarting, with safe defaults
+  tuned for Quest 3 and documented ranges so the build can be used on other headsets.
+  *(Added 2026-11-01 from user feedback after play-testing.)*
+- **FR-041**: When controller tracking is lost (e.g. a backhand swing behind the head, where the
+  front-facing cameras cannot see the controller), the saber MUST continue from an extrapolated
+  pose for a bounded window instead of freezing, so a swing that physically passed through a note
+  still registers. Extrapolation MUST decay and re-converge to the tracked pose when tracking
+  returns, and MUST NOT apply during pauses or before the song starts.
+  *(Added 2026-11-01 from user play-testing feedback: behind-head swings were not registering.)*
+- **FR-042**: Release 0.1 MUST be versioned in the product (in-game version string, Android
+  `versionName`/`versionCode`), documented in the README with a dated before/after, and published
+  as a GitHub release with the APK attached and install instructions.
+  *(Added 2026-11-01.)*
 - **FR-022**: The "before" in every comparison MUST be the unmodified upstream commit built
   with the pinned toolchain — not the APK currently installed on the headset. The installed
   build may differ in engine version and export settings, so it is a reference point only.
@@ -330,6 +344,13 @@ requirements below; they are facts, not hypotheses.
 - **SC-013**: After the clarity sweep, on a cold run of the reference workload, `App=` (GPU) p95
   is ≤ 9 ms (~65% of the 13.89 ms budget) and dropped-frame events plus stale samples do not
   exceed the Baseline v0 median plus its measured spread. *(Added at G2.)*
+- **SC-014**: Changing render scale, refresh rate or MSAA in the settings panel takes effect
+  without restarting the app, and the choice persists across launches. *(Added 2026-11-01.)*
+- **SC-015**: A backhand swing that passes the saber through a note behind the player's head
+  registers as a cut at least as reliably as a forehand swing at the same speed, verified by the
+  user in play. *(Added 2026-11-01 from user feedback.)*
+- **SC-016**: Release 0.1 exists as a GitHub release with a downloadable APK whose in-game
+  version string matches the release tag. *(Added 2026-11-01.)*
 
 ## Assumptions
 
@@ -415,6 +436,8 @@ requirements below; they are facts, not hypotheses.
 | G2 | Raycast CPU suspicion | 18 rays × 60 ticks ≈ 1k queries/s against a few dozen Area3Ds ≈ 0.1-0.3 ms/tick — probably a rounding error | Measure with `Time.get_ticks_usec()` before optimizing anything |
 | G2 | User asked: is the game single-core-bound, or is physics genuinely heavy? | **BOTH HALF RIGHT, NEITHER IS THE FIX.** Serial-by-architecture (Godot runs `_process`, `_physics_process` and callbacks on the main thread), but the problem is the tail (p99 22.5 ms), not the average. Physics *volume* is not the cost — 20 raycasts are microseconds; the cost is node/GDScript overhead and geometry rebuilds | Threading levers: `rendering/driver/threads/thread_model=Separate` worth one A/B; `physics/3d/run_on_separate_thread` is a trap (callbacks stay on main); `WorkerThreadPool` only for pure-data jobs (map JSON, arc meshes ahead of time). Copy from other VR rhythm games: notes as **data**, swept-quad vs AABB in a beat window, no Area3D/RayCast nodes in the hit path, pool or MultiMesh the note visuals, never CSG at runtime |
 | G2 | Measurement methodology | The harness must not perturb what it measures: five `Performance.get_monitor()` calls per frame (MEMORY_STATIC + four PIPELINE_COMPILATIONS_*) pushed main-thread p95 from 10.2 ms to **44.2 ms** and dropped frames from 1% to 5% | Deep-probe monitors are now sampled every 30th frame and only under `[bench] deep_probe=true`; columns zero-fill otherwise so row shape stays constant |
+| G0 | Release 0.1: expose performance settings, investigate behind-head misses, publish a release | **GO WITH CHANGES**: do not write pose extrapolation until diagnosis proves the pose is lost; add FR-043 (log tracking state per note/miss) and SC-017 (no phantom hits when tracking returns); settings list narrowed to refresh rate (live), render scale, MSAA (menu-only), foveation; release needs one authoritative version, monotonic versionCode, a release keystore decision, and README before/after based on the upstream baseline | Diagnosis instead found a code defect (see below), so extrapolation is deferred. FR-040/041/042 + SC-014/015/016 added; settings implemented for v0.1 |
+| G0 | Behind-head misses | Pre-check identified the cause **without** needing extrapolation: `SwingableRayCast._prev_ray_positions` was advanced unconditionally, so movement below the 35 mm sweep threshold was discarded rather than deferred. At 120 Hz a 4 m/s swing moves ~33 mm/tick — under the threshold — so the sweep was skipped and the motion thrown away, letting the blade cross a note with nothing cast | Fixed: the previous position now only advances when a cast actually happens, so the motion accumulates until the sweep exceeds the threshold; the engine's minimum-cast-length constraint is preserved. Extrapolation (FR-041) remains unimplemented pending the user's confirmation |
 
 | G1 | Benchmark-mode implementation (delegated to `coder`, its own consult) | **GO WITH CHANGES**, all applied: flag read from `user://` then external app dir, renamed `.consumed` before the run, proximity/focus documented plus a `focused` CSV column, `song_end` only after playback was seen, separate `process_delta_usec` column, verified with a 3-second headless run | `game/scripts/BenchmarkRunner.gd` + a 9-line guarded hook in `BeepSaber_Game._ready()`; 437 samples at 3 s, mean 6.87 ms, p99 10.03 ms, max 14.62 ms on desktop headless |
 

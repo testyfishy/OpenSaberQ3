@@ -339,6 +339,92 @@ ticks_on_borders = true
 layout_mode = 2
 text = "Recenter"
 
+[node name="PerfHeader" type="Label" parent="ScrollContainer/VBox"]
+layout_mode = 2
+theme = SubResource("3")
+text = "Performance
+"
+
+[node name="RefreshRateRow" type="HBoxContainer" parent="ScrollContainer/VBox"]
+layout_mode = 2
+
+[node name="refresh_rate_label" type="Label" parent="ScrollContainer/VBox/RefreshRateRow"]
+layout_mode = 2
+theme = SubResource("3")
+text = "Refresh Rate: "
+
+[node name="refresh_rate" type="OptionButton" parent="ScrollContainer/VBox/RefreshRateRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Display refresh rate. Physics runs at the same rate so hit detection samples every displayed frame."
+theme = SubResource("5")
+theme_override_fonts/font = SubResource("4")
+flat = true
+
+[node name="RenderScaleRow" type="HBoxContainer" parent="ScrollContainer/VBox"]
+layout_mode = 2
+
+[node name="render_scale_label" type="Label" parent="ScrollContainer/VBox/RenderScaleRow"]
+layout_mode = 2
+theme = SubResource("3")
+text = "Render Scale: "
+
+[node name="render_scale" type="HSlider" parent="ScrollContainer/VBox/RenderScaleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+tooltip_text = "Per-eye resolution multiplier. 1.25 is tuned for Quest 3; lower it for weaker headsets, raise it for sharper image if frames still hold."
+min_value = 0.7
+max_value = 1.5
+step = 0.0001
+value = 1.2546
+
+[node name="render_scale_value" type="Label" parent="ScrollContainer/VBox/RenderScaleRow"]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+theme = SubResource("3")
+text = "1.25x"
+horizontal_alignment = 2
+
+[node name="MSAARow" type="HBoxContainer" parent="ScrollContainer/VBox"]
+layout_mode = 2
+
+[node name="msaa_label" type="Label" parent="ScrollContainer/VBox/MSAARow"]
+layout_mode = 2
+theme = SubResource("3")
+text = "Anti-Aliasing: "
+
+[node name="msaa" type="OptionButton" parent="ScrollContainer/VBox/MSAARow"]
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "MSAA. Changing it rebuilds render pipelines, so the image may hitch for a moment. Takes effect immediately."
+theme = SubResource("5")
+theme_override_fonts/font = SubResource("4")
+flat = true
+
+[node name="FoveationRow" type="HBoxContainer" parent="ScrollContainer/VBox"]
+layout_mode = 2
+
+[node name="foveation_label" type="Label" parent="ScrollContainer/VBox/FoveationRow"]
+layout_mode = 2
+theme = SubResource("3")
+text = "Foveated Rendering: "
+
+[node name="foveation" type="OptionButton" parent="ScrollContainer/VBox/FoveationRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Renders the edges of the view at lower resolution. Trades peripheral sharpness for performance."
+theme = SubResource("5")
+theme_override_fonts/font = SubResource("4")
+flat = true
+
+[node name="PerfNote" type="Label" parent="ScrollContainer/VBox"]
+layout_mode = 2
+theme = SubResource("3")
+theme_override_font_sizes/font_size = 10
+text = "Performance settings above apply immediately; anti-aliasing may hitch for a moment."
+autowrap_mode = 3
+
 [node name="d_background" type="CheckButton" parent="ScrollContainer/VBox"]
 layout_mode = 2
 tooltip_text = "Low Performance impact*"
@@ -661,5 +747,9 @@ scroll_node_path = NodePath("../ScrollContainer")
 [connection signal="toggled" from="ScrollContainer/VBox/disable_map_color" to="." method="_on_disable_map_color_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/spectator_view" to="." method="_on_spectator_view_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/spectator_hud" to="." method="_on_spectator_hud_toggled"]
+[connection signal="item_selected" from="ScrollContainer/VBox/RefreshRateRow/refresh_rate" to="." method="_on_refresh_rate_item_selected"]
+[connection signal="value_changed" from="ScrollContainer/VBox/RenderScaleRow/render_scale" to="." method="_on_render_scale_value_changed"]
+[connection signal="item_selected" from="ScrollContainer/VBox/MSAARow/msaa" to="." method="_on_msaa_item_selected"]
+[connection signal="item_selected" from="ScrollContainer/VBox/FoveationRow/foveation" to="." method="_on_foveation_item_selected"]
 [connection signal="button_up" from="defaults" to="." method="_restore_defaults"]
 [connection signal="pressed" from="apply" to="." method="_on_apply_pressed"]

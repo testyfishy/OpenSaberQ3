@@ -36,6 +36,23 @@ signal apply()
 @onready var spectator_view_control := $ScrollContainer/VBox/spectator_view as CheckButton
 @onready var spectator_hud_control := $ScrollContainer/VBox/spectator_hud as CheckButton
 
+# Performance rows (FR-040). Each one is hidden when the running XR interface cannot apply it.
+@onready var refresh_rate_row := $ScrollContainer/VBox/RefreshRateRow as HBoxContainer
+@onready var refresh_rate_control := $ScrollContainer/VBox/RefreshRateRow/refresh_rate as OptionButton
+@onready var render_scale_control := $ScrollContainer/VBox/RenderScaleRow/render_scale as HSlider
+@onready var render_scale_value := $ScrollContainer/VBox/RenderScaleRow/render_scale_value as Label
+@onready var msaa_control := $ScrollContainer/VBox/MSAARow/msaa as OptionButton
+@onready var foveation_row := $ScrollContainer/VBox/FoveationRow as HBoxContainer
+@onready var foveation_control := $ScrollContainer/VBox/FoveationRow/foveation as OptionButton
+
+# Index in these arrays is the OptionButton id, the value is the engine value. MSAA matches
+# Viewport.MSAA (and rendering/anti_aliasing/quality/msaa_3d): 0 = off, 1 = 2x, 2 = 4x.
+const MSAA_VALUES: Array[int] = [0, 1, 2]
+const MSAA_LABELS: Array[String] = ["Off", "2x", "4x"]
+const FOVEATION_LABELS: Array[String] = ["Off", "Low", "Medium"]
+
+var _refresh_rates: Array[float] = []
+
 var _play_ui_sound_demo := false
 
 func _ready() -> void:
@@ -88,6 +105,62 @@ func set_controls_from_settings() -> void:
 	audio_sfx_control.value = Settings.audio_sfx
 	spectator_view_control.button_pressed = Settings.spectator_view
 	spectator_hud_control.button_pressed = Settings.spectator_hud
+	_set_up_performance_controls()
+
+# Builds the performance rows from what the current XR session actually offers, so a headset
+# without XR_FB_foveation or without adjustable refresh rates simply does not show those rows.
+func _set_up_performance_controls() -> void:
+	var iface := XRServer.primary_interface
+	
+	# Refresh rate: only the rates the panel reports are offered, because anything else is
+	# silently rejected by the runtime.
+	_refresh_rates.clear()
+	if iface != null and iface.has_method(&"get_available_display_refresh_rates"):
+		var available: Array = iface.call(&"get_available_display_refresh_rates")
+		for rate in available:
+			var hz := float(rate)
+			if hz > 0.0 and not _refresh_rates.has(hz):
+				_refresh_rates.append(hz)
+	_refresh_rates.sort()
+	refresh_rate_control.clear()
+	refresh_rate_row.visible = not _refresh_rates.is_empty()
+	if not _refresh_rates.is_empty():
+		var selected := 0
+		var best_delta := INF
+		for i in _refresh_rates.size():
+			refresh_rate_control.add_item("%d Hz" % int(round(_refresh_rates[i])))
+			var delta := absf(_refresh_rates[i] - Settings.display_refresh_rate)
+			if delta < best_delta:
+				best_delta = delta
+				selected = i
+		refresh_rate_control.select(selected)
+	
+	# Render scale: applies live (the OpenXR layer recreates its swapchains when the resulting
+	# size changes), so it is always offered.
+	render_scale_control.value = Settings.render_scale
+	_update_render_scale_label()
+	
+	msaa_control.clear()
+	for label in MSAA_LABELS:
+		msaa_control.add_item(label)
+	var msaa_index := MSAA_VALUES.find(Settings.msaa_3d)
+	msaa_control.select(msaa_index if msaa_index >= 0 else MSAA_VALUES.size() - 1)
+	
+	# Foveation is only real when the runtime advertises XR_FB_foveation.
+	var foveation_supported := false
+	if iface != null and iface.has_method(&"is_foveation_supported"):
+		foveation_supported = bool(iface.call(&"is_foveation_supported"))
+	foveation_control.clear()
+	for label in FOVEATION_LABELS:
+		foveation_control.add_item(label)
+	foveation_control.select(clampi(Settings.foveation_level, 0, FOVEATION_LABELS.size() - 1))
+	foveation_row.visible = foveation_supported
+	vr.log_info("perf panel: refresh rates offered=%s, selected=%.0f Hz, render scale=%.4f (setting %.4f), msaa=%d (index %d), foveation supported=%s level=%d" % [
+		str(_refresh_rates), Settings.display_refresh_rate, render_scale_control.value, Settings.render_scale,
+		Settings.msaa_3d, msaa_control.selected, str(foveation_supported), Settings.foveation_level])
+
+func _update_render_scale_label() -> void:
+	render_scale_value.text = "%.2fx" % render_scale_control.value
 
 func _restore_defaults() -> void:
 	Settings.restore_defaults()
@@ -213,6 +286,27 @@ func _on_spectator_view_toggled(value: bool) -> void:
 
 func _on_spectator_hud_toggled(value: bool) -> void:
 	Settings.spectator_hud = value
+
+# Performance rows. The values are only stored here; BeepSaber_Game.on_settings_changed applies
+# them, so there is exactly one place that talks to the XR session.
+func _on_refresh_rate_item_selected(index: int) -> void:
+	if index < 0 or index >= _refresh_rates.size():
+		return
+	Settings.display_refresh_rate = _refresh_rates[index]
+
+func _on_render_scale_value_changed(value: float) -> void:
+	Settings.render_scale = value
+	_update_render_scale_label()
+
+func _on_msaa_item_selected(index: int) -> void:
+	if index < 0 or index >= MSAA_VALUES.size():
+		return
+	Settings.msaa_3d = MSAA_VALUES[index]
+
+func _on_foveation_item_selected(index: int) -> void:
+	if index < 0 or index >= FOVEATION_LABELS.size():
+		return
+	Settings.foveation_level = index
 
 
 func _on_recenter_button_up() -> void:

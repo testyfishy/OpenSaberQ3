@@ -131,8 +131,13 @@ func _physics_process(_delta: float) -> void:
 			if coll is Area3D:
 				aux_ray_collision_count += 1
 				area_collided.emit(coll)
-		
-		_prev_ray_positions[i] = ray.global_transform.origin
+			# Only advance the previous position when a cast actually happened. This line used
+			# to run unconditionally, which silently DISCARDED movement shorter than the 35 mm
+			# threshold: at 120 Hz a 4 m/s swing moves ~33 mm per tick, so the sweep was skipped
+			# and the motion thrown away, letting the blade pass through a note with nothing ever
+			# cast. Keeping the old position accumulates the motion until the next tick exceeds
+			# the threshold and the sweep covers the whole path.
+			_prev_ray_positions[i] = ray.global_transform.origin
 		
 	if DEBUG:
 		var old_slice := _debug_raycast_trail.pop_back() as Array[RayCast3D]
