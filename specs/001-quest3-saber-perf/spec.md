@@ -223,6 +223,17 @@ plus 10 consecutive song load/unload cycles.
   `versionName`/`versionCode`), documented in the README with a dated before/after, and published
   as a GitHub release with the APK attached and install instructions.
   *(Added 2026-11-01.)*
+- **FR-043**: A note that is missed or cut badly MUST be attributable from logs: tracking state
+  (`get_has_tracking()`), saber movement that tick, whether a ray reported a hit, and whether the
+  cut failed the angle/direction check. Without this, "I hit it but it didn't count" cannot be
+  distinguished from tracking loss, a swept-cast gap, or a bad-angle rejection.
+  *(Added at G0, 2026-11-01.)*
+- **FR-044**: The game MUST react to the headset's own recenter (`OpenXRInterface.pose_recentered`)
+  by re-applying its play-space alignment, so the menu and the play area return in front of the
+  player. The OpenXR documentation requires this behaviour; ignoring it leaves the world rotated by
+  whatever offset the game applied at startup.
+  *(Added 2026-11-01 from play-testing: the menu sat ~45° to the left after pressing the Meta
+  button, and looking 45° right before pressing it appeared to fix it.)*
 - **FR-022**: The "before" in every comparison MUST be the unmodified upstream commit built
   with the pinned toolchain — not the APK currently installed on the headset. The installed
   build may differ in engine version and export settings, so it is a reference point only.
@@ -351,6 +362,8 @@ requirements below; they are facts, not hypotheses.
   user in play. *(Added 2026-11-01 from user feedback.)*
 - **SC-016**: Release 0.1 exists as a GitHub release with a downloadable APK whose in-game
   version string matches the release tag. *(Added 2026-11-01.)*
+- **SC-017**: Pressing the headset's recenter leaves the menu and play area directly in front of
+  the player, with no manual "look 45° right first" workaround. *(Added 2026-11-01.)*
 
 ## Assumptions
 

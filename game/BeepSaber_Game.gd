@@ -233,6 +233,16 @@ func _ready() -> void:
 	
 	recenter()
 
+	# React to the headset's own recenter (Meta button). The OpenXR docs are explicit that the
+	# game must re-orient on `pose_recentered`: in stage/local-floor spaces the runtime does not
+	# move our XROrigin3D, so ignoring it leaves the play space and UI rotated by whatever
+	# alignment offset this game applied at startup - observed in play as the menu sitting ~45
+	# degrees to the left after pressing the Meta button.
+	var xr_iface := XRServer.primary_interface
+	if xr_iface != null and xr_iface.has_signal("pose_recentered"):
+		if not xr_iface.pose_recentered.is_connected(_on_pose_recentered):
+			xr_iface.pose_recentered.connect(_on_pose_recentered)
+
 	# Prewarm the arc ribbon. Arcs are instantiated per spawn rather than pooled, and they
 	# carry a material_override - which Godot's mesh pipeline precompile step explicitly does
 	# not cover - so the first arc of a song can compile a pipeline on the main thread mid-play.
@@ -537,6 +547,11 @@ func _on_ScenePool_new_scene_instanced(obj: Node3D, during_presizing: bool) -> v
 			obj.hide_cube()
 		else:
 			obj.visible = false
+
+func _on_pose_recentered() -> void:
+	# The runtime has re-based tracking. Re-apply our alignment so the play space and the UI
+	# are in front of the player again, rather than keeping the startup offset.
+	recenter()
 
 func recenter():
 	var xr_camera := $XROrigin3D/XRCamera3D as XRCamera3D
