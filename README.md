@@ -172,15 +172,23 @@ MIT — see [`LICENSE`](LICENSE) (retained unmodified, © 2020 Holger Dammertz) 
 
 ## Contributing and roadmap
 
-Current focus, in order:
+**Release policy:** fixes and improvements accumulate on `godot-4-port` and ship together in the
+next numbered release. There are no incremental releases for individual changes.
 
-1. **Hitches** — attribute and remove the ~16 dropped-frame events per three minutes, which are a
-   CPU/physics-side problem on this workload.
-2. **90 Hz** — verify frame pacing and headroom at 90 Hz (11.1 ms budget) before claiming it; today
-   the recorded numbers are at 72 Hz only.
-3. **Hit registration** — a swept-path and tick-alignment rework is planned but **not implemented
-   yet**. No hit-registration fix should be assumed from the configuration changes above.
+Next release — **v0.2**:
+
+1. **Hit-feedback audio** — the current sound is a single fixed tone per saber, with one voice, so
+   rapid hits cut each other off. v0.2 replaces it with velocity- and accuracy-varied, non-fatiguing
+   hit audio spatialised at the saber blade, with pooled voices. The design and its evidence are in
+   [`specs/002-hit-audio-research/research.md`](specs/002-hit-audio-research/research.md).
+2. **Behind-head hit registration** — a sub-threshold sweep bug that discarded valid swings at high
+   refresh rates is fixed; the remaining behind-head case (controller tracking loss when the
+   front cameras cannot see the controller) still needs either diagnosis logging or pose
+   extrapolation.
+3. **Sound provenance** — the current hit sample has no attribution record; v0.2 replaces it with
+   generated or CC0 samples and records every one.
 
 Contributions are welcome as issues or pull requests. A performance change without a reproducible
 before/after in `PERF.md`, taken with the same method, will not be merged; a claimed win that does
 not reproduce gets reverted.
+
