@@ -191,7 +191,13 @@ func _ready() -> void:
 		left_controller,
 		right_controller
 	)
-	
+
+	# Godot does not honour xr/openxr/render_target_size_multiplier from project.godot on this
+	# path: measured render_target_size stayed at the runtime's recommended 1680x1760 with the
+	# setting present in the build. Apply it explicitly so the eye buffers actually render at
+	# (or above) the panel's native resolution instead of ~81% of it.
+	_apply_render_scale()
+
 	debug_info_label.visible = Settings.show_debug_info
 	set_colors_from_settings()
 	($WorldEnvironment as WorldEnvironment).environment.glow_enabled = Settings.glare
@@ -222,6 +228,19 @@ func _ready() -> void:
 	# normal launch behaves exactly as before. See game/scripts/BenchmarkRunner.gd.
 	if BenchmarkRunnerScript.has_bench_flag():
 		add_child(BenchmarkRunnerScript.new(self))
+
+func _apply_render_scale() -> void:
+	var iface := XRServer.primary_interface
+	if iface == null:
+		return
+	var scale := float(ProjectSettings.get_setting("xr/openxr/render_target_size_multiplier", 1.0))
+	if scale <= 1.0:
+		return
+	if iface.has_method("set_render_target_size_multiplier"):
+		iface.set_render_target_size_multiplier(scale)
+		vr.log_info("render scale %.4f applied (requested per-eye >= native)" % scale)
+	else:
+		vr.log_warning("XR interface cannot set render target size multiplier; staying at recommended size")
 
 func on_settings_changed(key: StringName) -> void:
 	# ensures proper initialization of tree for proper first frame setting loading
