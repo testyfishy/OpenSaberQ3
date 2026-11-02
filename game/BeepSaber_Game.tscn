@@ -35,6 +35,7 @@
 [ext_resource type="Script" path="res://game/scripts/SongUploader/song_uploader.gd" id="33_l0uxg"]
 [ext_resource type="PackedScene" uid="uid://dvj8dorx2l7s0" path="res://game/BeepCube/BeepCube.tscn" id="33_nc705"]
 [ext_resource type="PackedScene" uid="uid://b62c3hkjmky75" path="res://game/Chain/ChainLink.tscn" id="34_tsovg"]
+[ext_resource type="PackedScene" path="res://game/ProfilePanel.tscn" id="36_profiles"]
 
 [sub_resource type="Environment" id="1"]
 background_mode = 2
@@ -274,6 +275,12 @@ update_only_on_input = false
 [node name="NameSelector" parent="NameSelector_Canvas" instance=ExtResource("25")]
 mouse_filter = 1
 
+[node name="Profile_canvas" parent="." instance=ExtResource("3")]
+transform = Transform3D(2.3178, 0, 0, 0, 2.3178, 0, 0, 0, 2.3178, 0, 1.5, -0.68)
+visible = false
+
+[node name="ProfilePanel" parent="Profile_canvas" instance=ExtResource("36_profiles")]
+
 [node name="BeepCubePool" parent="." instance=ExtResource("27")]
 scene = ExtResource("33_nc705")
 
@@ -303,7 +310,12 @@ main_menu_ref = NodePath("../MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu")
 [connection signal="mainmenu_button" from="PauseMenu_canvas/Pause_Panel" to="." method="_main_menu_button"]
 [connection signal="restart_button" from="PauseMenu_canvas/Pause_Panel" to="." method="_restart_button"]
 [connection signal="apply" from="Settings_canvas/settings_Panel" to="." method="_on_settings_Panel_apply"]
-[connection signal="name_selected" from="NameSelector_Canvas/NameSelector" to="." method="_submit_highscore"]
+[connection signal="users_requested" from="MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu" to="." method="_users_button"]
+[connection signal="switch_requested" from="EndScore" to="." method="_on_endscore_switch_requested"]
+[connection signal="user_chosen" from="Profile_canvas/ProfilePanel" to="." method="_on_profile_user_chosen"]
+[connection signal="new_user_requested" from="Profile_canvas/ProfilePanel" to="." method="_on_profile_new_user_requested"]
+[connection signal="close_requested" from="Profile_canvas/ProfilePanel" to="." method="hide_profile_panel"]
 [connection signal="new_scene_instanced" from="BeepCubePool" to="." method="_on_ScenePool_new_scene_instanced"]
 [connection signal="new_scene_instanced" from="ChainLinkPool" to="." method="_on_ScenePool_new_scene_instanced"]
-[connection signal="text_input_enter" from="Keyboard_highscore" to="." method="_submit_highscore"]
+[connection signal="text_input_enter" from="Keyboard_highscore" to="." method="_on_keyboard_entered"]
+[connection signal="text_input_cancel" from="Keyboard_highscore" to="." method="_on_keyboard_cancel"]

@@ -15,7 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Open Saber Q3"
-config/version="0.1.1"
+config/version="0.2.0-dev"
 run/main_scene="res://game/BeepSaber_Game.tscn"
 config/features=PackedStringArray("4.6")
 boot_splash/bg_color=Color(0, 0, 0, 1)
@@ -34,6 +34,7 @@ Scoreboard="*res://game/Scoreboard.gd"
 Settings="*res://game/Settings.gd"
 vr="*res://OQ_Toolkit/vr_autoload.gd"
 Highscores="*res://game/scripts/HighscoreTable/HighscoreTable.gd"
+ProfileManager="*res://game/scripts/ProfileManager.gd"
 PlayCount="*res://game/scripts/PlayCountTable.gd"
 StopwatchFactory="*res://addons/stopwatch/public/StopwatchFactory.gd"
 UI_AudioEngine="*res://game/ui/UI_AudioEngine/UI_AudioEngine.tscn"
@@ -186,6 +187,7 @@ shaders/enabled=true
 
 notes/enable_collision_once=true
 notes/isolate_collision_shapes=true
+
 
 
 

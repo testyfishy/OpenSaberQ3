@@ -146,6 +146,26 @@ theme_override_styles/pressed = SubResource("3")
 theme_override_styles/normal = SubResource("4")
 text = "Settings"
 
+[node name="Users_Button" type="Button" parent="."]
+layout_mode = 0
+offset_left = 1265.0
+offset_top = 464.0
+offset_right = 1390.0
+offset_bottom = 512.0
+theme_override_styles/hover = SubResource("2")
+theme_override_styles/pressed = SubResource("3")
+theme_override_styles/normal = SubResource("4")
+text = "Users"
+
+[node name="User_Badge" type="Label" parent="."]
+layout_mode = 0
+offset_left = 864.0
+offset_top = 468.0
+offset_right = 1250.0
+offset_bottom = 512.0
+text = "Playing as: Player"
+horizontal_alignment = 2
+
 [node name="Search_Button" type="Button" parent="."]
 layout_mode = 0
 offset_left = 19.0
@@ -283,6 +303,7 @@ text = "0.4.1"
 [connection signal="button_up" from="Delete_Button" to="." method="_on_Delete_Button_button_up"]
 [connection signal="pressed" from="Exit_Button" to="." method="_on_Exit_Button_pressed"]
 [connection signal="pressed" from="Settings_Button" to="." method="_on_Settings_Button_pressed"]
+[connection signal="pressed" from="Users_Button" to="." method="_on_Users_Button_pressed"]
 [connection signal="button_up" from="Search_Button" to="." method="_on_Search_Button_button_up"]
 [connection signal="item_selected" from="SongsMenu" to="." method="_select_song"]
 [connection signal="item_selected" from="PlaylistSelector" to="." method="_on_PlaylistSelector_item_selected"]

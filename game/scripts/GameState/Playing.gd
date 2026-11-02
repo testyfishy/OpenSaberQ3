@@ -22,6 +22,7 @@ func _ready(game: BeepSaber_Game) -> void:
 	game.left_saber.set_swingcast_enabled(true)
 	game.right_saber.set_swingcast_enabled(true)
 	Scoreboard.paused = false
+	game.hide_profile_panel()
 
 func _physics_process(game: BeepSaber_Game) -> void:
 	if game.left_controller.by_just_pressed():
@@ -118,3 +119,4 @@ func _process_map(game: BeepSaber_Game) -> void:
 	
 	if probe:
 		Cost.spawn_usec += Time.get_ticks_usec() - t0
+	game.hide_profile_panel()

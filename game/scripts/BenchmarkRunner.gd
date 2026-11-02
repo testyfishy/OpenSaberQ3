@@ -364,6 +364,17 @@ func _begin() -> void:
 # normal operation; `max_fps` here only pins conditions while measuring).
 func _apply_overrides(cfg: ConfigFile) -> void:
 	var applied := PackedStringArray()
+	# Audio verification: counts every attempted voice so a run can prove hit audio is
+	# actually being queued (valid ids, layer mix) instead of merely compiling.
+	if bool(cfg.get_value("bench", "audio_probe", false)):
+		DefaultSaber.probe_enabled = true
+		DefaultSaber.probe_calls = 0
+		DefaultSaber.probe_invalid = 0
+		DefaultSaber.probe_soft = 0
+		DefaultSaber.probe_hard = 0
+		DefaultSaber.probe_accent = 0
+		DefaultSaber.probe_dull = 0
+		applied.append("audio_probe=true")
 	# A/B switch for the CSG arc ribbon, which is the prime suspect for the main-thread tail.
 	var arcs = cfg.get_value("bench", "arcs", null)
 	if arcs != null:
@@ -735,6 +746,14 @@ func _write_meta() -> void:
 		if xr_end.has_method("get_display_refresh_rate"):
 			_meta["refresh_rate_final"] = str(xr_end.get_display_refresh_rate())
 	_meta["physics_ticks_final"] = str(Engine.physics_ticks_per_second)
+	# Audio verification counters (see _apply_overrides).
+	_meta["audio_probe_enabled"] = "true" if DefaultSaber.probe_enabled else "false"
+	_meta["audio_play_calls"] = str(DefaultSaber.probe_calls)
+	_meta["audio_invalid_ids"] = str(DefaultSaber.probe_invalid)
+	_meta["audio_layer_soft"] = str(DefaultSaber.probe_soft)
+	_meta["audio_layer_hard"] = str(DefaultSaber.probe_hard)
+	_meta["audio_layer_accent"] = str(DefaultSaber.probe_accent)
+	_meta["audio_layer_dull"] = str(DefaultSaber.probe_dull)
 	# Validity: physics must have run at the rate the display actually ended at.
 	var rej := float(_meta.get("refresh_rate_requested", "0"))
 	var ref := float(_meta.get("refresh_rate_final", "0"))

@@ -3,12 +3,21 @@ class_name EndScore
 
 signal mainmenu
 signal repeat
+# the player wants to move the score that was just saved to another profile
+signal switch_requested
 
 var animated_percent: float = 0.0
 @onready var raycast_area := $RaycastArea as Area3D
 @onready var collision := $RaycastArea/CollisionShape3D as CollisionShape3D
 
+# is there a score on disk behind the "Saved as ..." line? Without one there is nothing to
+# switch, so the line and the Switch button stay away entirely (FR-006).
+var _has_saved := false
+# buttons are collision-disabled while the board fades in and while the profile panel is up
+var _buttons_disabled := true
+
 func _ready() -> void:
+	_apply_saved_state()
 	set_buttons_disabled(true)
 
 func _show() -> void:
@@ -16,6 +25,7 @@ func _show() -> void:
 	collision.disabled = false
 	($Repeat as UIRaycastButton).collision_layer = CollisionLayerConstants.Ui_mask
 	($MainMenu as UIRaycastButton).collision_layer = CollisionLayerConstants.Ui_mask
+	($Switch as UIRaycastButton).collision_layer = CollisionLayerConstants.Ui_mask
 	show()
 
 func _hide() -> void:
@@ -23,7 +33,30 @@ func _hide() -> void:
 	collision.disabled = true
 	($Repeat as UIRaycastButton).collision_layer = 0
 	($MainMenu as UIRaycastButton).collision_layer = 0
+	($Switch as UIRaycastButton).collision_layer = 0
 	hide()
+
+# names the profile the score was stored under, next to the score itself
+func show_saved_as(player_name: String) -> void:
+	var text := "Saved as %s" % player_name
+	var label := $SavedViewport/SavedLabel as RichTextLabel
+	# RobotoMono advances roughly 0.6em per character, so shrink the font until the line
+	# fits the 256px viewport instead of clipping it. 16px is the legible floor.
+	var wanted := int(256.0 / (float(maxi(text.length(),1)) * 0.6))
+	label.add_theme_font_size_override("normal_font_size", clampi(wanted, 16, 32))
+	label.text = "[center]%s" % text
+	_has_saved = true
+	_apply_saved_state()
+
+func hide_saved() -> void:
+	_has_saved = false
+	_apply_saved_state()
+
+func _apply_saved_state() -> void:
+	($SavedMesh as MeshInstance3D).visible = _has_saved
+	($Switch as UIRaycastButton).visible = _has_saved
+	# a hidden Area3D keeps colliding, so the shape has to go too
+	($Switch/Collision as CollisionShape3D).disabled = _buttons_disabled or not _has_saved
 
 func show_score(score: int, record: int, percent: float, song_string: String, is_full_combo: bool, is_new_record: bool) -> void:
 	var details_mesh := ($Details as MeshInstance3D).mesh as TextMesh
@@ -76,8 +109,10 @@ func show_score(score: int, record: int, percent: float, song_string: String, is
 	tw.play()
 
 func set_buttons_disabled(disabled: bool) -> void:
+	_buttons_disabled = disabled
 	($Repeat/Collision as CollisionShape3D).disabled = disabled
 	($MainMenu/Collision as CollisionShape3D).disabled = disabled
+	($Switch/Collision as CollisionShape3D).disabled = disabled or not _has_saved
 
 func _on_Repeat_button_up() -> void:
 	repeat.emit()
@@ -85,3 +120,8 @@ func _on_Repeat_button_up() -> void:
 func _on_MainMenu_button_up() -> void:
 	set_buttons_disabled(true)
 	mainmenu.emit()
+
+func _on_Switch_button_up() -> void:
+	# the board stays up behind the profile panel: the owner disables our buttons, asks for
+	# a profile, and re-enables them when the panel closes
+	switch_requested.emit()

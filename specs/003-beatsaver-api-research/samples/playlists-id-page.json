@@ -1,0 +1,132 @@
+{
+    "docs": [
+        {
+            "playlistId": 1226891,
+            "name": "santiagolazo",
+            "description": "",
+            "playlistImage": "https://cfcdn.beatsaver.com/playlist/1226891.jpg",
+            "playlistImage512": "https://cfcdn.beatsaver.com/playlist/512/1226891.jpg",
+            "owner": {
+                "id": 377641,
+                "name": "Xsoad",
+                "avatar": "https://www.gravatar.com/avatar/a65ee33f613718ebafb302d40c61947594cf8f731d6f6fac4ffc1b26b8daaab7?d=retro",
+                "type": "SIMPLE",
+                "admin": false,
+                "curator": false,
+                "seniorCurator": false,
+                "playlistUrl": "https://api.beatsaver.com/users/id/377641/playlist"
+            },
+            "stats": {
+                "totalMaps": 22231,
+                "mapperCount": 6204,
+                "totalDuration": 4188291,
+                "minNps": 0.0,
+                "maxNps": 14027.8,
+                "upVotes": 6571850,
+                "downVotes": 889885,
+                "avgScore": 0.7218
+            },
+            "createdAt": "2026-06-28T18:24:14.948970Z",
+            "updatedAt": "2026-06-28T18:24:14.948970Z",
+            "songsChangedAt": "2026-06-29T17:42:02.200740Z",
+            "downloadURL": "https://api.beatsaver.com/playlists/id/1226891/download",
+            "type": "Public"
+        },
+        {
+            "playlistId": 826841,
+            "name": "Karan",
+            "description": "hahahahhahahahahahahahahah",
+            "playlistImage": "https://cfcdn.beatsaver.com/playlist/826841.jpg",
+            "playlistImage512": "https://cfcdn.beatsaver.com/playlist/512/826841.jpg",
+            "owner": {
+                "id": 272243,
+                "name": "karan1718",
+                "avatar": "https://cdn.beatsaver.com/avatar/7e1965ecf47276fc91a6510f56df42f231c0255f.png",
+                "type": "DISCORD",
+                "admin": false,
+                "curator": false,
+                "seniorCurator": false,
+                "playlistUrl": "https://api.beatsaver.com/users/id/272243/playlist"
+            },
+            "stats": {
+                "totalMaps": 22241,
+                "mapperCount": 6210,
+                "totalDuration": 4190316,
+                "minNps": 0.0,
+                "maxNps": 14027.8,
+                "upVotes": 6639272,
+                "downVotes": 891734,
+                "avgScore": 0.7219
+            },
+            "createdAt": "2025-02-25T08:11:19.391800Z",
+            "updatedAt": "2025-02-25T08:11:19.391800Z",
+            "songsChangedAt": "2025-02-27T09:11:30.254301Z",
+            "downloadURL": "https://api.beatsaver.com/playlists/id/826841/download",
+            "type": "Public"
+        },
+        {
+            "playlistId": 660573,
+            "name": "songs",
+            "description": "songs",
+            "playlistImage": "https://cfcdn.beatsaver.com/playlist/660573.jpg",
+            "playlistImage512": "https://cfcdn.beatsaver.com/playlist/512/660573.jpg",
+            "owner": {
+                "id": 232772,
+                "name": "sylthi",
+                "avatar": "https://www.gravatar.com/avatar/a2acd02e0729ecf1c9f614209ce4444b32d19581262560d29257929e69657e3d?d=retro",
+                "type": "SIMPLE",
+                "admin": false,
+                "curator": false,
+                "seniorCurator": false,
+                "playlistUrl": "https://api.beatsaver.com/users/id/232772/playlist"
+            },
+            "stats": {
+                "totalMaps": 179,
+                "mapperCount": 148,
+                "totalDuration": 35808,
+                "minNps": 0.0,
+                "maxNps": 23.578,
+                "upVotes": 219406,
+                "downVotes": 8315,
+                "avgScore": 0.8381
+            },
+            "createdAt": "2024-08-26T16:15:43.677234Z",
+            "updatedAt": "2024-08-26T16:41:02.847469Z",
+            "songsChangedAt": "2024-08-26T16:16:19.958921Z",
+            "downloadURL": "https://api.beatsaver.com/playlists/id/660573/download",
+            "type": "Public"
+        },
+        {
+            "playlistId": 284257,
+            "name": "Alt & Metal Mix",
+            "description": "",
+            "playlistImage": "https://cfcdn.beatsaver.com/playlist/284257.jpg",
+            "playlistImage512": "https://cfcdn.beatsaver.com/playlist/512/284257.jpg",
+            "owner": {
+                "id": 184488,
+                "name": "somnia__",
+                "avatar": "https://cdn.beatsaver.com/avatar/0799760de22826944c044bc78f7679c10197a480.png",
+                "type": "DISCORD",
+                "admin": false,
+                "curator": false,
+                "seniorCurator": false,
+                "playlistUrl": "https://api.beatsaver.com/users/id/184488/playlist"
+            },
+            "stats": {
+                "totalMaps": 44,
+                "mapperCount": 33,
+                "totalDuration": 9363,
+                "minNps": 0.0,
+                "maxNps": 7.355,
+                "upVotes": 11426,
+                "downVotes": 865,
+                "avgScore": 0.8155
+            },
+            "createdAt": "2024-01-16T14:28:43.191820Z",
+            "updatedAt": "2024-01-16T14:28:43.191820Z",
+            "songsChangedAt": "2024-01-16T14:44:38.803072Z",
+            "downloadURL": "https://api.beatsaver.com/playlists/id/284257/download",
+            "type": "Public"
+        }
+    ]
+}

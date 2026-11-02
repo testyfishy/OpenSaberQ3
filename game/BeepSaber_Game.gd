@@ -41,6 +41,11 @@ var gamestate: GameState = gamestate_bootup
 @onready var highscore_keyboard := $Keyboard_highscore as OQ_UI2DKeyboard
 @onready var endscore := $EndScore as EndScore
 
+# Untyped on purpose: the panel's class_name is not in the editor's global class cache on a
+# clean clone (same reason BenchmarkRunnerScript above is preloaded by path).
+@onready var profile_canvas := $Profile_canvas as OQ_UI2DCanvas
+@onready var profile_panel = profile_canvas.ui_control
+
 @onready var points_label_driver := $Points_label_driver as PointsLabelDriver
 @onready var event_driver := $event_driver as EventDriver
 
@@ -90,6 +95,9 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 	var map_filename := info.filepath + map_difficulty.beatmap_filename
 	var map_data := vr.load_json_file(map_filename)
 	
+	# a new song starts with nothing on the end screen to re-attribute
+	_saved_record = {}
+	
 	if (map_data == null):
 		vr.log_error("Could not read map data from " + map_filename)
 	if not Map.load_beatmap(info, map_difficulty, map_data):
@@ -132,17 +140,6 @@ func show_MapSourceDialogs(showing: bool = true) -> void:
 		var first_dialog := map_source_dialogs.get_child(0)
 		if first_dialog is OQ_UI2DCanvas:
 			(first_dialog as OQ_UI2DCanvas)._show()
-
-# call this method to submit a new highscore to the database
-func _submit_highscore(player_name: String) -> void:
-	if gamestate == gamestate_newhighscore:
-		Highscores.add_highscore(
-			Map.current_info,
-			Map.current_difficulty.difficulty_rank,
-			player_name,
-			Scoreboard.points)
-			
-		_transition_game_state(gamestate_mapcomplete)
 
 func _check_and_update_saber(controller: BeepSaberController, saber: LightSaber) -> void:
 	# to allow extending/sheething the saber while not playing a song
@@ -467,6 +464,25 @@ func _on_song_ended() -> void:
 		new_record = true
 
 	var current_percent := Scoreboard.right_notes/(Scoreboard.right_notes+Scoreboard.wrong_notes)
+	
+	# FR-005: no name prompt any more. The score is written under the profile that is
+	# currently playing, before the board is faded in, and only when it earns a slot - a
+	# run that does not make the table must not touch the file at all.
+	_saved_record = {}
+	_saved_map_info = Map.current_info
+	_saved_diff_rank = Map.current_difficulty.difficulty_rank
+	if Highscores.is_new_highscore(Map.current_info, Map.current_difficulty.difficulty_rank, Scoreboard.points):
+		_saved_record = Highscores.add_highscore(
+			Map.current_info,
+			Map.current_difficulty.difficulty_rank,
+			ProfileManager.current_name(),
+			Scoreboard.points,
+			ProfileManager.current_id())
+	if _saved_record.is_empty():
+		endscore.hide_saved()
+	else:
+		endscore.show_saved_as(ProfileManager.current_name())
+	
 	endscore.show_score(
 		Scoreboard.points,
 		highscore,
@@ -480,10 +496,119 @@ func _on_song_ended() -> void:
 		new_record
 	)
 	
-	if Highscores.is_new_highscore(Map.current_info,Map.current_difficulty.difficulty_rank,Scoreboard.points):
-		_transition_game_state(gamestate_newhighscore)
-	else:
-		_transition_game_state(gamestate_mapcomplete)
+	_transition_game_state(gamestate_mapcomplete)
+
+# --- profiles -------------------------------------------------------------------------
+#
+# The end screen's "Saved as <name>" line and the main menu's "Playing as: <name>" badge both
+# follow ProfileManager. Switching a profile is two taps either way: Users/chip in the menu,
+# Switch/chip on the end screen.
+
+var _saved_record: Dictionary = {}
+var _saved_map_info: MapInfo = null
+var _saved_diff_rank := 0
+# true while the panel was opened by the end screen's Switch: choosing a profile then also
+# re-attributes the record that was just stored (FR-007)
+var _profile_panel_from_endscore := false
+# true while the shared keyboard is collecting a name for "+ New"
+var _new_user_pending := false
+var _main_menu_hidden_by_profile_panel := false
+
+func _users_button() -> void:
+	_open_profile_panel(false)
+
+func _on_endscore_switch_requested() -> void:
+	_open_profile_panel(true)
+
+func _open_profile_panel(move_saved_record: bool) -> void:
+	_profile_panel_from_endscore = move_saved_record
+	if move_saved_record:
+		# the board stays visible but must not swallow the clicks meant for the panel
+		endscore.set_buttons_disabled(true)
+	elif gamestate == gamestate_mapselection:
+		# the menu shares Keyboard_highscore with "+ New" typing, and its buttons sit
+		# behind the panel: take it off screen while the panel is up
+		main_menu._hide()
+		_main_menu_hidden_by_profile_panel = true
+	profile_panel.open()
+	profile_canvas._show()
+
+# Single teardown for the profile UI. Every GameState calls this, and so does Close, so a
+# state change in the middle of name entry can never strand the keyboard on screen.
+func hide_profile_panel() -> void:
+	_new_user_pending = false
+	_set_keyboard_cancelable(false)
+	highscore_keyboard._hide()
+	profile_canvas._hide()
+	_profile_panel_from_endscore = false
+	if _main_menu_hidden_by_profile_panel:
+		_main_menu_hidden_by_profile_panel = false
+		if gamestate == gamestate_mapselection:
+			main_menu._show()
+	if gamestate == gamestate_mapcomplete:
+		endscore.set_buttons_disabled(false)
+
+func _on_profile_user_chosen(id: String) -> void:
+	if id == ProfileManager.current_id():
+		# already playing as this one: nothing to switch and nothing to rename
+		hide_profile_panel()
+		return
+	var user := ProfileManager.get_user(id)
+	if user.is_empty():
+		hide_profile_panel()
+		return
+	_move_saved_record(user)
+	ProfileManager.set_current(id)
+	hide_profile_panel()
+
+# FR-007: re-attributes the just-saved record to `user`, keeping score and epoch_time. A
+# record that has since dropped out of the table is simply left alone; the switch itself
+# still happens.
+func _move_saved_record(user: Dictionary) -> void:
+	if not _profile_panel_from_endscore or _saved_record.is_empty():
+		return
+	var player_name := String(user.get("name",""))
+	# move_record returns the record it re-added, which is what a second Switch has to move
+	_saved_record = Highscores.move_record(
+		_saved_map_info, _saved_diff_rank, _saved_record, player_name, String(user.get("id","")))
+	endscore.show_saved_as(player_name)
+
+func _on_profile_new_user_requested() -> void:
+	_new_user_pending = true
+	profile_canvas._hide()
+	highscore_keyboard._show()
+	# with an empty field the Enter key is disabled, so the cancel key is the only way out
+	_set_keyboard_cancelable(true)
+
+func _on_keyboard_entered(text: String) -> void:
+	if not _new_user_pending:
+		return
+	_new_user_pending = false
+	_set_keyboard_cancelable(false)
+	highscore_keyboard._hide()
+	# create_user strips the name, refuses an empty one and returns the existing profile when
+	# the typed name only differs in case
+	var user := ProfileManager.create_user(text)
+	if not user.is_empty():
+		_move_saved_record(user)
+	profile_panel.open()
+	profile_canvas._show()
+
+func _on_keyboard_cancel() -> void:
+	if not _new_user_pending:
+		return
+	_new_user_pending = false
+	_set_keyboard_cancelable(false)
+	highscore_keyboard._hide()
+	profile_panel.open()
+	profile_canvas._show()
+
+# OQ_UI2DKeyboard keeps its VirtualKeyboard private, so reach it the same way it does. Only
+# the "+ New" flow shows the cancel key; the menu's search keyboard keeps its own behaviour.
+func _set_keyboard_cancelable(cancelable: bool) -> void:
+	var virtual_keyboard := highscore_keyboard.find_child("VirtualKeyboard", true, false)
+	if virtual_keyboard != null and virtual_keyboard.has_method(&"set_cancelable"):
+		virtual_keyboard.call(&"set_cancelable", cancelable)
 
 func _restart_button() -> void:
 	start_map(Map.current_info, Map.current_difficulty)

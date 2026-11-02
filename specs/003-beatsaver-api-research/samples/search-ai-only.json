@@ -1,0 +1,175 @@
+{
+    "docs": [
+        {
+            "id": "557f5",
+            "name": "F・L・Y",
+            "description": "",
+            "uploader": {
+                "id": 313031,
+                "name": "GwizdOr",
+                "avatar": "https://www.gravatar.com/avatar/90f9c16c5195be70ba307ff9bc1cca0e2e1535a56f9d3224c062ad21fddbab11?d=retro",
+                "type": "SIMPLE",
+                "admin": false,
+                "curator": false,
+                "seniorCurator": false,
+                "playlistUrl": "https://api.beatsaver.com/users/id/313031/playlist"
+            },
+            "metadata": {
+                "bpm": 120.0,
+                "duration": 211,
+                "songName": "F・L・Y",
+                "songSubName": "",
+                "songAuthorName": "Spectrum",
+                "levelAuthorName": "Beat Sage"
+            },
+            "stats": {
+                "plays": 0,
+                "downloads": 0,
+                "upvotes": 0,
+                "downvotes": 0,
+                "score": 0.5
+            },
+            "uploaded": "2026-11-02T03:56:58.809889Z",
+            "automapper": true,
+            "ranked": false,
+            "qualified": false,
+            "versions": [
+                {
+                    "hash": "3f0d42dc02f18e81d8c1d2c96bd378a25696b5f7",
+                    "state": "Published",
+                    "createdAt": "2026-11-02T03:56:40.871316Z",
+                    "sageScore": -11,
+                    "diffs": [
+                        {
+                            "njs": 16.0,
+                            "offset": 0.0,
+                            "notes": 960,
+                            "bombs": 0,
+                            "obstacles": 21,
+                            "nps": 4.686,
+                            "length": 409.722,
+                            "characteristic": "Standard",
+                            "difficulty": "ExpertPlus",
+                            "events": 0,
+                            "chroma": false,
+                            "me": false,
+                            "ne": false,
+                            "cinema": false,
+                            "seconds": 204.861,
+                            "paritySummary": {
+                                "errors": 10,
+                                "warns": 2,
+                                "resets": 0
+                            },
+                            "maxScore": 875955,
+                            "environment": "DefaultEnvironment"
+                        }
+                    ],
+                    "downloadURL": "https://cdn.beatsaver.com/3f0d42dc02f18e81d8c1d2c96bd378a25696b5f7.zip",
+                    "coverURL": "https://cfcdn.beatsaver.com/3f0d42dc02f18e81d8c1d2c96bd378a25696b5f7.jpg",
+                    "previewURL": "https://cfcdn.beatsaver.com/3f0d42dc02f18e81d8c1d2c96bd378a25696b5f7.mp3"
+                }
+            ],
+            "createdAt": "2026-11-02T03:56:40.871316Z",
+            "updatedAt": "2026-11-02T03:56:58.809889Z",
+            "lastPublishedAt": "2026-11-02T03:56:58.809889Z",
+            "tags": [
+                "ai",
+                "drum-and-bass"
+            ],
+            "bookmarked": false,
+            "declaredAi": "Uploader",
+            "blRanked": false,
+            "blQualified": false
+        },
+        {
+            "id": "557f2",
+            "name": "~Jingle Bells~",
+            "description": "This map is made to show that Christmas is near!",
+            "uploader": {
+                "id": 389210,
+                "name": "Niko1401",
+                "avatar": "https://www.gravatar.com/avatar/007c6f10c4a582fe911657f3808dc5d693f8cda97efeb342b46cd0f588375a87?d=retro",
+                "type": "SIMPLE",
+                "admin": false,
+                "curator": false,
+                "seniorCurator": false,
+                "playlistUrl": "https://api.beatsaver.com/users/id/389210/playlist"
+            },
+            "metadata": {
+                "bpm": 120.0,
+                "duration": 18,
+                "songName": "~Jingle Bells~",
+                "songSubName": "",
+                "songAuthorName": "BeepBox",
+                "levelAuthorName": "Beat Sage"
+            },
+            "stats": {
+                "plays": 0,
+                "downloads": 0,
+                "upvotes": 0,
+                "downvotes": 0,
+                "score": 0.5
+            },
+            "uploaded": "2026-11-02T03:22:02.798841Z",
+            "automapper": true,
+            "ranked": false,
+            "qualified": false,
+            "versions": [
+                {
+                    "hash": "ebbe6cc6e06b4485d6d4c9c90458ff5d85bbd6e4",
+                    "state": "Published",
+                    "createdAt": "2026-11-02T03:21:16.878923Z",
+                    "sageScore": -11,
+                    "diffs": [
+                        {
+                            "njs": 16.0,
+                            "offset": 0.0,
+                            "notes": 62,
+                            "bombs": 0,
+                            "obstacles": 0,
+                            "nps": 4.592,
+                            "length": 27.001,
+                            "characteristic": "Standard",
+                            "difficulty": "ExpertPlus",
+                            "events": 0,
+                            "chroma": false,
+                            "me": false,
+                            "ne": false,
+                            "cinema": false,
+                            "seconds": 13.501,
+                            "paritySummary": {
+                                "errors": 5,
+                                "warns": 11,
+                                "resets": 0
+                            },
+                            "maxScore": 49795,
+                            "environment": "FitBeatEnvironment"
+                        }
+                    ],
+                    "downloadURL": "https://cdn.beatsaver.com/ebbe6cc6e06b4485d6d4c9c90458ff5d85bbd6e4.zip",
+                    "coverURL": "https://cfcdn.beatsaver.com/ebbe6cc6e06b4485d6d4c9c90458ff5d85bbd6e4.jpg",
+                    "previewURL": "https://cfcdn.beatsaver.com/ebbe6cc6e06b4485d6d4c9c90458ff5d85bbd6e4.mp3"
+                }
+            ],
+            "createdAt": "2026-11-02T03:21:16.878923Z",
+            "updatedAt": "2026-11-02T03:22:02.798841Z",
+            "lastPublishedAt": "2026-11-02T03:22:02.798841Z",
+            "tags": [
+                "speed",
+                "challenge",
+                "instrumental",
+                "holiday"
+            ],
+            "bookmarked": false,
+            "declaredAi": "Uploader",
+            "blRanked": false,
+            "blQualified": false
+        }
+    ],
+    "info": {
+        "total": 21122,
+        "pages": 1057,
+        "duration": 0.003
+    }
+}

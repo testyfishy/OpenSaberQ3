@@ -1,0 +1,81 @@
+{
+    "id": "4063",
+    "name": "Calm Snow - I See Stars",
+    "description": "",
+    "uploader": {
+        "id": 43326,
+        "name": "deadlydomo",
+        "hash": "5cff0b7798cc5a672c855bc3",
+        "avatar": "https://www.gravatar.com/avatar/7aef1c8b7d309adb3293f74623bc4f3ecab36d55d72ac2f2adbcc7fcef896b16?d=retro",
+        "type": "SIMPLE",
+        "admin": false,
+        "curator": false,
+        "seniorCurator": false,
+        "playlistUrl": "https://api.beatsaver.com/users/id/43326/playlist"
+    },
+    "metadata": {
+        "bpm": 90.0,
+        "duration": 197,
+        "songName": "Calm Snow",
+        "songSubName": "",
+        "songAuthorName": "I See Stars",
+        "levelAuthorName": "DeadlyDomo"
+    },
+    "stats": {
+        "plays": 0,
+        "downloads": 0,
+        "upvotes": 49,
+        "downvotes": 23,
+        "score": 0.6621,
+        "reviews": 1
+    },
+    "uploaded": "2019-03-24T16:57:10Z",
+    "automapper": false,
+    "ranked": false,
+    "qualified": false,
+    "versions": [
+        {
+            "hash": "e091890ed604f1f63fe87c0749600f7d067443ba",
+            "key": "4063",
+            "state": "Published",
+            "createdAt": "2019-03-24T16:57:10Z",
+            "sageScore": 4,
+            "diffs": [
+                {
+                    "njs": 12.0,
+                    "offset": 0.0,
+                    "notes": 633,
+                    "bombs": 0,
+                    "obstacles": 8,
+                    "nps": 3.491,
+                    "length": 272.0,
+                    "characteristic": "Standard",
+                    "difficulty": "Expert",
+                    "events": 9,
+                    "chroma": false,
+                    "me": false,
+                    "ne": false,
+                    "cinema": false,
+                    "seconds": 181.333,
+                    "paritySummary": {
+                        "errors": 45,
+                        "warns": 45,
+                        "resets": 0
+                    },
+                    "maxScore": 575115,
+                    "environment": "DefaultEnvironment"
+                }
+            ],
+            "downloadURL": "https://r2cdn.beatsaver.com/e091890ed604f1f63fe87c0749600f7d067443ba.zip",
+            "coverURL": "https://cfcdn.beatsaver.com/e091890ed604f1f63fe87c0749600f7d067443ba.jpg",
+            "previewURL": "https://cfcdn.beatsaver.com/e091890ed604f1f63fe87c0749600f7d067443ba.mp3"
+        }
+    ],
+    "createdAt": "2019-03-24T16:57:10Z",
+    "updatedAt": "2019-03-24T16:57:10Z",
+    "lastPublishedAt": "2019-03-24T16:57:10Z",
+    "bookmarked": false,
+    "declaredAi": "None",
+    "blRanked": false,
+    "blQualified": false
+}

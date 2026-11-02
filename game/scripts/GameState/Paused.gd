@@ -30,3 +30,4 @@ func _ready(game: BeepSaber_Game) -> void:
 		Map.current_info.level_author_name
 		], Map.current_difficulty.custom_name
 	)
+	game.hide_profile_panel()

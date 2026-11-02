@@ -10,6 +10,7 @@ class_name MainMenu
 signal difficulty_changed(map_info: MapInfo, diff_rank: int)
 # emitted when the settings button is pressed
 signal settings_requested()
+signal users_requested()
 signal start_map(info: MapInfo, difficulty: DifficultyInfo)
 
 var _cover_texture_create_sw := StopwatchFactory.create("cover_texture_create",10,true)
@@ -300,6 +301,9 @@ func _delete_map(map: MapInfo) -> void:
 func _ready() -> void:
 	UI_AudioEngine.attach_children(self)
 	vr.log_info("BeepSaber search path is " + Constants.APPDATA_PATH)
+	if not ProfileManager.changed.is_connected(_refresh_user_badge):
+		ProfileManager.changed.connect(_refresh_user_badge)
+	_refresh_user_badge()
 	
 	playlist_selector.clear()
 	playlist_selector.add_item("All Songs")
@@ -342,8 +346,17 @@ func _on_Exit_Button_pressed() -> void:
 	get_tree().quit()
 
 
-func _on_Settings_Button_pressed() -> void:
-	settings_requested.emit()
+func _on_Users_Button_pressed() -> void:
+	users_requested.emit()
+
+# The badge is the "who is playing" reminder the user asked for: it must track the
+# current profile, so it is refreshed on ProfileManager.changed rather than only once.
+func _refresh_user_badge() -> void:
+	var badge := get_node_or_null("User_Badge") as Label
+	if badge != null:
+		badge.text = "Playing as: %s" % ProfileManager.current_name()
+
+func _on_Settings_Button_pressed() -> void:	settings_requested.emit()
 
 const READ_PERMISSION = "android.permission.READ_EXTERNAL_STORAGE"
 

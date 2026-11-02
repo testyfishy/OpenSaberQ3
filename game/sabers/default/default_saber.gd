@@ -17,6 +17,16 @@ class_name DefaultSaber
 
 const POLYPHONY := 8
 
+# Audio verification counters (FR: prove hit audio really plays). Benchmark-only; reset and
+# read by BenchmarkRunner, which writes them into the run's meta file. Zero effect in play.
+static var probe_enabled := false
+static var probe_calls := 0
+static var probe_invalid := 0
+static var probe_soft := 0
+static var probe_hard := 0
+static var probe_accent := 0
+static var probe_dull := 0
+
 # Sample pools. Generated procedurally by tools/audio/gen_hitsounds.py, so there
 # is no licensing obligation attached (ATTRIBUTION.md).
 #   soft: pre-darkened (the soft layer *is* the low-pass; a polyphonic voice has
@@ -196,6 +206,13 @@ func _fire(info: HitInfo, from_offset: float) -> void:
 	
 	var semitones := randf_range(-PITCH_JITTER_ST, PITCH_JITTER_ST)
 	_play(_pick(pool, pool_key), gain_db, semitones, from_offset)
+	if probe_enabled:
+		match pool_key:
+			&"soft": probe_soft += 1
+			&"dull": probe_dull += 1
+			&"hard": probe_hard += 1
+		if accent:
+			probe_accent += 1
 	if accent:
 		# The accent stacks on top of the hard layer, so it must sit below it or the pair
 		# breaches the 9 dB total budget. -4 dB is a tuning start (G4).
@@ -236,7 +253,11 @@ func _play(sample: AudioStream, gain_db: float, semitones: float, from_offset: f
 	# p_bus is only honoured on the Web PLAYBACK_TYPE_SAMPLE path; on native the voice
 	# is mixed by the player and routed by the node's own `bus` property, which is SFX.
 	var id := _voices.play_stream(sample, from_offset, gain_db, ratio, 0, &"SFX")
+	if probe_enabled:
+		probe_calls += 1
 	if id == AudioStreamPlaybackPolyphonic.INVALID_ID:
+		if probe_enabled:
+			probe_invalid += 1
 		return
 	_remember(id)
 

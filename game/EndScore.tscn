@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3 uid="uid://i5nhm2p2kqay"]
+[gd_scene load_steps=28 format=3 uid="uid://i5nhm2p2kqay"]
 
 [ext_resource type="Shader" path="res://game/UI_Panel.gdshader" id="1_cfcnp"]
 [ext_resource type="Script" path="res://game/EndScore.gd" id="1_jacne"]
@@ -78,6 +78,21 @@ disable_receive_shadows = true
 [sub_resource type="QuadMesh" id="QuadMesh_k3idy"]
 resource_local_to_scene = true
 material = SubResource("StandardMaterial3D_d4cmo")
+size = Vector2(0.5, 0.094)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_saved"]
+viewport_path = NodePath("SavedViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_saved"]
+resource_local_to_scene = true
+blend_mode = 1
+shading_mode = 0
+albedo_texture = SubResource("ViewportTexture_saved")
+disable_receive_shadows = true
+
+[sub_resource type="QuadMesh" id="QuadMesh_saved"]
+resource_local_to_scene = true
+material = SubResource("StandardMaterial3D_saved")
 size = Vector2(0.5, 0.094)
 
 [sub_resource type="FontFile" id="9"]
@@ -1385,6 +1400,17 @@ mesh = SubResource("QuadMesh_eor5b")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0.3, 0.1)
 mesh = SubResource("QuadMesh_k3idy")
 
+[node name="SavedMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, -0.19, 0.1)
+visible = false
+mesh = SubResource("QuadMesh_saved")
+
+[node name="Switch" parent="." instance=ExtResource("4_n4s7s")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, -0.31, 0.1)
+visible = false
+size = Vector2(0.25, 0.0625)
+text = "Switch"
+
 [node name="FCViewport" type="SubViewport" parent="."]
 own_world_3d = true
 size = Vector2i(256, 48)
@@ -1411,10 +1437,22 @@ bbcode_enabled = true
 text = "[center][wave amp=30 freq=8][rainbow freq=0.5 sat=0.7 val=2]New Record!"
 autowrap_mode = 0
 
+[node name="SavedViewport" type="SubViewport" parent="."]
+own_world_3d = true
+size = Vector2i(256, 48)
+
+[node name="SavedLabel" type="RichTextLabel" parent="SavedViewport"]
+offset_right = 256.0
+offset_bottom = 48.0
+theme = SubResource("Theme_553gf")
+theme_override_font_sizes/normal_font_size = 32
+bbcode_enabled = true
+text = "[center]Saved as Player"
+autowrap_mode = 0
+
 [node name="GradeViewport" type="SubViewport" parent="."]
 own_world_3d = true
 size = Vector2i(256, 256)
-
 [node name="GradeLabel" type="RichTextLabel" parent="GradeViewport"]
 offset_right = 256.0
 offset_bottom = 256.0
@@ -1432,3 +1470,4 @@ shape = SubResource("BoxShape3D_iqqq6")
 
 [connection signal="released" from="Repeat" to="." method="_on_Repeat_button_up"]
 [connection signal="released" from="MainMenu" to="." method="_on_MainMenu_button_up"]
+[connection signal="released" from="Switch" to="." method="_on_Switch_button_up"]
