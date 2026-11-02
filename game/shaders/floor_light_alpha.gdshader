@@ -40,6 +40,10 @@ void vertex() {
 // light rather than as a painted stripe, and divided by height so a saber held high
 // throws less onto the floor than one dragged along it.
 float blade_streak(vec3 p, vec3 base, vec3 tip) {
+	// See floor_light.gdshader: without this a retracted saber paints a pool at the feet.
+	if (max(base.y, tip.y) < p.y) {
+		return 0.0;
+	}
 	vec2 a = base.xz;
 	vec2 d = tip.xz - a;
 	float dd = max(dot(d, d), 1e-6);
@@ -61,7 +65,7 @@ void fragment() {
 	// 16x matches the floor.tscn emission energy (16, Multiply) that this replaces; the 6x
 	// that floor.gd baked into the sprite modulate is not the same number, and using it here
 	// made the burn trail ~2.7x dimmer than before.
-	EMISSION = burn * 16.0 + light * 3.0
+	EMISSION = burn * 16.0 + light * 3.0;
 	ALPHA = floor_alpha;
 }
 

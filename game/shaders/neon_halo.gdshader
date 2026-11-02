@@ -40,9 +40,11 @@ void fragment() {
 		float m = max(a.x * axis_mask.x, max(a.y * axis_mask.y, a.z * axis_mask.z));
 		mask = smoothstep(0.80, 1.0, m);
 	} else {
-		// Brightest where the shell faces the eye and fading to zero at the edge: the
-		// inverse (1 - |N.V|) draws a hard hollow outline on a shell this wide.
-		mask = pow(clamp(dot(normalize(local_n), normalize(VIEW)), 0.0, 1.0), rim_power);
+		// Rim uses the VIEW-SPACE normal with the VIEW-SPACE view vector. (local_n is model
+		// space and is only valid for the box mask above, which compares against local_pos.)
+		// Brightest where the shell faces the eye and fading to zero at the edge: the inverse
+		// (1 - |N.V|) draws a hard hollow outline on a shell this wide.
+		mask = pow(clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0), rim_power);
 	}
 	ALBEDO = color * energy * mask;
 }

@@ -40,6 +40,12 @@ void vertex() {
 // light rather than as a painted stripe, and divided by height so a saber held high
 // throws less onto the floor than one dragged along it.
 float blade_streak(vec3 p, vec3 base, vec3 tip) {
+	// A blade that is above the floor point cannot light it. Without this a retracted saber
+	// parked far below the world maps to floor position (0,0) - the player's feet - and
+	// paints a full-strength pool there. Also covers a blade dipped through the floor.
+	if (max(base.y, tip.y) < p.y) {
+		return 0.0;
+	}
 	vec2 a = base.xz;
 	vec2 d = tip.xz - a;
 	float dd = max(dot(d, d), 1e-6);
