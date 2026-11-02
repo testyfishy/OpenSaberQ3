@@ -205,22 +205,40 @@ this project does not have (see "key-lock" below).
 
 | # | Input | Audio target | Mapping | Tag |
 |---|---|---|---|---|
-| 1 | `speed_len` = `controller_speed.length()` | **gain** | `-9 dB at 1 m/s → 0 dB at 8 m/s`, linear in speed, clamped outside | range **[TS]**, the 9 dB ceiling is **FR-012** |
+| 1 | `speed_len` = `controller_speed.length()` | **gain** | `-6 dB at 1 m/s → 0 dB at 8 m/s`, linear, clamped outside | **[TS]** |
 | 2 | `speed_len` | **layer** | `< 3 m/s` → soft layer; `3–7` → hard layer; `> 7` → hard **+ accent layer** | thresholds **[TS]** |
 | 3 | `cut_angle_accuracy` | **layer bias** | `< 0.5` → soft layer regardless of speed (a glancing cut *should* sound dull); `≥ 0.5` → normal rules | threshold **[TS]**; 0.5 sits mid-scale of the game's own 0.7–1.0 dot window **[V]** (code) |
-| 4 | `cut_distance_accuracy` | **gain** | `+0 dB` at 1.0 → `-3 dB` at 0.0, linear | **[TS]** |
-| 5 | `travel_distance_factor` | **gain trim** | `±1.5 dB` across 0→1 | **[TS]** |
+| 4 | `cut_distance_accuracy` | **gain** | `0 dB` at 1.0 → `-1.5 dB` at 0.0, linear | **[TS]** |
+| 5 | `travel_distance_factor` | **gain trim** | `0 dB` at 1.0 → `-0.5 dB` at 0.0 | **[TS]** |
 | 6 | `beat_accuracy` | **accent mute** | `< 0.2` (hit >40 cm/±~0.1 beat off) → drop the accent layer | **[TS]**; the 0.5 m window is the game's own **[V]** |
 | 7 | `is_correct_saber` | **sample set** | wrong-saber cut uses a separate dull "bad cut" set | design choice **[TS]** |
 | 8 | `saber_type` 0/1 | **pan bias** | `panning_strength` 0.9 L / 0.75 R, or symmetric 0.85 | **[TS]** |
 | 9 | note position | **nothing** | deliberately not mapped — see §2 | **[V2]** |
-| 10 | (all hits) | **pitch** | uniform in **±1.0 st** (`0.943–1.059`), hard ceiling ±2 st | spread **[TS]**; ceiling **FR-012**; Beat Saber ships ±1.82/+3.16 st **[V2]** so ±1 is conservative |
-| 11 | (all hits) | **sample choice** | round-robin, **no immediate repeat** | **[V]** (Wwise `Shuffle` + `Limit Repetition`) |
+| 10 | `speed_len` + `cut_angle_accuracy` | **filter** | **not a runtime filter.** `AudioStreamPolyphonic` has no per-voice DSP, and `attenuation_filter_cutoff_hz` is a whole-node property, so a shared 3D node cannot low-pass one voice and not another. Instead the **soft layer is a pre-filtered, darker sample set** (HPF at 120 Hz + LPF at ~4 kHz before import) | **[TS]**; constraint is **[V]** (no per-voice filter exists) |
+| 11 | (all hits) | **pitch** | uniform in **±1.0 st** (`0.943–1.059`), hard ceiling ±2 st | spread **[TS]**; ceiling **FR-012**; Beat Saber ships ±1.82/+3.16 st **[V2]** so ±1 is conservative |
+| 12 | (all hits) | **gain jitter** | uniform **±0.5 dB** | **[TS]** |
+| 13 | (all hits) | **sample choice** | round-robin, **no immediate repeat** | **[V]** (Wwise `Shuffle` + `Limit Repetition`) |
 
-**Total gain span:** 9 dB (speed) + 3 dB (centrality) + 3 dB (±1.5 travel) = **15 dB**, which
-exceeds the FR-012 ceiling. Fix: make the three terms *additive but clamped*, i.e.
-`gain_db = clamp(speed_gain + centrality_gain + travel_trim, -9.0, +1.5)`. **The clamp is the
-requirement, not the sum.** **[TS]**
+**Gain budget — split it, do not sum-then-clamp.** The three gesture terms span at most
+`-6 - 1.5 - 0.5 = -8 dB`. Add the ±0.5 dB jitter and clamp the **total** to `[-8.5, +0.5]`:
+
+```gdscript
+var g := speed_gain + centrality_gain + travel_trim + randf_range(-0.5, 0.5)
+g = clampf(g, -8.5, 0.5)   # total span exactly 9.0 dB -> FR-012
+```
+
+Summing wider terms and clamping afterwards is wrong: every slow, off-centre hit would land on
+the same floor and the variation would disappear. Set the randomizer's
+`random_volume_offset_db = 0` so the jitter is counted exactly once, in the line above. **[TS]**
+
+Gain is not the main signal — the **soft / hard / accent layer switch** is. 6 dB of speed range
+is clearly audible (roughly a 2:1 loudness ratio) without making a fast hit sound like a
+different game. **[TS]**
+
+**Node-level filter is disabled, not tuned.** `attenuation_filter_cutoff_hz = 20500` (the
+documented way to switch it off **[V]**) so that the only filtering in the chain is the one
+baked into the soft layer. With `attenuation_model = 3` there is no distance factor to filter
+anyway; this makes that explicit rather than incidental.
 
 **Key-lock (optional, default OFF).** Pitch-quantising to the map's musical key needs key data.
 This project's map path (`game/Map.gd`, `game/BeatmapInfo`) parses note cut direction and
@@ -233,10 +251,10 @@ metadata.
 | Limit | Value | Basis |
 |---|---|---|
 | Pitch spread | **≤ ±2 st**, ship ±1 st | **[V2]** Beat Saber ±1.82/+3.16 st as upper bound; **[TS]** ours |
-| Gain range | **≤ 9 dB** end to end | **[TS]**; enforced by the clamp above |
+| Gain range | **≤ 9 dB** end to end, jitter included | **[TS]**; enforced by the clamp in the table above |
 | Round-robin variants | **≥ 3 per layer** (3 soft, 3 hard, 1 accent) | **[V]** Wwise `Shuffle` / `Limit Repetition` |
 | No exact repeat | same sample **and** pitch never twice in a row | **[V]** same source; `AudioStreamRandomizer` `PLAYBACK_RANDOM_NO_REPEATS` gives it free **[V]** |
-| Extra volume jitter | ±1.5 dB per hit | **[TS]** |
+| Volume jitter | ±0.5 dB, counted **inside** the 9 dB budget | **[TS]** |
 
 ---
 
@@ -315,15 +333,34 @@ code, **simultaneously using a single player**", `polyphony` default 32; per-voi
 Keep it on **one `AudioStreamPlayer3D` per saber**, so panning is anchored to the saber **[V2]**
 and no node is created per hit.
 
+### Lifecycle rules (get these wrong and every voice dies)
+
+1. In `_ready()`: set `stream` to the `AudioStreamPolyphonic`, call `play()` **exactly once**,
+   then cache `_voices := get_stream_playback() as AudioStreamPlaybackPolyphonic`. Every later
+   hit is `_voices.play_stream(...)`; the player is never played again.
+2. **Any subsequent `play()` or `stop()` on that player creates a new playback**, which
+   silences every voice and invalidates every stored id. So deleting the old `hitsound.play()`
+   paths is mandatory, not cosmetic — in `default_saber.gd:33,62,65` **and** `particles_saber.gd`.
+3. Spatialisation carries through: voices are mixed first, then panned and attenuated at the
+   node's **current** transform. All voices therefore follow the saber. That is exactly the
+   behaviour §2 argues for, and it is why per-note panning is not available on this path.
+
 ### Voice-steal rule
 
 `polyphony = 8`. At 8 hits/s with a ≤0.15 s sample the steady-state concurrency is
 `8 × 0.15 ≈ 1.2` voices; 8 is ~6× headroom **[D]**. Rule:
 
-1. `id = play_stream(sample, from_offset, gain_db, pitch_semitones_to_ratio(p))`.
-2. If `id == INVALID_ID`: `stop_stream(oldest_owned_id)`, then retry once.
-3. Track ids in a fixed 8-slot ring; drop ids where `is_stream_playing(id) == false`.
-4. Never steal the *newest* voice (that would be the audible one).
+1. `id = play_stream(sample, from_offset, gain_db, pitch_semitones_to_ratio(p), 0, &"SFX")`.
+2. If `id == INVALID_ID`: walk the ring oldest→newest, skip any id where
+   `is_stream_playing(id) == false`, stop the first still-playing id, then retry once.
+3. Track ids in a fixed 8-slot ring; drop dead ids on the way past (step 2 does this for free).
+4. If every slot is somehow still playing, drop the hit rather than stopping the newest voice.
+
+**Bus caveat [P]:** `play_stream()`'s `bus` argument defaults to `&"Master"`. It is not
+documented whether a 3D player honours it or overrides it with the node's own `bus`. Pass
+`&"SFX"` explicitly **and** verify on device by dragging the in-game SFX slider while hitting
+(`Settings.gd:93-97` sets the `SFX` bus): if hits do not follow the slider, they are going to
+`Master` and the limiter in §7 step 6 is not protecting them.
 
 Cheaper and better: since `polyphony` is a hard cap, the ring makes stealing *deterministic*
 (oldest first) instead of relying on engine order.
@@ -347,11 +384,11 @@ Cheaper and better: since `polyphony` is a hard cap, the ring makes stealing *de
   shape even where it is not the wrong cost. `AudioStreamPlaybackPolyphonic` still allocates a
   playback object per `play_stream` **[P]**, but that is one `RefCounted`, not a node.
 - **`AudioStreamRandomizer`** (`PLAYBACK_RANDOM_NO_REPEATS`, `random_pitch_semitones`,
-  `random_volume_offset_db`) is the zero-code way to get round-robin + jitter, and it satisfies
-  FR-012 on its own **[V]** — worth using *for the variant selection*, but it cannot take a
-  per-hit pitch from gameplay, so the gameplay mapping must go through `play_stream`.
-  Whether its randomisation is applied per playback instance when nested inside
-  `AudioStreamPolyphonic` is **[P]** — verify with one on-device test before relying on it.
+  `random_volume_offset_db = 0`) is the zero-code way to get round-robin, and `playback_mode`
+  alone satisfies FR-012's no-repeat rule **[V]**. It cannot take a per-hit pitch from
+  gameplay, so the gameplay mapping must go through `play_stream`; use the randomizer purely as
+  the *variant pool* behind each layer. Whether it re-rolls per playback instance when nested
+  inside `AudioStreamPolyphonic` is **[P]** — see test #1 below.
 
 ---
 
@@ -387,10 +424,10 @@ Dependency order; each step names the file.
 | 2 | Capture `controller_speed` and the cut plane *before* the audio call; `saber_visual.hit(time_offset, info)` | `game/LightSaber.gd` (lines 136-143) | **unblocks everything**; without it no mapping is possible |
 | 3 | `hit(time_offset, info)`; `_pending_hits` holds `{remaining, info}`; gain → layer → pitch → `play_stream`; id ring + steal rule | `game/sabers/default/default_saber.gd` | the actual feature |
 | 4 | `stream = AudioStreamPolyphonic` (`polyphony = 8`), emitter moved from mid-blade to `tip` (y≈1.2554), `attenuation_filter_cutoff_hz = 20500`, keep `attenuation_model = 3`, `max_distance = 0`, `panning_strength` 0.85 | `game/sabers/default/default_saber.tscn` | scene must match the script's expectations |
-| 5 | Delete the post-hoc `hitsound.pitch_scale = randf_range(0.9,1.1)`; override `hit(info)` and forward | `game/sabers/particles/particles_saber.gd` | it currently fights the manager; also the ordering bug (`play()` then `pitch_scale`) |
+| 5 | Delete **every** `hitsound.play()` and the post-hoc `pitch_scale` write — `play()` on the polyphonic player would re-create the playback and kill all voices; override `hit(info)` and forward | `game/sabers/particles/particles_saber.gd` | it currently fights the manager; also the ordering bug (`play()` then `pitch_scale`) |
 | 6 | `AudioEffectHardLimiter` on the `SFX` bus, ceiling ≈ -1 dB | `audiobuslayout.tres` | 8 voices sum; protect Master |
-| 7 | Add 3 soft + 3 hard + 1 accent `AudioStreamWAV` files, then a provenance row per file | `game/data/`, `ATTRIBUTION.md` | content step; also resolves the undocumented `beepcube_cut.ogg` |
-| 8 | On-device: confirm `AudioStreamRandomizer`-inside-`AudioStreamPolyphonic` jitter, and measure hit-to-sound latency | (measurement only) | the two **[P]** claims in this brief |
+| 7 | Add 3 soft (pre-filtered) + 3 hard + 1 accent `AudioStreamWAV` files, then a provenance row per file | `game/data/`, `ATTRIBUTION.md` | content step; also resolves the undocumented `beepcube_cut.ogg` |
+| 8 | On-device tests, in this order: **#1** `AudioStreamRandomizer` nested in `AudioStreamPolyphonic` re-rolls per hit (pass: 20 rapid hits, no immediate sample repeat) — if it fails, roll variants in GDScript; **#2** `play_stream(bus: &"SFX")` respects the bus (pass: hits follow the SFX slider); **#3** hit-to-sound latency with `play_stream` vs the old `play()` (expect ~8 ms better at 120 Hz physics) | measurement only | the two **[P]** claims in this brief |
 
 Steps 1–3 are one change; do not land 3 before 1–2.
 

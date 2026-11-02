@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-01
 
-**Status**: Draft
+**Status**: Done (G4)
 
 **Input**: User description: "Research hit-feedback audio design for Godot 4.6 VR rhythm game on Quest 3 — verify how VR rhythm games do hit audio, what Godot 4.6 spatialisation offers, how to map cut-score data to audio parameters, whether GPU audio is real on Snapdragon XR2 Gen 2, cheap-CPU best practice for many short sounds, and CC0 sample licensing."
 
@@ -109,3 +109,4 @@ writes no gameplay code.
 | Gate | Asked | Verdict | Action taken |
 |------|-------|---------|--------------|
 | G0 | Is the FR/SC set sufficient to stop the brief becoming opinion? Where should the cut-data→audio mapping anchor? How hard to push the GPU question? | **GO WITH CHANGES** | Added FR-010 (polyphony + voice-steal), FR-011 (data availability at contact + delivery to `hit()`), FR-012 (measurable anti-fatigue limits), SC-005 (every number tagged sourced/tuning-start). Plan changes adopted: anchor gain/cutoff/layer to physical speed + centrality, pitch as small jitter with optional key-lock; GPU section capped at ~10% of effort; `LightSaber.gd` ordering change placed first in the implementation order; Meta SDK limited to one search pass with a dated "no maintained binding" fallback. |
+| G4 + G5 | Can an implementer build from `specs/002-hit-audio-research/research.md`? Does the doc still answer FR-001..FR-012 / SC-001..SC-005? | **SHIP WITH FIXES** | Drift found: FR-012/SC-003 failed (the three gain terms summed to −15 dB, so a `[-9,+1.5]` clamp still spanned 10.5 dB) and FR-004 had no filter row. Fixed: gain split into −6/−1.5/−0.5 terms plus ±0.5 jitter with the total clamped to `[-8.5,+0.5]` (exactly 9 dB); randomizer `random_volume_offset_db = 0`; filter requirement resolved as *baked into the soft layer* because `AudioStreamPolyphonic` has no per-voice DSP and `attenuation_filter_cutoff_hz` is node-wide; added the `AudioStreamPolyphonic` lifecycle rules (single `play()` in `_ready`, cache the playback; any later `play()`/`stop()` invalidates all voice ids, so step 5 now deletes every `hitsound.play()` call); added the explicit `&"SFX"` bus argument as a `[P]` device check; named the three on-device tests with pass conditions. |

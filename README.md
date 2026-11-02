@@ -26,25 +26,15 @@ and every measurement, including the ones that went badly, is recorded in [`PERF
 
 ## What this fork changes
 
-- **Builds on Godot 4.6.3.** Upstream declares 4.3, but 4.3 cannot import this repository's own
-  assets on a clean clone (the mesh importer crashes and leaves 1-byte mesh files), so this fork
-  builds on 4.6.3-stable.
-- **Renders at native panel resolution.** OpenXR recommends 1680×1760 per eye — about **81%** of the
-  Quest 3 panel. This fork applies a render-target multiplier at runtime so the image renders at
-  **2107×2208 per eye**, full panel coverage with no upscaling.
-- **MSAA 4×.** Upstream shipped `quality/filters/msaa`, a Godot 3 key Godot 4 ignores, so
-  anti-aliasing was off. This fork sets the Godot 4 key.
-- **120 Hz with physics at 120 Hz.** Unlocking rates above 72 required declaring the Meta headset in
-  the Android manifest (`com.oculus.supportedDevices`); without it the runtime runs the app in
-  compatibility mode and reports only 72 Hz. Physics is pinned to the display rate so collision
-  sampling matches the panel — previously it ran at 60 Hz against a 72 Hz panel.
-- **Hit registration fixes.** The swept-collision path discarded sub-threshold movement, which at
-  high refresh rates silently dropped valid swings; the previous position now only advances when a
-  cast actually happens. Note collision shapes were also being rewritten every tick, and were
-  shared between notes so the last-spawned note set every live note's hitbox.
-- **Deterministic benchmark mode.** A flag file starts a scripted run, a bot plays the map through
-  the real collision path on the song clock, and the app writes a per-frame CSV plus metadata, then
-  quits. Host-side capture and summarising scripts live in [`tools/perf/`](tools/perf/).
+- **Godot 4.6.3** (was 4.3, which cannot import this repo's own assets on a clean clone)
+- **Native panel resolution**: 2107 × 2208 per eye (was 1680 × 1760, ~81% of the panel)
+- **4× MSAA** (was off — the setting was a dead Godot 3 key)
+- **120 Hz with physics at 120 Hz** (was 72 Hz with physics at 60 Hz)
+- **Working hit registration**: sub-threshold sweep movement is no longer discarded, collision flags are no longer rewritten every tick, and notes no longer share one mutated hitbox
+- **The Meta recenter button works** (was ignored, leaving the menu rotated)
+- **Adjustable performance settings** in-game (see below)
+- **A reproducible benchmark harness** in `tools/perf/`
+
 
 ## Settings
 
@@ -168,18 +158,6 @@ invent a performance problem that is not there.
 Package id: `io.github.testyfishy.opensaberq3`. It is deliberately different from upstream's
 `org.godotengine.open_saber`, so this build installs **side by side** with an existing copy and
 does not touch its songs or scores.
-
-## Benchmarking
-
-- [`tools/perf/benchmark.md`](tools/perf/benchmark.md) — what benchmark mode does, the flag file,
-  the CSV/meta outputs, and the device recipe.
-- [`tools/perf/bench.ps1`](tools/perf/bench.ps1) — push the flag, launch, pull the results.
-- [`tools/perf/summarize.ps1`](tools/perf/summarize.ps1) — turn a capture into the summary used in
-  `PERF.md`.
-- [`tools/perf/capture.ps1`](tools/perf/capture.ps1) — host-side logcat/`VrApi` capture, for checks
-  that do not need in-app instrumentation.
-- A `compare.ps1` (A/B of two captures) exists in the working tree and will land with the next
-  tooling commit.
 
 ## License and attribution
 
