@@ -8,6 +8,25 @@ const Cost := preload("res://game/scripts/CostProbe.gd")
 # thread. Set false to measure the game without arcs and prove or eliminate that cost.
 static var spawn_enabled := true
 
+# Arc instances are pooled instead of freed at despawn: spawning was instantiate() +
+# add_child() + CSG rebuild per arc, and the instantiation half is pure churn. The CSG
+# rebuild itself still happens (the curve differs per arc), but node creation/free stops.
+static var _pool: Array = []
+
+static func acquire() -> Arc:
+	if _pool.is_empty():
+		return preload("res://game/Arc/Arc.tscn").instantiate() as Arc
+	return _pool.pop_back() as Arc
+
+func _release_to_pool() -> void:
+	if activator_cube and activator_cube.cutted.is_connected(_on_activator_cube_cutted):
+		activator_cube.cutted.disconnect(_on_activator_cube_cutted)
+	activator_cube = null
+	hide()
+	if get_parent() != null:
+		get_parent().remove_child(self)
+	_pool.append(self)
+
 static var left_material := load("res://game/Arc/Arc.material").duplicate() as ShaderMaterial
 static var right_material := left_material.duplicate() as ShaderMaterial
 
@@ -27,6 +46,9 @@ var despawn_z: float
 
 func spawn(info: ArcInfo, current_beat: float, _activator_cube: BeepCube = null) -> void:
 	arc_info = info
+	# Pooled reuse: a recycled arc keeps the previous arc's travelled distance and hidden state.
+	transform.origin.z = 0.0
+	show()
 	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute * 0.016666666666666667
 	visual = $Path3D/Visual
 	visual.material_override = right_material if arc_info.color == 1 else left_material
@@ -112,7 +134,5 @@ func _process(delta: float) -> void:
 	if Scoreboard.paused or not is_visible_in_tree() or not Map.current_info: return
 	transform.origin.z += speed * delta
 	if transform.origin.z >= despawn_z:
-		if activator_cube and activator_cube.cutted.is_connected(_on_activator_cube_cutted):
-			activator_cube.cutted.disconnect(_on_activator_cube_cutted)
 		if Cost.enabled: Cost.objs_freed += 1
-		queue_free()
+		_release_to_pool()

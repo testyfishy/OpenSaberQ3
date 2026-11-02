@@ -91,7 +91,7 @@ func _process_map(game: BeepSaber_Game) -> void:
 		if not Arc.spawn_enabled:
 			Map.arc_stack.pop_back()
 			continue
-		var arc := arc_template.instantiate() as Arc
+		var arc := Arc.acquire() as Arc
 		var arc_info := Map.arc_stack.pop_back() as ArcInfo
 		
 		# find starting cube to use as magnet trigger

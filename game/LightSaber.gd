@@ -24,6 +24,19 @@ var saber_end := Vector3.ZERO
 var saber_end_past := Vector3.ZERO
 var last_dt := 0.0
 
+# Analytic hit path (specs/006-swing-hit-sweep). `_hit_mask` is the swing cast's
+# collision mask, i.e. exactly the layers the ray fan could hit; `_hit_prev_*` is
+# the blade segment at the previous physics tick, so the resolver sweeps between
+# samples instead of testing one pose. `_hit_enabled` follows the play state
+# (set_swingcast_enabled), same gate the ray fan has.
+const HitResolver := preload("res://game/scripts/HitResolver.gd")
+
+var _hit_mask := 0
+var _hit_enabled := false
+var _hit_sampled := false
+var _hit_prev_base := Vector3.ZERO
+var _hit_prev_tip := Vector3.ZERO
+
 const Cost := preload("res://game/scripts/CostProbe.gd")
 
 func _show() -> void:
@@ -88,6 +101,9 @@ func _ready() -> void:
 	else:
 		_swing_cast._set_collision_mask_value(CollisionLayerConstants.RightNote_bit, true)
 	_swing_cast._set_collision_mask_value(CollisionLayerConstants.Bombs_bit, true)
+	# Captured after the mask is set: the resolver filters the registry with the
+	# same bits the rays use, so eligibility cannot drift from the ray path.
+	_hit_mask = _swing_cast.collision_mask
 
 func _physics_process(delta: float) -> void:
 	position = offset_pos + extra_offset_pos
@@ -95,6 +111,17 @@ func _physics_process(delta: float) -> void:
 	saber_end_past = saber_end
 	saber_end = saber_visual.tip.global_transform.origin
 	last_dt = delta
+	# The blade segment the fan casts from: the swing cast's origin and its
+	# animated target_position (the Show/Hide animation drives it, so a retracted
+	# saber sweeps nothing, exactly as the rays sweep nothing).
+	var blade_xf := _swing_cast.global_transform
+	var blade_base := blade_xf.origin
+	var blade_tip := blade_xf * _swing_cast.target_position
+	if _hit_sampled and _hit_enabled and is_extended() and HitResolver.is_analytic():
+		_resolve_analytic_hits(blade_base, blade_tip)
+	_hit_prev_base = blade_base
+	_hit_prev_tip = blade_tip
+	_hit_sampled = true
 	if is_extended():
 		#check floor collision for burn mark
 		var probe := Cost.enabled
@@ -121,11 +148,46 @@ func set_saber(saber_path: String) -> void:
 		saber_visual.set_trail(Settings.saber_tail)
 
 func set_swingcast_enabled(value: bool) -> void:
-	_swing_cast.set_raycasts_enabled(value)
+	_hit_enabled = value
+	# Re-seed the sweep on the next tick, so resuming after a pause does not
+	# sweep from wherever the blade was before it.
+	_hit_sampled = false
+	# In analytic mode the fan is never switched on at all: its nine physics
+	# queries per tick are the cost this change removes (FR-006).
+	_swing_cast.set_raycasts_enabled(value and not HitResolver.is_analytic())
+
+# Analytic counterpart of the ray fan (specs/006-swing-hit-sweep FR-003/FR-004).
+# It only decides *whether* something was hit; the cut itself goes through
+# _handle_cuttable, which is the same funnel the rays use.
+func _resolve_analytic_hits(blade_base: Vector3, blade_tip: Vector3) -> void:
+	var probe := Cost.enabled
+	var t0 := Time.get_ticks_usec() if probe else 0
+	# A blade that jumped (map load, controller reconnect, tracking loss) is not a
+	# swing: cut nothing and let this pose become the new previous sample.
+	if (_hit_prev_tip.distance_to(blade_tip) > HitResolver.MAX_JUMP_M
+			or _hit_prev_base.distance_to(blade_base) > HitResolver.MAX_JUMP_M):
+		if probe:
+			Cost.swing_usec += Time.get_ticks_usec() - t0
+		return
+	var cuts := 0
+	while cuts < HitResolver.MAX_HITS_PER_TICK:
+		var cuttable := HitResolver.find_hit(
+			_hit_mask, _hit_prev_base, _hit_prev_tip, blade_base, blade_tip)
+		if cuttable == null: break
+		_handle_cuttable(cuttable)
+		cuts += 1
+		# Every cuttable unregisters itself inside cut()/hide_cube(). If one does
+		# not, stop instead of cutting the same note twice in one tick.
+		var cut := cuttable as Cuttable
+		if cut == null or not cut.is_hit_registered(): break
+	if probe:
+		Cost.swing_usec += Time.get_ticks_usec() - t0
 
 func _handle_area_collided(area: Area3D) -> void:
+	_handle_cuttable(area.get_parent() as Node3D)
+
+func _handle_cuttable(cut_object: Node3D) -> void:
 	if Scoreboard.paused: return
-	var cut_object := area.get_parent()
 	if not cut_object is Cuttable: return
 	var note := cut_object as Cuttable
 	

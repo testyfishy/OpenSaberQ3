@@ -79,6 +79,11 @@ func reset_counters() -> void:
 
 func set_raycasts_enabled(value: bool) -> void:
 	enabled = value
+	# The aux rays are RayCast3D nodes of their own: each one casts automatically
+	# every physics step unless it is disabled itself, so toggling only the parent
+	# left eight queries per saber running with nothing reading them (FR-007).
+	for ray in _rays:
+		ray.enabled = value
 
 func _update_element_positions() -> void:
 	# generate new locations for ray casters

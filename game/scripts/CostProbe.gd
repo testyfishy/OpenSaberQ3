@@ -22,7 +22,11 @@ extends RefCounted
 
 static var enabled := false
 
-# Self-time of SwingableRayCast._physics_process, both sabers (the ray fan).
+# Self-time of the saber hit path, both sabers. Under the ray fan that is
+# SwingableRayCast._physics_process; under the analytic resolver (specs/006) it is
+# LightSaber._resolve_analytic_hits. Compare the two arms of a run with this
+# column AND TIME_PHYSICS_PROCESS: the aux rays' automatic casts run inside the
+# physics server, i.e. outside this timer.
 static var swing_usec := 0
 # Self-time of Cuttable._physics_process, summed over every live note/link.
 static var cuttable_usec := 0

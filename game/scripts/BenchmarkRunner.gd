@@ -96,6 +96,7 @@ const Cost := preload("res://game/scripts/CostProbe.gd")
 # Preloaded by path so benchmark mode does not depend on the editor's global
 # class cache being up to date on a clean clone (same reason as BenchmarkRunner).
 const BotDriverScript := preload("res://game/scripts/BotDriver.gd")
+const HitResolver := preload("res://game/scripts/HitResolver.gd")
 
 var _game: Node3D
 var _song_player: AudioStreamPlayer
@@ -392,6 +393,15 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 	if isolate != null:
 		ProjectSettings.set_setting(&"gameplay/notes/isolate_collision_shapes", bool(isolate))
 		applied.append("isolate_shapes=%s" % str(bool(isolate)))
+	# A/B arm for specs/006-swing-hit-sweep: "rays" is the pre-006 fan, "analytic"
+	# the swept-blade resolver. The mode is cached on first use, so the cache is
+	# dropped here for the sabers that already exist.
+	var detection = cfg.get_value("bench", "detection", null)
+	if detection != null:
+		var mode := str(detection).strip_edges().to_lower()
+		ProjectSettings.set_setting(&"gameplay/swing_hit/detection", mode)
+		HitResolver.reset_mode_cache()
+		applied.append("detection=%s" % mode)
 	var max_fps := int(cfg.get_value("bench", "max_fps", 0))
 	if max_fps > 0:
 		Engine.max_fps = max_fps
@@ -754,6 +764,7 @@ func _write_meta() -> void:
 	_meta["audio_layer_hard"] = str(DefaultSaber.probe_hard)
 	_meta["audio_layer_accent"] = str(DefaultSaber.probe_accent)
 	_meta["audio_layer_dull"] = str(DefaultSaber.probe_dull)
+	_meta["detection"] = "analytic" if HitResolver.is_analytic() else "rays"
 	# Validity: physics must have run at the rate the display actually ended at.
 	var rej := float(_meta.get("refresh_rate_requested", "0"))
 	var ref := float(_meta.get("refresh_rate_final", "0"))

@@ -12,6 +12,7 @@ func set_collision_disabled(value: bool) -> void:
 
 @warning_ignore("unused_parameter")
 func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: BeepSaberController) -> HitInfo:
+	_unregister_hit()
 	Scoreboard.bad_cut(transform.origin)
 	var info := HitInfo.new()
 	info.kind = HitInfo.Kind.BAD
@@ -23,6 +24,7 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 	return info
 
 func on_miss() -> void:
+	_unregister_hit()
 	if Cost.enabled: Cost.objs_freed += 1
 	queue_free()
 

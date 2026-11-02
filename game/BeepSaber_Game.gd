@@ -243,11 +243,19 @@ func _ready() -> void:
 	# Prewarm the arc ribbon. Arcs are instantiated per spawn rather than pooled, and they
 	# carry a material_override - which Godot's mesh pipeline precompile step explicitly does
 	# not cover - so the first arc of a song can compile a pipeline on the main thread mid-play.
+	# Bombs and walls are instantiated per spawn the same way, so they get the same treatment:
+	# the first of each used to cost a first-of-song hitch.
 	var arc_warm := preload("res://game/Arc/Arc.tscn").instantiate()
 	track.add_child(arc_warm)
+	var bomb_warm := preload("res://game/Bomb/Bomb.tscn").instantiate()
+	track.add_child(bomb_warm)
+	var wall_warm := preload("res://game/Wall/Wall.tscn").instantiate()
+	track.add_child(wall_warm)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	arc_warm.queue_free()
+	bomb_warm.queue_free()
+	wall_warm.queue_free()
 
 	# Deterministic benchmark mode. Only created when a bench flag file exists, so a
 	# normal launch behaves exactly as before. See game/scripts/BenchmarkRunner.gd.
