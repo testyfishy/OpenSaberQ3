@@ -140,7 +140,7 @@ ui_end={
 
 common/physics_jitter_fix=0.0
 3d/physics_engine="GodotPhysics3D"
-common/physics_ticks_per_second=72
+common/physics_ticks_per_second=120
 
 [rendering]
 
@@ -178,10 +178,14 @@ openxr/enabled=true
 openxr/reference_space=2
 openxr/startup_alert=false
 openxr/render_target_size_multiplier=1.2546
+openxr/default_refresh_rate=120
 shaders/enabled=true
 
 [gameplay]
 
 notes/enable_collision_once=true
 notes/isolate_collision_shapes=true
+
+
+
 

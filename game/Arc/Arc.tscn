@@ -25,11 +25,13 @@ polygon = PackedVector2Array(-0.04, 0, 0, 0.04, 0.04, 0, 0, -0.04)
 mode = 2
 path_node = NodePath("..")
 path_interval_type = 0
-path_interval = 0.13
+path_interval = 0.45
 path_simplify_angle = 0.0
 path_rotation = 2
 path_local = true
 path_continuous_u = true
 path_u_distance = 1.0
 path_joined = false
-smooth_faces = true
+smooth_faces = false
+
+

@@ -70,20 +70,22 @@ The "after" column renders **1.57× more pixels**, at a **25% shorter frame budg
 faster and steadier than the baseline. GPU use *fell* from 28.4% to 21.6% of budget because the
 scene is CPU-bound, not fill-rate-bound — which is why raising resolution was affordable.
 
-### 120 Hz status — not yet stable
+### 120 Hz status — shipping, with one known defect
 
-| Metric | 90 Hz | 120 Hz |
+| Metric | 90 Hz | **120 Hz (default)** |
 |---|---|---|
-| Sustained | 89.90 fps | 116.85 fps |
-| Frames on vsync | 99.880% | 99.066% |
-| Dropped events per 120 s | 13 | 131 |
-| GPU `App=` mean | 2.40 ms (21.6%) | 3.26 ms (39.1%) |
-| Main thread `TIME_PROCESS` p95 | 8.26 ms | **10.23 ms vs 8.33 ms budget** |
+| Sustained | 89.90 fps | **116.8 fps** |
+| Frames on vsync | 99.880% | **99.151%** |
+| Dropped events per 120 s | 13 | **119** |
+| GPU `App=` mean | 2.40 ms (21.6%) | 3.26 ms (39.3%) |
+| Frame interval p50 / p95 / p99 | 11.13 / 12.26 / 12.95 ms | **8.43 / 10.09 / 12.14 ms** |
 
-The GPU has room at 120 Hz (39% of budget). It drops frames because main-thread `TIME_PROCESS`
-p95 exceeds the entire 120 Hz frame. That is the current work: attributing and removing those
-main-thread spikes, then re-testing against the 120 Hz gate. **90 Hz is the recommended rate
-today.**
+120 Hz is the default. Physics runs at 120, matching the display, and resolution is native.
+**Known defect: roughly one dropped frame per second** (0.85% of frames). It is not GPU-bound and
+not physics-bound; a once-per-second periodic event is suspected, with Adreno pipeline compilation
+as the leading candidate (Godot disables ubershaders on this GPU family). 90 Hz remains available
+and is measurably cleaner: 99.88% on vsync.
+
 
 ### Baseline v0 detail (before any optimisation)
 

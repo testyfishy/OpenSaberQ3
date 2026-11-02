@@ -129,11 +129,51 @@ part of the noise floor.
 Baseline committed as: **no optimization has been applied yet.** Every later row must beat the
 medians above by more than the spread.
 
-### v2 — 2026-11-01 — 90 Hz and 120 Hz, physics matched to display, native resolution
+### Measurement correction — 2026-11-01 (applies to every row above)
+
+Reading Godot 4.6 `main.cpp` established two facts that change how the earlier tables must be
+interpreted:
+
+1. **`Performance.TIME_PROCESS` includes render submission.** The process timer is closed after
+   `RenderingServer::sync()` and `draw()`, so it covers pipeline creation, command recording and
+   `xrEndFrame` present — not just game logic.
+2. **It is a once-per-second maximum, not a per-frame value.** The monitor is written inside
+   `if (frame > 1000000)`, i.e. once per second, holding the worst frame of that second.
+
+Therefore every `TIME_PROCESS` p95/p99 in this file means "in 95%/99% of *seconds*, the worst frame
+was this long". In particular the ~120 dropped frames per 120 s at 120 Hz is **~1 dropped frame per
+second**, which points at a periodic once-per-second event rather than a random tail.
+`TIME_PHYSICS_PROCESS` is written in the same block and is subject to the same caveat.
+
+The correct rig (per-frame ring buffer, script self-time from `process_priority` -1000/+1000, and
+`RenderingServer.frame_pre_draw`/`frame_post_draw` timestamps, cross-checked against VrApi `Stale`)
+is specified and **not yet implemented**. Until it is, per-frame tail conclusions in this file are
+directional, not exact.
+
+### v7 — 2026-11-01 — collision fixes and arc tessellation
+
+| Metric | v4 (120 Hz) | v7 (120 Hz) |
+|---|---|---|
+| On vsync | 99.122 % | 99.144 % |
+| Dropped / 120 s | 123 | 120 |
+| Physics p95 (see caveat) | 5.83 ms | **3.66 ms** |
+| Arcs disabled (A/B) | 104 drops, physics p95 3.61 | — |
+
+Changes: redundant per-tick `CollisionShape3D.disabled` writes removed; shared `BoxShape3D`
+mutation isolated per instance (a correctness defect where the last-spawned note set every live
+note's hitbox); arc CSG tessellation reduced (`path_interval` 0.13 → 0.45, smoothing off).
+
+**Final configuration for this release:** refresh 90 Hz default (`xr/openxr/default_refresh_rate`),
+physics 90 Hz (matching the display), render target 2107×2208/eye, MSAA 4×, collision fixes on.
+120 Hz remains available by request but is **not** the default: it sustains 116.8 fps with ~1 %
+stale frames, which is visible judder in a rhythm game.
+
 
 Same workload/conditions as v0/v1. Validity flags now recorded per run: `refresh_request_honoured=true`
 and `physics_matches_display=true` on both rows (the earlier runs had physics pinned to a stale
 rate; that is fixed and proven, not asserted).
+
+### v2 — 2026-11-01 — 90 Hz and 120 Hz, physics matched to display, native resolution
 
 | Metric | v0 (72 Hz) | **v2 90 Hz** | **v2 120 Hz** |
 |---|---|---|---|

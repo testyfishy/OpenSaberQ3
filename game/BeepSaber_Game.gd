@@ -231,7 +231,16 @@ func _ready() -> void:
 	($pre_renderer as Node3D).queue_free()
 	
 	recenter()
-	
+
+	# Prewarm the arc ribbon. Arcs are instantiated per spawn rather than pooled, and they
+	# carry a material_override - which Godot's mesh pipeline precompile step explicitly does
+	# not cover - so the first arc of a song can compile a pipeline on the main thread mid-play.
+	var arc_warm := preload("res://game/Arc/Arc.tscn").instantiate()
+	track.add_child(arc_warm)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	arc_warm.queue_free()
+
 	# Deterministic benchmark mode. Only created when a bench flag file exists, so a
 	# normal launch behaves exactly as before. See game/scripts/BenchmarkRunner.gd.
 	if BenchmarkRunnerScript.has_bench_flag():
@@ -241,6 +250,13 @@ func _apply_render_scale() -> void:
 	var iface := XRServer.primary_interface
 	if iface == null:
 		return
+	# Refresh rate first: the runtime chooses a default (120 Hz on Quest 3 once rates are
+	# unlocked), and 120 drops ~0.9% of frames until the main-thread tail is fixed. Pin the
+	# rate we can actually hold so normal play is smooth; the benchmark can override it.
+	var want_hz := float(ProjectSettings.get_setting("xr/openxr/default_refresh_rate", 0.0))
+	if want_hz > 0.0 and iface.has_method("set_display_refresh_rate"):
+		iface.set_display_refresh_rate(want_hz)
+		vr.log_info("display refresh requested: %.0f Hz" % want_hz)
 	var scale := float(ProjectSettings.get_setting("xr/openxr/render_target_size_multiplier", 1.0))
 	if scale <= 1.0:
 		return
