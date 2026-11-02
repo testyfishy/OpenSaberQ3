@@ -9,7 +9,6 @@ signal apply()
 # Visual additions (FR-045..FR-048).
 @onready var floor_light_control := $ScrollContainer/VBox/floor_light as CheckButton
 @onready var saber_halo_control := $ScrollContainer/VBox/saber_halo as CheckButton
-@onready var note_halo_control := $ScrollContainer/VBox/note_halo as CheckButton
 @onready var mirror_reflections_control := $ScrollContainer/VBox/mirror_reflections as CheckButton
 @onready var saber_tail_control := $ScrollContainer/VBox/saber_tail as CheckButton
 @onready var saber_thickness := $ScrollContainer/VBox/SaberThicknessRow/saber_thickness as HSlider
@@ -88,7 +87,6 @@ func set_controls_from_settings() -> void:
 	glare_control.button_pressed = Settings.glare
 	floor_light_control.button_pressed = Settings.floor_light
 	saber_halo_control.button_pressed = Settings.saber_halo
-	note_halo_control.button_pressed = Settings.note_halo
 	mirror_reflections_control.button_pressed = Settings.mirror_reflections
 	d_background.button_pressed = Settings.events
 	saber_control.select(Settings.saber_visual)
@@ -199,9 +197,6 @@ func _on_floor_light_toggled(button_pressed: bool) -> void:
 
 func _on_saber_halo_toggled(button_pressed: bool) -> void:
 	Settings.saber_halo = button_pressed
-
-func _on_note_halo_toggled(button_pressed: bool) -> void:
-	Settings.note_halo = button_pressed
 
 func _on_mirror_reflections_toggled(button_pressed: bool) -> void:
 	Settings.mirror_reflections = button_pressed
@@ -342,3 +337,4 @@ func _on_recenter_button_up() -> void:
 	recenter_button.text = "Recenter"
 	recenter_button.disabled = false
 	beepsaber_game.recenter()
+

@@ -28,6 +28,10 @@ func _init(parent: Node3D, mesh_in: Mesh, mat_in: ShaderMaterial, bouncy: bool) 
 	mesh.mesh = mesh_in
 	mesh.layers = 3 # visible to both spectator and player
 	mesh.material_override = mat_in
+	# The note's per-instance look (colour, dot flag, edge mask size) lives on the
+	# MeshInstance3D, not on the shared material (FR-002), so a cut piece has to be told
+	# about it explicitly - it does not inherit the note's instance parameters.
+	mesh.set_instance_shader_parameter(&"note_half_extent", mesh_in.get_aabb().size * 0.5)
 	
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(0.25, 0.25, 0.125)
@@ -51,10 +55,13 @@ func start_cut(dist_from_center, angle) -> void:
 	mesh.material_override.set_shader_parameter(&"cut_angle", angle)
 
 func set_color(new_color: Color) -> void:
-	mesh.material_override.set_shader_parameter(&"color", new_color)
-	
+	mesh.set_instance_shader_parameter(&"note_color", new_color)
+
+func set_dot(value: bool) -> void:
+	mesh.set_instance_shader_parameter(&"note_is_dot", 1.0 if value else 0.0)
+
 func set_chain_head(is_chain_head: bool) -> void:
-	mesh.material_override.set_shader_parameter(&"is_chain_head", is_chain_head)
+	mesh.set_instance_shader_parameter(&"note_chain_head", 1.0 if is_chain_head else 0.0)
 
 func hide_piece():
 	visible = false

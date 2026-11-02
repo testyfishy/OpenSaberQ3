@@ -455,12 +455,6 @@ tooltip_text = "Additive emissive halo around each blade. One extra draw call pe
 theme = SubResource("3")
 text = "Saber Halo: "
 
-[node name="note_halo" type="CheckButton" parent="ScrollContainer/VBox"]
-layout_mode = 2
-tooltip_text = "Low Performance impact*\nAdditive edge glow on notes: one extra draw call per visible note. Off until it is measured on the headset."
-theme = SubResource("3")
-text = "*Note Halo: "
-
 [node name="mirror_reflections" type="CheckButton" parent="ScrollContainer/VBox"]
 layout_mode = 2
 tooltip_text = "High Performance impact*\nMirrors sabers and notes under a slightly translucent floor. Doubles the draw calls for those objects. Visual only: no collision, no Area3D, so the hit test cannot see it."
@@ -748,7 +742,6 @@ scroll_node_path = NodePath("../ScrollContainer")
 [connection signal="toggled" from="ScrollContainer/VBox/glare" to="." method="_on_glare_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/floor_light" to="." method="_on_floor_light_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/saber_halo" to="." method="_on_saber_halo_toggled"]
-[connection signal="toggled" from="ScrollContainer/VBox/note_halo" to="." method="_on_note_halo_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/mirror_reflections" to="." method="_on_mirror_reflections_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/saber_tail" to="." method="_on_saber_tail_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/show_debug" to="." method="_on_show_debug_toggled"]

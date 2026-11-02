@@ -136,14 +136,52 @@ var saber_halo: bool:
 	set(value):
 		saber_halo = value
 		set_and_emit(&"saber_halo", value)
-var note_halo: bool:
-	set(value):
-		note_halo = value
-		set_and_emit(&"note_halo", value)
 var mirror_reflections: bool:
 	set(value):
 		mirror_reflections = value
 		set_and_emit(&"mirror_reflections", value)
+
+# --- Round 2 visual work (specs/007-visual-options FR-001..FR-010). Same rule as above:
+# every addition is a switch. The first five cost extra maths inside a pass that already
+# runs, so they ship on; the last three add draws or overdraw, so they ship off and wait
+# for a measurement (FR-049).
+#
+# `note_halo` is gone on purpose: the note glow is EMISSION inside BeepCube.gdshader now
+# (FR-001), so the shell mesh, its material and this key had nothing left to switch. An
+# old config.ini that still contains note_halo is simply ignored - reload() only ever
+# reads keys that are in `default_values`.
+var note_edge_glow: bool:
+	set(value):
+		note_edge_glow = value
+		set_and_emit(&"note_edge_glow", value)
+var hit_flash: bool:
+	set(value):
+		hit_flash = value
+		set_and_emit(&"hit_flash", value)
+var note_map_colors: bool:
+	set(value):
+		note_map_colors = value
+		set_and_emit(&"note_map_colors", value)
+var event_tint: bool:
+	set(value):
+		event_tint = value
+		set_and_emit(&"event_tint", value)
+var floor_grid: bool:
+	set(value):
+		floor_grid = value
+		set_and_emit(&"floor_grid", value)
+var sky_gradient: bool:
+	set(value):
+		sky_gradient = value
+		set_and_emit(&"sky_gradient", value)
+var wall_fresnel: bool:
+	set(value):
+		wall_fresnel = value
+		set_and_emit(&"wall_fresnel", value)
+var debris_cap: bool:
+	set(value):
+		debris_cap = value
+		set_and_emit(&"debris_cap", value)
 
 # --- BeatSaver browser state (specs/005-beatsaver-browser, FR-011). Only the sort and the filter
 # set are remembered; the search text and the current page are deliberately not.
@@ -242,8 +280,18 @@ var default_values = {
 	# Visual (FR-045..FR-047). 1 and 2 on, 3 and 4 off: the user judges those two visually.
 	floor_light = true,
 	saber_halo = true,
-	note_halo = false,
 	mirror_reflections = false,
+	# Round 2 (specs/007-visual-options). `sky_gradient` ships off although the brief asked
+	# for on: it replaces the game's background art, and FR-049 gates additions on
+	# measurement, so the panorama stays unless the player chooses otherwise.
+	note_edge_glow = true,
+	hit_flash = true,
+	note_map_colors = true,
+	event_tint = true,
+	floor_grid = true,
+	sky_gradient = false,
+	wall_fresnel = false,
+	debris_cap = false,
 	beatsaver_order = "Latest",
 	beatsaver_curated = false,
 	beatsaver_verified = false,

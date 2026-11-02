@@ -7,6 +7,9 @@ var line_layer: int
 var color: int # 0=left, 1=right
 var cut_direction: int
 var angle_offset: int
+# Per-note colour from the map (FR per-note colour). Transparent means "not specified", so the
+# game falls back to the map's scheme colour and then to settings.
+var custom_color: Color = Color(0.0, 0.0, 0.0, 0.0)
 
 @warning_ignore("shadowed_variable")
 func _init(beat: float, line_index: int, line_layer: int, color: int, cut_direction: int, angle_offset: int) -> void:
@@ -18,7 +21,7 @@ func _init(beat: float, line_index: int, line_layer: int, color: int, cut_direct
 	self.angle_offset = angle_offset
 
 static func new_v2(note_dict: Dictionary) -> ColorNoteInfo:
-	return ColorNoteInfo.new(
+	var note := ColorNoteInfo.new(
 		Utils.get_float(note_dict, "_time", 0.0),
 		int(Utils.get_float(note_dict, "_lineIndex", 0)),
 		int(Utils.get_float(note_dict, "_lineLayer", 0)),
@@ -26,9 +29,11 @@ static func new_v2(note_dict: Dictionary) -> ColorNoteInfo:
 		int(Utils.get_float(note_dict, "_cutDirection", 0)),
 		0
 	)
+	note.custom_color = _read_custom_color(note_dict)
+	return note
 
 static func new_v3(note_dict: Dictionary) -> ColorNoteInfo:
-	return ColorNoteInfo.new(
+	var note := ColorNoteInfo.new(
 		Utils.get_float(note_dict, "b", 0.0),
 		int(Utils.get_float(note_dict, "x", 0)),
 		int(Utils.get_float(note_dict, "y", 0)),
@@ -36,3 +41,20 @@ static func new_v3(note_dict: Dictionary) -> ColorNoteInfo:
 		int(Utils.get_float(note_dict, "d", 0)),
 		int(Utils.get_float(note_dict, "a", 0))
 	)
+	note.custom_color = _read_custom_color(note_dict)
+	return note
+
+# Maps express this differently per format: v2 uses `_customData._color` as {r,g,b},
+# v3 embeds `customData.color`. Returns transparent when absent so callers can fall back.
+static func _read_custom_color(note_dict: Dictionary) -> Color:
+	var cd = note_dict.get("_customData", note_dict.get("customData", null))
+	if cd is not Dictionary:
+		return Color(0.0, 0.0, 0.0, 0.0)
+	var c = cd.get("_color", cd.get("color", null))
+	if c is Dictionary:
+		return Color(
+			float(c.get("r", 1.0)),
+			float(c.get("g", 1.0)),
+			float(c.get("b", 1.0)),
+			1.0)
+	return Color(0.0, 0.0, 0.0, 0.0)

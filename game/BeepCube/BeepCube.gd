@@ -12,8 +12,8 @@ signal cutted(correct_saber: bool)
 
 # Visual-only additions (FR-046, FR-047). Both are plain MeshInstance3D nodes: no Area3D,
 # no CollisionShape3D and no script, so Cuttable._register_hit (which only ever walks Area3D
-# children) and the physics server cannot see either of them.
-@onready var halo := $BeepCubeMesh/Halo as MeshInstance3D
+# children) and the physics server cannot see them.
+# The note's own glow is no longer a node: it is EMISSION inside BeepCube.gdshader (FR-001).
 @onready var mirror := $Mirror as MeshInstance3D
 
 var which_saber: int
@@ -23,8 +23,10 @@ var is_dot: bool
 # reuse it when we create the cut cube pieces
 var _mesh: Mesh
 var _mat: ShaderMaterial
-var _halo_mat: ShaderMaterial
 var _mirror_mat: ShaderMaterial
+# Mesh-space half extent, for the edge mask in the shader. One value per note because the
+# uniform is an `instance uniform`, so it costs one write per instance and no material.
+var _half_extent := Vector3(0.5, 0.5, 0.5)
 @export var min_speed := 0.5
 
 # The mirror is a flip about the world y = 0 plane, applied in the cube's own parent frame.
@@ -40,14 +42,16 @@ var piece_right : CutPiece = null
 
 func _ready() -> void:
 	_mat = mi.material_override as ShaderMaterial
-	_halo_mat = halo.material_override as ShaderMaterial
 	_mirror_mat = mirror.material_override as ShaderMaterial
 	_mesh = mi.mesh
-	# The halos share the cube's own mesh instead of duplicating it: same vertices, same
-	# vertex budget, one extra draw call per note and nothing else.
-	halo.mesh = _mesh
+	# The mirror shares the cube's own mesh instead of duplicating it: same vertices, same
+	# vertex budget, one extra draw call per note and nothing else. The mirror hides unless
+	# the setting is on (spawn() decides), so it gets its mesh here either way.
 	mirror.mesh = _mesh
-	_halo_mat.set_shader_parameter(&"half_extent", _mesh.get_aabb().size * 0.5)
+	_half_extent = _mesh.get_aabb().size * 0.5
+	# `note_half_extent` is an instance uniform: it is the same for every note but belongs
+	# to the instance, so the shared material does not have to be duplicated (FR-002).
+	mi.set_instance_shader_parameter(&"note_half_extent", _half_extent)
 	mirror.visible = false
 	
 	if bool(ProjectSettings.get_setting(SETTING_ISOLATE_SHAPES, false)):
@@ -69,6 +73,11 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	
 	var color := Map.color_left if note_info.color == 0 else Map.color_right
+	# FR-004: a colour the map puts on this one note wins over the scheme, which in turn
+	# already fell back to Settings when the map had none. `disable_map_color` suppresses
+	# both, so settings win outright.
+	if Settings.note_map_colors and not Settings.disable_map_color and note_info.custom_color.a > 0.0:
+		color = note_info.custom_color
 	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute * 0.016666666666666667
 	beat = note_info.beat
 	which_saber = note_info.color
@@ -87,13 +96,14 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	
 	piece_left.set_color(color)
 	piece_right.set_color(color)
-	_mat.set_shader_parameter(&"color", color)
-	_halo_mat.set_shader_parameter(&"color", color)
+	# Instance uniforms, not material parameters: `_mat` is shared by every live note now,
+	# so a material write here would repaint all of them (FR-002).
+	mi.set_instance_shader_parameter(&"note_color", color)
+	mi.set_instance_shader_parameter(&"note_is_dot", 1.0 if is_dot else 0.0)
 	_mirror_mat.set_shader_parameter(&"color", color)
-	_mat.set_shader_parameter(&"is_dot", is_dot)
 	# since cube instances get recycled, we gotta reset cubes that were chain
 	# heads in a past life
-	_mat.set_shader_parameter(&"is_chain_head", false)
+	mi.set_instance_shader_parameter(&"note_chain_head", 0.0)
 	piece_left.set_chain_head(false)
 	piece_right.set_chain_head(false)
 	
@@ -119,7 +129,6 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	
 	slice_particles.reset()
 	mi.visible = true
-	halo.visible = Settings.note_halo
 	_update_mirror()
 	mirror.visible = Settings.mirror_reflections
 
@@ -153,7 +162,7 @@ func hide_cube() -> void:
 	process_mode = Node.PROCESS_MODE_DISABLED
 
 func make_chain_head() -> void:
-	_mat.set_shader_parameter(&"is_chain_head", true)
+	mi.set_instance_shader_parameter(&"note_chain_head", 1.0)
 	piece_left.set_chain_head(true)
 	piece_right.set_chain_head(true)
 
