@@ -53,10 +53,12 @@ func _enable_once_mode() -> bool:
 		_enable_once = 1 if bool(ProjectSettings.get_setting(SETTING_ENABLE_ONCE, false)) else 0
 	return _enable_once == 1
 
-# overriden by bombs and cubes
+# overriden by bombs and cubes.
+# Returns the hit data the sabre needs for its hit sound; null when the cuttable
+# has none (chain links). See HitInfo.gd.
 @warning_ignore("unused_parameter")
-func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: BeepSaberController) -> void:
-	return
+func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: BeepSaberController) -> HitInfo:
+	return null
 
 # this too
 func on_miss() -> void:

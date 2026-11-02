@@ -361,6 +361,9 @@ shader = ExtResource("5")
 shader_parameter/color = Vector4(1, 0, 0, 1)
 shader_parameter/center_color = Vector4(0, 0, 0, 1)
 
+[sub_resource type="AudioStreamPolyphonic" id="AudioStreamPolyphonic_hit"]
+polyphony = 10
+
 [node name="particle_saber" type="Node3D"]
 script = ExtResource("1")
 
@@ -409,12 +412,15 @@ transform = Transform3D(2.4869e-14, -12.6557, 0.240074, -5.33065e-07, 0.249189, 
 remote_path = NodePath("../../tail")
 
 [node name="hitsound" type="AudioStreamPlayer3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.753543, 0)
-stream = ExtResource("3")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.255, 0)
+stream = SubResource("AudioStreamPolyphonic_hit")
 attenuation_model = 3
+attenuation_filter_cutoff_hz = 20500.0
+panning_strength = 0.85
 volume_db = 1.0
 bus = &"SFX"
 
 [node name="tail" parent="." instance=ExtResource("8_m1jst")]
 transform = Transform3D(0.999998, -6.66134e-16, -1.3145e-13, -5.39704e-17, 0.9998, -0.0189659, -7.10543e-14, 0.0204335, 0.99981, -9.96203e-18, 0.048214, 2.27911e-10)
 size = 1.2
+

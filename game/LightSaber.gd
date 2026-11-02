@@ -133,14 +133,16 @@ func _handle_area_collided(area: Area3D) -> void:
 		(note.beat/Map.current_info.beats_per_minute * 60.0)-
 		song_player_ref.get_playback_position()
 	)
-	saber_visual.hit(time_offset)
-	controller.simple_rumble(0.75, 0.1)
-	
 	var o := controller.global_transform.origin
 	var controller_speed: Vector3 = (saber_end - saber_end_past) / last_dt
 	const BEAT_DISTANCE := 4.0
 	var cutplane := Plane(o, saber_end, saber_end_past + Vector3(0, 0, BEAT_DISTANCE * Map.current_info.beats_per_minute * last_dt / 30)) # Account for relative position to track speed
-	note.cut(type, controller_speed, cutplane, controller)
+	# The cut scores the hit and hands back the components it computed, so the
+	# hit sound is driven by the real numbers instead of a second copy of the
+	# maths. `note` is not touched after this call (it may go back to the pool).
+	var info := note.cut(type, controller_speed, cutplane, controller)
+	saber_visual.hit(time_offset, info)
+	controller.simple_rumble(0.75, 0.1)
 
 func _on_AnimationPlayer_animation_started(_anim_name: StringName) -> void:
 	_swing_cast.adjust_segments = true

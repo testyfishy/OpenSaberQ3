@@ -1,6 +1,71 @@
 extends Node3D
 class_name DefaultSaber
 
+# Hit-feedback audio. Design and every number here: specs/002-hit-audio-research/research.md
+# (§3 mapping, §5 mechanism). Summary:
+#
+#   * one AudioStreamPlayer3D per saber carrying an AudioStreamPolyphonic, so
+#     overlapping hits get a voice each instead of cutting each other off;
+#   * per-voice sample, gain and pitch come from the cut data the note returned
+#     (HitInfo), which is why `hit()` takes the info rather than just a time;
+#   * all voices are mixed first and then panned/attenuated at this node's
+#     current transform, so the sound is always at the saber tip.
+#
+# The player's `pitch_scale`/`volume_db` are node-wide and shared by every voice,
+# and `max_polyphony` cannot give a voice its own pitch — that is why neither is
+# used here.
+
+const POLYPHONY := 8
+
+# Sample pools. Generated procedurally by tools/audio/gen_hitsounds.py, so there
+# is no licensing obligation attached (ATTRIBUTION.md).
+#   soft: pre-darkened (the soft layer *is* the low-pass; a polyphonic voice has
+#         no per-voice DSP and the node's filter would hit every voice)
+#   dull: wrong-saber / bomb set
+const SOFT: Array[AudioStream] = [
+	preload("res://game/data/hits/soft_01.wav"),
+	preload("res://game/data/hits/soft_02.wav"),
+	preload("res://game/data/hits/soft_03.wav"),
+]
+const HARD: Array[AudioStream] = [
+	preload("res://game/data/hits/hard_01.wav"),
+	preload("res://game/data/hits/hard_02.wav"),
+	preload("res://game/data/hits/hard_03.wav"),
+]
+const ACCENT: Array[AudioStream] = [
+	preload("res://game/data/hits/accent_01.wav"),
+]
+const DULL: Array[AudioStream] = [
+	preload("res://game/data/hits/dull_01.wav"),
+	preload("res://game/data/hits/dull_02.wav"),
+]
+
+# Gain budget (FR-012): the three gesture terms span at most -8 dB, the jitter
+# +/-0.5 dB is counted inside the clamp, and the total span is exactly 9 dB.
+# Split into terms and clamped once, rather than summed wide and clamped after
+# (which would flatten every slow off-centre hit onto the same floor).
+const SPEED_GAIN_MIN_DB := -6.0     # at SPEED_REF_MIN m/s
+const SPEED_GAIN_MAX_DB := 0.0      # at SPEED_REF_MAX m/s
+const SPEED_REF_MIN := 1.0
+const SPEED_REF_MAX := 8.0
+const DIST_GAIN_MIN_DB := -1.5      # centrality 0
+const TRAVEL_GAIN_MIN_DB := -0.5    # travel 0
+const JITTER_DB := 0.5
+const GAIN_MIN_DB := -8.5
+const GAIN_MAX_DB := 0.5
+
+# Layer thresholds.
+const LAYER_SOFT_MAX_SPEED := 3.0   # below this -> soft layer
+const LAYER_HARD_MAX_SPEED := 7.0   # above this -> hard + accent
+const ANGLE_SOFT_THRESHOLD := 0.5   # glancing cut sounds dull whatever the speed
+const BEAT_ACCENT_MIN := 0.2        # far off the beat: drop the accent layer
+
+# Pitch is jitter only: no pitch->score mapping ships anywhere credible, and
+# key data does not exist in this map format (research.md §3, "key-lock").
+const PITCH_JITTER_ST := 1.0        # FR-012 ceiling is +/-2 st
+const BAD_CUT_GAIN_DB := -3.0       # wrong saber / bomb, on the dull set
+const CHAIN_TAP_GAIN_DB := -4.0     # no hit data at all: a light tap
+
 var is_extended := false
 
 @onready var _anim := $AnimationPlayer as AnimationPlayer
@@ -10,16 +75,35 @@ var is_extended := false
 @onready var tail := $tail as SaberTail
 @onready var hitsound := $hitsound as AudioStreamPlayer3D
 
-# Pending delayed hit sounds, in seconds remaining. A hit whose note is a little
-# in the future plays its sound when that beat arrives; this used to be an
-# `await get_tree().create_timer(...)`, i.e. a SceneTreeTimer plus a coroutine per
-# hit (FR-033: per-hit allocation on the gameplay path). A SceneTreeTimer only
-# fires on a process frame anyway, so polling here has the same timing.
-var _pending_hits: Array[float] = []
+# The polyphonic playback, obtained once from the player. Every later hit is a
+# `play_stream` on this object; the player itself is never played again, because
+# a second play()/stop() creates a new playback and silences every live voice.
+var _voices: AudioStreamPlaybackPolyphonic = null
+
+# Fixed ring of voice ids, oldest at `_voice_next`. Used to steal the oldest
+# still-playing voice when the pool is full, instead of relying on engine order.
+var _voice_ids := PackedInt32Array()
+var _voice_next := 0
+
+# Last variant played per pool, so round-robin never repeats immediately.
+var _last_variant := {}
+
+# Pending delayed hit sounds: `{remaining: float, info: HitInfo}`. A hit whose
+# note is a little in the future plays its sound when that beat arrives; this
+# used to be an `await get_tree().create_timer(...)`, i.e. a SceneTreeTimer plus
+# a coroutine per hit (FR-033: per-hit allocation on the gameplay path). A
+# SceneTreeTimer only fires on a process frame anyway, so polling here has the
+# same timing. The info travels with the delay so the sound keeps the gesture
+# data it was struck with.
+var _pending_hits: Array[Dictionary] = []
 
 func _ready() -> void:
 	set_process(false)
 	quickhide()
+	# Exactly one play() for the lifetime of this node, then cache the playback.
+	if hitsound.stream is AudioStreamPolyphonic:
+		hitsound.play()
+		_voices = hitsound.get_stream_playback() as AudioStreamPlaybackPolyphonic
 
 func _process(delta: float) -> void:
 	if _pending_hits.is_empty():
@@ -27,10 +111,11 @@ func _process(delta: float) -> void:
 		return
 	var i := 0
 	while i < _pending_hits.size():
-		_pending_hits[i] -= delta
-		if _pending_hits[i] <= 0.0:
+		_pending_hits[i]["remaining"] -= delta
+		if _pending_hits[i]["remaining"] <= 0.0:
+			var info: HitInfo = _pending_hits[i]["info"]
 			_pending_hits.remove_at(i)
-			hitsound.play()
+			_fire(info, 0.0)
 		else:
 			i += 1
 
@@ -57,12 +142,133 @@ func quickhide() -> void:
 	_anim.play(&"QuickHide")
 	is_extended = false
 
-func hit(time_offset: float) -> void:
-	if time_offset>0.2 or time_offset<-0.05:
-		hitsound.play()
+# `info` is null when the cuttable has no hit data (chain links).
+func hit(time_offset: float, info: HitInfo = null) -> void:
+	if time_offset > 0.2 or time_offset < -0.05:
+		_fire(info, 0.0)
 	else:
-		if time_offset <= 0:
-			hitsound.play(-time_offset)
+		if time_offset <= 0.0:
+			# Already late: skip into the sample instead of starting it late.
+			_fire(info, maxf(0.0, -time_offset))
 		else:
-			_pending_hits.append(time_offset)
+			_pending_hits.append({"remaining": time_offset, "info": info})
 			set_process(true)
+
+# Gain -> layer -> pitch -> voices. One function so the mapping stays readable
+# and the pending-hit path and the immediate path cannot drift apart.
+func _fire(info: HitInfo, from_offset: float) -> void:
+	var gain_db := 0.0
+	var pool: Array = HARD
+	var pool_key := &"hard"
+	var accent := false
+	
+	if info == null:
+		# Chain link: no scoring data, keep the old "a cut happened" cue.
+		pool = SOFT
+		pool_key = &"soft"
+		gain_db = CHAIN_TAP_GAIN_DB
+	elif info.kind == HitInfo.Kind.BAD:
+		# A different, duller set: the sound should tell you it was wrong.
+		pool = DULL
+		pool_key = &"dull"
+		gain_db = BAD_CUT_GAIN_DB
+	else:
+		var speed_gain := remap(
+			clampf(info.speed_len, SPEED_REF_MIN, SPEED_REF_MAX),
+			SPEED_REF_MIN, SPEED_REF_MAX, SPEED_GAIN_MIN_DB, SPEED_GAIN_MAX_DB)
+		var centrality_gain := remap(clampf(info.dist_acc, 0.0, 1.0), 0.0, 1.0, DIST_GAIN_MIN_DB, 0.0)
+		var travel_trim := remap(clampf(info.travel, 0.0, 1.0), 0.0, 1.0, TRAVEL_GAIN_MIN_DB, 0.0)
+		gain_db = clampf(
+			speed_gain + centrality_gain + travel_trim + randf_range(-JITTER_DB, JITTER_DB),
+			GAIN_MIN_DB, GAIN_MAX_DB)
+		
+		if info.angle_acc < ANGLE_SOFT_THRESHOLD or info.speed_len < LAYER_SOFT_MAX_SPEED:
+			pool = SOFT
+			pool_key = &"soft"
+		elif info.speed_len <= LAYER_HARD_MAX_SPEED:
+			pool = HARD
+			pool_key = &"hard"
+		else:
+			pool = HARD
+			pool_key = &"hard"
+			# Far off the beat, the accent would only smear the timing.
+			accent = info.beat_acc >= BEAT_ACCENT_MIN
+	
+	var semitones := randf_range(-PITCH_JITTER_ST, PITCH_JITTER_ST)
+	_play(_pick(pool, pool_key), gain_db, semitones, from_offset)
+	if accent:
+		# The accent stacks on top of the hard layer, so it must sit below it or the pair
+		# breaches the 9 dB total budget. -4 dB is a tuning start (G4).
+		_play(_pick(ACCENT, &"accent"), gain_db - 4.0, semitones, from_offset)
+
+# Round-robin with no immediate repeat (research.md §3 row 13).
+func _pick(pool: Array, key: StringName) -> AudioStream:
+	var n := pool.size()
+	if n == 0:
+		return null
+	var idx := randi() % n
+	var last: int = _last_variant.get(key, -1)
+	if n > 1 and idx == last:
+		idx = (idx + 1 + randi() % (n - 1)) % n
+	_last_variant[key] = idx
+	return pool[idx] as AudioStream
+
+func _play(sample: AudioStream, gain_db: float, semitones: float, from_offset: float) -> void:
+	if sample == null:
+		return
+	# Pause, a tree re-entry or a saber swap can stop the parent player, and the
+	# cached playback would then be dead without any error. Re-arm before each
+	# hit rather than assuming the _ready() play() still holds.
+	if not hitsound.playing:
+		hitsound.play()
+		_voices = hitsound.get_stream_playback() as AudioStreamPlaybackPolyphonic
+	if _voices == null:
+		return
+	
+	var ratio := pow(2.0, semitones / 12.0)
+	# Godot marks a stopped stream inactive only on the NEXT audio mix, so stopping a
+	# voice and immediately calling play_stream would still return INVALID_ID and the
+	# newest hit would be the one dropped. The stream is therefore configured with
+	# POLYPHONY + 2 slots (see the .tscn): we cap ourselves at POLYPHONY, so after a
+	# steal there is always a spare slot to play into without a retry.
+	if _active_voice_count() >= POLYPHONY:
+		_steal_oldest()
+	# p_bus is only honoured on the Web PLAYBACK_TYPE_SAMPLE path; on native the voice
+	# is mixed by the player and routed by the node's own `bus` property, which is SFX.
+	var id := _voices.play_stream(sample, from_offset, gain_db, ratio, 0, &"SFX")
+	if id == AudioStreamPlaybackPolyphonic.INVALID_ID:
+		return
+	_remember(id)
+
+# Voices still actually playing. A stolen voice lingers here until the next mix, so
+# this is deliberately the same check the steal path uses.
+func _active_voice_count() -> int:
+	if _voices == null:
+		return 0
+	var count := 0
+	for id in _voice_ids:
+		if id != AudioStreamPlaybackPolyphonic.INVALID_ID and _voices.is_stream_playing(id):
+			count += 1
+	return count
+
+func _remember(id: int) -> void:
+	if _voice_ids.size() < POLYPHONY:
+		_voice_ids.append(id)
+		_voice_next = _voice_ids.size() % POLYPHONY
+	else:
+		_voice_ids[_voice_next] = id
+		_voice_next = (_voice_next + 1) % POLYPHONY
+
+# Oldest-first steal. Dead ids are skipped on the way past, so the ring cleans
+# itself up without a separate sweep.
+func _steal_oldest() -> bool:
+	var n := _voice_ids.size()
+	for k in n:
+		var idx := (_voice_next + k) % n
+		var id := _voice_ids[idx]
+		if id == AudioStreamPlaybackPolyphonic.INVALID_ID:
+			continue
+		if _voices != null and _voices.is_stream_playing(id):
+			_voices.stop_stream(id)
+			return true
+	return false

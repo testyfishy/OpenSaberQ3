@@ -22,6 +22,13 @@ redistribution are permitted by that licence provided the notice is kept — whi
 | "Time Lapse" demo track | TheFatRat | per upstream `LICENSE`/credits | bundled demo song, not part of the engine work |
 | BeepSaber logo, UI art, saber models | upstream authors | MIT unless noted | inherited; see `LICENSE` |
 | Nightsky skybox | ESO / S. Brunier | **CC-BY-4.0** | `https://www.eso.org/public/images/eso0932a/` — attribution required. Present in `arpruss/OpenSaberPlus`, **not** in this fork's base. If cherry-picked, this credit must ship with it |
+| Hit-feedback one-shots — `game/data/hits/{soft,hard,dull}_0{1,2,3}.wav`, `accent_01.wav` (9 files) | generated for this fork by `tools/audio/gen_hitsounds.py` | **MIT** (same as this repository) | No third-party samples, so no attribution obligation. Synthesised from scratch (deterministic seeds); regenerating produces byte-identical files. Provenance: created 2026-11-01 for `specs/002-hit-audio-research` |
+
+Retired hit stream: `game/data/beepcube_cut.ogg` had no provenance record (violating the rule
+below), so it was removed 2026-11-01 and replaced by the generated one-shots above.
+`game/sabers/particles/sword_clash.{8a,10}.ogg` are inherited from upstream BeepSaber and are
+still referenced by the particle saber's animation track; no upstream provenance record exists
+for them either — they are no longer used for hit feedback.
 
 If an asset's provenance cannot be established, it does not ship. See spec FR-029.
 

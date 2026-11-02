@@ -8,17 +8,19 @@ func _sub_ready() -> void:
 
 var last_tip_pos := Vector3.ZERO
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	# Hit sounds are owned by DefaultSaber: this override used to swallow the
+	# pending-hit queue (a future-beat hit never fired and the array grew), so
+	# drain it first. There is deliberately no hit() override here any more —
+	# the old one called play() then wrote pitch_scale, which fought the
+	# polyphonic playback (one play() kills every live voice).
+	super._process(delta)
 	var current_tip_pos := tip.global_transform.origin
 	var speed := (current_tip_pos-last_tip_pos).length()
 	if is_instance_valid(particles):
 		particles.speed_scale = 2.5+(30*speed)
 		#Particles.lifetime = max(0.1, 2-(20*speed))
 	last_tip_pos = current_tip_pos
-
-func hit(time_offset: float) -> void:
-	super(time_offset)
-	hitsound.pitch_scale = randf_range(0.9,1.1)
 
 func set_thickness(_value: float) -> void: #ignore set thinkness on this saber
 	pass

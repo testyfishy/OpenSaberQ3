@@ -124,7 +124,7 @@ func hide_cube() -> void:
 	# disable processing on this node and all children to help with performance
 	process_mode = Node.PROCESS_MODE_DISABLED # disable to help with performance
 
-func cut(saber_type: int, _cut_speed: Vector3, cut_plane: Plane, _controller: BeepSaberController) -> void:
+func cut(saber_type: int, _cut_speed: Vector3, cut_plane: Plane, _controller: BeepSaberController) -> HitInfo:
 	if saber_type == which_saber:
 		Scoreboard.chain_link_cut(transform.origin)
 	else:
@@ -136,6 +136,9 @@ func cut(saber_type: int, _cut_speed: Vector3, cut_plane: Plane, _controller: Be
 		# release() will be called by Cuttable class when it sees both pieces die
 	else:
 		release()# release now instead of waiting for cut pieces to die off
+	# Chain links carry no hit data: the sabre plays its light tap. Nullable by
+	# design, see HitInfo.gd.
+	return null
 
 func on_miss() -> void:
 	Scoreboard.reset_combo()

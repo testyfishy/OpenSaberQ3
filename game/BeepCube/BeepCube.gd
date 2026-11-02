@@ -122,11 +122,17 @@ func set_collision_disabled(value: bool) -> void:
 	collision_big.disabled = value
 	collision_small.disabled = value
 
-func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: BeepSaberController) -> void:
+func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: BeepSaberController) -> HitInfo:
 	# compute the angle between the cube orientation and the cut direction
 	var cut_direction_xy := -Vector3(cut_speed.x, cut_speed.y, 0.0).normalized()
 	var base_cut_angle_accuracy := global_transform.basis.y.dot(cut_direction_xy)
 	var cut_distance := cut_plane.distance_to(global_transform.origin)
+	
+	# The hit sound needs these, so they are returned rather than re-derived by
+	# the sabre (specs/002-hit-audio-research/research.md §3).
+	var info := HitInfo.new()
+	info.speed_len = cut_speed.length()
+	info.note_pos = transform.origin
 	
 	if saber_type == which_saber:
 		var cut_angle_accuracy := clampf((base_cut_angle_accuracy-0.7)/0.3, 0.0, 1.0)
@@ -139,9 +145,15 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 		var beat_accuracy := clampf((1.0 - absf(global_transform.origin.z)) / 0.5, 0.0, 1.0)
 		Scoreboard.note_cut(transform.origin, beat_accuracy, cut_angle_accuracy, cut_distance_accuracy, travel_distance_factor)
 		cutted.emit(true)
+		info.angle_acc = cut_angle_accuracy
+		info.dist_acc = cut_distance_accuracy
+		info.travel = travel_distance_factor
+		info.beat_acc = beat_accuracy
 	else:
 		Scoreboard.bad_cut(transform.origin)
 		cutted.emit(false)
+		info.kind = HitInfo.Kind.BAD
+		info.is_correct_saber = false
 	
 	# reset the movement tracking volume for the next cut
 	controller.reset_movement_aabb()
@@ -152,6 +164,7 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 		# release() will be called by Cuttable class when it sees both pieces die
 	else:
 		release() # release now instead of waiting for cut pieces to die off
+	return info
 
 # cut the cube by creating two rigid bodies and using a CSGBox to create
 # the cut plane
