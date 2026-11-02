@@ -358,6 +358,18 @@ func _start_bot(cfg: ConfigFile) -> void:
 	vr.log_info("BENCH: bot enabled miss_percent=%.1f sway=%s" % [miss_percent, str(sway)])
 
 func _start_recording() -> void:
+	# Refresh-rate changes are asynchronous: the runtime applies them some frames later.
+	# Reading get_display_refresh_rate() right after requesting returns the OLD rate, so
+	# pinning physics there produced 120 Hz physics against a 90 Hz display for a whole run.
+	# Settle here, immediately before recording, and pin physics to what actually applies.
+	var xr_settle := XRServer.primary_interface
+	if xr_settle != null and xr_settle.has_method("get_display_refresh_rate"):
+		var settled := float(xr_settle.get_display_refresh_rate())
+		if settled > 0.0:
+			Engine.physics_ticks_per_second = int(round(settled))
+			_meta["refresh_rate_settled"] = str(settled)
+			_meta["physics_ticks_settled"] = str(Engine.physics_ticks_per_second)
+			vr.log_info("BENCH: settled refresh=%.1f physics=%d" % [settled, Engine.physics_ticks_per_second])
 	_recording = true
 	_start_usec = Time.get_ticks_usec()
 	_prev_usec = _start_usec

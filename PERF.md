@@ -129,7 +129,40 @@ part of the noise floor.
 Baseline committed as: **no optimization has been applied yet.** Every later row must beat the
 medians above by more than the spread.
 
-### Harness validation run (2026-11-01) — superseded by Baseline v0
+### v1 — 2026-11-01 — native resolution at 90 Hz
+
+**Changes vs Baseline v0:** Manifest declares `com.oculus.supportedDevices` (unlocks rates
+above 72), 4× MSAA is now real, physics tick follows the display, render target multiplier is
+applied at runtime, resolution raised from the runtime default to native.
+
+**Workload and conditions:** identical map/difficulty/bot as Baseline v0; release build; 120 s
+runs; USB/charging; cold; all rows focused.
+
+| Metric | Baseline v0 (72 Hz, 1680×1760) | v1 (90 Hz, 2107×2208) |
+|---|---|---|
+| Display refresh granted | 72 Hz | **90 Hz** (`[72, 80, 90, 120]` available) |
+| Sustained frame rate | 71.96 fps | **89.90 fps** |
+| Frames on vsync | 99.876 % | 99.852 % |
+| p50 / p95 / p99 interval | 13.91 / 15.44 / 16.50 ms | 11.13 / 12.24 / 13.07 ms |
+| Frame budget | 13.89 ms | **11.11 ms** |
+| `App=` GPU mean | 3.94 ms (28.4 %) | **2.87 ms (25.8 %)** |
+| Render target per eye | 1680 × 1760 (81 % of panel width) | **2107 × 2208 (native, +2 % width)** |
+| Dropped-frame events | 16 per 180 s | 16 per 120 s |
+
+**Reading:**
+1. **90 Hz was never a performance problem — it was a manifest declaration.** Without
+   `com.oculus.supportedDevices`, Horizon OS ran the app in compatibility mode as an older
+   device and reported exactly one rate. One declaration exposed 72/80/90/120.
+2. **Native resolution is affordable.** Rendering 1.57× more pixels (1680×1760 → 2107×2208) at a
+   20 % shorter frame budget still left GPU at ~26 %, because the scene is CPU-bound, not
+   fill-rate-bound. This is the clarity win, and it is now real rather than a setting that
+   silently did nothing.
+3. **Caveat on this row:** the runtime's refresh change is asynchronous and the harness pinned
+   physics to the *stale* reading (120 Hz physics against a 90 Hz display) for this run. Frame
+   pacing was unaffected, CPU cost was inflated. Fixed by pinning physics at record-start from
+   the settled rate; the corrected row follows as v1a.
+
+### v0 harness validation (2026-11-01)
 
 
 Release build, Godot 4.6.3, Vulkan Forward Mobile, Adreno 740, 72 Hz, charging, cold
