@@ -48,9 +48,46 @@ are the baseline below, taken before them.
 
 ## Measured performance
 
-**Baseline v0** — before any optimisation, upstream `64200ad` built on Godot 4.6.3. Workload:
-`ODDS&ENDS feat. Hatsune Miku` ExpertPlus, bot autoplay, 3 × 180 s runs, 72 Hz, charging, thermal status 0.
-Medians of three runs:
+All runs below are dated, taken on the same Quest 3, with the same workload: `ODDS&ENDS feat.
+Hatsune Miku` ExpertPlus, with an in-engine bot that actually plays the map (it cuts the notes
+through the real collision path, so debris, particles and scoring are all loaded). Method,
+validity rules, per-run spread and caveats: [`PERF.md`](PERF.md).
+
+### Before and after
+
+| | **Before** — 2026-11-01 (Baseline v0) | **After** — 2026-11-01 (v2) |
+|---|---|---|
+| Display refresh | 72 Hz | **90 Hz** (120 Hz reached 116.85 fps, see below) |
+| Render target per eye | 1680 × 1760 — **81% of panel width** | **2107 × 2208 — native** |
+| MSAA | off (the setting was an inert Godot 3 key) | **4×** |
+| Physics tick | 60 Hz against a 72 Hz panel | **matched to the display** |
+| Frames delivered on vsync | 99.876% | **99.880%** |
+| Dropped-frame events | 16 per 180 s | **13 per 120 s** |
+| Frame interval p50 / p95 / p99 | 13.91 / 15.44 / 16.50 ms | **11.13 / 12.26 / 12.95 ms** |
+| GPU `App=` mean | 3.94 ms (28.4% of budget) | **2.40 ms (21.6% of budget)** |
+
+The "after" column renders **1.57× more pixels**, at a **25% shorter frame budget**, and is still
+faster and steadier than the baseline. GPU use *fell* from 28.4% to 21.6% of budget because the
+scene is CPU-bound, not fill-rate-bound — which is why raising resolution was affordable.
+
+### 120 Hz status — not yet stable
+
+| Metric | 90 Hz | 120 Hz |
+|---|---|---|
+| Sustained | 89.90 fps | 116.85 fps |
+| Frames on vsync | 99.880% | 99.066% |
+| Dropped events per 120 s | 13 | 131 |
+| GPU `App=` mean | 2.40 ms (21.6%) | 3.26 ms (39.1%) |
+| Main thread `TIME_PROCESS` p95 | 8.26 ms | **10.23 ms vs 8.33 ms budget** |
+
+The GPU has room at 120 Hz (39% of budget). It drops frames because main-thread `TIME_PROCESS`
+p95 exceeds the entire 120 Hz frame. That is the current work: attributing and removing those
+main-thread spikes, then re-testing against the 120 Hz gate. **90 Hz is the recommended rate
+today.**
+
+### Baseline v0 detail (before any optimisation)
+
+Upstream `64200ad` built on Godot 4.6.3, 3 × 180 s runs at 72 Hz, medians of three:
 
 | Metric | Median |
 |---|---|
@@ -59,17 +96,12 @@ Medians of three runs:
 | Severe drops (≥ 2 vsync) | 1 |
 | Frame interval p50 / p95 / p99 | 13.91 / 15.44 / 16.50 ms |
 | Frame interval max | 54.40 ms * |
-| `App=` GPU+CPU mean | 3.94 ms (28.4% of the 13.89 ms budget) |
-| `CPU&GPU=` mean / p95 | 8.00 ms / 86.3% of budget |
+| `App=` GPU per-eye time mean | 3.94 ms (28.4% of the 13.89 ms budget) |
 | Notes cut (median) | 653 |
 
 \* Run 1's single 459 ms spike is first-note shader/pipeline compilation; it is recorded and
 excluded from judgement rather than hidden.
 
-Read plainly: the GPU is not the bottleneck (about 72% of its budget unused on this map), while the
-combined CPU side is — its p95 sits at 86% of the frame budget. That is where the intermittent
-hitches and the frame-stability work are aimed. Full method, validity rules, per-run spread and
-caveats: [`PERF.md`](PERF.md).
 
 ## Build from source
 

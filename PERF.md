@@ -129,6 +129,35 @@ part of the noise floor.
 Baseline committed as: **no optimization has been applied yet.** Every later row must beat the
 medians above by more than the spread.
 
+### v2 — 2026-11-01 — 90 Hz and 120 Hz, physics matched to display, native resolution
+
+Same workload/conditions as v0/v1. Validity flags now recorded per run: `refresh_request_honoured=true`
+and `physics_matches_display=true` on both rows (the earlier runs had physics pinned to a stale
+rate; that is fixed and proven, not asserted).
+
+| Metric | v0 (72 Hz) | **v2 90 Hz** | **v2 120 Hz** |
+|---|---|---|---|
+| Render target / eye | 1680×1760 | **2107×2208** | **2107×2208** |
+| Refresh / physics | 72 / 60→72 (mismatched) | **90 / 90** | **120 / 120** |
+| Sustained fps | 71.96 | **89.90** | **116.85** |
+| Frames on vsync | 99.876 % | **99.880 %** | 99.066 % |
+| Dropped events / 120 s | 16 per 180 s | **13** | 131 |
+| Severe (≥2 vsync) | 1 | 1 | 3 |
+| p50 / p95 / p99 interval | 13.91 / 15.44 / 16.50 ms | **11.13 / 12.26 / 12.95 ms** | 8.43 / 10.06 / 12.31 ms |
+| `App=` GPU mean | 3.94 ms (28.4 %) | **2.40 ms (21.6 %)** | 3.26 ms (39.1 %) |
+| `TIME_PROCESS` p95 / p99 | — | 8.26 / 26.63 ms | **10.23 / 22.54 ms** |
+| `TIME_PHYSICS_PROCESS` p95 / p99 | — | 5.91 / 11.47 ms | 5.85 / 11.59 ms |
+
+**Reading:**
+1. **90 Hz is solid**: 99.88 % of frames on vsync, 13 drops in two minutes, GPU at 22 %.
+2. **120 Hz is reachable in GPU terms but not yet stable**: 116.85 fps average with 0.93 % of
+   frames dropped, because main-thread `TIME_PROCESS` p95 (10.23 ms) exceeds the entire 8.33 ms
+   budget. GPU is only at 39 % of the same budget.
+3. **Physics is not the 120 Hz blocker** at p95 5.85 ms — but its p99 (11.59 ms) still exceeds
+   the frame, and the main-thread spikes (p99 22.5 ms, max 147 ms) are the real cause of drops.
+4. The advisor's 120 Hz gate requires CPU p99 ≤ 7.0 ms, no frame over 16 ms outside song load,
+   and GPU p99 ≤ 6.5 ms, cold and after a 15-minute hot run. v2 120 Hz fails the CPU criteria.
+
 ### v1 — 2026-11-01 — native resolution at 90 Hz
 
 **Changes vs Baseline v0:** Manifest declares `com.oculus.supportedDevices` (unlocks rates
