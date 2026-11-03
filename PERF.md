@@ -275,6 +275,33 @@ Kept changes only. Each row must be reproducible from the commit in the last col
 |---|---|---|---|---|---|---|
 | — | *none yet* | — | — | — | — | — |
 
+### Stress run + metric correction (2026-11-02)
+
+**The pass metric was too lenient.** `summarize.ps1` counts a frame as dropped only when the
+interval reaches 1.5x the period (12.5 ms at 120 Hz). Every frame landing between 8.75 and
+12.5 ms was therefore reported as "on vsync" when it is in fact late. Re-analysing the saved
+CSVs by true on-time share:
+
+| Run | <= 8.75 ms | 8.75-12.5 ms | >= 12.5 ms | mean fps |
+|---|---|---|---|---|
+| Default visuals (60 s, rays) | **77.8 %** | 21.8 % | 0.4 % | **118.5** |
+| Everything on (334 s, song end) | **60.6 %** | 38.8 % | 0.5 % | **114.3** |
+
+Two corrections to earlier claims:
+1. The game has **never** held a true 120 Hz. Even at defaults, ~22 % of frames are late.
+   The "99.79 % on vsync" figures in this file measured only catastrophic misses.
+2. **Everything on is genuinely worse**: -4.2 fps mean and the on-time share falls 78 -> 61 %,
+   despite the runtime never dropping the display below 120 Hz.
+
+Stress run conditions: `visuals_all=true` (floor light, saber halo, note edge glow, hit flash,
+per-note colours, event tint, grid, sky, wall fresnel, debris cap, mirrors, bloom), 120 Hz, bot
+playing. It ended at song end (334 s) rather than the 900 s cap. Drops per ~56 s bucket were
+flat (0.47 / 0.61 / 0.66 / 0.52 / 0.49 / 0.53 %), so **no thermal degradation**; `refresh_rate_final`
+stayed 120. **0 SHADER ERROR**, which is the first execution of the alpha floor variant with
+mirrors enabled.
+
+
+
 ### A/B result — analytic hit resolver vs the ray fan (2026-11-02)
 
 Measured on device, same map, same bot, 60 s per side, only `gameplay/swing_hit/detection` differed.
