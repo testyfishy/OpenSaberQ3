@@ -135,7 +135,7 @@ def draw_q(img, cx, cy, radius, thickness, colour, tail_colour):
     ], fill=tail_colour + (255,))
 
     # crossguard, perpendicular to the blade at the ring
-    hx, hy = cx + math.cos(ang) * (radius * 0.92), cy + math.sin(ang) * (radius * 0.92)
+    hx, hy = cx + math.cos(ang) * (radius * 1.02), cy + math.sin(ang) * (radius * 1.02)
     gx, gy = -math.sin(ang) * thickness * 1.15, math.cos(ang) * thickness * 1.15
     d.line([(hx - gx, hy - gy), (hx + gx, hy + gy)], fill=colour + (255,), width=int(thickness * 0.8))
 
@@ -145,29 +145,34 @@ def draw_q(img, cx, cy, radius, thickness, colour, tail_colour):
 
 
 def make_icon(size=512, badge=True):
+    """badge=True -> app icon (rounded plate, grid, glow).
+    badge=False -> the mark alone on transparency, for compositing onto other artwork. It must not
+    carry its own grid or glow: pasted onto the banner that read as a second, non-converging grid
+    inside a soft square."""
     ss = 4
     S = size * ss
     img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
 
     if badge:
         bg = vertical_gradient((S, S), DEEP, INK).convert("RGBA")
-        mask = Image.new("L", (S, S), 0)
-        ImageDraw.Draw(mask).rounded_rectangle([0, 0, S - 1, S - 1], radius=int(S * 0.23), fill=255)
-        img.paste(bg, (0, 0), mask)
-
-    horizon = int(S * 0.66)
-    img = perspective_grid(img, horizon, CYAN, alpha=30, spacing=int(S * 0.22))
-
-    glow = radial_glow((S, S), (S * 0.5, S * 0.5), S * 0.46, CYAN, 0.30).convert("RGBA")
-    img = Image.alpha_composite(img, glow)
-    warm = radial_glow((S, S), (S * 0.72, S * 0.72), S * 0.24, AMBER, 0.22).convert("RGBA")
-    img = Image.alpha_composite(img, warm)
+        img.paste(bg, (0, 0))
+        horizon = int(S * 0.68)
+        img = perspective_grid(img, horizon, CYAN, alpha=28, spacing=int(S * 0.22))
+        img = Image.alpha_composite(img, radial_glow((S, S), (S * 0.5, S * 0.52), S * 0.44, CYAN, 0.26))
+        img = Image.alpha_composite(img, radial_glow((S, S), (S * 0.70, S * 0.70), S * 0.22, AMBER, 0.18))
 
     layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    draw_q(layer, S * 0.50, S * 0.50, S * 0.300, int(S * 0.085), CYAN, AMBER)
+    # radius 0.26 leaves room for the blade tip and its emitter inside the rounded corner
+    draw_q(layer, S * 0.50, S * 0.47, S * 0.260, int(S * 0.078), CYAN, AMBER)
     bloom = layer.filter(ImageFilter.GaussianBlur(S * 0.028))
     img = Image.alpha_composite(img, bloom)
     img = Image.alpha_composite(img, layer)
+
+    if badge:
+        # trim everything - grid, glow, bloom - to the rounded square
+        mask = Image.new("L", (S, S), 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, S - 1, S - 1], radius=int(S * 0.23), fill=255)
+        img.putalpha(Image.composite(img.getchannel("A"), Image.new("L", (S, S), 0), mask))
 
     return img.resize((size, size), Image.LANCZOS)
 
@@ -202,17 +207,17 @@ def make_cover(size=(1280, 640)):
     w, h = size
     img = make_background(size).convert("RGBA")
 
-    icon = make_icon(300, badge=False)   # mark only: no dark plate over the backdrop
-    img.alpha_composite(icon, (76, (h - 300) // 2 - 6))
+    icon = make_icon(260, badge=False)   # mark only: no plate, no baked grid
+    img.alpha_composite(icon, (92, 84))
 
     d = ImageDraw.Draw(img)
     x = 436
     d.text((x, int(h * 0.26)), "OpenSaberQ3", font=load_font(72), fill=WHITE)
     d.text((x, int(h * 0.43)), "Beat-saber style rhythm game for Quest 3",
            font=load_font(29), fill=(196, 214, 232))
-    d.text((x, int(h * 0.53)), "120 Hz", font=load_font(27), fill=CYAN)
-    d.text((x + 132, int(h * 0.53)), "v2/v3/v4 maps", font=load_font(27), fill=(196, 214, 232))
-    d.text((x + 356, int(h * 0.53)), "MIT", font=load_font(27), fill=(196, 214, 232))
+    d.text((x, int(h * 0.50)), "120 Hz", font=load_font(27), fill=CYAN)
+    d.text((x + 132, int(h * 0.50)), "v2/v3/v4 maps", font=load_font(27), fill=(196, 214, 232))
+    d.text((x + 356, int(h * 0.50)), "MIT", font=load_font(27), fill=(196, 214, 232))
     return img.convert("RGB")
 
 
@@ -245,6 +250,7 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 
 
 
