@@ -418,6 +418,21 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		Settings.debris_cap = false
 		Settings.mirror_reflections = false
 		applied.append("visuals_default=true")
+	# Everything off in one key. The comma-list `visual_off` form below fails ConfigFile
+	# parsing when the list is long ("Parse error" -> bad_config), which silently produced
+	# empty runs; this key is the reliable way to take the whole visual layer out.
+	if bool(cfg.get_value("bench", "visuals_none", false)):
+		Settings.floor_light = false
+		Settings.saber_halo = false
+		Settings.note_edge_glow = false
+		Settings.hit_flash = false
+		Settings.note_map_colors = false
+		Settings.event_tint = false
+		Settings.floor_grid = false
+		Settings.sky_gradient = false
+		Settings.debris_cap = false
+		Settings.mirror_reflections = false
+		applied.append("visuals_none=true")
 	# Per-feature attribution: `[bench] visual_off=mirrors,sky` turns individual features
 	# off from the full set, which is how the cost of each one is isolated (removing one from
 	# all-on captures the interactions, adding one to defaults does not).
@@ -1071,3 +1086,4 @@ func _poll_player_capture() -> void:
 func _finish_player() -> void:
 	_player_capture = false
 	_finish("player_song_end", false)
+
