@@ -33,6 +33,11 @@ if (-not $rows -or $rows.Count -eq 0) { throw "empty csv: $Csv" }
 
 $period = 1000.0 / $Hz
 $dropThreshold = 1.5 * $period   # one or more skipped vsync intervals
+# TRUE on-time threshold. A frame is on time if it is delivered within one refresh plus a small
+# tolerance. Using 1.5x the period as the pass/fail line (as this script used to) reports every
+# frame between 1.0x and 1.5x as perfect, which at 120 Hz hides the whole 8.33-12.5 ms band - the
+# band that actually contains most of the lateness we are trying to remove.
+$onTimeThreshold = 1.05 * $period
 $severeThreshold = 2.5 * $period # two or more
 
 function Pct($values, $p) {
@@ -75,6 +80,10 @@ if ($rows[0].PSObject.Properties.Name -contains 'focused') {
 "  max       : {0:N2} ms" -f (($ms | Measure-Object -Maximum).Maximum)
 ""
 "frames delivered on vsync : {0} of {1} ({2:N3}%)" -f $onVsync, $ms.Count, (100.0 * $onVsync / $ms.Count)
+$onTime = @($ms | Where-Object { $_ -le $onTimeThreshold }).Count
+$late = $ms.Count - $onTime - $dropped.Count
+"frames truly on time     : {0} of {1} ({2:N3}%)  <= {3:N2} ms" -f $onTime, $ms.Count, (100.0 * $onTime / $ms.Count), $onTimeThreshold
+"frames late but not dropped: {0} ({1:N3}%)  in the {2:N2}-{3:N2} ms band" -f $late, (100.0 * $late / $ms.Count), $onTimeThreshold, $dropThreshold
 "dropped-frame events      : {0} ({1:N3}% of frames missed at least one vsync)" -f $dropped.Count, (100.0 * $dropped.Count / $ms.Count)
 "severe events (>=2 vsync) : {0}" -f $severe.Count
 
