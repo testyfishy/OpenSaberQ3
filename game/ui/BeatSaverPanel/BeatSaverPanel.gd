@@ -302,11 +302,13 @@ func _build_ui() -> void:
 	var close_button := _make_button(Rect2(1312, 868, 208, 60), "Close")
 	close_button.pressed.connect(_hide)
 
-	# The existing thumbstick / drag scroller, pointed at the new list.
-	var slider := VR_SLIDER.instantiate()
-	slider.name = "list_slider"
-	slider.scroll_node_path = NodePath("../CardsScroll")
-	add_child(slider)
+	# The existing thumbstick / drag scroller, pointed at the new list. Guarded: the panel
+	# rebuilds its UI on some setting changes, and a second slider would double the stick speed.
+	if not has_node("list_slider"):
+		var slider := VR_SLIDER.instantiate()
+		slider.name = "list_slider"
+		slider.scroll_node_path = NodePath("../CardsScroll")
+		add_child(slider)
 
 
 func _make_button(rect: Rect2, text: String) -> Button:
