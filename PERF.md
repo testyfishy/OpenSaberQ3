@@ -334,23 +334,29 @@ current bottleneck.
 | **Wall fresnel** (`wall_fresnel.gdshader`, FR-009) | **removed** | compile only ever; the test map has no full-height walls, so it never executed | gone 2026-11-02: additive overdraw across large surfaces for no gameplay gain |
 | **Residual ~0.2 % drops** | no | — | needs the per-frame timing rig (the current `Performance.TIME_PROCESS` is a once-per-second maximum) |
 
-### Stress test — NOT RUN
+### Sustained run with every visual enabled - 2026-11-03
 
-The 15-minute sustained/thermal run and the 10× load/unload memory test are **not done**. They
-were blocked by the headset dropping off adb. Until they run, "stable 120 Hz" remains a
-**cold-start** result: all recorded rows are 60–180 s at thermal status 0, and 120 Hz is the
-first rate the runtime drops on a thermal event.
+The sustained test that used to be listed here as never run, now measured. Every visual setting
+forced on (mirrors, panorama sky, halos, note glow, grid, hit flash, event tint), 120 Hz,
+shipped Performance preset, bot playing ODDS ExpertPlus for the whole song:
 
-The prepared configuration is committed as a flag file: 900 s, `refresh_hz=120`,
-`detection=analytic`, bot playing the reference map. Run:
+| | value |
+|---|---|
+| duration | **334 s** (the song ended; the 900 s limit was not reached) |
+| frames | 39,815 |
+| on time | 75.4% |
+| **dropped** | **0.02%** (8 frames) |
+| p95 / p99 | 9.36 / 10.12 ms |
+| thirds (on time) | 75.1 / 73.7 / 77.2% |
+| thirds (mean frame) | 8.33 / 8.34 / 8.34 ms |
 
-```powershell
-adb push <flag> /sdcard/Android/data/io.github.testyfishy.opensaberq3/files/bench.flag
-adb shell am start -n io.github.testyfishy.opensaberq3/com.godot.game.GodotAppLauncher
-```
+Flat across five and a half minutes with the heaviest visual set, and the mean frame does not
+move. The all-visuals cost against the shipped default is about 1 point of on-time (75.4 vs
+76.6), which is inside the run-to-run band.
 
-then pull `bench_meta.txt` and `bench.csv`. Watch `thermal_status`, dropped-frame counts by
-20-second bucket, and whether `refresh_rate_final` stays 120.
+Still not covered: a true 15-minute run (the reference song is 5.5 minutes) and the 10x
+load/unload memory test. A 900 s capture needs a longer map or a loop setting.
+
 
 ## 120 Hz frame-budget investigation - 2026-11-02
 
