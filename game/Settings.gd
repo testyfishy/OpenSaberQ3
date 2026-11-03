@@ -174,6 +174,36 @@ var floor_grid: bool:
 	set(value):
 		floor_grid = value
 		set_and_emit(&"floor_grid", value)
+# Performance preset: one switch that sets the three GPU levers together, because they are
+# measured as a group and their individual names mean nothing to a player.
+#   0 Quality     - native supersampled render target, 4x MSAA, no foveation  (GPU ~86%)
+#   1 Balanced    - 1.1x render target, 4x MSAA, foveation 1                   (GPU ~75%)
+#   2 Performance - runtime-recommended render target, 2x MSAA, foveation 2    (GPU ~64%)
+# Default is Performance: the player's stated priority is a rock-solid 120 Hz with headroom,
+# and this is the only configuration measured with zero dropped frames and ~3 ms of GPU slack.
+var perf_preset: int:
+	set(value):
+		# Stores the choice only. Applying it here would clobber the individual render_scale /
+		# msaa / foveation values on every load, because reload() sets every key in
+		# default_values in arbitrary order. The panel applies it when the player picks one,
+		# and restore_defaults() applies it once on a fresh install.
+		perf_preset = clampi(value, 0, 2)
+		set_and_emit(&"perf_preset", perf_preset)
+
+func _apply_perf_preset(preset: int) -> void:
+	match preset:
+		0:
+			render_scale = 1.2546
+			msaa_3d = 2
+			foveation_level = 0
+		1:
+			render_scale = 1.1
+			msaa_3d = 2
+			foveation_level = 1
+		_:
+			render_scale = 1.0
+			msaa_3d = 1
+			foveation_level = 2
 # 0 = black void, 1 = gradient sky, 2 = the original panorama. Void is the shipped default:
 # the panorama was the most visible piece of unfinished art, and a black background is also
 # cheaper to draw than a full-screen textured sky.
@@ -286,6 +316,7 @@ var default_values = {
 	note_map_colors = true,
 	event_tint = true,
 	floor_grid = true,
+	perf_preset = 2,
 	sky_style = 0,
 	debris_cap = false,
 	beatsaver_order = "Latest",
@@ -314,8 +345,14 @@ func reload() -> void:
 		vr.log_file_error(config_error, CONFIG_PATH, "reload() in Settings.gd")
 		return
 	
+	# A config written before the preset existed has no key for it. Apply the preset once, then
+	# always persist the key so a later launch cannot clobber individually tweaked settings.
+	var had_preset := config.has_section_key(SECTION, "perf_preset")
 	for key in default_values:
 		set(key, cast_or_default(key))
+	config.set_value(SECTION, "perf_preset", perf_preset)
+	if not had_preset:
+		_apply_perf_preset(perf_preset)
 
 func load_old_config() -> void:
 	var file := FileAccess.open(OLD_CONFIG_PATH, FileAccess.READ)
@@ -389,3 +426,5 @@ func restore_defaults() -> void:
 	config.clear()
 	save()
 	reload()
+
+

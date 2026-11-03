@@ -17,6 +17,7 @@ signal apply()
 @onready var event_tint_control := $ScrollContainer/VBox/event_tint as CheckButton
 @onready var debris_cap_control := $ScrollContainer/VBox/debris_cap as CheckButton
 @onready var sky_style_control := $ScrollContainer/VBox/sky_style as OptionButton
+var perf_control: OptionButton
 @onready var saber_thickness := $ScrollContainer/VBox/SaberThicknessRow/saber_thickness as HSlider
 @onready var cut_blocks := $ScrollContainer/VBox/cut_blocks as CheckButton
 @onready var d_background := $ScrollContainer/VBox/d_background as CheckButton
@@ -95,6 +96,7 @@ func set_controls_from_settings() -> void:
 	event_tint_control.button_pressed = Settings.event_tint
 	debris_cap_control.button_pressed = Settings.debris_cap
 	_populate_sky_style()
+	_populate_perf_preset()
 	d_background.button_pressed = Settings.events
 	saber_control.select(Settings.saber_visual)
 	show_debug_control.button_pressed = Settings.show_debug_info
@@ -367,4 +369,27 @@ func _on_recenter_button_up() -> void:
 	recenter_button.text = "Recenter"
 	recenter_button.disabled = false
 	beepsaber_game.recenter()
+# One row for the three GPU levers, inserted above the sky choice. Their individual names
+# (render scale / MSAA / foveation) mean nothing to a player, and they are only meaningful
+# together: the measured curve is Quality ~86% GPU, Balanced ~75%, Performance ~64%.
+func _populate_perf_preset() -> void:
+	var row := HBoxContainer.new()
+	row.name = "PerfPresetRow"
+	var label := Label.new()
+	label.text = "Performance:  "
+	perf_control = OptionButton.new()
+	perf_control.add_item("Quality (sharpest)")
+	perf_control.add_item("Balanced")
+	perf_control.add_item("Performance (smoothest)")
+	perf_control.select(clampi(Settings.perf_preset, 0, 2))
+	perf_control.item_selected.connect(_on_perf_preset_selected)
+	row.add_child(label)
+	row.add_child(perf_control)
+	var vbox := $ScrollContainer/VBox
+	vbox.add_child(row)
+	if sky_style_control != null:
+		vbox.move_child(row, sky_style_control.get_index())
 
+func _on_perf_preset_selected(index: int) -> void:
+	Settings.perf_preset = index
+	Settings._apply_perf_preset(index)
