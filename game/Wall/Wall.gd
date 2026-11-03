@@ -1,4 +1,4 @@
-extends Node3D
+extends PooledNode3D
 class_name Wall
 
 # Spike attribution (FR-033): the deferred free of a whole wall/arc/bomb tree runs
@@ -28,23 +28,36 @@ func _physics_process(delta: float) -> void:
 	# remove children that go to far
 	if transform.origin.z > despawn_z:
 		if Cost.enabled: Cost.objs_freed += 1
-		queue_free()
+		# Pooled, not freed. A wall map can spawn ~74 walls a second; instantiating and freeing a
+		# whole Mesh + Area3D + AnimationPlayer tree at that rate was the single largest cost
+		# measured across the map matrix (Gloom: 92.9 fps, 24% dropped; Empires, no walls: 120).
+		_despawn()
+
+func hide_wall() -> void:
+	visible = false
+	process_mode = Node.PROCESS_MODE_DISABLED
+
+func _despawn() -> void:
+	hide_wall()
+	release()
 
 func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	visible = true
 	var mesh := $WallMeshOrientation/WallMesh as MeshInstance3D
-	var m := mesh.mesh as BoxMesh
 	var shape := ($WallMeshOrientation/WallArea/CollisionShape3D as CollisionShape3D).shape as BoxShape3D
 	
 	var x_size := wall_info.width * Constants.LANE_DISTANCE
 	var y_size := wall_info.height * Constants.LANE_DISTANCE
 	var z_size := wall_info.duration * Constants.BEAT_DISTANCE
 	var depth := z_size * 0.5
-	m.size.x = x_size
-	shape.size.x = x_size
-	m.size.y = y_size
-	shape.size.y = y_size
-	m.size.z = z_size
-	shape.size.z = z_size
+	# Scale the mesh node, not the mesh. The BoxMesh is shared and unit-sized: mutating a
+	# per-wall mesh (`resource_local_to_scene`) rebuilt and re-uploaded its buffers on every
+	# spawn, which on a wall map is ~74 times a second. A BoxMesh's UVs are 0..1 per face at any
+	# size, so scaling the node renders identically. The collision shape still needs its own
+	# size - that is a cheap shape update, not a mesh rebuild.
+	mesh.scale = Vector3(x_size, y_size, z_size)
+	shape.size = Vector3(x_size, y_size, z_size)
 	despawn_z = Constants.MISS_Z + depth
 	_apply_material(Vector3(x_size, y_size, z_size))
 	

@@ -281,6 +281,9 @@ scene = ExtResource("33_nc705")
 [node name="ChainLinkPool" parent="." instance=ExtResource("27")]
 scene = ExtResource("34_tsovg")
 
+[node name="WallPool" parent="." instance=ExtResource("27")]
+scene = ExtResource("3_73652")
+
 [node name="Keyboard_highscore" parent="." instance=ExtResource("21")]
 transform = Transform3D(2.40442, 0, 0, 0, 2.37659, 0.364816, 0, -0.364816, 2.37659, -0.00735812, 0.350501, -0.67319)
 visible = false
@@ -311,5 +314,6 @@ main_menu_ref = NodePath("../MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu")
 [connection signal="close_requested" from="Profile_canvas/ProfilePanel" to="." method="hide_profile_panel"]
 [connection signal="new_scene_instanced" from="BeepCubePool" to="." method="_on_ScenePool_new_scene_instanced"]
 [connection signal="new_scene_instanced" from="ChainLinkPool" to="." method="_on_ScenePool_new_scene_instanced"]
+[connection signal="new_scene_instanced" from="WallPool" to="." method="_on_ScenePool_new_scene_instanced"]
 [connection signal="text_input_enter" from="Keyboard_highscore" to="." method="_on_keyboard_entered"]
 [connection signal="text_input_cancel" from="Keyboard_highscore" to="." method="_on_keyboard_cancel"]

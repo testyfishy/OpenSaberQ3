@@ -54,9 +54,13 @@ func spawn(info: ArcInfo, current_beat: float, _activator_cube: BeepCube = null)
 	visual.material_override = right_material if arc_info.color == 1 else left_material
 	activator_cube = _activator_cube
 	if activator_cube:
-		activator_cube.cutted.connect(_on_activator_cube_cutted)
-	else:
-		start_magnet()
+		# One-shot: a note that is released (missed) goes back to the pool, and a stale
+		# connection would let the NEXT note reusing that cube fire this arc's magnet.
+		activator_cube.cutted.connect(_on_activator_cube_cutted, CONNECT_ONE_SHOT)
+	# With no activator, the arc stays in its map position, unmagnetised. This used to call
+	# start_magnet() here, which snapped the head to the saber the instant the arc spawned -
+	# the "arc disconnected from the block" the player reported.
+
 	
 	var head_pos := Vector3(
 		Constants.LANE_DISTANCE * float(info.head_line_index) + Constants.LANE_ZERO_X,

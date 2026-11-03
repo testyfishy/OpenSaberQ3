@@ -21,6 +21,8 @@ static var _mirror_material: ShaderMaterial
 
 var which_saber: int
 var is_dot: bool
+var line_index: int
+var line_layer: int
 
 # we store the mesh here as part of the BeepCube for easier access because we will
 # reuse it when we create the cut cube pieces
@@ -71,6 +73,11 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	beat = note_info.beat
 	which_saber = note_info.color
 	is_dot = note_info.cut_direction == 8
+	# Kept so an arc can find its head note unambiguously. Beat + colour alone picks the wrong
+	# note when two same-colour notes share a beat (stacks and windows), which is how an arc ends
+	# up attached to a note it does not belong to.
+	line_index = note_info.line_index
+	line_layer = note_info.line_layer
 	
 	if is_dot:
 		(collision_big.shape as BoxShape3D).size.y = 0.8

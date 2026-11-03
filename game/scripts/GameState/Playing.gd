@@ -79,9 +79,10 @@ func _process_map(game: BeepSaber_Game) -> void:
 	# spawn obstacles (walls)
 	while not Map.obstacle_stack.is_empty() and Map.obstacle_stack[-1].beat <= look_ahead:
 		if probe: Cost.objs_spawned += 1
-		var wall := wall_template.instantiate() as Wall
+		# Pooled, not instantiated. The pool adds its scene to the track at creation, so the
+		# node is already in the tree and spawn() can apply its material immediately.
+		var wall := GlobalReferences.wall_pool.acquire() as Wall
 		wall.spawn(Map.obstacle_stack.pop_back() as ObstacleInfo, current_beat)
-		game.track.add_child(wall)
 	
 	while not Map.arc_stack.is_empty() and Map.arc_stack[-1].head_beat <= look_ahead:
 		if probe:
@@ -96,13 +97,18 @@ func _process_map(game: BeepSaber_Game) -> void:
 		var arc := Arc.acquire() as Arc
 		var arc_info := Map.arc_stack.pop_back() as ArcInfo
 		
-		# find starting cube to use as magnet trigger
+		# Find the arc's head note: beat within a tolerance, plus colour AND grid position.
+		# The old check compared beat and colour only, so with two same-colour notes on one beat
+		# (stacks, windows) the arc could attach to the wrong one - which reads as an arc hanging
+		# off the side of a block. The tolerance covers float round-trip differences.
 		var cube : BeepCube
 		var cube_id := cube_refs.size()-1
 		while cube_id >= 0:
 			var current_cube : BeepCube = cube_refs[cube_id]
-			if (current_cube.beat == arc_info.head_beat
+			if (absf(current_cube.beat - arc_info.head_beat) < 0.001
 				and current_cube.which_saber == arc_info.color
+				and current_cube.line_index == arc_info.head_line_index
+				and current_cube.line_layer == arc_info.head_line_layer
 				):
 					cube = current_cube
 					break

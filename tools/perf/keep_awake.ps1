@@ -1,40 +1,45 @@
 # Keeps the Quest awake and adb-reachable while the bench works.
 #
-# The headset sleeps on the WEAR sensor, not on battery: 'dumpsys battery' reports level 100 and
-# status 3 (discharging, "Weak Charger: true"), so it was never a flat battery. Between runs
-# nothing broadcast prox_close, the headset decided it was unworn, slept, and USB/adb dropped
-# with it.
+# The headset sleeps on the WEAR sensor (battery was 100% when it kept dropping), so it must be
+# told it is being worn. Two lessons are built in:
 #
-# Run this in the background for the whole session. It reconnects adb if the device vanishes and
-# re-broadcasts prox_close so the wear sensor never sees "unworn" for long.
+#   1. Resolve the device EVERY cycle. The first version addressed the USB serial only, so the
+#      moment USB was unplugged (to use a stronger charger) nothing kept it awake and the headset
+#      slept, taking the wireless adb endpoint with it.
+#   2. Reconnect actively. If neither endpoint answers, try the known wireless address before
+#      giving up, because a sleeping headset never reconnects on its own.
 
 param(
     [int]$Hours = 12,
     [int]$IntervalSec = 3,
-    [string]$Device = "2G0YC1ZF9J0G2V"
+    [string]$UsbSerial = "2G0YC1ZF9J0G2V",
+    [string]$Wireless = "192.168.86.250:5555"
 )
 
 $adb = "$env:LOCALAPPDATA\Android\platform-tools\adb.exe"
 $end = (Get-Date).AddHours($Hours)
 $reconnects = 0
 
+function Resolve-Target {
+    param($Adb, $Usb, $Wifi)
+    $list = (& $Adb devices 2>&1) -join "`n"
+    if ($list -match [regex]::Escape($Usb) + '\s+device') { return $Usb }
+    if ($list -match [regex]::Escape($Wifi) + '\s+device') { return $Wifi }
+    return $null
+}
+
 while ((Get-Date) -lt $end) {
-    $list = (& $adb devices 2>&1) -join "`n"
-    if ($list -notmatch [regex]::Escape($Device)) {
+    $target = Resolve-Target -Adb $adb -Usb $UsbSerial -Wifi $Wireless
+    if (-not $target) {
         $reconnects++
         & $adb reconnect offline 2>&1 | Out-Null
-        Start-Sleep -Seconds 4
-        $list = (& $adb devices 2>&1) -join "`n"
-        if ($list -notmatch [regex]::Escape($Device)) {
-            # Last resort: the wireless endpoint the headset advertises.
-            $svc = (& $adb mdns services 2>&1 | Select-String 'Quest|_adb-tls-connect' | Select-Object -First 1)
-            if ($svc -and $svc.Line -match '(\d+\.\d+\.\d+\.\d+:\d+)') {
-                & $adb connect $Matches[1] 2>&1 | Out-Null
-            }
-        }
-        Start-Sleep -Seconds 4
+        & $adb connect $Wireless 2>&1 | Out-Null
+        Start-Sleep -Seconds 5
+        $target = Resolve-Target -Adb $adb -Usb $UsbSerial -Wifi $Wireless
     }
-    & $adb -s $Device shell "am broadcast -a com.oculus.vrpowermanager.prox_close >/dev/null 2>&1; svc power stayon true >/dev/null 2>&1" 2>&1 | Out-Null
+    if ($target) {
+        & $adb -s $target shell "am broadcast -a com.oculus.vrpowermanager.prox_close >/dev/null 2>&1; svc power stayon true >/dev/null 2>&1" 2>&1 | Out-Null
+    }
     Start-Sleep -Seconds $IntervalSec
 }
 

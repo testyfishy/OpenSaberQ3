@@ -194,8 +194,12 @@ func _ready() -> void:
 	# pre-allocate scenes in our scene pools
 	GlobalReferences.cube_pool = $BeepCubePool
 	GlobalReferences.link_pool = $ChainLinkPool
+	GlobalReferences.wall_pool = $WallPool
 	GlobalReferences.cube_pool.presize(100)
 	GlobalReferences.link_pool.presize(100)
+	# Wall maps spawn tens of walls a second (Gloom: ~74/s, 12,340 in one song). Presizing
+	# covers the visible window so a dense section never has to instantiate mid-play.
+	GlobalReferences.wall_pool.presize(96)
 	
 	var xr_camera := $XROrigin3D/XRCamera3D as XRCamera3D
 	vr.initialize(
@@ -789,6 +793,8 @@ func _on_ScenePool_new_scene_instanced(obj: Node3D, during_presizing: bool) -> v
 			obj.hide_cube()
 		elif obj is ChainLink:
 			obj.hide_cube()
+		elif obj is Wall:
+			obj.hide_wall()
 		else:
 			obj.visible = false
 
