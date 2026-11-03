@@ -195,7 +195,8 @@ shaders/enabled=true
 
 notes/enable_collision_once=true
 notes/isolate_collision_shapes=true
-swing_hit/detection="analytic"
+swing_hit/detection="rays"
+
 
 
 

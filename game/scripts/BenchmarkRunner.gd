@@ -365,6 +365,22 @@ func _begin() -> void:
 # normal operation; `max_fps` here only pins conditions while measuring).
 func _apply_overrides(cfg: ConfigFile) -> void:
 	var applied := PackedStringArray()
+	# Stress-test switch: force every visual setting on so the frame budget can be measured
+	# with the full feature set, which is what the shipped defaults must eventually hold.
+	if bool(cfg.get_value("bench", "visuals_all", false)):
+		Settings.floor_light = true
+		Settings.saber_halo = true
+		Settings.note_edge_glow = true
+		Settings.hit_flash = true
+		Settings.note_map_colors = true
+		Settings.event_tint = true
+		Settings.floor_grid = true
+		Settings.sky_gradient = true
+		Settings.wall_fresnel = true
+		Settings.debris_cap = true
+		Settings.mirror_reflections = true
+		Settings.glare = true
+		applied.append("visuals_all=true")
 	# Audio verification: counts every attempted voice so a run can prove hit audio is
 	# actually being queued (valid ids, layer mix) instead of merely compiling.
 	if bool(cfg.get_value("bench", "audio_probe", false)):

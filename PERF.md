@@ -275,7 +275,28 @@ Kept changes only. Each row must be reproducible from the commit in the last col
 |---|---|---|---|---|---|---|
 | — | *none yet* | — | — | — | — | — |
 
-### Optimizations — implemented, verification status
+### A/B result — analytic hit resolver vs the ray fan (2026-11-02)
+
+Measured on device, same map, same bot, 60 s per side, only `gameplay/swing_hit/detection` differed.
+
+| | rays | analytic |
+|---|---|---|
+| Notes cut | **114** | **114** |
+| Wrong cuts | 0 | 0 |
+| physics p95 | **3.28 ms** | 3.54 ms |
+| physics p99 | **4.28 ms** | 7.15 ms |
+| dropped-frame events | **30** | 38 |
+
+**Verdict: reverted to `rays` as the default.** The analytic path is behaviourally identical
+(parity is exact), but it did **not** reduce physics cost — it slightly increased it. The advisor
+had estimated the 9 forced raycasts at 0.1–0.3 ms; measurement says they are cheap, and the
+resolver's per-note work costs more than it saves. Single run per side, so treat the margin as
+noise-level, but there is no win to chase here.
+
+The resolver and its parity test remain in the tree behind the flag, because the test proved it is
+correct and it is the right architecture if the ray fan ever becomes a measured cost. It is not the
+current bottleneck.
+
 
 | Change | Implemented | Verified | Pending |
 |---|---|---|---|
