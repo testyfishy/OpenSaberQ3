@@ -454,6 +454,31 @@ meant: frame time rising 8.40 -> 8.95 ms over three minutes, tracking notes live
 
 Method note for anything after this: report thirds, not just the average. A run that averages
 78% but decays to 52% is worse for a player than one that holds 74% flat.
+### The limiter is the GPU, not the CPU - 2026-11-03
+
+The runtime's own counters, sampled 38 times during a 40 s 120 Hz run (VrApi line, filtered
+with `adb logcat -s VrApi:I`):
+
+  FPS=120/120  App=5.57ms  GPU%=0.85-0.86  CPU%=0.22  TW=1.19ms  Stale=0  Tear=1-2
+  clocks 1382/545 MHz, 45.0 C
+
+**The GPU is at 85-86% of the 8.33 ms budget. The CPU is at 22%.** That reframes the whole
+optimisation pass: every CPU-side cost measured tonight - physics 2.4 ms, swing peaks of 3.7 ms,
+the per-note drift - happened while three quarters of the CPU was idle. The frames that miss
+are missing because the GPU ran out of time, not because the main thread did.
+
+It also explains two earlier results that made no sense in isolation:
+
+  render target 2107x2208 -> 1176x1232 (render_scale 0.7)  +6.6 points on time
+  physics 120 Hz -> 60 Hz                                  +0.6 points (noise)
+
+Cutting pixels helped; cutting CPU work did not. The floor run (nothing spawning at all,
+88.6% on time, p99 9.23) is the engine + XR + render cost, and at 86% GPU there is only ~1 ms
+of headroom in it.
+
+Consequence for v0.3: the target ("worst case under 8.33 ms with margin to 7 ms") is a GPU
+budget problem. The levers are resolution, MSAA and foveation - all measurable as GPU% - and
+the visual cost of each has to be weighed by the player, not decided by me.
 ## Rejected
 
 Changes that were measured, did not beat the noise, and were reverted (SC-002 scenario 2).
