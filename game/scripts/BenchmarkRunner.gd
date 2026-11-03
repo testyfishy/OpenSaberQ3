@@ -463,6 +463,13 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		DefaultSaber.probe_accent = 0
 		DefaultSaber.probe_dull = 0
 		applied.append("audio_probe=true")
+	# GPU attribution: hide the floor pad, which is a large screen-area surface with per-pixel
+	# streak, grid and flash maths. If it is a big share of GPU%, simplifying it beats dropping
+	# resolution, because it costs sharpness nowhere.
+	if bool(cfg.get_value("bench", "floor_off", false)):
+		@warning_ignore("unsafe_property_access")
+		_game.standing_ground.visible = false
+		applied.append("floor_off=true")
 	# Floor measurement: no notes at all. Everything left is engine + XR + audio + UI + render,
 	# which is the number the 8.33 ms budget has to be judged against - no note optimisation can
 	# go below it.
@@ -1113,6 +1120,7 @@ func _poll_player_capture() -> void:
 func _finish_player() -> void:
 	_player_capture = false
 	_finish("player_song_end", false)
+
 
 
 

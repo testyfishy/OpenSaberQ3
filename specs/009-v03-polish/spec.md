@@ -88,6 +88,25 @@ player's words:
 - **SC-007**: Every item in this sheet carries a before/after measurement or an explicit
   statement of why it could not be measured.
 
+## GPU lever curve (Quest 3, ODDS ExpertPlus, 120 Hz, 40 s arms, VrApi GPU% median)
+
+The runtime counter is the reliable signal: GPU% is the share of the 8.33 ms budget the GPU
+uses. Baseline is 0.86 at 2107x2208 with 4x MSAA and no foveation.
+
+| configuration | GPU% | on time | dropped | p99 |
+|---|---|---|---|---|
+| baseline: 2107x2208, MSAA 4x, FFR 0 | 0.86 | 78.3% | 0.21% | 10.37 ms |
+| MSAA 2x, same resolution | 0.77 | 82.4% | 0.02% | 9.57 ms |
+| FFR 2, same resolution and MSAA | 0.80 | 85.1% | 0.07% | 9.59 ms |
+| render scale 1.0 (1680x1760), MSAA 4x | 0.69 | 88.6% | 0.00% | 9.52 ms |
+
+Each is one lever. The player has to pick where on this curve to sit, because every one of them
+trades sharpness: resolution softens everything, MSAA softens edges on glow and thin geometry,
+foveation softens the periphery. Combined arms are being measured to complete the curve.
+
+Nothing on the CPU side reaches this: the CPU is at 22% and halving the physics rate moved the
+on-time figure by 0.6 points.
+
 ## Out of scope
 
 - Ray tracing, real-time GI, shadow maps for the floor light.
