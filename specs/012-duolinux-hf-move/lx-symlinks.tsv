@@ -1,0 +1,62 @@
+out\overlay\usr\lib\aarch64-linux-gnu\libqrtr-glib.so.0	libqrtr-glib.so.0.0.0
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO AIR Pro	AYANEO AIR
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO AYA NEO 2021	AYANEO AIR
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO AYANEO 2	AYANEO AIR
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO AYANEO 2021	AYANEO AIR
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO AYANEO 2021 Pro	AYANEO AIR
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO AYANEO 2021 Pro Retro Power	AYANEO AIR
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO AYANEO NEXT Pro	AYANEO AIR
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO GEEK	AYANEO AIR
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO NEXT	AYANEO AIR
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO NEXT Advance	AYANEO AIR
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO NEXT Pro	AYANEO AIR
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO Pocket S Mini	AYANEO Pocket S 2K
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\ayn Loki MiniPro	ayn Loki Max
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYN Odin M2	AYN Odin M0
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\KONKR Pocket FIT	AYANEO Pocket S2
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Retroid Pocket 5 Visionox	Retroid Pocket 5
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Retroid Pocket 6 TOP-DPAD	Retroid Pocket 6
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Retroid Pocket Classic Rev Q	Retroid Pocket Classic
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Retroid Pocket Flip2	Retroid Pocket 5
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Retroid Pocket Flip2 Visionox	Retroid Pocket 5
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Retroid Pocket Mini V2	Retroid Pocket Mini
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Anbernic RG353M	Anbernic RG353P
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYA NEO AYA NEO Founder	AYANEO AIR
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Powkiddy x35s	Powkiddy x55
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Anbernic RG ARC-S\remappings	../Anbernic RG ARC-D/remappings
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Anbernic RG ARC-S\020-gpios	../Anbernic RG ARC-D/020-gpios
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Anbernic RG ARC-S\050-game-configs	../Anbernic RG ARC-D/050-game-configs
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Anbernic RG DS Plus\bin	../Anbernic RG DS/bin
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Anbernic RG DS Plus\sleep.d	../Anbernic RG DS/sleep.d
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Anbernic RG DS Plus\001-device_config	../Anbernic RG DS/001-device_config
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Anbernic RG DS Plus\050-es_settings	../Anbernic RG DS/050-es_settings
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Anbernic RG DS Plus\050-game_configs	../Anbernic RG DS/050-game_configs
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Anbernic RG DS Plus\050-modifiers	../Anbernic RG DS/050-modifiers
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Anbernic RG DS Plus\110-retroarch-joypad	../Anbernic RG DS/110-retroarch-joypad
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Anbernic RG40XX H\bin\achievements	../../Anbernic RG CubeXX/bin/achievements
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Anbernic RG40XX V\bin\achievements	../../Anbernic RG CubeXX/bin/achievements
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO Pocket DMG\001-device_config	../AYANEO Pocket ACE/001-device_config
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO Pocket DMG\020-set-xbox-gamepad	../AYANEO Pocket ACE/020-set-xbox-gamepad
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO Pocket DMG\400-set_gpu_overclock	../AYANEO Pocket ACE/400-set_gpu_overclock
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO Pocket DMG\bin\achievements	../../AYN Odin 2/bin/achievements
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO Pocket DMG\bin\battery_led_status	../../AYANEO Pocket ACE/bin/battery_led_status
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO Pocket DMG\bin\ledcontrol	../../AYANEO Pocket ACE/bin/ledcontrol
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO Pocket DS\020-set-xbox-gamepad	../AYANEO Pocket ACE/020-set-xbox-gamepad
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO Pocket DS\400-set_gpu_overclock	../AYANEO Pocket ACE/400-set_gpu_overclock
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO Pocket EVO\001-device_config	../AYANEO Pocket ACE/001-device_config
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO Pocket EVO\020-set-xbox-gamepad	../AYANEO Pocket ACE/020-set-xbox-gamepad
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO Pocket EVO\400-set_gpu_overclock	../AYANEO Pocket ACE/400-set_gpu_overclock
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\AYANEO Pocket EVO\bin\achievements	../../AYN Odin 2/bin/achievements
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Powkiddy RGB10\001-device_config	../ODROID-GO Advance Black Edition/001-device_config
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Powkiddy RGB10\050-game_configs	../ODROID-GO Advance Black Edition/050-game_configs
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Retroid Pocket Classic 6 Rev Q\remappings	../Anbernic RG ARC-D/remappings
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Retroid Pocket Classic 6 Rev Q\001-device_config	../Retroid Pocket Classic/001-device_config
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\devices\Retroid Pocket Classic 6 Rev Q\050-game-configs	../Anbernic RG ARC-D/050-game-configs
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\platforms\SDM845\005-thermal_path	../SM8250/005-thermal_path
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\platforms\SDM845\020-fan_control	../SM8250/020-fan_control
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\platforms\SDM845\500-enable-led	../SM8250/500-enable-led
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\platforms\SDM845\bin\fancontrol	../../SM8250/bin/fancontrol
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\platforms\SDM845\sleep.d\post\001-led	../../../SM8250/sleep.d/post/001-led
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\platforms\SDM845\sleep.d\pre\001-led	../../../SM8250/sleep.d/pre/001-led
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\platforms\SM8550\095-force_zink	../SM8750/095-force_zink
+out\rnx-port\internal\extract\usr\lib\autostart\quirks\platforms\SM8650\095-force_zink	../SM8750/095-force_zink

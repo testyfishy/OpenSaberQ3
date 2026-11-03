@@ -1,6 +1,6 @@
 # Feature Specification: v0.3 — feedback, layout and frame stability
 
-**Feature Branch**: `009-v03-polish`
+**Feature Branch**: `011-v03-polish`
 
 **Created**: 2026-11-02
 
