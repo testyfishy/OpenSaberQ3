@@ -1,5 +1,20 @@
 # itch.io page — draft
 
+## Do not publish yet
+
+Publication is gated on v0.3 being finished and verified. This is a fork that improves existing
+work so people can play it — it is not a new game from us, and it must never be presented that way.
+The page leads with the upstream credit, and the known-issues block stays in even after the wall fix
+lands.
+
+Gate — all must be true before the page goes live:
+
+- [ ] Wall-heavy maps hold their frame budget (Gloom and Somewhere Out There measured).
+- [ ] Arcs attach to their head note in play.
+- [ ] HUD and end-of-map card have no overlapping text.
+- [ ] Every other item in `specs/011-v03-polish/spec.md` is done or explicitly cut.
+- [ ] A tag builds an APK that installs cleanly over an older build.
+
 Everything below is ready to paste. The one thing still needed is **screenshots from the headset**;
 the desktop simulator shot has a keyboard overlay and does not represent the game.
 
@@ -28,9 +43,14 @@ the desktop simulator shot has a keyboard overlay and does not represent the gam
 
 ## Full description
 
-> **OpenSaberQ3** is an open-source rhythm game for the Meta Quest 3, forked from
-> [BeepSaber](https://github.com/leandrodreamer/BeepSaber) (MIT) and rebuilt around a measured frame
-> budget rather than guesswork.
+> **OpenSaberQ3** is an open-source fork of [BeepSaber](https://github.com/leandrodreamer/BeepSaber)
+> (MIT), working toward better frame stability, clearer rendering and a friendlier map workflow on
+> the Meta Quest 3.
+>
+> **Credit where it belongs:** the game, its engine port and its content pipeline are the work of the
+> BeepSaber authors and the projects it descends from — NeoSpark314's BeepSaber and the Godot Oculus
+> Quest Toolkit. This fork tunes and fixes; it did not invent. The full chain is in `UPSTREAM.md` and
+> `ATTRIBUTION.md` in the repository.
 >
 > **What it does**
 >

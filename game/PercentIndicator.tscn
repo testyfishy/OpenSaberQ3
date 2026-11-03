@@ -16,7 +16,7 @@ size = Vector2(0.5, 0.5)
 [sub_resource type="TextMesh" id="TextMesh_bcnkh"]
 resource_local_to_scene = true
 text = "0%"
-font_size = 10
+font_size = 8
 depth = 0.0
 
 [node name="PercentIndicator" type="MeshInstance3D"]
