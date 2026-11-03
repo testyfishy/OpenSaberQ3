@@ -462,7 +462,10 @@ with `adb logcat -s VrApi:I`):
   FPS=120/120  App=5.57ms  GPU%=0.85-0.86  CPU%=0.22  TW=1.19ms  Stale=0  Tear=1-2
   clocks 1382/545 MHz, 45.0 C
 
-**The GPU is at 85-86% of the 8.33 ms budget. The CPU is at 22%.** That reframes the whole
+**The GPU is at 85-86% of the 8.33 ms budget. The CPU is at 22%.**
+
+(Re-measured later with only 120 Hz samples included, the shipped Performance preset sits at
+GPU 0.68-0.70. The first numbers were diluted by 72 Hz menu samples; the direction stands.) That reframes the whole
 optimisation pass: every CPU-side cost measured tonight - physics 2.4 ms, swing peaks of 3.7 ms,
 the per-note drift - happened while three quarters of the CPU was idle. The frames that miss
 are missing because the GPU ran out of time, not because the main thread did.
