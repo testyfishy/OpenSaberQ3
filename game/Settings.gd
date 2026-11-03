@@ -72,6 +72,14 @@ var disable_map_color: bool:
 	set(value):
 		disable_map_color = value
 		set_and_emit(&"disable_map_color", value)
+# The local upload page: a small HTTP server on the LAN that accepts a map zip from a PC
+# browser. Off means the port is not opened at all, which is what a player on a shared or
+# untrusted network wants. Default on because it is the only way to sideload a map without
+# using the in-game browser.
+var upload_server: bool:
+	set(value):
+		upload_server = value
+		set_and_emit(&"upload_server", value)
 var player_height_offset: float:
 	set(value):
 		player_height_offset = value
@@ -249,6 +257,7 @@ var default_values = {
 	right_saber_offset_pos = Vector3.ZERO,
 	right_saber_offset_rot = Vector3.ZERO,
 	disable_map_color = false,
+	upload_server = true,
 	player_height_offset = 0.0,
 	audio_master = 0.8,
 	audio_music = 0.8,
@@ -358,6 +367,7 @@ func load_old_config() -> void:
 	bombs_enabled = Utils.get_bool(settings_dict, "bombs_enabled", true)
 	events = Utils.get_bool(settings_dict, "events", true, {"Web": false})
 	disable_map_color = Utils.get_bool(settings_dict, "disable_map_color", false)
+	upload_server = Utils.get_bool(settings_dict, "upload_server", true)
 	player_height_offset = Utils.get_float(settings_dict, "player_height_offset", 0.0)
 
 func save() -> void:

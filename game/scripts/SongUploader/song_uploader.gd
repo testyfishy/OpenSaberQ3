@@ -18,13 +18,30 @@ var active := false
 func _enter_tree() -> void:
 	if not DirAccess.dir_exists_absolute(UPLOAD_DIR):
 		DirAccess.make_dir_recursive_absolute(UPLOAD_DIR)
-	
-	var err := server.listen(PORT)
-	if err == OK:
-		print("Server started on ", get_server_url())
-		active = true
-	else:
-		print("Failed to start server: ", err)
+	Settings.changed.connect(_on_settings_changed)
+	apply_enabled(Settings.upload_server)
+
+func _on_settings_changed(key: StringName) -> void:
+	if key == &"upload_server":
+		apply_enabled(Settings.upload_server)
+
+# Opening the port is the whole feature, so "off" must actually close it rather than just
+# ignore requests: a player on a shared network should not be serving anything.
+func apply_enabled(value: bool) -> void:
+	if value:
+		if active:
+			return
+		var err := server.listen(PORT)
+		if err == OK:
+			active = true
+			print("Server started on ", get_server_url())
+		else:
+			active = false
+			print("Failed to start server: ", err)
+	elif active:
+		server.stop()
+		active = false
+		print("Upload server stopped")
 
 func get_server_url() -> String:
 	var ips := IP.get_local_addresses()

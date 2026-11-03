@@ -463,8 +463,7 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 	if max_fps > 0:
 		Engine.max_fps = max_fps
 		applied.append("max_fps=%d" % max_fps)
-	# GPU-vs-CPU discriminator: dropping the render scale removes roughly half the pixel work
-	# while leaving every node, script and physics tick untouched. If frame time falls, the
+	# GPU-vs-CPU discriminator: dropping the render scale removes roughly half the pixel work	# while leaving every node, script and physics tick untouched. If frame time falls, the
 	# frame is GPU-limited; if it holds, the main thread is the limit and no visual change helps.
 	var scale = cfg.get_value("bench", "render_scale", null)
 	if scale != null:
@@ -480,6 +479,12 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 	if msaa != null:
 		Settings.msaa_3d = int(msaa)
 		applied.append("msaa=%d" % Settings.msaa_3d)
+	# The upload page is a live setting (Settings.changed -> SongUploader.apply_enabled), so
+	# this arm proves the toggle really closes the port instead of only ignoring requests.
+	var upload = cfg.get_value("bench", "upload_server", null)
+	if upload != null:
+		Settings.upload_server = bool(upload)
+		applied.append("upload_server=%s" % str(bool(upload)))
 	_meta["overrides"] = ", ".join(applied) if not applied.is_empty() else "none"
 	vr.log_info("BENCH: overrides %s" % _meta["overrides"])
 # --- In-app download probe (bench-only) ---------------------------------------------------

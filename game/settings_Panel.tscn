@@ -716,7 +716,13 @@ value = -0.25
 [node name="disable_map_color" type="CheckButton" parent="ScrollContainer/VBox"]
 layout_mode = 2
 theme = SubResource("3")
-text = "Ignore Map's Colors:"
+text = "Ignore Map's Colors: "
+
+[node name="upload_server" type="CheckButton" parent="ScrollContainer/VBox"]
+layout_mode = 2
+tooltip_text = "Serves a small upload page at http://<this headset's IP>:45800 so a map zip can be dropped in from a PC browser. Off closes the port completely - nothing is listening. On by default; turn it off on a network you do not trust."
+theme = SubResource("3")
+text = "Local Map Upload Page: "
 
 [node name="spectator_view" type="CheckButton" parent="ScrollContainer/VBox"]
 layout_mode = 2
@@ -794,6 +800,7 @@ scroll_node_path = NodePath("../ScrollContainer")
 [connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/rotz" to="." method="_on_right_saber_rot_z_changed"]
 [connection signal="value_changed" from="ScrollContainer/VBox/player_height_offset/pos" to="." method="_on_player_height_offset_changed"]
 [connection signal="toggled" from="ScrollContainer/VBox/disable_map_color" to="." method="_on_disable_map_color_toggled"]
+[connection signal="toggled" from="ScrollContainer/VBox/upload_server" to="." method="_on_upload_server_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/spectator_view" to="." method="_on_spectator_view_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/spectator_hud" to="." method="_on_spectator_hud_toggled"]
 [connection signal="item_selected" from="ScrollContainer/VBox/RefreshRateRow/refresh_rate" to="." method="_on_refresh_rate_item_selected"]

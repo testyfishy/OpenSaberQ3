@@ -27,6 +27,7 @@ signal apply()
 @onready var bombs_enabled_control := $ScrollContainer/VBox/bombs_enabled as CheckButton
 @onready var ui_volume_slider := $ScrollContainer/VBox/UI_VolumeRow/ui_volume_slider as HSlider
 @onready var disable_map_color_control := $ScrollContainer/VBox/disable_map_color as CheckButton
+@onready var upload_server_control := $ScrollContainer/VBox/upload_server as CheckButton
 @onready var left_saber_posx_control := $ScrollContainer/VBox/left_saber_offset/posx as SpinBox
 @onready var left_saber_posy_control := $ScrollContainer/VBox/left_saber_offset/posy as SpinBox
 @onready var left_saber_posz_control := $ScrollContainer/VBox/left_saber_offset/posz as SpinBox
@@ -100,6 +101,7 @@ func set_controls_from_settings() -> void:
 	bombs_enabled_control.button_pressed = Settings.bombs_enabled
 	ui_volume_slider.value = Settings.ui_volume
 	disable_map_color_control.button_pressed = Settings.disable_map_color
+	upload_server_control.button_pressed = Settings.upload_server
 	left_saber_posx_control.value = Settings.left_saber_offset_pos.x
 	left_saber_posy_control.value = Settings.left_saber_offset_pos.y
 	left_saber_posz_control.value = Settings.left_saber_offset_pos.z
@@ -279,6 +281,9 @@ func _on_player_height_offset_changed(value: float) -> void:
 
 func _on_disable_map_color_toggled(toggled_on: bool) -> void:
 	Settings.disable_map_color = toggled_on
+
+func _on_upload_server_toggled(toggled_on: bool) -> void:
+	Settings.upload_server = toggled_on
 
 func _force_update_show_coll_shapes(node: Node) -> void:
 	# toggle enable to make engine show collision shapes

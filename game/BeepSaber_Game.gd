@@ -94,6 +94,12 @@ var pause_position := 0.0
 func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 	var map_filename := info.filepath + map_difficulty.beatmap_filename
 	var map_data := vr.load_json_file(map_filename)
+	# v4 keeps every lighting event in a separate lightshow file (FR: map formats v2/v3/v4).
+	var lightshow_data := {}
+	if not map_difficulty.lightshow_filename.is_empty():
+		lightshow_data = vr.load_json_file(info.filepath + map_difficulty.lightshow_filename)
+		if lightshow_data == null:
+			lightshow_data = {}
 	
 	# a new song starts with nothing on the end screen to re-attribute
 	_saved_record = {}
@@ -102,7 +108,7 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 	
 	if (map_data == null):
 		vr.log_error("Could not read map data from " + map_filename)
-	if not Map.load_beatmap(info, map_difficulty, map_data):
+	if not Map.load_beatmap(info, map_difficulty, map_data, lightshow_data):
 		return
 	
 	update_left_color(Map.color_left)

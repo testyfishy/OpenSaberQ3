@@ -92,3 +92,95 @@ static func new_v2(info_dict: Dictionary, load_path: String) -> MapInfo:
 		load_path,
 		diffs
 	)
+
+
+# v3 and v4 share one Info layout: a `song` block, an `audio` block, and a flat
+# `difficultyBeatmaps` array. Two differences matter here: v4 has no top-level level-author
+# (it is per beatmap, in `beatmapAuthors`), and v4 writes colour schemes as hex strings
+# ("C81414FF") where v3 still uses {r,g,b} objects.
+#
+# Scheme colours are folded into `_colorLeft` / `_colorRight` so the existing custom-colour
+# path in Map.set_colors_from_custom_data() picks them up unchanged. Only the first scheme is
+# used: this loader merges every characteristic's difficulties into one list, so there is no
+# single "current beatmap" whose scheme index could be honoured.
+static func new_v3(info_dict: Dictionary, load_path: String) -> MapInfo:
+	var version := Utils.get_str(info_dict, "version", "3.0.0")
+	var song := Utils.get_dict(info_dict, "song", {})
+	var audio := Utils.get_dict(info_dict, "audio", {})
+
+	var diffs: Array[DifficultyInfo] = []
+	for d: Variant in Utils.get_array(info_dict, "difficultyBeatmaps", []):
+		if d is Dictionary:
+			diffs.append(DifficultyInfo.load_v3(d as Dictionary))
+	if diffs.is_empty():
+		vr.log_warning("No difficultyBeatmaps in %s" % load_path)
+
+	var environment := ""
+	var env_names := Utils.get_array(info_dict, "environmentNames", [])
+	if not env_names.is_empty() and env_names[0] is String:
+		environment = env_names[0]
+
+	# v4 credits mappers per beatmap; take the first credited one as the map's author.
+	var level_author := ""
+	for d: DifficultyInfo in diffs:
+		if not d.level_author.is_empty():
+			level_author = d.level_author
+			break
+
+	return MapInfo.new(
+		version,
+		Utils.get_str(song, "title", ""),
+		Utils.get_str(song, "subTitle", ""),
+		Utils.get_str(song, "author", ""),
+		level_author,
+		Utils.get_float(audio, "bpm", 60.0),
+		Utils.get_float(audio, "previewStartTime", 0.0),
+		Utils.get_float(audio, "previewDuration", 0.0),
+		Utils.get_str(audio, "songFilename", ""),
+		Utils.get_str(info_dict, "coverImageFilename", ""),
+		environment,
+		0.0,
+		_color_scheme_custom_data(info_dict),
+		load_path,
+		diffs
+	)
+
+
+static func _color_scheme_custom_data(info_dict: Dictionary) -> Dictionary:
+	var schemes := Utils.get_array(info_dict, "colorSchemes", [])
+	if schemes.is_empty() or not (schemes[0] is Dictionary):
+		return {}
+	@warning_ignore("unsafe_cast")
+	var scheme := schemes[0] as Dictionary
+	# v2.1 nests the colours one level deeper; v3 and v4 have them directly on the entry.
+	var colors := Utils.get_dict(scheme, "colorScheme", scheme)
+
+	var left: Variant = _scheme_color(colors, "saberAColor")
+	var right: Variant = _scheme_color(colors, "saberBColor")
+	if left == null or right == null:
+		return {}
+	return {"_colorLeft": left, "_colorRight": right}
+
+
+# Returns {r,g,b} for the existing colour reader, or null when the scheme omits the colour.
+static func _scheme_color(scheme: Dictionary, key: String) -> Variant:
+	var v: Variant = scheme.get(key, null)
+	if v is Dictionary:
+		@warning_ignore("unsafe_cast")
+		var obj := v as Dictionary
+		return {
+			"r": Utils.get_float(obj, "r", 1.0),
+			"g": Utils.get_float(obj, "g", 1.0),
+			"b": Utils.get_float(obj, "b", 1.0),
+		}
+	if v is String:
+		# v4: "RRGGBBAA".
+		var hex := (v as String).strip_edges()
+		if hex.length() < 6:
+			return null
+		return {
+			"r": ("0x" + hex.substr(0, 2)).hex_to_int() / 255.0,
+			"g": ("0x" + hex.substr(2, 2)).hex_to_int() / 255.0,
+			"b": ("0x" + hex.substr(4, 2)).hex_to_int() / 255.0,
+		}
+	return null
