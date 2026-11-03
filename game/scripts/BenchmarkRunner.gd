@@ -731,6 +731,9 @@ func _process(delta: float) -> void:
 	if _ticks.size() % COUNTER_STRIDE == 1:
 		_sample_counters()
 	_col_cubes.append(_last_cubes)
+	if GlobalReferences.wall_pool != null:
+		var in_use: int = GlobalReferences.wall_pool.total_count() - GlobalReferences.wall_pool.free_count()
+		_wall_pool_peak = maxi(_wall_pool_peak, in_use)
 	_col_links.append(_last_links)
 	_col_debris.append(_last_debris)
 	_col_bursts.append(_last_bursts)
@@ -921,6 +924,8 @@ func _finish(reason: String, quit_after: bool = true) -> void:
 	_meta["debris_peak"] = str(_peak_of(_col_debris))
 	_meta["slice_bursts_total"] = str(_bursts_total)
 	_meta["cubes_peak"] = str(_peak_of(_col_cubes))
+	_meta["wall_pool_peak"] = str(_wall_pool_peak)
+	_meta["wall_pool_total"] = str(GlobalReferences.wall_pool.total_count()) if GlobalReferences.wall_pool != null else "0"
 	_meta["spikes"] = str(_spikes)
 	_meta["spike_threshold_usec"] = str(SPIKE_USEC)
 	while not _spike_queue.is_empty():
@@ -1099,6 +1104,10 @@ func _run_ui_scroll_probe() -> void:
 
 # --- human-play capture ------------------------------------------------------------------
 var _player_capture := false
+# Peak wall-pool usage. Pooling walls only helps if the pool is big enough: if the peak reaches
+# total_count() the pool ran dry and instantiated during play, which is the spike pooling exists
+# to remove. Recording it makes the next run answer that instead of leaving it to inference.
+var _wall_pool_peak := 0
 # Read by BeepSaber_Game._on_score_changed when hud_off is set.
 static var _hud_disabled := false
 
@@ -1120,6 +1129,8 @@ func _poll_player_capture() -> void:
 func _finish_player() -> void:
 	_player_capture = false
 	_finish("player_song_end", false)
+
+
 
 
 
