@@ -473,6 +473,10 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 	# Floor measurement: no notes at all. Everything left is engine + XR + audio + UI + render,
 	# which is the number the 8.33 ms budget has to be judged against - no note optimisation can
 	# go below it.
+	if bool(cfg.get_value("bench", "screenshot", false)):
+		_screenshot_enabled = true
+		applied.append("screenshot=true")
+
 	if bool(cfg.get_value("bench", "no_notes", false)):
 		Map.spawn_disabled = true
 		applied.append("no_notes=true")
@@ -685,6 +689,12 @@ func _process(delta: float) -> void:
 	if not _recording:
 		return
 	var now := Time.get_ticks_usec()
+	if _screenshot_enabled and not _screenshot_done and now - _start_usec > 4000000:
+		_screenshot_done = true
+		var img := get_viewport().get_texture().get_image()
+		var path := _out_dir.path_join("screenshot.png")
+		img.save_png(path)
+		vr.log_info("BENCH: screenshot %s (%dx%d)" % [path, img.get_width(), img.get_height()])
 	_ticks.append(now)
 	_deltas.append(now - _prev_usec)
 	_prev_usec = now
@@ -1108,6 +1118,11 @@ var _player_capture := false
 # total_count() the pool ran dry and instantiated during play, which is the spike pooling exists
 # to remove. Recording it makes the next run answer that instead of leaving it to inference.
 var _wall_pool_peak := 0
+# Bench-only: save one PNG a few seconds into the run. Used to verify a rendering change without
+# a headset (the wall mesh change scales the node instead of the mesh - identical in theory,
+# worth looking at once).
+var _screenshot_enabled := false
+var _screenshot_done := false
 # Read by BeepSaber_Game._on_score_changed when hud_off is set.
 static var _hud_disabled := false
 
@@ -1129,6 +1144,8 @@ func _poll_player_capture() -> void:
 func _finish_player() -> void:
 	_player_capture = false
 	_finish("player_song_end", false)
+
+
 
 
 

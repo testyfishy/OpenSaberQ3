@@ -41,6 +41,15 @@ func _despawn() -> void:
 	hide_wall()
 	release()
 
+# Called by BeepSaber_Game._clear_track() when a map ends. Pooled nodes MUST return to their pool
+# here: _clear_track() frees anything without this method, and a freed wall left in the pool
+# makes the next acquire() hand out a freed object ("Trying to cast a freed object", then
+# spawn() on a null). Notes and chain links already implement this; walls now do too.
+func clear_from_track() -> void:
+	hide_wall()
+	if not is_released():
+		release()
+
 func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = true
@@ -58,6 +67,7 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	# size - that is a cheap shape update, not a mesh rebuild.
 	mesh.scale = Vector3(x_size, y_size, z_size)
 	shape.size = Vector3(x_size, y_size, z_size)
+
 	despawn_z = Constants.MISS_Z + depth
 	_apply_material(Vector3(x_size, y_size, z_size))
 	
