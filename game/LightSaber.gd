@@ -55,7 +55,14 @@ func _hide() -> void:
 		_anim.play(&"Hide")
 		saber_visual._hide()
 
+# The colour currently on the blade. Kept here because the floor streak and the glow strip
+# read the LIGHT colour as a global (`light_left`/`light_right`), and the light has to be
+# derived from whatever colour the blade is actually showing - the map's scheme after a load,
+# or the player's choice from the panel. Nothing else stored it.
+var light_color := Color.WHITE
+
 func set_color(color: Color) -> void:
+	light_color = color
 	saber_visual.set_color(color)
 
 func on_settings_changed(key: StringName) -> void:

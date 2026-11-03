@@ -97,6 +97,8 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 	
 	# a new song starts with nothing on the end screen to re-attribute
 	_saved_record = {}
+	# ...and with no light event carried over from the last one (FR-005).
+	_event_tint = Color.WHITE
 	
 	if (map_data == null):
 		vr.log_error("Could not read map data from " + map_filename)
@@ -207,6 +209,10 @@ func _ready() -> void:
 	debug_info_label.visible = Settings.show_debug_info
 	set_colors_from_settings()
 	($WorldEnvironment as WorldEnvironment).environment.glow_enabled = Settings.glare
+	_apply_sky()
+	@warning_ignore("return_value_discarded")
+	event_driver.light_event_color.connect(_on_light_event_color)
+	_apply_light_tint()
 	
 	if not vr.inVR:
 		xr_origin.add_child(preload("res://OQ_Toolkit/OQ_ARVROrigin/Feature_VRSimulator.tscn").instantiate())
@@ -380,9 +386,92 @@ func on_settings_changed(key: StringName) -> void:
 		&"foveation_level":
 			_apply_foveation_level()
 		# Visual additions. The saber halo lives on the saber visual, which listens for its
-		# own key; these two only change how the floor is drawn.
-		&"floor_light", &"mirror_reflections":
+		# own key; these only change how the floor is drawn.
+		&"floor_light", &"mirror_reflections", &"floor_grid", &"hit_flash":
 			standing_ground.apply_visual_settings()
+		&"event_tint":
+			_apply_light_tint()
+		&"wall_fresnel":
+			_apply_wall_fresnel()
+		&"sky_gradient":
+			_apply_sky()
+		&"debris_cap":
+			BeepCubeSliceParticles.apply_cap_setting()
+
+# --- Light tint (specs/007-visual-options FR-005) ---------------------------------------
+#
+# The map's light events tint the light the blades throw. The tint is applied ONCE, here, and
+# published as `light_left`/`light_right`; the floor shader and the glow strip only READ that
+# value and never multiply a tint of their own (007 rule 6). Until now nothing wrote these
+# globals at all, so the floor streak and the blade glow sat on the project.godot defaults
+# (red/blue) whatever colour the blades or the map actually were.
+#
+# Strength is 0.5, not 1.0: at full strength a red event drives the blue blade's light down
+# to the brightness floor, which reads as the blade losing its colour rather than as the room
+# changing colour.
+const EVENT_TINT_STRENGTH := 0.5
+# Blade light never disappears: every channel keeps at least this share of the blade colour.
+const EVENT_TINT_BRIGHTNESS_FLOOR := 0.35
+
+var _event_tint := Color.WHITE
+
+func _on_light_event_color(color: Color) -> void:
+	_event_tint = color
+	_apply_light_tint()
+
+func _apply_light_tint() -> void:
+	# `events` off means the map's whole lighting system is off, so there is nothing to tint
+	# by: the blades get their own colour back rather than the last event's.
+	var k := EVENT_TINT_STRENGTH if (Settings.event_tint and Settings.events) else 0.0
+	RenderingServer.global_shader_parameter_set(
+		&"light_left", _tinted_light(left_saber.light_color, k))
+	RenderingServer.global_shader_parameter_set(
+		&"light_right", _tinted_light(right_saber.light_color, k))
+
+# lerp(blade, blade * tint, k) per channel, floored so a lights-off (black) event dims the
+# blade light instead of deleting it. Returns the vec3 the shader globals are declared as.
+func _tinted_light(base: Color, k: float) -> Vector3:
+	return Vector3(
+		maxf(lerpf(base.r, base.r * _event_tint.r, k), base.r * EVENT_TINT_BRIGHTNESS_FLOOR),
+		maxf(lerpf(base.g, base.g * _event_tint.g, k), base.g * EVENT_TINT_BRIGHTNESS_FLOOR),
+		maxf(lerpf(base.b, base.b * _event_tint.b, k), base.b * EVENT_TINT_BRIGHTNESS_FLOOR))
+
+# --- Gradient sky (FR-007) --------------------------------------------------------------
+#
+# One Sky resource built on first use and swapped in whole, which is what makes it "updates on
+# load / setting change" rather than per frame: the sky shader has no TIME, so the engine
+# renders it (and its radiance cubemap) once, and assigning a different Sky is the only thing
+# that retriggers it. `RADIANCE_SIZE_32` is the smallest the engine offers, which is what the
+# ambient filter has to work through.
+const SKY_GRADIENT_SHADER := preload("res://game/shaders/sky_gradient.gdshader")
+var _panorama_sky: Sky
+var _gradient_sky: Sky
+
+func _apply_sky() -> void:
+	var env := ($WorldEnvironment as WorldEnvironment).environment
+	if env == null:
+		return
+	if _panorama_sky == null:
+		_panorama_sky = env.sky
+	if Settings.sky_gradient:
+		if _gradient_sky == null:
+			_gradient_sky = Sky.new()
+			_gradient_sky.radiance_size = Sky.RADIANCE_SIZE_32
+			var sky_mat := ShaderMaterial.new()
+			sky_mat.shader = SKY_GRADIENT_SHADER
+			_gradient_sky.sky_material = sky_mat
+		if env.sky != _gradient_sky:
+			env.sky = _gradient_sky
+	elif env.sky != _panorama_sky:
+		env.sky = _panorama_sky
+
+# --- Fresnel walls (FR-009) -------------------------------------------------------------
+# Walls are spawned per obstacle, so the setting is applied to the walls that are on the track
+# right now; the next spawn picks it up in Wall.spawn -> Wall._apply_material.
+func _apply_wall_fresnel() -> void:
+	for c in track.get_children():
+		if c is Wall:
+			(c as Wall).apply_visual_settings()
 
 func set_colors_from_settings() -> void:
 	update_left_color(Settings.color_left)
@@ -397,6 +486,7 @@ func update_left_color(color: Color) -> void:
 	goggles_shader.set_shader_parameter(&"left_color", color)
 	event_driver.update_left_color(color)
 	standing_ground.update_left_color(color)
+	_apply_light_tint()
 
 func update_right_color(color: Color) -> void:
 	if !left_saber:
@@ -407,6 +497,7 @@ func update_right_color(color: Color) -> void:
 	goggles_shader.set_shader_parameter(&"right_color", color)
 	event_driver.update_right_color(color)
 	standing_ground.update_right_color(color)
+	_apply_light_tint()
 
 func disable_events(disabled: bool) -> void:
 	event_driver.disabled = disabled
@@ -414,6 +505,7 @@ func disable_events(disabled: bool) -> void:
 		event_driver.set_all_off()
 	else:
 		event_driver.set_all_on(Settings.color_left, Settings.color_right)
+	_apply_light_tint()
 
 func _clear_track() -> void:
 	for c in track.get_children():

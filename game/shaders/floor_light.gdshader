@@ -46,7 +46,9 @@ uniform vec3 flash_pos = vec3(0.0, 0.0, -50.0);
 uniform float flash_energy = 0.0;
 uniform float flash_radius = 0.55;
 uniform float grid_scale = 2.0;
-uniform float grid_strength = 0.10;
+// Faint on purpose: this is added to the same EMISSION the burn trail already drives, and
+// anything stronger turns the pad into graph paper and starts to shimmer at distance.
+uniform float grid_strength = 0.08;
 
 varying vec3 world_pos;
 

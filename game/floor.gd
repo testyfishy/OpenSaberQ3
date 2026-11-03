@@ -68,6 +68,9 @@ func flash_at(pos: Vector3) -> void:
 		return
 	_flash_energy = 1.0
 	_light_mat.set_shader_parameter(&"flash_pos", Vector3(pos.x, 0.0, pos.z))
+	# Peak is 1.0 and the shader clamps to 1.0 as well: the burst is written on the cut frame,
+	# not one frame later in _process, so the first visible frame of the flash is its peak.
+	_light_mat.set_shader_parameter(&"flash_energy", 1.0)
 
 # Single funnel for the visual settings that touch the floor (FR-045, FR-003, FR-006), so
 # the material in use and the shader uniforms can never disagree.

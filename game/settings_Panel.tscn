@@ -467,6 +467,42 @@ tooltip_text = "High Performance impact*"
 theme = SubResource("3")
 text = "*Saber Tail: "
 
+[node name="hit_flash" type="CheckButton" parent="ScrollContainer/VBox"]
+layout_mode = 2
+tooltip_text = "A short burst of light on the floor where your blade cut the note (about 80 ms, fading out). Drawn inside the floor shader that is already running: one uniform write per cut, no extra draw call."
+theme = SubResource("3")
+text = "Cut Flash: "
+
+[node name="floor_grid" type="CheckButton" parent="ScrollContainer/VBox"]
+layout_mode = 2
+tooltip_text = "Low Performance impact\nA faint grid on the floor so the room reads as a floor. Anti-aliased in the fragment shader: about one fwidth per floor pixel, inside the pass the floor already runs."
+theme = SubResource("3")
+text = "Floor Grid: "
+
+[node name="event_tint" type="CheckButton" parent="ScrollContainer/VBox"]
+layout_mode = 2
+tooltip_text = "Low Performance impact\nLight events in the map tint the light your blades throw on the floor. Applied once where the light colour is published, so the floor and the blade glow share it; blade light never goes fully dark."
+theme = SubResource("3")
+text = "Map Light Tint: "
+
+[node name="wall_fresnel" type="CheckButton" parent="ScrollContainer/VBox"]
+layout_mode = 2
+tooltip_text = "High Performance impact*\nDraws walls as a glowing fresnel outline instead of a textured panel. Additive and unshaded, so it fills pixels rather than reading a texture - and it fades out against your face so you can never be blinded from inside a wall. Off by default: measure it first."
+theme = SubResource("3")
+text = "*Glowing Walls: "
+
+[node name="debris_cap" type="CheckButton" parent="ScrollContainer/VBox"]
+layout_mode = 2
+tooltip_text = "Saves performance\nCaps slice debris at 120 particles in total (four bursts, half-size). Extra bursts from cuts in a dense section are simply skipped. Unshaded additive quads, no depth write."
+theme = SubResource("3")
+text = "Limit Debris: "
+
+[node name="sky_gradient" type="CheckButton" parent="ScrollContainer/VBox"]
+layout_mode = 2
+tooltip_text = "Saves performance\nReplaces the background panorama with a plain gradient. No texture fetch, and the ambient cubemap is built once at the smallest size the engine offers. Off by default because it replaces the game's background art."
+theme = SubResource("3")
+text = "Gradient Sky: "
+
 [node name="show_debug" type="CheckButton" parent="ScrollContainer/VBox"]
 layout_mode = 2
 theme = SubResource("3")
@@ -744,6 +780,12 @@ scroll_node_path = NodePath("../ScrollContainer")
 [connection signal="toggled" from="ScrollContainer/VBox/saber_halo" to="." method="_on_saber_halo_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/mirror_reflections" to="." method="_on_mirror_reflections_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/saber_tail" to="." method="_on_saber_tail_toggled"]
+[connection signal="toggled" from="ScrollContainer/VBox/hit_flash" to="." method="_on_hit_flash_toggled"]
+[connection signal="toggled" from="ScrollContainer/VBox/floor_grid" to="." method="_on_floor_grid_toggled"]
+[connection signal="toggled" from="ScrollContainer/VBox/event_tint" to="." method="_on_event_tint_toggled"]
+[connection signal="toggled" from="ScrollContainer/VBox/wall_fresnel" to="." method="_on_wall_fresnel_toggled"]
+[connection signal="toggled" from="ScrollContainer/VBox/debris_cap" to="." method="_on_debris_cap_toggled"]
+[connection signal="toggled" from="ScrollContainer/VBox/sky_gradient" to="." method="_on_sky_gradient_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/show_debug" to="." method="_on_show_debug_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/show_collisions" to="." method="_on_show_collisions_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/bombs_enabled" to="." method="_on_bombs_enabled_toggled"]

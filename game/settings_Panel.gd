@@ -11,6 +11,14 @@ signal apply()
 @onready var saber_halo_control := $ScrollContainer/VBox/saber_halo as CheckButton
 @onready var mirror_reflections_control := $ScrollContainer/VBox/mirror_reflections as CheckButton
 @onready var saber_tail_control := $ScrollContainer/VBox/saber_tail as CheckButton
+# Round 2 visual additions (specs/007-visual-options). Each one is its own switch, like the
+# rows above; the tooltip states the cost.
+@onready var hit_flash_control := $ScrollContainer/VBox/hit_flash as CheckButton
+@onready var floor_grid_control := $ScrollContainer/VBox/floor_grid as CheckButton
+@onready var event_tint_control := $ScrollContainer/VBox/event_tint as CheckButton
+@onready var wall_fresnel_control := $ScrollContainer/VBox/wall_fresnel as CheckButton
+@onready var debris_cap_control := $ScrollContainer/VBox/debris_cap as CheckButton
+@onready var sky_gradient_control := $ScrollContainer/VBox/sky_gradient as CheckButton
 @onready var saber_thickness := $ScrollContainer/VBox/SaberThicknessRow/saber_thickness as HSlider
 @onready var cut_blocks := $ScrollContainer/VBox/cut_blocks as CheckButton
 @onready var d_background := $ScrollContainer/VBox/d_background as CheckButton
@@ -88,6 +96,12 @@ func set_controls_from_settings() -> void:
 	floor_light_control.button_pressed = Settings.floor_light
 	saber_halo_control.button_pressed = Settings.saber_halo
 	mirror_reflections_control.button_pressed = Settings.mirror_reflections
+	hit_flash_control.button_pressed = Settings.hit_flash
+	floor_grid_control.button_pressed = Settings.floor_grid
+	event_tint_control.button_pressed = Settings.event_tint
+	wall_fresnel_control.button_pressed = Settings.wall_fresnel
+	debris_cap_control.button_pressed = Settings.debris_cap
+	sky_gradient_control.button_pressed = Settings.sky_gradient
 	d_background.button_pressed = Settings.events
 	saber_control.select(Settings.saber_visual)
 	show_debug_control.button_pressed = Settings.show_debug_info
@@ -200,6 +214,24 @@ func _on_saber_halo_toggled(button_pressed: bool) -> void:
 
 func _on_mirror_reflections_toggled(button_pressed: bool) -> void:
 	Settings.mirror_reflections = button_pressed
+
+func _on_hit_flash_toggled(button_pressed: bool) -> void:
+	Settings.hit_flash = button_pressed
+
+func _on_floor_grid_toggled(button_pressed: bool) -> void:
+	Settings.floor_grid = button_pressed
+
+func _on_event_tint_toggled(button_pressed: bool) -> void:
+	Settings.event_tint = button_pressed
+
+func _on_wall_fresnel_toggled(button_pressed: bool) -> void:
+	Settings.wall_fresnel = button_pressed
+
+func _on_debris_cap_toggled(button_pressed: bool) -> void:
+	Settings.debris_cap = button_pressed
+
+func _on_sky_gradient_toggled(button_pressed: bool) -> void:
+	Settings.sky_gradient = button_pressed
 
 func _on_d_background_toggled(button_pressed: bool) -> void:
 	Settings.events = button_pressed

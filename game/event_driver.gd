@@ -40,6 +40,15 @@ const INTENSITY_PARAMS: Array[StringName] = [
 # Reused instead of a fresh Array per fade call: this runs once per light event.
 var _fade_materials: Array[StandardMaterial3D] = []
 
+# The colour the room is currently lit with, for the floor streak and the blade glow
+# (specs/007-visual-options FR-005). Emitted from ONE group - the floor lights, the group the
+# eye reads as "the room's light" - because publishing from every group would let whichever
+# group fired last win the beat and make the tint flicker between colours.
+signal light_event_color(color: Color)
+
+func _publish_light_color(color: Color) -> void:
+	light_event_color.emit(color)
+
 func _ready() -> void:
 	# get_rendering_device() returns null in opengl, meaning this block is skipped in vulkan
 	if not RenderingServer.get_rendering_device():
@@ -149,6 +158,8 @@ func stop_prev_tween(type: int) -> void:
 func turn_light_off(type: int) -> void:
 	stop_prev_tween(type)
 	_on_Tween_tween_step(Color.BLACK, type)
+	if type == EventInfo.TYPE_FLOOR_LIGHTS:
+		_publish_light_color(Color.BLACK)
 	match type:
 		EventInfo.TYPE_DIAGONAL_LASERS:
 			diagonal_lasers_holder.visible = false
@@ -171,6 +182,8 @@ func turn_light_on(type: int, color: Color) -> void:
 	sphere_material.set_shader_parameter(TINT_PARAMS[type], color)
 	stop_prev_tween(type)
 	_on_Tween_tween_step(color, type)
+	if type == EventInfo.TYPE_FLOOR_LIGHTS:
+		_publish_light_color(color)
 	match type:
 		EventInfo.TYPE_DIAGONAL_LASERS:
 			diagonal_lasers_holder.visible = true
@@ -191,10 +204,14 @@ func turn_light_on(type: int, color: Color) -> void:
 
 func flash_light_on(type: int, color: Color) -> void:
 	sphere_material.set_shader_parameter(TINT_PARAMS[type], color)
+	if type == EventInfo.TYPE_FLOOR_LIGHTS:
+		_publish_light_color(color)
 	fade_light(type, color * 3.0, color, false, Tween.TRANS_LINEAR, Tween.EASE_OUT)
 
 func flash_light_then_fade_off(type: int, color: Color) -> void:
 	sphere_material.set_shader_parameter(TINT_PARAMS[type], color)
+	if type == EventInfo.TYPE_FLOOR_LIGHTS:
+		_publish_light_color(color)
 	fade_light(type, color * 3.0, Color.BLACK, true, Tween.TRANS_QUAD, Tween.EASE_IN)
 
 func fade_light_from_current(type: int, to_color: Color) -> void:
@@ -252,14 +269,18 @@ func fade_light(type: int, from: Color, to: Color, turn_off_after_fade: bool, tr
 	# stop_prev_tween) still skips it exactly as before.
 	@warning_ignore("return_value_discarded")
 	tween.set_parallel(false)
-	tween.tween_callback(_finish_fade.bind(group, turn_off_after_fade, type))
+	tween.tween_callback(_finish_fade.bind(group, turn_off_after_fade, type, to))
 	tween.play()
 	prev_tweeners[type] = tween
 
-func _finish_fade(group: Node3D, turn_off_after_fade: bool, type: int) -> void:
+func _finish_fade(group: Node3D, turn_off_after_fade: bool, type: int, to: Color) -> void:
 	if turn_off_after_fade:
 		group.visible = false
 		_on_Tween_tween_step(Color.BLACK, type)
+	# The tint follows the fade only when it is over: a map that fades the room to black must
+	# not leave the last flash colour on the floor until the next event (FR-005).
+	if type == EventInfo.TYPE_FLOOR_LIGHTS:
+		_publish_light_color(Color.BLACK if turn_off_after_fade else to)
 
 func _on_Tween_tween_step(value: Color, id: int) -> void:
 	sphere_material.set_shader_parameter(INTENSITY_PARAMS[id], value.v)
