@@ -75,6 +75,9 @@ func on_settings_changed(key: StringName) -> void:
 		&"saber_halo":
 			# FR-046. Lives on the visual so a saber swap picks the setting up again.
 			saber_visual.set_halo_enabled(Settings.saber_halo)
+		&"mirror_reflections":
+			# FR-047: the mirrored blade is a next_pass on the blade material.
+			saber_visual.set_mirror_enabled(Settings.mirror_reflections)
 		&"left_saber_offset_pos":
 			if type == 0:
 				extra_offset_pos = Settings.left_saber_offset_pos
@@ -95,6 +98,9 @@ func _ready() -> void:
 	saber_visual.quickhide()
 	saber_visual.set_thickness(Settings.thickness)
 	saber_visual.set_trail(Settings.saber_tail)
+	saber_visual.set_halo_enabled(Settings.saber_halo)
+	saber_visual.set_mirror_enabled(Settings.mirror_reflections)
+	saber_visual.set_side(type)
 	
 	@warning_ignore("return_value_discarded")
 	Settings.changed.connect(on_settings_changed)
@@ -162,6 +168,9 @@ func set_saber(saber_path: String) -> void:
 		saber_visual.set_color(Settings.color_right if type else Settings.color_left)
 		saber_visual.set_thickness(Settings.thickness)
 		saber_visual.set_trail(Settings.saber_tail)
+		saber_visual.set_halo_enabled(Settings.saber_halo)
+		saber_visual.set_mirror_enabled(Settings.mirror_reflections)
+		saber_visual.set_side(type)
 
 func set_swingcast_enabled(value: bool) -> void:
 	_hit_enabled = value

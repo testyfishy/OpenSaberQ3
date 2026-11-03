@@ -85,11 +85,18 @@ var is_extended := false
 @onready var tail := $tail as SaberTail
 @onready var hitsound := $hitsound as AudioStreamPlayer3D
 
-# Emissive halo shell (FR-046): a slightly enlarged MeshInstance3D that shares this
-# saber's CapsuleMesh resource, so the Show/Hide animation drives its length and radius
-# too. Unshaded, additive, no depth write — it adds light and cannot occlude anything.
+# Emissive glow (FR-046, 007 rule 3): a camera-facing quad strip, billboarded about the
+# blade axis in its own shader, instead of the 2.4x additive capsule shell it replaced. Its
+# height is driven by the same Show/Hide animations as the blade, so a retracting saber
+# shortens its glow. The colour comes from the light globals, not from this node, because a
+# map light event tints the light once at the source (007 rule 6).
 @onready var _halo := $LightSaber_Mesh/Halo as MeshInstance3D
 @onready var _halo_mat := _halo.material_override as ShaderMaterial
+
+# Mirrored copy, as a `next_pass` on the blade material (FR-047). The pass reads the colour
+# from an instance uniform, so one shared material serves both blades.
+const MIRROR_SHADER := preload("res://game/shaders/mirror_pass.gdshader")
+static var _mirror_material: ShaderMaterial
 
 # The polyphonic playback, obtained once from the player. Every later hit is a
 # `play_stream` on this object; the player itself is never played again, because
@@ -117,6 +124,7 @@ func _ready() -> void:
 	set_process(false)
 	quickhide()
 	set_halo_enabled(Settings.saber_halo)
+	_set_mirror_pass(Settings.mirror_reflections)
 	# Exactly one play() for the lifetime of this node, then cache the playback.
 	if hitsound.stream is AudioStreamPolyphonic:
 		hitsound.play()
@@ -138,8 +146,33 @@ func _process(delta: float) -> void:
 
 func set_color(color: Color) -> void:
 	_mat.set_shader_parameter(&"color", color)
-	_halo_mat.set_shader_parameter(&"color", color)
 	tail.set_color(color)
+	# The mirrored pass is a second pass on this same mesh, so its colour travels as an
+	# instance uniform: one shared mirror material serves both blades (007 rule 2).
+	light_mesh.set_instance_shader_parameter(&"mirror_color", color)
+
+# 0 = left blade, 1 = right: which light global the glow strip reads, so the strip follows
+# the light that is applied once at the source rather than carrying its own tint.
+func set_side(side: int) -> void:
+	_halo_mat.set_shader_parameter(&"side", side)
+
+func set_mirror_enabled(value: bool) -> void:
+	_set_mirror_pass(value)
+
+# `next_pass = null` when off, not a hidden uniform test: a pass that is not attached costs
+# no draw call at all.
+func _set_mirror_pass(enabled: bool) -> void:
+	if _mat == null:
+		return
+	if enabled:
+		if _mirror_material == null:
+			_mirror_material = ShaderMaterial.new()
+			_mirror_material.shader = MIRROR_SHADER
+			_mirror_material.render_priority = -1
+		if _mat.next_pass != _mirror_material:
+			_mat.next_pass = _mirror_material
+	elif _mat.next_pass != null:
+		_mat.next_pass = null
 
 func set_thickness(value: float) -> void:
 	light_mesh.scale.x = value

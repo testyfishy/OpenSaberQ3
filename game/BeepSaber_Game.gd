@@ -675,10 +675,8 @@ func _on_ScenePool_new_scene_instanced(obj: Node3D, during_presizing: bool) -> v
 	# make obj visible and wait for a frame to be processed. this tricks
 	# shaders to be loaded at startup time.
 	if during_presizing:
-		# FR-038: cube/wall/bomb/arc materials compile on this frame. The mirrored copy is a
-		# child of the cube and ships switched off, so it needs asking (see BeepCube.warm_mirror).
-		if obj is BeepCube:
-			obj.warm_mirror()
+		# FR-038: cube/wall/bomb/arc materials compile on this frame. Mirrored copies are now a
+		# material next_pass on the mesh itself rather than a child node, so nothing extra to warm.
 		obj.position.z = -2.0
 		await get_tree().process_frame
 		

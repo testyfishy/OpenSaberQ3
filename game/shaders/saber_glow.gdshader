@@ -40,8 +40,8 @@ void vertex() {
 	// QuadMesh UVs: 0..1 across and 0..1 along, independent of the animated size.
 	quad_uv = UV;
 	// The blade axis and the point on it this vertex belongs to, both in view space.
-	vec3 axis_view = normalize((MODELVIEW * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
-	vec3 centre_view = (MODELVIEW * vec4(0.0, VERTEX.y, 0.0, 1.0)).xyz;
+	vec3 axis_view = normalize((MODELVIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+	vec3 centre_view = (MODELVIEW_MATRIX * vec4(0.0, VERTEX.y, 0.0, 1.0)).xyz;
 	// Lateral direction: perpendicular to the blade and to the eye ray. The eye is at the
 	// origin of view space, looking down -Z.
 	vec3 to_cam = -normalize(centre_view);
@@ -50,9 +50,9 @@ void vertex() {
 	// Blade pointing straight at the eye: no meaningful side vector, so collapse to a
 	// degenerate strip rather than producing NaNs.
 	lateral = lateral_len > 1e-5 ? lateral / lateral_len : vec3(0.0);
-	// MODELVIEW's x axis length carries the saber thickness scale, so the strip widens with
+	// MODELVIEW_MATRIX's x axis length carries the saber thickness scale, so the strip widens with
 	// the blade as set_thickness() changes it.
-	float thickness = length((MODELVIEW * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
+	float thickness = length((MODELVIEW_MATRIX * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
 	float w = half_width * max(thickness, 1e-3);
 	vec3 view_pos = centre_view + lateral * (sign(VERTEX.x) * w);
 	POSITION = PROJECTION_MATRIX * vec4(view_pos, 1.0);
@@ -67,3 +67,4 @@ void fragment() {
 	vec3 light = side > 0 ? light_right : light_left;
 	ALBEDO = min(light * energy * mask, vec3(peak));
 }
+

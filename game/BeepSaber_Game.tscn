@@ -36,7 +36,6 @@
 [ext_resource type="PackedScene" uid="uid://dvj8dorx2l7s0" path="res://game/BeepCube/BeepCube.tscn" id="33_nc705"]
 [ext_resource type="PackedScene" uid="uid://b62c3hkjmky75" path="res://game/Chain/ChainLink.tscn" id="34_tsovg"]
 [ext_resource type="PackedScene" path="res://game/ProfilePanel.tscn" id="36_profiles"]
-[ext_resource type="Script" path="res://game/visual/MirrorRig.gd" id="37_mirror"]
 
 [sub_resource type="Environment" id="1"]
 background_mode = 2
@@ -166,11 +165,6 @@ ui_raycast_length = 5.0
 controller = NodePath("../..")
 
 [node name="Track" type="Node3D" parent="."]
-
-[node name="MirrorRig" type="Node3D" parent="." node_paths=PackedStringArray("left_saber", "right_saber")]
-script = ExtResource("37_mirror")
-left_saber = NodePath("../XROrigin3D/LeftController/LeftLightSaber")
-right_saber = NodePath("../XROrigin3D/RightController/RightLightSaber")
 
 [node name="StandingGround" parent="." instance=ExtResource("1")]
 

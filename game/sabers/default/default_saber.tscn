@@ -1,16 +1,20 @@
-[gd_scene load_steps=17 format=3 uid="uid://bw3rjal5qlu0p"]
+[gd_scene load_steps=18 format=3 uid="uid://bw3rjal5qlu0p"]
 
 [ext_resource type="Material" uid="uid://chqutrqmle57g" path="res://game/LightSaber.material" id="1"]
 [ext_resource type="AudioStream" uid="uid://bkuquwclng0k" path="res://game/data/lightsaber.ogg" id="2"]
 [ext_resource type="Script" path="res://game/sabers/default/default_saber.gd" id="3"]
 [ext_resource type="Texture2D" uid="uid://drc5tdiltfqnk" path="res://game/BeepCube/BeepCubeEmission.png" id="3_b1nd4"]
 [ext_resource type="PackedScene" uid="uid://buhdimf18mwbo" path="res://game/sabers/default/tail.tscn" id="6_wpbvo"]
-[ext_resource type="Shader" path="res://game/shaders/neon_halo.gdshader" id="7_halo"]
+[ext_resource type="Shader" path="res://game/shaders/saber_glow.gdshader" id="7_halo"]
 
 [sub_resource type="CapsuleMesh" id="1"]
 resource_local_to_scene = true
 radius = 0.0005
 height = 1.2
+
+[sub_resource type="QuadMesh" id="QuadMesh_halo"]
+resource_local_to_scene = true
+size = Vector2(0.036, 1.2)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vuh23"]
 albedo_color = Color(0, 0, 0, 1)
@@ -100,6 +104,18 @@ tracks/5/keys = {
 "update": 0,
 "values": [1.15, 0.0]
 }
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Halo:mesh:size")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0, 1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(0.036, 1.2), Vector2(0.036, 0.001)]
+}
 
 [sub_resource type="Animation" id="5"]
 resource_name = "QuickHide"
@@ -163,6 +179,18 @@ tracks/4/keys = {
 "transitions": PackedFloat32Array(1),
 "update": 0,
 "values": [0.0]
+}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Halo:mesh:size")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(0.036, 0.001)]
 }
 
 [sub_resource type="Animation" id="Animation_ddgay"]
@@ -281,6 +309,18 @@ tracks/6/keys = {
 "update": 0,
 "values": [0.0, 1.15]
 }
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Halo:mesh:size")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0, 1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(0.036, 0.001), Vector2(0.036, 1.2)]
+}
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_ox0xw"]
 _data = {
@@ -296,11 +336,12 @@ polyphony = 10
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_halo"]
 resource_local_to_scene = true
 shader = ExtResource("7_halo")
-shader_parameter/color = Color(1, 1, 1, 1)
+shader_parameter/side = 0
 shader_parameter/energy = 0.45
-shader_parameter/rim_power = 1.5
-shader_parameter/box_edges = false
-shader_parameter/half_extent = Vector3(0.5, 0.5, 0.5)
+shader_parameter/half_width = 0.018
+shader_parameter/falloff = 2.5
+shader_parameter/cap_fade = 0.06
+shader_parameter/peak = 1.1
 
 [node name="default_saber" type="Node3D"]
 script = ExtResource("3")
@@ -308,14 +349,16 @@ script = ExtResource("3")
 [node name="LightSaber_Mesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -1, -1.33118e-07, 0, 1.33118e-07, -1, 0, 0.65, 0)
 layers = 3
+extra_cull_margin = 3.0
 material_override = ExtResource("1")
 mesh = SubResource("1")
 
 [node name="Halo" type="MeshInstance3D" parent="LightSaber_Mesh"]
-transform = Transform3D(2.4, 0, 0, 0, 1.02, 0, 0, 0, 2.4, 0, 0, 0)
 layers = 3
+extra_cull_margin = 0.1
 material_override = SubResource("ShaderMaterial_halo")
-mesh = SubResource("1")
+mesh = SubResource("QuadMesh_halo")
+cast_shadow = 0
 
 [node name="Hilt_Mesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.03, 0)
