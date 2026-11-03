@@ -437,12 +437,6 @@ tooltip_text = "High Performance impact*"
 theme = SubResource("3")
 text = "*Cut Blocks: "
 
-[node name="glare" type="CheckButton" parent="ScrollContainer/VBox"]
-layout_mode = 2
-tooltip_text = "Bloom. A full-screen resolve: roughly 1-2.5 ms per frame on Quest 3, and it is what makes fixed foveated rendering unattractive later. Off by default; measure before shipping it on."
-theme = SubResource("3")
-text = "*Glow (bloom): "
-
 [node name="floor_light" type="CheckButton" parent="ScrollContainer/VBox"]
 layout_mode = 2
 tooltip_text = "Light pool under each blade, drawn analytically by the floor shader from the saber positions. No extra render pass, no second viewport."
@@ -484,12 +478,6 @@ layout_mode = 2
 tooltip_text = "Low Performance impact\nLight events in the map tint the light your blades throw on the floor. Applied once where the light colour is published, so the floor and the blade glow share it; blade light never goes fully dark."
 theme = SubResource("3")
 text = "Map Light Tint: "
-
-[node name="wall_fresnel" type="CheckButton" parent="ScrollContainer/VBox"]
-layout_mode = 2
-tooltip_text = "High Performance impact*\nDraws walls as a glowing fresnel outline instead of a textured panel. Additive and unshaded, so it fills pixels rather than reading a texture - and it fades out against your face so you can never be blinded from inside a wall. Off by default: measure it first."
-theme = SubResource("3")
-text = "*Glowing Walls: "
 
 [node name="debris_cap" type="CheckButton" parent="ScrollContainer/VBox"]
 layout_mode = 2
@@ -775,7 +763,6 @@ scroll_node_path = NodePath("../ScrollContainer")
 [connection signal="button_up" from="ScrollContainer/VBox/recenter" to="." method="_on_recenter_button_up"]
 [connection signal="toggled" from="ScrollContainer/VBox/d_background" to="." method="_on_d_background_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/cut_blocks" to="." method="_on_cut_blocks_toggled"]
-[connection signal="toggled" from="ScrollContainer/VBox/glare" to="." method="_on_glare_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/floor_light" to="." method="_on_floor_light_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/saber_halo" to="." method="_on_saber_halo_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/mirror_reflections" to="." method="_on_mirror_reflections_toggled"]
@@ -783,7 +770,6 @@ scroll_node_path = NodePath("../ScrollContainer")
 [connection signal="toggled" from="ScrollContainer/VBox/hit_flash" to="." method="_on_hit_flash_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/floor_grid" to="." method="_on_floor_grid_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/event_tint" to="." method="_on_event_tint_toggled"]
-[connection signal="toggled" from="ScrollContainer/VBox/wall_fresnel" to="." method="_on_wall_fresnel_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/debris_cap" to="." method="_on_debris_cap_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/sky_gradient" to="." method="_on_sky_gradient_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/show_debug" to="." method="_on_show_debug_toggled"]

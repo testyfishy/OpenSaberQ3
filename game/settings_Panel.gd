@@ -5,7 +5,6 @@ signal apply()
 @export var beepsaber_game : BeepSaber_Game
 
 @onready var saber_control := $ScrollContainer/VBox/SaberTypeRow/saber as OptionButton
-@onready var glare_control := $ScrollContainer/VBox/glare as CheckButton
 # Visual additions (FR-045..FR-048).
 @onready var floor_light_control := $ScrollContainer/VBox/floor_light as CheckButton
 @onready var saber_halo_control := $ScrollContainer/VBox/saber_halo as CheckButton
@@ -16,7 +15,6 @@ signal apply()
 @onready var hit_flash_control := $ScrollContainer/VBox/hit_flash as CheckButton
 @onready var floor_grid_control := $ScrollContainer/VBox/floor_grid as CheckButton
 @onready var event_tint_control := $ScrollContainer/VBox/event_tint as CheckButton
-@onready var wall_fresnel_control := $ScrollContainer/VBox/wall_fresnel as CheckButton
 @onready var debris_cap_control := $ScrollContainer/VBox/debris_cap as CheckButton
 @onready var sky_gradient_control := $ScrollContainer/VBox/sky_gradient as CheckButton
 @onready var saber_thickness := $ScrollContainer/VBox/SaberThicknessRow/saber_thickness as HSlider
@@ -72,10 +70,6 @@ func _ready() -> void:
 	
 	set_controls_from_settings()
 	_play_ui_sound_demo = true
-	
-	if OS.get_name() == &"Web":
-		# way too heavy for webxr
-		$ScrollContainer/VBox/glare.hide()
 
 func set_controls_from_settings() -> void:
 	saber_control.clear()
@@ -92,14 +86,12 @@ func set_controls_from_settings() -> void:
 	left_saber_col.color = Settings.color_left
 	right_saber_col.color = Settings.color_right
 	saber_tail_control.button_pressed = Settings.saber_tail
-	glare_control.button_pressed = Settings.glare
 	floor_light_control.button_pressed = Settings.floor_light
 	saber_halo_control.button_pressed = Settings.saber_halo
 	mirror_reflections_control.button_pressed = Settings.mirror_reflections
 	hit_flash_control.button_pressed = Settings.hit_flash
 	floor_grid_control.button_pressed = Settings.floor_grid
 	event_tint_control.button_pressed = Settings.event_tint
-	wall_fresnel_control.button_pressed = Settings.wall_fresnel
 	debris_cap_control.button_pressed = Settings.debris_cap
 	sky_gradient_control.button_pressed = Settings.sky_gradient
 	d_background.button_pressed = Settings.events
@@ -203,9 +195,6 @@ func _on_right_saber_color_changed(color: Color) -> void:
 func _on_saber_tail_toggled(button_pressed: bool) -> void:
 	Settings.saber_tail = button_pressed
 
-func _on_glare_toggled(button_pressed: bool) -> void:
-	Settings.glare = button_pressed
-
 func _on_floor_light_toggled(button_pressed: bool) -> void:
 	Settings.floor_light = button_pressed
 
@@ -223,9 +212,6 @@ func _on_floor_grid_toggled(button_pressed: bool) -> void:
 
 func _on_event_tint_toggled(button_pressed: bool) -> void:
 	Settings.event_tint = button_pressed
-
-func _on_wall_fresnel_toggled(button_pressed: bool) -> void:
-	Settings.wall_fresnel = button_pressed
 
 func _on_debris_cap_toggled(button_pressed: bool) -> void:
 	Settings.debris_cap = button_pressed

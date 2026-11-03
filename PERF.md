@@ -330,6 +330,8 @@ current bottleneck.
 | **Analytic swept hit test** (`HitResolver`, `detection = analytic\|rays`) | yes | unit parity: 26 checks pass; analytic registers 9/9 test cubes vs 7/9 for the ray fan, and the fan false-positives on a note 2 m away | **A/B RUN 2026-11-02: 114 vs 114 cuts, 0 wrong both; physics p95 3.28 (rays) vs 3.54 (analytic); reverted to rays as default
 | **Effect prewarm** (arcs, bombs, walls instantiated per spawn) | yes | parse only | first-song hitch measurement on device |
 | **Arc pooling** (reuse instead of instantiate/free) | yes | parse only | device run; pooled reuse resets travelled Z and visibility |
+| **Bloom / glow** (`Settings.glare`, `Environment.glow_*`) | **removed** | - | gone from the tree 2026-11-02: a full-screen post pass forces the 4x MSAA image out of tile memory and our halos already carry the glow |
+| **Wall fresnel** (`wall_fresnel.gdshader`, FR-009) | **removed** | compile only ever; the test map has no full-height walls, so it never executed | gone 2026-11-02: additive overdraw across large surfaces for no gameplay gain |
 | **Residual ~0.2 % drops** | no | — | needs the per-frame timing rig (the current `Performance.TIME_PROCESS` is a once-per-second maximum) |
 
 ### Stress test — NOT RUN

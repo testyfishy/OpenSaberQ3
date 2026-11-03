@@ -130,8 +130,11 @@ cap, and a foveation row that actually applies and reports its level.
   change, with the smallest radiance size.
 - **FR-008**: The additive saber trail ribbon MUST exist and stay switchable (verified:
   `Settings.saber_tail`, `tail.tscn`). No second ribbon is added.
-- **FR-009**: A fresnel wall material MUST be switchable (default OFF) and MUST fade with
-  camera proximity so a wall at the face cannot flood the screen with additive fill.
+- **FR-009**: ~~A fresnel wall material MUST be switchable (default OFF)~~ **WITHDRAWN
+  2026-11-02 by user instruction.** Built, compile-checked, never executed (the test map has
+  no full-height walls), and structurally the wrong trade on a tiled GPU: additive fill across
+  large surfaces. `wall_fresnel.gdshader`, the `Settings.wall_fresnel` key and its panel row
+  are removed. Walls keep their original shared material.
 - **FR-010**: Debris/slice particles MUST be capped by a setting (default OFF) and be
   unshaded.
 - **FR-011**: Fixed foveation MUST be selectable (Off/Low/Medium), applied through the XR
@@ -168,7 +171,7 @@ cap, and a foveation row that actually applies and reports its level.
   unverified).
 - Scoring, hit detection, audio, the benchmark harness, the map format beyond reading a
   per-note colour.
-- Changing the existing `saber_tail` default or the existing bloom default.
+- Changing the existing `saber_tail` default. Bloom was removed from the build entirely on 2026-11-02 (`Settings.glare` and `Environment.glow_*` are gone), so there is no bloom default left to change.
 
 ## Open questions
 

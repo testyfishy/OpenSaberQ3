@@ -376,23 +376,19 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		Settings.event_tint = true
 		Settings.floor_grid = true
 		Settings.sky_gradient = true
-		Settings.wall_fresnel = true
 		Settings.debris_cap = true
 		Settings.mirror_reflections = true
-		Settings.glare = true
 		applied.append("visuals_all=true")
-	# Per-feature attribution: `[bench] visual_off=bloom,mirrors` turns individual features
+	# Per-feature attribution: `[bench] visual_off=mirrors,sky` turns individual features
 	# off from the full set, which is how the cost of each one is isolated (removing one from
 	# all-on captures the interactions, adding one to defaults does not).
 	var visual_off := str(cfg.get_value("bench", "visual_off", "")).strip_edges()
 	if not visual_off.is_empty():
 		for name in visual_off.split(",", false):
 			match name.strip_edges():
-				"bloom": Settings.glare = false
 				"mirrors": Settings.mirror_reflections = false
 				"halo": Settings.saber_halo = false
 				"floor_light": Settings.floor_light = false
-				"walls": Settings.wall_fresnel = false
 				"debris": Settings.debris_cap = false
 				"note_glow": Settings.note_edge_glow = false
 				"flash": Settings.hit_flash = false

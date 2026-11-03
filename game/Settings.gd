@@ -56,10 +56,6 @@ var saber_tail: bool:
 	set(value):
 		saber_tail = value
 		set_and_emit(&"saber_tail", value)
-var glare: bool:
-	set(value):
-		glare = value
-		set_and_emit(&"glare", value)
 var show_debug_info: bool:
 	set(value):
 		show_debug_info = value
@@ -127,7 +123,7 @@ var foveation_level: int:
 
 # --- Visual additions (FR-045..FR-048). Each is switchable because FR-049 gates every one
 # of them on measurement rather than on intent: the defaults are the state the user asked to
-# judge first, and the panel is the A/B switch. `glare` above is the bloom switch (FR-048).
+# judge first, and the panel is the A/B switch.
 var floor_light: bool:
 	set(value):
 		floor_light = value
@@ -174,10 +170,6 @@ var sky_gradient: bool:
 	set(value):
 		sky_gradient = value
 		set_and_emit(&"sky_gradient", value)
-var wall_fresnel: bool:
-	set(value):
-		wall_fresnel = value
-		set_and_emit(&"wall_fresnel", value)
 var debris_cap: bool:
 	set(value):
 		debris_cap = value
@@ -234,11 +226,7 @@ func _ready() -> void:
 		save()
 
 const platform_default_values = {
-	Android = {
-		glare = false,
-	},
 	Web = {
-		glare = false,
 		saber_tail = false,
 		cube_cuts_falloff = false,
 		events = false,
@@ -251,10 +239,6 @@ var default_values = {
 	color_left = Color("ff1a1a"),
 	color_right = Color("1a1aff"),
 	saber_tail = true,
-	# FR-048: bloom is a measured, switchable setting, not a default. It costs ~1-2.5 ms on
-	# Quest 3 and its full-screen resolve is what makes fixed foveated rendering unattractive
-	# later, so it ships off until a run says otherwise.
-	glare = false,
 	show_debug_info = false,
 	bombs_enabled = true,
 	events = true,
@@ -290,7 +274,6 @@ var default_values = {
 	event_tint = true,
 	floor_grid = true,
 	sky_gradient = false,
-	wall_fresnel = false,
 	debris_cap = false,
 	beatsaver_order = "Latest",
 	beatsaver_curated = false,
@@ -371,7 +354,6 @@ func load_old_config() -> void:
 				right_saber_offset_rot = right_array[1] as Vector3
 	cube_cuts_falloff = Utils.get_bool(settings_dict, "cube_cuts_falloff", true, {"Web": false})
 	saber_tail = Utils.get_bool(settings_dict, "saber_tail", true, {"Web": false})
-	glare = Utils.get_bool(settings_dict, "glare", true, {"Android": false, "Web": false})
 	show_debug_info = Utils.get_bool(settings_dict, "show_debug_info", false)
 	bombs_enabled = Utils.get_bool(settings_dict, "bombs_enabled", true)
 	events = Utils.get_bool(settings_dict, "events", true, {"Web": false})

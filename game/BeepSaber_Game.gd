@@ -208,7 +208,6 @@ func _ready() -> void:
 
 	debug_info_label.visible = Settings.show_debug_info
 	set_colors_from_settings()
-	($WorldEnvironment as WorldEnvironment).environment.glow_enabled = Settings.glare
 	_apply_sky()
 	@warning_ignore("return_value_discarded")
 	event_driver.light_event_color.connect(_on_light_event_color)
@@ -373,8 +372,6 @@ func on_settings_changed(key: StringName) -> void:
 			disable_events(not Settings.events)
 		&"show_debug_info":
 			debug_info_label.visible = Settings.show_debug_info
-		&"glare":
-			($WorldEnvironment as WorldEnvironment).environment.glow_enabled = Settings.glare
 		&"player_height_offset":
 			xr_origin.transform.origin.y = Settings.player_height_offset
 		&"display_refresh_rate":
@@ -391,8 +388,6 @@ func on_settings_changed(key: StringName) -> void:
 			standing_ground.apply_visual_settings()
 		&"event_tint":
 			_apply_light_tint()
-		&"wall_fresnel":
-			_apply_wall_fresnel()
 		&"sky_gradient":
 			_apply_sky()
 		&"debris_cap":
@@ -464,14 +459,6 @@ func _apply_sky() -> void:
 			env.sky = _gradient_sky
 	elif env.sky != _panorama_sky:
 		env.sky = _panorama_sky
-
-# --- Fresnel walls (FR-009) -------------------------------------------------------------
-# Walls are spawned per obstacle, so the setting is applied to the walls that are on the track
-# right now; the next spawn picks it up in Wall.spawn -> Wall._apply_material.
-func _apply_wall_fresnel() -> void:
-	for c in track.get_children():
-		if c is Wall:
-			(c as Wall).apply_visual_settings()
 
 func set_colors_from_settings() -> void:
 	update_left_color(Settings.color_left)
