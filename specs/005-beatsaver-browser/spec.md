@@ -151,6 +151,16 @@ and requirement badges for Noodle, Mapping Extensions, Chroma, Vivify.
 - **SC-005**: `godot --headless --path . --quit` prints no SCRIPT ERROR / Parse Error.
 - **SC-006**: No `Image.load_*_from_buffer` and no `FileAccess` write appears inside any
   `_process` in `game/ui/BeatSaverPanel/`.
+- **SC-007** (device, verified 2026-11-02): the download chain completes *on the headset* -
+  search `HTTP 200` -> first result -> download `HTTP 200` -> zip written ->
+  unzipped into `user://OpenSaber/Songs/<name>/` -> `Map.load_map_info()` parses the result.
+  Measured with the bench-only probe `[bench] beatsaver_probe=true`, which runs the same
+  `BeatSaverApi` URL/parse functions and the same destination layout as the panel: search
+  200 / 73 798 bytes, map `55831` "Void Hornet", download 200 / 5 106 825 bytes, parsed as
+  v2.1.0 with 2 difficulties. Recorded in `perf/captures/beatprobe.meta.txt`.
+  This supersedes the "no Quest in this session" scope note above for the data path only;
+  the panel's button handling is still verified by compile + code inspection, not by a
+  wearer pressing it.
 
 ## Assumptions
 

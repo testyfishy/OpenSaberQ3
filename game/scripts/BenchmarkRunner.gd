@@ -254,6 +254,14 @@ func _begin() -> void:
 		_abort("bad_config")
 		return
 	
+	# In-app download probe: exercises the exact chain the BeatSaver panel uses - search API,
+	# download URL, zip write, unzip into the songs directory, map parse - and records each
+	# step. "The API answers from my PC" does not prove it answers from inside the headset, and
+	# the panel itself cannot be driven without a player wearing the headset.
+	if bool(cfg.get_value("bench", "beatsaver_probe", false)):
+		_run_beatsaver_probe()
+		return
+
 	var query := str(cfg.get_value("bench", "map", "")).strip_edges()
 	if query.is_empty():
 		vr.log_error("BENCH: [bench] map= is required")
@@ -379,9 +387,10 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		Settings.debris_cap = true
 		Settings.mirror_reflections = true
 		applied.append("visuals_all=true")
-	# Settings persist to the device config file, so an arm that merely *omits* an override
-	# inherits whatever the previous arm wrote. That silently invalidated the first attempt at
-	# an all-off arm. This pins every visual to its shipped default instead.
+	# Settings live in memory per process: only the settings panel and the BeatSaver panel call
+	# Settings.save(), so a benchmark override never reaches config.ini. Arms are therefore
+	# independent of each other. This key still exists because it makes an arm state its
+	# visual configuration explicitly instead of depending on whatever defaults the build has.
 	if bool(cfg.get_value("bench", "visuals_default", false)):
 		Settings.floor_light = true
 		Settings.saber_halo = true
@@ -473,6 +482,87 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		applied.append("msaa=%d" % Settings.msaa_3d)
 	_meta["overrides"] = ", ".join(applied) if not applied.is_empty() else "none"
 	vr.log_info("BENCH: overrides %s" % _meta["overrides"])
+# --- In-app download probe (bench-only) ---------------------------------------------------
+# Each step writes its own result key, so a partial failure says exactly where it stopped
+# instead of reporting a generic "download failed".
+func _run_beatsaver_probe() -> void:
+	var http := HTTPRequest.new()
+	http.timeout = 40.0
+	add_child(http)
+	var headers := PackedStringArray(["User-Agent: " + BeatSaverApi.USER_AGENT])
+	var search_url: String = BeatSaverApi.build_search_url({}, 0)
+	_meta["probe_search_url"] = search_url
+	if http.request(search_url, headers) != OK:
+		_meta["probe_error"] = "search request failed to start"
+		_probe_done()
+		return
+	var res: Array = await http.request_completed
+	_meta["probe_search_code"] = str(res[1])
+	var body: PackedByteArray = res[3]
+	_meta["probe_search_bytes"] = str(body.size())
+	var search: Variant = BeatSaverApi.parse_search(body)
+	if search == null or not search.ok or (search.docs as Array).is_empty():
+		_meta["probe_error"] = "search did not return a map list"
+		_probe_done()
+		return
+	var rec: Variant = search.docs[0]
+	@warning_ignore("unsafe_property_access")
+	_meta["probe_map_id"] = str(rec.id)
+	@warning_ignore("unsafe_property_access")
+	_meta["probe_map_name"] = str(rec.song_name)
+	@warning_ignore("unsafe_property_access")
+	var download_url := str(rec.download_url)
+	if download_url.is_empty():
+		_meta["probe_error"] = "first result had no download URL"
+		_probe_done()
+		return
+	if http.request(download_url, headers) != OK:
+		_meta["probe_error"] = "download request failed to start"
+		_probe_done()
+		return
+	res = await http.request_completed
+	_meta["probe_download_code"] = str(res[1])
+	body = res[3]
+	_meta["probe_download_bytes"] = str(body.size())
+	if body.is_empty():
+		_meta["probe_error"] = "download body was empty"
+		_probe_done()
+		return
+	# Same destination layout the panel uses (BeatSaverPanel._on_download_completed).
+	var tempdir: String = Constants.APPDATA_PATH + "temp"
+	DirAccess.make_dir_recursive_absolute(tempdir)
+	var zippath: String = tempdir.path_join("probe.zip")
+	var file := FileAccess.open(zippath, FileAccess.WRITE)
+	if file == null:
+		_meta["probe_error"] = "cannot write " + zippath
+		_probe_done()
+		return
+	file.store_buffer(body)
+	file.close()
+	@warning_ignore("unsafe_property_access")
+	var dirname := "Probe-" + str(rec.id)
+	var outdir: String = Constants.APPDATA_PATH + "Songs/" + dirname + "/"
+	if DirAccess.make_dir_recursive_absolute(outdir) != OK:
+		_meta["probe_error"] = "cannot create " + outdir
+		_probe_done()
+		return
+	Utils.unzip(zippath, outdir)
+	DirAccess.remove_absolute(zippath)
+	var info: MapInfo = Map.load_map_info(outdir)
+	_meta["probe_map_parsed"] = "true" if info != null else "false"
+	if info != null:
+		_meta["probe_map_version"] = info.version
+		_meta["probe_map_title"] = info.song_name
+		_meta["probe_map_difficulties"] = str(info.difficulty_beatmaps.size())
+	_probe_done()
+
+
+func _probe_done() -> void:
+	_meta["samples"] = 0
+	_meta["exit_reason"] = "beatsaver_probe"
+	_write_meta()
+	vr.log_info("BENCH: beatsaver probe complete")
+	get_tree().quit()
 
 func _start_bot(cfg: ConfigFile) -> void:
 	var enabled := bool(cfg.get_value("bot", "enabled", false))
