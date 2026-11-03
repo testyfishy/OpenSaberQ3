@@ -6,6 +6,8 @@ class_name Map
 # https://bsmg.wiki/mapping/map-format.html
 
 static var current_info: MapInfo
+# Bench-only: when true, _process_map spawns nothing, so a run measures the floor.
+static var spawn_disabled := false
 static var current_difficulty: DifficultyInfo
 
 static var note_stack: Array[ColorNoteInfo]
@@ -525,3 +527,4 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 			return true
 	vr.log_warning("selected map is an unsupported version")
 	return false
+

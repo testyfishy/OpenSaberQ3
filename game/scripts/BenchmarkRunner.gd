@@ -463,6 +463,26 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		DefaultSaber.probe_accent = 0
 		DefaultSaber.probe_dull = 0
 		applied.append("audio_probe=true")
+	# Floor measurement: no notes at all. Everything left is engine + XR + audio + UI + render,
+	# which is the number the 8.33 ms budget has to be judged against - no note optimisation can
+	# go below it.
+	if bool(cfg.get_value("bench", "no_notes", false)):
+		Map.spawn_disabled = true
+		applied.append("no_notes=true")
+
+	# HUD text writes are the other per-cut cost: every score change rewrites two TextMeshes and
+	# each write re-triangulates glyphs on the main thread.
+	if bool(cfg.get_value("bench", "hud_off", false)):
+		_hud_disabled = true
+		applied.append("hud_off=true")
+
+	# Physics rate, decoupled from the display. The sweep fix means the ray fan accumulates
+	# motion between ticks, so 60 Hz physics is not the hit-registration loss it would have
+	# been before.
+	var phys = cfg.get_value("bench", "physics_hz", null)
+	if phys != null:
+		Engine.physics_ticks_per_second = int(phys)
+		applied.append("physics_hz=%d" % Engine.physics_ticks_per_second)
 	# Audio churn switch: skips the hit-sound calls entirely, so a drift caused by voices
 	# accumulating in the mixer shows up as a flat run instead of a rising frame time.
 	if bool(cfg.get_value("bench", "no_audio", false)):
@@ -1072,6 +1092,8 @@ func _run_ui_scroll_probe() -> void:
 
 # --- human-play capture ------------------------------------------------------------------
 var _player_capture := false
+# Read by BeepSaber_Game._on_score_changed when hud_off is set.
+static var _hud_disabled := false
 
 func _poll_player_capture() -> void:
 	if _song_player == null:
@@ -1091,6 +1113,7 @@ func _poll_player_capture() -> void:
 func _finish_player() -> void:
 	_player_capture = false
 	_finish("player_song_end", false)
+
 
 
 

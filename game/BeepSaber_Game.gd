@@ -537,6 +537,8 @@ func _display_points() -> void:
 	# assignment re-triangulates glyphs and re-uploads the mesh. The displayed
 	# string is unchanged when the underlying value is unchanged, so only write
 	# when it actually differs. Same rendered pixels, fewer mesh rebuilds.
+	if BenchmarkRunner._hud_disabled:
+		return
 	if Scoreboard.points != _shown_points:
 		_shown_points = Scoreboard.points
 		if Cost.enabled: Cost.text_mesh_writes += 1
@@ -799,3 +801,4 @@ func recenter():
 	var xr_camera := $XROrigin3D/XRCamera3D as XRCamera3D
 	xr_origin.rotation.y -= xr_camera.global_rotation.y
 	xr_origin.position -= (xr_camera.global_position * Vector3(1,0,1)) - Vector3(0,0,1)
+

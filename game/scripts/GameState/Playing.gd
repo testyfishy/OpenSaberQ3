@@ -46,6 +46,8 @@ const Cost := preload("res://game/scripts/CostProbe.gd")
 func _process_map(game: BeepSaber_Game) -> void:
 	if (Map.current_info == null):
 		return
+	if Map.spawn_disabled:
+		return
 	var probe := Cost.enabled
 	var t0 := Time.get_ticks_usec() if probe else 0
 	
@@ -120,3 +122,4 @@ func _process_map(game: BeepSaber_Game) -> void:
 	if probe:
 		Cost.spawn_usec += Time.get_ticks_usec() - t0
 	game.hide_profile_panel()
+
