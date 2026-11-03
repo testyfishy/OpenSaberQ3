@@ -10,11 +10,14 @@ signal cutted(correct_saber: bool)
 @onready var collision_small := $BeepCube_Small/CollisionSmall as CollisionShape3D
 @onready var slice_particles := $SliceParticles as BeepCubeSliceParticles
 
-# Visual-only additions (FR-046, FR-047). Both are plain MeshInstance3D nodes: no Area3D,
-# no CollisionShape3D and no script, so Cuttable._register_hit (which only ever walks Area3D
-# children) and the physics server cannot see them.
-# The note's own glow is no longer a node: it is EMISSION inside BeepCube.gdshader (FR-001).
-@onready var mirror := $Mirror as MeshInstance3D
+# Visual-only addition (FR-047). The mirrored copy is a `next_pass` on this note's material
+# (see shaders/mirror_pass.gdshader): no node, no collision, nothing the physics server or
+# Cuttable._register_hit can see, and no per-frame work at all.
+# The note's own glow is EMISSION inside BeepCube.gdshader (FR-001).
+const MIRROR_SHADER := preload("res://game/shaders/mirror_pass.gdshader")
+
+# One material for every note, so switching the setting is one write (007 rule 2).
+static var _mirror_material: ShaderMaterial
 
 var which_saber: int
 var is_dot: bool
@@ -23,36 +26,22 @@ var is_dot: bool
 # reuse it when we create the cut cube pieces
 var _mesh: Mesh
 var _mat: ShaderMaterial
-var _mirror_mat: ShaderMaterial
 # Mesh-space half extent, for the edge mask in the shader. One value per note because the
 # uniform is an `instance uniform`, so it costs one write per instance and no material.
 var _half_extent := Vector3(0.5, 0.5, 0.5)
 @export var min_speed := 0.5
-
-# The mirror is a flip about the world y = 0 plane, applied in the cube's own parent frame.
-# The note's transform only changes in z after spawn, and a z shift commutes with a flip in
-# y, so this composes to a constant local transform: one write per spawn, none per frame.
-const MIRROR_FLIP := Transform3D(Vector3(1, 0, 0), Vector3(0, -1, 0), Vector3(0, 0, 1), Vector3.ZERO)
-# BeepCubeMesh's own scale, which the mirror has to reproduce because the flip is applied to
-# the cube root and this node is its sibling, not its child.
-const MIRROR_MESH_SCALE := 0.8
 
 var piece_left : CutPiece = null
 var piece_right : CutPiece = null
 
 func _ready() -> void:
 	_mat = mi.material_override as ShaderMaterial
-	_mirror_mat = mirror.material_override as ShaderMaterial
 	_mesh = mi.mesh
-	# The mirror shares the cube's own mesh instead of duplicating it: same vertices, same
-	# vertex budget, one extra draw call per note and nothing else. The mirror hides unless
-	# the setting is on (spawn() decides), so it gets its mesh here either way.
-	mirror.mesh = _mesh
 	_half_extent = _mesh.get_aabb().size * 0.5
 	# `note_half_extent` is an instance uniform: it is the same for every note but belongs
 	# to the instance, so the shared material does not have to be duplicated (FR-002).
 	mi.set_instance_shader_parameter(&"note_half_extent", _half_extent)
-	mirror.visible = false
+	_set_mirror_pass(Settings.mirror_reflections)
 	
 	if bool(ProjectSettings.get_setting(SETTING_ISOLATE_SHAPES, false)):
 		# One-time, per instance: from here on spawn() only edits our own shapes.
@@ -100,7 +89,9 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	# so a material write here would repaint all of them (FR-002).
 	mi.set_instance_shader_parameter(&"note_color", color)
 	mi.set_instance_shader_parameter(&"note_is_dot", 1.0 if is_dot else 0.0)
-	_mirror_mat.set_shader_parameter(&"color", color)
+	# The mirrored pass reads its colour from the instance too, because that material is
+	# shared by every note (and by the blades, which set the same key).
+	mi.set_instance_shader_parameter(&"mirror_color", color)
 	# since cube instances get recycled, we gotta reset cubes that were chain
 	# heads in a past life
 	mi.set_instance_shader_parameter(&"note_chain_head", 0.0)
@@ -129,20 +120,26 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	
 	slice_particles.reset()
 	mi.visible = true
-	_update_mirror()
-	mirror.visible = Settings.mirror_reflections
+	_set_mirror_pass(Settings.mirror_reflections)
 
-# One write per spawn, for the reason in the MIRROR_FLIP comment above.
-func _update_mirror() -> void:
-	var local := transform.affine_inverse() * (MIRROR_FLIP * transform)
-	local.basis = local.basis.scaled(Vector3.ONE * MIRROR_MESH_SCALE)
-	mirror.transform = local
+# FR-047 / 007 rule 2: the mirrored copy is a second pass on the shared note material, so
+# this is one write for the whole pool, and `null` when the setting is off so the pass costs
+# no draw at all rather than being hidden behind a uniform test.
+func _set_mirror_pass(enabled: bool) -> void:
+	if enabled:
+		if _mirror_material == null:
+			_mirror_material = ShaderMaterial.new()
+			_mirror_material.shader = MIRROR_SHADER
+			_mirror_material.render_priority = -1
+		if _mat.next_pass != _mirror_material:
+			_mat.next_pass = _mirror_material
+	elif _mat.next_pass != null:
+		_mat.next_pass = null
 
-# FR-038: the mirrored copy ships off, so without this its material would compile the first
-# time the setting is switched on - i.e. mid-song. The pool shows each cube for one frame at
-# load; this puts the mirror on screen for that same frame, under the opaque floor.
-func warm_mirror() -> void:
-	mirror.visible = true
+# Called on the settings change with any pooled instance (the material is shared, so the one
+# call updates every live note immediately).
+func apply_mirror_setting() -> void:
+	_set_mirror_pass(Settings.mirror_reflections)
 
 # call this when clearing the track
 func clear_from_track() -> void:
@@ -154,9 +151,6 @@ func clear_from_track() -> void:
 
 func hide_cube() -> void:
 	mi.visible = false
-	# The mirror is a sibling of the mesh, not its child, so hiding the mesh does not
-	# hide it: without this a cut cube would leave its reflection behind.
-	mirror.visible = false
 	set_collision_enabled(false)
 	# disable processing on this node and all children to help with performance
 	process_mode = Node.PROCESS_MODE_DISABLED
@@ -212,6 +206,10 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 	controller.reset_movement_aabb()
 	
 	hide_cube()
+	# FR-003: a burst on the floor where the blade met the note. One float write into a
+	# shader uniform, decayed by Floor._process; nothing is allocated or spawned.
+	if Settings.hit_flash and Floor.instance != null:
+		Floor.instance.flash_at(global_transform.origin)
 	if Settings.cube_cuts_falloff:
 		_start_cut_pieces(cut_plane)
 		# release() will be called by Cuttable class when it sees both pieces die

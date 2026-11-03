@@ -181,6 +181,26 @@ right_saber_base={
 "type": "vec3",
 "value": Vector3(0.5, 1, 0)
 }
+light_left={
+"type": "vec3",
+"value": Vector3(1, 0.1, 0.1)
+}
+light_right={
+"type": "vec3",
+"value": Vector3(0.1, 0.1, 1)
+}
+event_light_color={
+"type": "vec3",
+"value": Vector3(1, 1, 1)
+}
+note_edge_glow={
+"type": "float",
+"value": 1.0
+}
+floor_grid={
+"type": "float",
+"value": 1.0
+}
 
 [xr]
 

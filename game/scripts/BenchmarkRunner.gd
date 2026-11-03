@@ -381,6 +381,27 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		Settings.mirror_reflections = true
 		Settings.glare = true
 		applied.append("visuals_all=true")
+	# Per-feature attribution: `[bench] visual_off=bloom,mirrors` turns individual features
+	# off from the full set, which is how the cost of each one is isolated (removing one from
+	# all-on captures the interactions, adding one to defaults does not).
+	var visual_off := str(cfg.get_value("bench", "visual_off", "")).strip_edges()
+	if not visual_off.is_empty():
+		for name in visual_off.split(",", false):
+			match name.strip_edges():
+				"bloom": Settings.glare = false
+				"mirrors": Settings.mirror_reflections = false
+				"halo": Settings.saber_halo = false
+				"floor_light": Settings.floor_light = false
+				"walls": Settings.wall_fresnel = false
+				"debris": Settings.debris_cap = false
+				"note_glow": Settings.note_edge_glow = false
+				"flash": Settings.hit_flash = false
+				"grid": Settings.floor_grid = false
+				"sky": Settings.sky_gradient = false
+				"tint": Settings.event_tint = false
+				"note_colors": Settings.note_map_colors = false
+				_: vr.log_warning("BENCH: unknown visual_off entry %s" % name)
+		applied.append("visual_off=%s" % visual_off)
 	# Audio verification: counts every attempted voice so a run can prove hit audio is
 	# actually being queued (valid ids, layer mix) instead of merely compiling.
 	if bool(cfg.get_value("bench", "audio_probe", false)):

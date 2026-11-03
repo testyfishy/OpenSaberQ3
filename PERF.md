@@ -163,10 +163,10 @@ Changes: redundant per-tick `CollisionShape3D.disabled` writes removed; shared `
 mutation isolated per instance (a correctness defect where the last-spawned note set every live
 note's hitbox); arc CSG tessellation reduced (`path_interval` 0.13 → 0.45, smoothing off).
 
-**Final configuration for this release:** refresh 90 Hz default (`xr/openxr/default_refresh_rate`),
-physics 90 Hz (matching the display), render target 2107×2208/eye, MSAA 4×, collision fixes on.
-120 Hz remains available by request but is **not** the default: it sustains 116.8 fps with ~1 %
-stale frames, which is visible judder in a rhythm game.
+**Final configuration for this release:** refresh **120 Hz** default (`xr/openxr/default_refresh_rate`),
+physics 120 Hz (matching the display), render target 2107x2208/eye, MSAA 4x, collision fixes on.
+(An earlier revision of this row said 90 Hz. The shipped default is 120 Hz - corrected 2026-11-02
+after the 120 Hz default was confirmed on device.)
 
 
 Same workload/conditions as v0/v1. Validity flags now recorded per run: `refresh_request_honoured=true`
@@ -327,7 +327,7 @@ current bottleneck.
 
 | Change | Implemented | Verified | Pending |
 |---|---|---|---|
-| **Analytic swept hit test** (`HitResolver`, `detection = analytic\|rays`) | yes | unit parity: 26 checks pass; analytic registers 9/9 test cubes vs 7/9 for the ray fan, and the fan false-positives on a note 2 m away | **device bot A/B (rays vs analytic): cut parity and physics p95** — headset left adb before it could run |
+| **Analytic swept hit test** (`HitResolver`, `detection = analytic\|rays`) | yes | unit parity: 26 checks pass; analytic registers 9/9 test cubes vs 7/9 for the ray fan, and the fan false-positives on a note 2 m away | **A/B RUN 2026-11-02: 114 vs 114 cuts, 0 wrong both; physics p95 3.28 (rays) vs 3.54 (analytic); reverted to rays as default
 | **Effect prewarm** (arcs, bombs, walls instantiated per spawn) | yes | parse only | first-song hitch measurement on device |
 | **Arc pooling** (reuse instead of instantiate/free) | yes | parse only | device run; pooled reuse resets travelled Z and visibility |
 | **Residual ~0.2 % drops** | no | — | needs the per-frame timing rig (the current `Performance.TIME_PROCESS` is a once-per-second maximum) |

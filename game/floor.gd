@@ -2,13 +2,20 @@ extends StaticBody3D
 class_name Floor
 
 const FLOOR_LIGHT_SHADER := preload("res://game/shaders/floor_light.gdshader")
-# Same light, plus ALPHA. A shader that writes ALPHA puts the floor in the transparent pass
-# even at alpha 1.0 (no depth prepass, no early-z over a large screen area), so the opaque
-# variant is used unless mirrored copies actually need to be seen through the floor.
-const FLOOR_LIGHT_ALPHA_SHADER := preload("res://game/shaders/floor_light_alpha.gdshader")
-# The floor is only see-through when the mirrored copies (FR-047) need a surface to show
-# through; the rest of the time it stays fully opaque.
-const MIRROR_FLOOR_ALPHA := 0.86
+
+# There is one floor material now. The mirrored copies (FR-047) are a `next_pass` on the
+# notes and blades that clips itself to this pad (see shaders/mirror_pass.gdshader), so the
+# floor never has to become translucent - a shader that writes ALPHA would put this whole
+# surface in the transparent pass and lose early-z for everything behind it.
+
+# How long the cut burst lasts and how far it reaches (FR-003). Both are floats on this
+# node: no node, tween or allocation is created per cut.
+const FLASH_DECAY := 12.0
+const FLASH_RADIUS := 0.55
+
+# Cheap handle for the cut path: `Floor.instance.flash_at(pos)` instead of a group lookup or
+# a tree walk on every cut.
+static var instance: Floor
 
 var left_last_position := Vector2(0,-50)
 var right_last_position := Vector2(0,-50)
@@ -31,15 +38,21 @@ var C_RIGHT := Color()
 var _opaque_mat: StandardMaterial3D
 var _light_mat: ShaderMaterial
 
+# Decaying cut burst (FR-003). Only written to the shader while it is not zero, so a floor
+# with no cuts pays one float comparison per frame.
+var _flash_energy := 0.0
+
 var is_disabled := false
 
 func _ready() -> void:
+	instance = self
 	_opaque_mat = _floor_mesh.material_override as StandardMaterial3D
 	_opaque_mat.albedo_texture = sub_viewport.get_texture()
 	_opaque_mat.emission_texture = sub_viewport.get_texture()
 	_light_mat = ShaderMaterial.new()
 	_light_mat.shader = FLOOR_LIGHT_SHADER
 	_light_mat.set_shader_parameter(&"burn_tex", sub_viewport.get_texture())
+	_light_mat.set_shader_parameter(&"flash_radius", FLASH_RADIUS)
 	update_left_color(Settings.color_left)
 	update_right_color(Settings.color_right)
 	apply_visual_settings()
@@ -48,29 +61,35 @@ func _ready() -> void:
 		sub_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 		is_disabled = true
 
-# Single funnel for the visual settings that touch the floor (FR-045, FR-047), so the
-# material in use and the shader uniforms can never disagree.
+# A cut raises the burst at the point where the blade met the note, projected onto the floor
+# plane. One float write; the shader draws the ring.
+func flash_at(pos: Vector3) -> void:
+	if not Settings.hit_flash or _light_mat == null:
+		return
+	_flash_energy = 1.0
+	_light_mat.set_shader_parameter(&"flash_pos", Vector3(pos.x, 0.0, pos.z))
+
+# Single funnel for the visual settings that touch the floor (FR-045, FR-003, FR-006), so
+# the material in use and the shader uniforms can never disagree.
 func apply_visual_settings() -> void:
 	if _light_mat == null:
 		return
 	var light_on: bool = Settings.floor_light
-	var mirror_on: bool = Settings.mirror_reflections
 	_light_mat.set_shader_parameter(&"streak_energy", 1.0 if light_on else 0.0)
-	_light_mat.set_shader_parameter(&"floor_alpha", MIRROR_FLOOR_ALPHA if mirror_on else 1.0)
-	_light_mat.shader = FLOOR_LIGHT_ALPHA_SHADER if mirror_on else FLOOR_LIGHT_SHADER
-	_floor_mesh.material_override = _light_mat if (light_on or mirror_on) else _opaque_mat
+	RenderingServer.global_shader_parameter_set(
+		&"floor_grid", 1.0 if Settings.floor_grid else 0.0)
+	# The shader also carries the grid and the cut burst, so it is used whenever either of
+	# those is on as well as when the streak is.
+	_floor_mesh.material_override = _light_mat if (
+		light_on or Settings.floor_grid or Settings.hit_flash) else _opaque_mat
 
 func update_left_color(color: Color) -> void:
 	C_LEFT = color
 	burn_l.modulate = color*6
-	if _light_mat != null:
-		_light_mat.set_shader_parameter(&"left_color", color)
 
 func update_right_color(color: Color) -> void:
 	C_RIGHT = color
 	burn_r.modulate = color*6
-	if _light_mat != null:
-		_light_mat.set_shader_parameter(&"right_color", color)
 
 var left_is_out := false
 var right_is_out := false
@@ -114,13 +133,18 @@ func burn_mark(pos:=Vector3(0,0,-50),type:=0) -> void:
 	elif type == 1:
 		right_last_position = newpos
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if left_is_out:
 		burn_l.visible = false
 	if right_is_out:
 		burn_r.visible = false
 	left_is_out = true
 	right_is_out = true
+	# FR-003: the burst decays here rather than in a tween or a Timer node.
+	if _flash_energy > 0.0:
+		_flash_energy = maxf(0.0, _flash_energy - FLASH_DECAY * delta)
+		if _light_mat != null:
+			_light_mat.set_shader_parameter(&"flash_energy", _flash_energy)
 
 func _on_timer_clear_timeout() -> void:
 	color_rect.self_modulate.a = 1

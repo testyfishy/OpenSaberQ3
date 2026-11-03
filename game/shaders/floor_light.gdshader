@@ -1,4 +1,5 @@
-// Analytic saber light on the floor (specs/001-quest3-saber-perf FR-045).
+// Analytic saber light on the floor (specs/001-quest3-saber-perf FR-045,
+// specs/007-visual-options FR-003/FR-005/FR-006).
 //
 // The floor already carries the burn trail from a SubViewport; this shader keeps that
 // texture and adds a closed-form "light pool" under each blade. There is no second
@@ -6,29 +7,46 @@
 // points the sabers publish once per physics tick (see project.godot [shader_globals]
 // and LightSaber._physics_process).
 //
+// Opaque on purpose. The mirrored copies (007 rule 2) used to need a translucent floor,
+// which put this whole large surface in the transparent pass: no depth prepass, no early-z
+// for everything behind it. The copies are now a `next_pass` that is open only where the
+// view ray meets this pad, so the pad can stay in the opaque queue. `depth_draw_never` is
+// what lets that pass reach the depth buffer: it is the only thing the pad could occlude,
+// and a below-floor copy is always farther from the eye than the pad itself.
+//
 // Stereo: world_pos comes from MODEL_MATRIX, which carries no eye offset, so both eyes
 // sample the same world point on the plane and the streak stays glued to the floor. An
 // eye-dependent quantity here would make the light swim between the eyes.
 shader_type spatial;
-render_mode blend_mix, cull_back;
+render_mode blend_mix, cull_back, depth_draw_never;
 
 // Both blades, base and tip, in world space (tip = the existing left_saber/right_saber).
 global uniform vec3 left_saber;
 global uniform vec3 left_saber_base;
 global uniform vec3 right_saber;
 global uniform vec3 right_saber_base;
+// Final light colour per side. The map's light-event tint is applied ONCE where these are
+// written (BeepSaber_Game._apply_light_tint): it is lerp(saber, saber*tint, k) with a
+// brightness floor, and nothing downstream multiplies a tint again (007 rule 6).
+global uniform vec3 light_left;
+global uniform vec3 light_right;
+// 0/1 from Settings.floor_grid, as a global so one write drives every floor pixel.
+global uniform float floor_grid;
 
 uniform sampler2D burn_tex : source_color, filter_linear, repeat_disable;
-uniform vec3 left_color : source_color = vec3(1.0, 0.1, 0.1);
-uniform vec3 right_color : source_color = vec3(0.1, 0.1, 1.0);
 // 0 when visual/floor_light is off: the burn trail is untouched, the streak is not.
 uniform float streak_energy = 1.0;
 // Metres from the blade's floor projection at which the pool reaches zero, and the
 // full-brightness core. These two decide the size of the light, nothing else does.
 uniform float streak_radius = 0.45;
 uniform float streak_core = 0.06;
-// 1.0 keeps the floor opaque; the mirror setting drops it so the copies below show.
-uniform float floor_alpha : hint_range(0.0, 1.0) = 1.0;
+// Hit flash (FR-003): a point on the floor plane plus an energy that Floor._process decays.
+// No node, no tween and no allocation is created for it.
+uniform vec3 flash_pos = vec3(0.0, 0.0, -50.0);
+uniform float flash_energy = 0.0;
+uniform float flash_radius = 0.55;
+uniform float grid_scale = 2.0;
+uniform float grid_strength = 0.10;
 
 varying vec3 world_pos;
 
@@ -56,16 +74,39 @@ float blade_streak(vec3 p, vec3 base, vec3 tip) {
 	return k * k / (1.0 + 0.9 * h * h);
 }
 
+// Faint anti-aliased grid (FR-006): one extra fwidth per floor pixel, in the pass the floor
+// already runs. Width is measured in pixels, so the lines stay one to two pixels wide at
+// any distance instead of aliasing into moire.
+float floor_grid_lines(vec3 p) {
+	if (floor_grid <= 0.0) {
+		return 0.0;
+	}
+	vec2 c = p.xz * grid_scale;
+	vec2 w = max(fwidth(c), vec2(1e-5));
+	vec2 g = abs(fract(c) - 0.5) / w;
+	return (1.0 - min(min(g.x, g.y), 1.0)) * grid_strength * floor_grid;
+}
+
 void fragment() {
 	float l = blade_streak(world_pos, left_saber_base, left_saber);
 	float r = blade_streak(world_pos, right_saber_base, right_saber);
-	vec3 light = (left_color * l + right_color * r) * streak_energy;
+	// Clamped so the worst case of every additive layer stacked stays bounded (007 rule 6).
+	vec3 light = min((light_left * l + light_right * r) * streak_energy, vec3(1.5));
+	// Radial burst at the cut point. No division and no eye vector, so a cut below the
+	// floor or a blade at the camera cannot produce a NaN.
+	float flash = 0.0;
+	if (flash_energy > 0.0) {
+		float d = length(world_pos.xz - flash_pos.xz);
+		flash = (1.0 - smoothstep(0.0, flash_radius, d)) * flash_energy;
+	}
+	flash = min(flash, 1.0);
 	// The burn trail is the same SubViewport texture the StandardMaterial3D used for
 	// albedo and emission, with the same 6x boost floor.gd bakes into the sprites.
 	vec3 burn = texture(burn_tex, UV).rgb;
 	ALBEDO = burn;
 	// 16x matches the floor.tscn emission energy (16, Multiply) that this replaces; the 6x
 	// that floor.gd baked into the sprite modulate is not the same number, and using it here
-	// made the burn trail ~2.7x dimmer than before.
-	EMISSION = burn * 16.0 + light * 3.0;
+	// made the burn trail ~2.7x dimmer than before. The 3x on the streak is the tuned look
+	// from FR-045 and is kept as it was.
+	EMISSION = burn * 16.0 + light * 3.0 + vec3(flash) + vec3(floor_grid_lines(world_pos));
 }
