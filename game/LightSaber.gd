@@ -236,10 +236,40 @@ func _handle_cuttable(cut_object: Node3D) -> void:
 	# maths. `note` is not touched after this call (it may go back to the pool).
 	var info := note.cut(type, controller_speed, cutplane, controller)
 	saber_visual.hit(time_offset, info)
-	controller.simple_rumble(0.75, 0.1)
+	_apply_hit_haptics(controller, info)
 
 func _on_AnimationPlayer_animation_started(_anim_name: StringName) -> void:
 	_swing_cast.adjust_segments = true
 
 func _on_AnimationPlayer_animation_finished(_anim_name: StringName) -> void:
 	_swing_cast.adjust_segments = false
+
+# --- hit haptics ---------------------------------------------------------------------------
+# Haptics carry more of the "I hit something" sense than the sound does, and the vocabulary is
+# small: Godot 4.6 exposes only amplitude and duration through the simple path (the frequency
+# field is ignored by Touch controllers unless the parametric extension is used, which Godot
+# does not expose). So the expression is amplitude + duration + short multi-tick patterns via
+# delay_sec.
+#
+# This used to fire one 100 ms pulse at 0.75 for every event - a perfect cut, a wrong-colour
+# cut and a bomb. 100 ms is the shape of *sustained contact*, not an impact, which is why the
+# controller said the same thing no matter what happened.
+const HAPTIC_CUT_S := 0.028
+const HAPTIC_BAD_S := 0.045
+
+func _apply_hit_haptics(controller: BeepSaberController, info: HitInfo) -> void:
+	if info != null and info.kind == HitInfo.Kind.BAD:
+		# Wrong colour or a bomb: short, dull, low. "That was wrong", not "that was weak".
+		controller.simple_rumble(0.28, HAPTIC_BAD_S)
+		return
+	var amplitude := 0.45
+	if info != null:
+		# Force and accuracy both raise it, over a wide enough range that a gentle cut and a
+		# hard one are tellable apart through the controller.
+		amplitude = clampf(0.35 + 0.45 * info.speed_len / 12.0, 0.35, 0.85)
+		amplitude = clampf(amplitude + 0.12 * info.angle_acc, 0.35, 0.95)
+		# Fast and clean gets a second tick 30 ms later: the closest a two-value API gets to
+		# the "crack" of an impact.
+		if info.speed_len > 7.0 and info.angle_acc > 0.8:
+			controller.trigger_haptic_pulse(&"haptic", 0.0, amplitude * 0.65, 0.012, 0.030)
+	controller.simple_rumble(amplitude, HAPTIC_CUT_S)
