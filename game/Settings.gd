@@ -174,10 +174,13 @@ var floor_grid: bool:
 	set(value):
 		floor_grid = value
 		set_and_emit(&"floor_grid", value)
-var sky_gradient: bool:
+# 0 = black void, 1 = gradient sky, 2 = the original panorama. Void is the shipped default:
+# the panorama was the most visible piece of unfinished art, and a black background is also
+# cheaper to draw than a full-screen textured sky.
+var sky_style: int:
 	set(value):
-		sky_gradient = value
-		set_and_emit(&"sky_gradient", value)
+		sky_style = clampi(value, 0, 2)
+		set_and_emit(&"sky_style", sky_style)
 var debris_cap: bool:
 	set(value):
 		debris_cap = value
@@ -274,15 +277,16 @@ var default_values = {
 	floor_light = true,
 	saber_halo = true,
 	mirror_reflections = false,
-	# Round 2 (specs/007-visual-options). `sky_gradient` ships off although the brief asked
-	# for on: it replaces the game's background art, and FR-049 gates additions on
-	# measurement, so the panorama stays unless the player chooses otherwise.
+	# Round 2 (specs/007-visual-options), revised in v0.3 (specs/009): the background is an
+	# explicit choice now - Black void (0, default), Gradient (1), Panorama (2). The plain
+	# gradient shipped off in 007 because it replaced the art; the player has since asked for
+	# a black void instead of the art, so void became the default and the art became option 2.
 	note_edge_glow = true,
 	hit_flash = true,
 	note_map_colors = true,
 	event_tint = true,
 	floor_grid = true,
-	sky_gradient = false,
+	sky_style = 0,
 	debris_cap = false,
 	beatsaver_order = "Latest",
 	beatsaver_curated = false,

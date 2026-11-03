@@ -16,7 +16,7 @@ signal apply()
 @onready var floor_grid_control := $ScrollContainer/VBox/floor_grid as CheckButton
 @onready var event_tint_control := $ScrollContainer/VBox/event_tint as CheckButton
 @onready var debris_cap_control := $ScrollContainer/VBox/debris_cap as CheckButton
-@onready var sky_gradient_control := $ScrollContainer/VBox/sky_gradient as CheckButton
+@onready var sky_style_control := $ScrollContainer/VBox/sky_style as OptionButton
 @onready var saber_thickness := $ScrollContainer/VBox/SaberThicknessRow/saber_thickness as HSlider
 @onready var cut_blocks := $ScrollContainer/VBox/cut_blocks as CheckButton
 @onready var d_background := $ScrollContainer/VBox/d_background as CheckButton
@@ -94,7 +94,7 @@ func set_controls_from_settings() -> void:
 	floor_grid_control.button_pressed = Settings.floor_grid
 	event_tint_control.button_pressed = Settings.event_tint
 	debris_cap_control.button_pressed = Settings.debris_cap
-	sky_gradient_control.button_pressed = Settings.sky_gradient
+	_populate_sky_style()
 	d_background.button_pressed = Settings.events
 	saber_control.select(Settings.saber_visual)
 	show_debug_control.button_pressed = Settings.show_debug_info
@@ -218,8 +218,15 @@ func _on_event_tint_toggled(button_pressed: bool) -> void:
 func _on_debris_cap_toggled(button_pressed: bool) -> void:
 	Settings.debris_cap = button_pressed
 
-func _on_sky_gradient_toggled(button_pressed: bool) -> void:
-	Settings.sky_gradient = button_pressed
+func _populate_sky_style() -> void:
+	if sky_style_control.item_count == 0:
+		sky_style_control.add_item("Black void")
+		sky_style_control.add_item("Gradient")
+		sky_style_control.add_item("Panorama")
+	sky_style_control.select(clampi(Settings.sky_style, 0, 2))
+
+func _on_sky_style_selected(index: int) -> void:
+	Settings.sky_style = index
 
 func _on_d_background_toggled(button_pressed: bool) -> void:
 	Settings.events = button_pressed

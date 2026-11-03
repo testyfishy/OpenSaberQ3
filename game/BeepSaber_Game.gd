@@ -394,7 +394,7 @@ func on_settings_changed(key: StringName) -> void:
 			standing_ground.apply_visual_settings()
 		&"event_tint":
 			_apply_light_tint()
-		&"sky_gradient":
+		&"sky_style":
 			_apply_sky()
 		&"debris_cap":
 			BeepCubeSliceParticles.apply_cap_setting()
@@ -454,17 +454,35 @@ func _apply_sky() -> void:
 		return
 	if _panorama_sky == null:
 		_panorama_sky = env.sky
-	if Settings.sky_gradient:
-		if _gradient_sky == null:
-			_gradient_sky = Sky.new()
-			_gradient_sky.radiance_size = Sky.RADIANCE_SIZE_32
-			var sky_mat := ShaderMaterial.new()
-			sky_mat.shader = SKY_GRADIENT_SHADER
-			_gradient_sky.sky_material = sky_mat
-		if env.sky != _gradient_sky:
+	if _gradient_sky == null:
+		_gradient_sky = Sky.new()
+		_gradient_sky.radiance_size = Sky.RADIANCE_SIZE_32
+		var sky_mat := ShaderMaterial.new()
+		sky_mat.shader = SKY_GRADIENT_SHADER
+		_gradient_sky.sky_material = sky_mat
+
+	match Settings.sky_style:
+		1:
+			env.background_mode = Environment.BG_SKY
 			env.sky = _gradient_sky
-	elif env.sky != _panorama_sky:
-		env.sky = _panorama_sky
+			env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+			env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+		2:
+			env.background_mode = Environment.BG_SKY
+			env.sky = _panorama_sky
+			env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+			env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+		_:
+			# Black void. The sky used to supply ambient and reflected light, so removing it
+			# darkens the blades and notes unless those sources are set explicitly - the
+			# advisor flagged this as the trap in a void background, and it is why the
+			# ambient colour below is tuned rather than zero.
+			env.background_mode = Environment.BG_COLOR
+			env.background_color = Color(0.0, 0.0, 0.0)
+			env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+			env.ambient_light_color = Color(0.62, 0.62, 0.68)
+			env.ambient_light_energy = 1.0
+			env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 
 func set_colors_from_settings() -> void:
 	update_left_color(Settings.color_left)

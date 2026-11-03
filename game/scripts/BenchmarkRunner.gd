@@ -398,7 +398,7 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		Settings.note_map_colors = true
 		Settings.event_tint = true
 		Settings.floor_grid = true
-		Settings.sky_gradient = true
+		Settings.sky_style = 2
 		Settings.debris_cap = true
 		Settings.mirror_reflections = true
 		applied.append("visuals_all=true")
@@ -414,7 +414,7 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		Settings.note_map_colors = true
 		Settings.event_tint = true
 		Settings.floor_grid = true
-		Settings.sky_gradient = false
+		Settings.sky_style = 0
 		Settings.debris_cap = false
 		Settings.mirror_reflections = false
 		applied.append("visuals_default=true")
@@ -429,7 +429,7 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		Settings.note_map_colors = false
 		Settings.event_tint = false
 		Settings.floor_grid = false
-		Settings.sky_gradient = false
+		Settings.sky_style = 0
 		Settings.debris_cap = false
 		Settings.mirror_reflections = false
 		applied.append("visuals_none=true")
@@ -447,7 +447,7 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 				"note_glow": Settings.note_edge_glow = false
 				"flash": Settings.hit_flash = false
 				"grid": Settings.floor_grid = false
-				"sky": Settings.sky_gradient = false
+				"sky": Settings.sky_style = 0
 				"tint": Settings.event_tint = false
 				"note_colors": Settings.note_map_colors = false
 				_: vr.log_warning("BENCH: unknown visual_off entry %s" % name)
@@ -1086,4 +1086,5 @@ func _poll_player_capture() -> void:
 func _finish_player() -> void:
 	_player_capture = false
 	_finish("player_song_end", false)
+
 
