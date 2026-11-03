@@ -83,6 +83,20 @@ layered hit audio, and the ten visual toggles.
 
 ## Measured performance
 
+![Frame time by percentile across releases](docs/images/frametime.png)
+
+Frame time at each percentile, from the same harness on the same map, 55 s of play each (the
+upstream capture is that long — every series gets the same window). Panel left is the 72 Hz
+upstream build against its own 13.9 ms budget; panel right is the two 120 Hz builds against
+8.33 ms. The shared y axis keeps the absolute comparison honest while the split stops the
+frame-rate change from being read as an efficiency win.
+
+The right panel is the release story: **v0.1 and v0.2 have the same median** (8.36 vs 8.35 ms)
+and diverge only in the tail — p99 10.50 → 9.66 ms, worst frame 17.16 → 13.22 ms, dropped
+frames 0.38% → 0.02%. Medians hid that; the tail is what a player feels.
+
+Regenerate with `python tools/perf/plot_frametime.py` after adding a capture to its series list.
+
 Quest 3, 120 Hz, bot playing `ODDS&ENDS feat. Hatsune Miku` ExpertPlus through the real collision
 path, 180 s unless stated. Method, validity rules and caveats: [`PERF.md`](PERF.md).
 
