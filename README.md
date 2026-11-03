@@ -83,19 +83,26 @@ layered hit audio, and the ten visual toggles.
 
 ## Measured performance
 
-![Frame time by percentile across releases](docs/images/frametime.png)
+![Frame time through a song](docs/images/frametime.png)
 
-Frame time at each percentile, from the same harness on the same map, 55 s of play each (the
-upstream capture is that long — every series gets the same window). Panel left is the 72 Hz
-upstream build against its own 13.9 ms budget; panel right is the two 120 Hz builds against
-8.33 ms. The shared y axis keeps the absolute comparison honest while the split stops the
-frame-rate change from being read as an efficiency win.
+Frame time across the whole song: x is seconds from the start, y is the interval between
+consecutive frames in milliseconds, same harness and map in every panel. The shaded band is the
+min-to-max range within each second, the line through it is the median, the thin line is the slowest
+frame in that second, and the **red dots are frames that actually missed a vsync slot**, drawn at the
+moment they happened.
 
-The right panel is the release story: **v0.1 and v0.2 have the same median** (8.36 vs 8.35 ms)
-and diverge only in the tail — p99 10.50 → 9.66 ms, worst frame 17.16 → 13.22 ms, dropped
-frames 0.38% → 0.02%. Medians hid that; the tail is what a player feels.
+What the trace shows that an average cannot:
 
-Regenerate with `python tools/perf/plot_frametime.py` after adding a capture to its series list.
+- **v0.1 is clean for about 28 seconds, then drops slots continuously to the end of the song** — 119
+  of them.
+- **v0.2 has nine in three minutes.** Its *median is identical to v0.1's* (8.37 vs 8.43 ms); the
+  entire difference is in the tail. That is exactly why the medians misled, and why this trace
+  replaced the percentile chart.
+- The triangles at the top are song-start pipeline compiles (41–51 ms), pinned above the axis instead
+  of being allowed to set its scale — otherwise a whole song squashes into a 5 ms strip.
+
+Regenerate with `python tools/perf/plot_frametime.py`; add a capture to its `SERIES` list and each
+new release appears on the same picture.
 
 Quest 3, 120 Hz, bot playing `ODDS&ENDS feat. Hatsune Miku` ExpertPlus through the real collision
 path, 180 s unless stated. Method, validity rules and caveats: [`PERF.md`](PERF.md).
