@@ -73,6 +73,9 @@ const BEAT_ACCENT_MIN := 0.2        # far off the beat: drop the accent layer
 # Pitch is jitter only: no pitch->score mapping ships anywhere credible, and
 # key data does not exist in this map format (research.md §3, "key-lock").
 const PITCH_JITTER_ST := 1.0        # FR-012 ceiling is +/-2 st
+# Bench-only: when true, _fire() returns immediately. Used to test whether audio voice
+# churn is what makes a long run slower, without changing anything else.
+static var audio_disabled := false
 const BAD_CUT_GAIN_DB := -3.0       # wrong saber / bomb, on the dull set
 const CHAIN_TAP_GAIN_DB := -4.0     # no hit data at all: a light tap
 
@@ -212,6 +215,8 @@ func hit(time_offset: float, info: HitInfo = null) -> void:
 # Gain -> layer -> pitch -> voices. One function so the mapping stays readable
 # and the pending-hit path and the immediate path cannot drift apart.
 func _fire(info: HitInfo, from_offset: float) -> void:
+	if audio_disabled:
+		return
 	var gain_db := 0.0
 	var pool: Array = HARD
 	var pool_key := &"hard"
@@ -338,3 +343,4 @@ func _steal_oldest() -> bool:
 			_voices.stop_stream(id)
 			return true
 	return false
+

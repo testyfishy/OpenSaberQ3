@@ -128,18 +128,24 @@ func _on_cut_piece_died():
 		release()
 
 func _physics_process(delta: float) -> void:
-	if Scoreboard.paused or not is_visible_in_tree() or not Map.current_info: return
+	if Scoreboard.paused or not visible or not Map.current_info: return
 	var probe := Cost.enabled
 	var t0 := Time.get_ticks_usec() if probe else 0
+	# Local z, not global: notes are children of the track, which sits at the origin with no
+	# rotation or scale, so the two are the same number - but reading `global_transform`
+	# walks up the tree and touches the transform cache once per access, and this runs twice
+	# per live note per tick. With 8 notes live at 120 Hz that is ~2 000 extra transform
+	# reads a second, on the exact path that gets slower as the map gets denser.
 	transform.origin.z += speed * delta
+	var z := transform.origin.z
 	
 	# enable collisions when cuttable gets close enough to player
 	# (this is also the hit window: see _register_hit)
-	if global_transform.origin.z > ENABLE_Z:
+	if z > ENABLE_Z:
 		set_collision_enabled(true)
 	
 	# remove children that go to far
-	if global_transform.origin.z > Constants.MISS_Z:
+	if z > Constants.MISS_Z:
 		on_miss()
 	
 	if probe:

@@ -463,6 +463,11 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		DefaultSaber.probe_accent = 0
 		DefaultSaber.probe_dull = 0
 		applied.append("audio_probe=true")
+	# Audio churn switch: skips the hit-sound calls entirely, so a drift caused by voices
+	# accumulating in the mixer shows up as a flat run instead of a rising frame time.
+	if bool(cfg.get_value("bench", "no_audio", false)):
+		DefaultSaber.audio_disabled = true
+		applied.append("no_audio=true")
 	# A/B switch for the CSG arc ribbon, which is the prime suspect for the main-thread tail.
 	var arcs = cfg.get_value("bench", "arcs", null)
 	if arcs != null:
@@ -1086,5 +1091,6 @@ func _poll_player_capture() -> void:
 func _finish_player() -> void:
 	_player_capture = false
 	_finish("player_song_end", false)
+
 
 
