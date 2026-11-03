@@ -191,7 +191,7 @@ material_override = SubResource("ShaderMaterial_6dld2")
 mesh = SubResource("QuadMesh_02xdc")
 
 [node name="EndScore" parent="." instance=ExtResource("20_fgfws")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.60386, -0.777581)
+transform = Transform3D(1.16, 0, 0, 0, 1.16, 0, 0, 0, 1, 0, 1.62, -1.15)
 layers = 3
 
 [node name="PauseMenu_canvas" parent="." instance=ExtResource("3")]

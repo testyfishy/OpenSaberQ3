@@ -254,6 +254,34 @@ func _begin() -> void:
 		_abort("bad_config")
 		return
 	
+	# End-card probe: shows the end-of-map card with known values and screenshots it, so its layout
+	# can be judged without playing a map to the end and reaching the headset.
+	if bool(cfg.get_value("bench", "endcard", false)):
+		_screenshot_enabled = true
+		_recording = true
+		_start_usec = Time.get_ticks_usec()
+		set_process(true)
+		# The end card is normally shown by the map-complete state, which also hides the menu and
+		# the map-source panels. Forcing the card without that leaves the menu, the upload page and
+		# the Beatsaver panel visible behind it - a screenshot of the wrong thing.
+		@warning_ignore("unsafe_method_access")
+		_game.show_MapSourceDialogs(false)
+		@warning_ignore("unsafe_property_access")
+		_game.main_menu._hide()
+		@warning_ignore("unsafe_property_access")
+		_game.settings_canvas._hide()
+		@warning_ignore("unsafe_property_access")
+		_game.highscore_canvas._hide()
+		@warning_ignore("unsafe_property_access")
+		var endcard: Node = _game.endscore
+		if endcard != null:
+			@warning_ignore("unsafe_method_access")
+			endcard.show_score(1234567, 1200000, 0.873, "ODDS&ENDS feat. Hatsune Miku", true, true)
+			@warning_ignore("unsafe_method_access")
+			endcard._show()
+		_meta["mode"] = "endcard"
+		vr.log_info("BENCH: endcard probe")
+		return
 	# Human-play capture: record whatever the player does, with no bot and no map forced.
 	# The CSV is identical to a bot run's, so play-time stutter can be measured from real play
 	# instead of inferred from a scripted swing. One song per launch; relaunch to capture again.
@@ -708,7 +736,10 @@ func _process(delta: float) -> void:
 	_floor_usec.append(Cost.floor_ray_usec)
 	_spawn_usec.append(Cost.spawn_usec)
 	_reenable.append(Cost.shape_reenable)
-	_song_pos.append(int(_song_player.get_playback_position() * 1000000.0))
+	if _song_player != null:
+		_song_pos.append(int(_song_player.get_playback_position() * 1000000.0))
+	else:
+		_song_pos.append(0)
 	_drawn.append(Engine.get_frames_drawn())
 	_focus_col.append(1 if _focused else 0)
 	
@@ -1144,6 +1175,8 @@ func _poll_player_capture() -> void:
 func _finish_player() -> void:
 	_player_capture = false
 	_finish("player_song_end", false)
+
+
 
 
 
