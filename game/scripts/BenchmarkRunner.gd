@@ -254,12 +254,27 @@ func _begin() -> void:
 		_abort("bad_config")
 		return
 	
+	# Human-play capture: record whatever the player does, with no bot and no map forced.
+	# The CSV is identical to a bot run's, so play-time stutter can be measured from real play
+	# instead of inferred from a scripted swing. One song per launch; relaunch to capture again.
+	if bool(cfg.get_value("bench", "player_capture", false)):
+		_player_capture = true
+		_meta["mode"] = "player_capture"
+		vr.log_info("BENCH: player capture armed - start a map")
+		return
 	# In-app download probe: exercises the exact chain the BeatSaver panel uses - search API,
 	# download URL, zip write, unzip into the songs directory, map parse - and records each
 	# step. "The API answers from my PC" does not prove it answers from inside the headset, and
 	# the panel itself cannot be driven without a player wearing the headset.
 	if bool(cfg.get_value("bench", "beatsaver_probe", false)):
 		_run_beatsaver_probe()
+		return
+	# UI scroll probe: opens the BeatSaver panel, drives the stick from code (vr_slider.debug_stick)
+	# and records the scroll value every frame. "It feels notchy" is not measurable, but the
+	# per-frame delta sequence is: a smooth scroll moves a little on most frames, a notchy one
+	# alternates zero-delta frames with large jumps.
+	if bool(cfg.get_value("bench", "ui_scroll_probe", false)):
+		_run_ui_scroll_probe()
 		return
 
 	var query := str(cfg.get_value("bench", "map", "")).strip_edges()
@@ -617,6 +632,9 @@ func _physics_process(_delta: float) -> void:
 		Cost.physics_ticks += 1
 
 func _process(delta: float) -> void:
+	if _player_capture and not _recording:
+		_poll_player_capture()
+		return
 	if not _recording:
 		return
 	var now := Time.get_ticks_usec()
@@ -680,6 +698,9 @@ func _process(delta: float) -> void:
 	if _song_player.playing:
 		_saw_playing = true
 	elif _saw_playing:
+		if _player_capture:
+			_finish_player()
+			return
 		_finish("song_end")
 		return
 	
@@ -840,7 +861,7 @@ func _consume_flag() -> void:
 		@warning_ignore("return_value_discarded")
 		DirAccess.remove_absolute(from)
 
-func _finish(reason: String) -> void:
+func _finish(reason: String, quit_after: bool = true) -> void:
 	if not _recording:
 		return
 	_recording = false
@@ -955,4 +976,98 @@ func _peak_of(values: PackedInt32Array) -> int:
 			peak = v
 	return peak
 
+const VRSlider := preload("res://game/vr_slider.gd")
 
+func _run_ui_scroll_probe() -> void:
+	var panel: Node = _game.find_child("BeatSaverPanel", true, false)
+	if panel == null:
+		_meta["probe_error"] = "panel node missing"
+		_probe_done()
+		return
+	_game.show_MapSourceDialogs(true)
+	@warning_ignore("unsafe_method_access")
+	panel._show()
+	# Give the first page time to arrive: there is nothing to scroll until cards exist.
+	for i in 300:
+		await get_tree().process_frame
+	var slider: Node = panel.get_node_or_null("list_slider")
+	if slider == null:
+		_meta["probe_error"] = "list_slider missing"
+		_probe_done()
+		return
+	var bar: Variant = slider.get("v_scroll")
+	if bar == null:
+		_meta["probe_error"] = "v_scroll missing"
+		_probe_done()
+		return
+	# If the page has not arrived (or the run has no network), give the list known content so
+	# the scroll mechanism itself can still be measured.
+	if float(bar.get("max_value")) <= 0.0:
+		var list_node: Node = panel.get_node_or_null("CardsScroll/CardList")
+		if list_node == null:
+			_meta["probe_error"] = "CardList missing"
+			_probe_done()
+			return
+		for i in 20:
+			var probe_card := Button.new()
+			probe_card.custom_minimum_size = Vector2(100, 120)
+			probe_card.text = "probe %d" % i
+			list_node.add_child(probe_card)
+		for i in 10:
+			await get_tree().process_frame
+	_meta["probe_scroll_range"] = "%.1f" % float(bar.get("max_value"))
+	# Hold the stick fully up for 120 frames, hovering as if the ray were on the list.
+	VRSlider.debug_hover = true
+	VRSlider.debug_stick = -1.0
+	var steps: Array[float] = []
+	var last := float(bar.get("value"))
+	for i in 120:
+		await get_tree().process_frame
+		var now := float(bar.get("value"))
+		steps.append(now - last)
+		last = now
+	VRSlider.debug_stick = INF
+	VRSlider.debug_hover = false
+	var moved := 0
+	var zero := 0
+	var biggest := 0.0
+	var total := 0.0
+	for s in steps:
+		total += s
+		if absf(s) > 0.0:
+			moved += 1
+		else:
+			zero += 1
+		biggest = maxf(biggest, absf(s))
+	_meta["probe_scroll_frames"] = str(steps.size())
+	_meta["probe_scroll_moved_frames"] = str(moved)
+	_meta["probe_scroll_zero_frames"] = str(zero)
+	_meta["probe_scroll_max_step"] = "%.3f" % biggest
+	_meta["probe_scroll_total"] = "%.1f" % total
+	var head := PackedStringArray()
+	for i in mini(24, steps.size()):
+		head.append("%.1f" % steps[i])
+	_meta["probe_scroll_first_steps"] = ",".join(head)
+	_probe_done()
+
+# --- human-play capture ------------------------------------------------------------------
+var _player_capture := false
+
+func _poll_player_capture() -> void:
+	if _song_player == null:
+		@warning_ignore("unsafe_property_access")
+		_song_player = _game.song_player
+	if _song_player == null:
+		return
+	if _song_player.playing and Map.current_info != null:
+		_meta["map_song_name"] = Map.current_info.song_name
+		_meta["map_filepath"] = Map.current_info.filepath
+		_start_recording()
+		_saw_playing = true
+
+
+# Same numbers as _finish(), but the game keeps running: the point is to play, so quitting at
+# the end of the song would defeat it. Player capture is one song per launch.
+func _finish_player() -> void:
+	_player_capture = false
+	_finish("player_song_end", false)

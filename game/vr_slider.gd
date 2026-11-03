@@ -28,6 +28,11 @@ const JOYSTICK_SLOW_SCROLL_SPEED := 260.0
 const JOYSTICK_FAST_SCROLL_SPEED := 2400.0
 const JOYSTICK_ACCEL := 2600.0
 
+# Bench-only: lets a probe drive the stick without a controller (`INF` = read the real one).
+# Used by BenchmarkRunner's ui_scroll_probe to measure the scroll value sequence per frame.
+static var debug_stick := INF
+static var debug_hover := false
+
 var _engaged := false
 # Fractional pixels carried between frames, so slow scrolling is not lost to rounding.
 var _accum := 0.0
@@ -58,14 +63,15 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	var newpos := -vr.rightController.rotation_degrees.x - (vr.rightController.transform.origin.y * 20.0)
-	if is_mouse_in and vr.rightController.trigger_pressed():
+	var hovering := is_mouse_in or debug_hover
+	if hovering and vr.rightController.trigger_pressed():
 		# Scroll via "click & drag"
 		var moved := (relpos - newpos) * 20.0
 		v_scroll.value += moved
 		if moved != 0.0:
 			_request_refresh()
 		_speed = 0.0
-	elif is_mouse_in:
+	elif hovering:
 		_stick_scroll(delta)
 	else:
 		_speed = 0.0
@@ -75,7 +81,7 @@ func _stick_scroll(delta: float) -> void:
 	if v_scroll == null:
 		_speed = 0.0
 		return
-	var y_joy := vr.rightController.get_vector2("primary").y
+	var y_joy: float = debug_stick if is_finite(debug_stick) else vr.rightController.get_vector2("primary").y
 	var magnitude := absf(y_joy)
 	if _engaged:
 		if magnitude < JOYSTICK_SCROLL_RELEASE:
