@@ -352,6 +352,68 @@ adb shell am start -n io.github.testyfishy.opensaberq3/com.godot.game.GodotAppLa
 then pull `bench_meta.txt` and `bench.csv`. Watch `thermal_status`, dropped-frame counts by
 20-second bucket, and whether `refresh_rate_final` stays 120.
 
+## 120 Hz frame-budget investigation - 2026-11-02
+
+Reported symptom: with the stricter metric, only ~78-80 % of frames were "truly on time" at
+120 Hz, while the lenient metric said 99.6 % "on vsync". Resolved by measuring what the
+number actually means rather than by changing rendering.
+
+### The ladder (45 s each, bot on ODDS, 120 Hz, physics pinned to the display)
+
+All arms ran on the same build (bloom and wall fresnel already removed), same map, same bot.
+Each arm is ~5 300 frames, so the binomial 95 % interval on a percentage is about +/-1.2 pp.
+
+| Arm | Change vs shipped defaults | Truly on time | Delivered fps | Skipped slots |
+|---|---|---|---|---|
+| d-def | none (shipped) | 80.07 % | 119.17 | 0.32 % |
+| e-collonce | `enable_collision_once=true` (already the default) | 81.66 % | - | - |
+| e-collonce-iso | + `isolate_shapes=true` (already the default) | 79.48 % | - | - |
+| d-ffr1 | foveation level 1 | 81.31 % | - | - |
+| d-ffr2 | foveation level 2 | 79.71 % | - | - |
+| d-msaa1 | MSAA 2x instead of 4x | 81.80 % | - | - |
+| d-scale115 | render scale 1.15 | 81.66 % | - | - |
+| gpu-100 | every visual setting forced on | 79.70 % | - | - |
+| gpu-070 | every visual on, render scale 0.70 | 86.28 % | - | - |
+| e-90hz | 90 Hz display, 90 Hz physics | 92.91 % | 89.87 | 0.10 % |
+
+**The first three rows are the same configuration.** `enable_collision_once` and
+`isolate_collision_shapes` are already `true` in `project.godot`, so those two "overrides"
+changed nothing. That makes the spread between them - 79.48 / 80.07 / 81.66 - a direct
+measurement of run-to-run noise: **sigma ~= 1.1 pp**. Everything from MSAA 2x to foveation to
+render scale 1.15 sits inside that band and is therefore indistinguishable from noise.
+
+### What the numbers mean
+
+- **p50 frame interval is 100.0-100.5 % of the display period in every arm**, including
+  render scale 0.70 and 90 Hz. A loop that is compute-limited would sit below 100 % when you
+  cut the work in half; this one does not move. The loop is paced by the compositor's
+  deadline, so "late" here means jitter around a fixed deadline, not an overrunning frame.
+- Widening the tolerance from 1.05x to 1.5x the period turns the same run from 80 % "on time"
+  into 99.7 % delivered, because the frames in the 8.75-12.5 ms band are **presented**, not
+  lost. `frames_drawn` increments by exactly one on every one of them.
+- Delivered rate is the figure that matters: **119.2 fps of 120** at 120 Hz, **89.9 of 90** at
+  90 Hz. Rendering 32 % more frames per second costs 0.22 pp of slot reliability.
+- Halving the pixel count (scale 0.70) buys +6 pp and nothing else does. So GPU work is a
+  small part of the budget margin and CPU work is smaller still: physics is 2.3 ms of an
+  8.33 ms frame at p50, and every instrumented gameplay path (swing, cuttable, floor ray,
+  spawn) sums to 0.13 ms.
+
+### Verdict
+
+**Keep 120 Hz.** It delivers 119.2 fps; the "22 % late" figure was a 1.05x threshold applied
+to a deadline-paced loop, not frame loss. `SC-010` ("zero dropped frames") is not met at
+either rate - 0.32 % at 120 Hz, 0.10 % at 90 Hz, so it is not achievable as written on this
+device; the honest working target is **>=99 % of vsync slots delivered**, which both meet.
+
+`tools/perf/summarize.ps1` now prints delivered fps, budget use as a percentage of the period
+and the skipped-slot rate above the on-time figure, with the band labelled as late-latch rather
+than dropped, so the flattering and alarming numbers cannot be quoted in isolation again.
+
+### Cost of the visual set, post-bloom
+
+Every visual setting forced on (mirrors + gradient sky included) is 79.70 % against 80.07 %
+for the shipped defaults - inside the noise band. The visual layer is free at this point; the
+remaining margin problem is the platform's, not the content's.
 ## Rejected
 
 Changes that were measured, did not beat the noise, and were reverted (SC-002 scenario 2).

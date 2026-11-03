@@ -82,8 +82,15 @@ if ($rows[0].PSObject.Properties.Name -contains 'focused') {
 "frames delivered on vsync : {0} of {1} ({2:N3}%)" -f $onVsync, $ms.Count, (100.0 * $onVsync / $ms.Count)
 $onTime = @($ms | Where-Object { $_ -le $onTimeThreshold }).Count
 $late = $ms.Count - $onTime - $dropped.Count
+$fps = 1000.0 / (($ms | Measure-Object -Average).Average)
+"delivered                 : {0:N2} fps of {1:N1}  ({2:N2}% of the display rate)" -f $fps, $Hz, (100.0 * $fps / $Hz)
+"frame budget use          : p50 {0:N1}%  p95 {1:N1}%  p99 {2:N1}% of the {3:N2} ms period" -f `
+    (100.0 * (Pct $ms 0.50) / $period), (100.0 * (Pct $ms 0.95) / $period), (100.0 * (Pct $ms 0.99) / $period), $period
 "frames truly on time     : {0} of {1} ({2:N3}%)  <= {3:N2} ms" -f $onTime, $ms.Count, (100.0 * $onTime / $ms.Count), $onTimeThreshold
 "frames late but not dropped: {0} ({1:N3}%)  in the {2:N2}-{3:N2} ms band" -f $late, (100.0 * $late / $ms.Count), $onTimeThreshold, $dropThreshold
+"  ^ presented late-latch, NOT lost: a frame here finished a fraction of a millisecond after the"
+"    period and was still shown. At 120 Hz this band sits at ~20% on this build while only 0.2% of"
+"    vsync slots are actually skipped, so it is a budget-margin diagnostic, not a frame-rate figure."
 "dropped-frame events      : {0} ({1:N3}% of frames missed at least one vsync)" -f $dropped.Count, (100.0 * $dropped.Count / $ms.Count)
 "severe events (>=2 vsync) : {0}" -f $severe.Count
 

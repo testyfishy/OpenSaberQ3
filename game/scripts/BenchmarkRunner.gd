@@ -379,6 +379,21 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		Settings.debris_cap = true
 		Settings.mirror_reflections = true
 		applied.append("visuals_all=true")
+	# Settings persist to the device config file, so an arm that merely *omits* an override
+	# inherits whatever the previous arm wrote. That silently invalidated the first attempt at
+	# an all-off arm. This pins every visual to its shipped default instead.
+	if bool(cfg.get_value("bench", "visuals_default", false)):
+		Settings.floor_light = true
+		Settings.saber_halo = true
+		Settings.note_edge_glow = true
+		Settings.hit_flash = true
+		Settings.note_map_colors = true
+		Settings.event_tint = true
+		Settings.floor_grid = true
+		Settings.sky_gradient = false
+		Settings.debris_cap = false
+		Settings.mirror_reflections = false
+		applied.append("visuals_default=true")
 	# Per-feature attribution: `[bench] visual_off=mirrors,sky` turns individual features
 	# off from the full set, which is how the cost of each one is isolated (removing one from
 	# all-on captures the interactions, adding one to defaults does not).
@@ -439,6 +454,23 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 	if max_fps > 0:
 		Engine.max_fps = max_fps
 		applied.append("max_fps=%d" % max_fps)
+	# GPU-vs-CPU discriminator: dropping the render scale removes roughly half the pixel work
+	# while leaving every node, script and physics tick untouched. If frame time falls, the
+	# frame is GPU-limited; if it holds, the main thread is the limit and no visual change helps.
+	var scale = cfg.get_value("bench", "render_scale", null)
+	if scale != null:
+		Settings.render_scale = float(scale)
+		applied.append("render_scale=%.3f" % Settings.render_scale)
+	# Fixed foveation is the classic Quest GPU lever: level 2 shades the periphery at reduced
+	# rate, which costs sharpness only where the player is not looking.
+	var fov = cfg.get_value("bench", "foveation", null)
+	if fov != null:
+		Settings.foveation_level = int(fov)
+		applied.append("foveation=%d" % Settings.foveation_level)
+	var msaa = cfg.get_value("bench", "msaa", null)
+	if msaa != null:
+		Settings.msaa_3d = int(msaa)
+		applied.append("msaa=%d" % Settings.msaa_3d)
 	_meta["overrides"] = ", ".join(applied) if not applied.is_empty() else "none"
 	vr.log_info("BENCH: overrides %s" % _meta["overrides"])
 
