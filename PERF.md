@@ -414,6 +414,46 @@ than dropped, so the flattering and alarming numbers cannot be quoted in isolati
 Every visual setting forced on (mirrors + gradient sky included) is 79.70 % against 80.07 %
 for the shipped defaults - inside the noise band. The visual layer is free at this point; the
 remaining margin problem is the platform's, not the content's.
+### The within-run drift, found and fixed - 2026-11-03
+
+Symptom the player reported: "I'm definitely feeling more stutter with the new changes", worse
+the longer a session runs. Six 180 s runs on ODDS ExpertPlus at 120 Hz found it.
+
+First, what it was NOT:
+
+| 180 s run | on time | dropped | p99 | mean frame: 1st / 2nd / 3rd third |
+|---|---|---|---|---|
+| defaults | 63.0% | 0.72% | 11.93 | 8.39 / 8.70 / 8.95 |
+| every visual off | 64.3% | 0.72% | 11.98 | 8.40 / 8.69 / 8.95 |
+
+The same numbers twice: **the visual layer costs nothing measurable.** The 60 s comparison that
+suggested a 4 pp visual cost was inside its own noise band (three runs of one scenario measured
+74.5 / 78.4 / 78.3), which is why every claim below is a 180 s run.
+
+| 180 s run | on time | dropped | p99 | thirds |
+|---|---|---|---|---|
+| no hit audio | 78.4% | 0.19% | 10.30 | 78.3 / 78.7 / 78.3 |
+| no arcs | 77.5% | 0.18% | 10.36 | 78.4 / 75.7 / 78.3 |
+| **control, no extra flags** | **78.3%** | **0.21%** | **10.37** | 82.7 / 75.6 / 76.6 |
+
+Both isolation arms and the control landed in the same place, so neither audio nor arcs was the
+cause: the change they shared was the build, and the only gameplay change in it was one line.
+
+`Cuttable._physics_process` read `global_transform` **twice per tick per live note**, right
+after writing `transform.origin.z`. Notes are children of the track, which sits at the origin
+unrotated and unscaled, so local z is the same number - but each global read walks the tree and
+touches the transform cache. At 8 notes live and 120 Hz that is ~2 000 extra reads a second.
+
+Replacing them with a single local read:
+
+  on time  64.3% -> 78.3%      dropped  0.72% -> 0.21%
+  p99      11.98 -> 10.37 ms   thirds   78.5/62.6/51.7  ->  82.7/75.6/76.6
+
+The level rose **and the decay disappeared**. That decay is what "worse the longer I play"
+meant: frame time rising 8.40 -> 8.95 ms over three minutes, tracking notes live (1.1 -> 7.8).
+
+Method note for anything after this: report thirds, not just the average. A run that averages
+78% but decays to 52% is worse for a player than one that holds 74% flat.
 ## Rejected
 
 Changes that were measured, did not beat the noise, and were reverted (SC-002 scenario 2).
