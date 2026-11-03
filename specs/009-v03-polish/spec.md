@@ -121,3 +121,5 @@ player's words:
 | Gate | Question | Verdict | Follow-up |
 |---|---|---|---|
 | G1 | Light / UI / sky / audio approach and order | GO WITH CHANGES: light A, sky A with ambient fix, HUD A + end card SubViewport, audio measure first then redesign | Recorded in the v0.3 order above |
+| measure | Is the v0.2 measurement method precise enough to attribute a 1-4 pp visual cost? | **NO.** Three 60 s runs of the same scenario (ODDS ExpertPlus, 120 Hz) gave 74.48 / 78.38 / 78.25% on time. The spread is ~4 pp, the same size as the effect being measured | FR-001 amended: comparisons need >=180 s runs or >=3 repeats; no per-feature claim below ~5 pp without both |
+| measure | Is the drop from the earlier 80.07% a regression? | Not established. 80.07 sits inside the same 4 pp band as today's 74.5-78.4. Thermal status 0 (no throttling), 47.9 C | Do not chase a regression until a 180 s baseline exists |
