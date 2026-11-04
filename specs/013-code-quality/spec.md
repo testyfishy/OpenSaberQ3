@@ -24,6 +24,15 @@ limiter, and only the bench-gating and pooled-node items could plausibly move a 
 
 ## Requirements
 
+### Working method (G1, 2026-11-04)
+
+- v0.4 runs in a separate worktree (`../OpenSaberQ3-v4`) on `harness-base`, with `v4/cleanup`
+  branching from it. `godot-4-port` stays exactly what is installed on the headset.
+- The headset keeps the v0.3 build, so **all v0.4 verification is host-only** until v0.3 is
+  approved; installing or merging still requires the device bench within noise.
+- The harness is tested before it is trusted: the replay must produce byte-identical logs on two
+  runs of the unmodified v0.3 code before it is used as a baseline.
+
 ### Harness first (nothing is refactored before this exists)
 
 - **FR-001**: A deterministic bot replay MUST exist: fixed seed, per-frame log of spawns (beat,
@@ -31,7 +40,16 @@ limiter, and only the bench-gating and pooled-node items could plausibly move a 
 - **FR-002**: A colour dump MUST resolve every note, wall and event colour for the 43 audit maps
   (`docs/map-data-audit.md`), so palette refactors are checked against data, not screenshots.
 - **FR-003**: A settings round-trip test MUST prove a config written by the old code reads
-  identically through any new schema.
+  identically through any new schema, and that a v0.3 `user://` file with unknown keys still
+  loads without losing known values.
+- **FR-011**: Replay mode MUST pin determinism: `--fixed-fps`, a seeded RNG for the bot, debris,
+  pitch jitter and sway, and a clock seam where song time is `frame_index / fps` instead of the
+  audio clock. The seam MUST be inert unless replay mode is on.
+- **FR-012**: The replay MUST log events, not frames: spawns (index, beat, quantised position),
+  cuts (good/bad, score components, combo), misses, final totals, and a sparse live-position
+  snapshot every 30 frames; positions quantised to 1 mm, angles to 0.1 degrees.
+- **FR-013**: A map dump MUST be identical when generated with the loader threads enabled and
+  disabled; that equality is the safety net for splitting `Map.gd`.
 
 ### Extractions, in this order
 
@@ -67,6 +85,12 @@ limiter, and only the bench-gating and pooled-node items could plausibly move a 
 - **SC-006**: On-device bench, three runs, p99, max and the count of frames over 1.5x the period
   inside the v0.3 baseline's run-to-run noise band.
 - **SC-007**: Release APK no longer contains the bench tooling, and a normal launch still works.
+- **SC-008**: Two replay runs on the unmodified v0.3 code produce byte-identical logs.
+- **SC-009**: The map dump covers all 43 audit maps and is byte-identical after every slice.
+- **SC-010**: Draw calls, primitives and node counts do not exceed the v0.3 baseline.
+- **SC-011**: Host CPU script time (median of three runs) regresses by no more than 5%.
+- **SC-012**: Goldens (settings top/mid/bottom, gameplay, end card) pass a perceptual diff.
+- **SC-013**: A v0.3 `user://config.ini` loads in v0.4 with every known key preserved.
 
 ## Out of scope
 
