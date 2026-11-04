@@ -197,10 +197,10 @@ func _ready() -> void:
 	GlobalReferences.wall_pool = $WallPool
 	GlobalReferences.cube_pool.presize(100)
 	GlobalReferences.link_pool.presize(100)
-	# Wall maps spawn tens of walls a second (Gloom: ~74/s, 12,340 in one song). With a 2-3 s
-	# life that is 150-220 alive at once, so 96 would run dry and instantiate mid-play - the
-	# exact spike pooling exists to remove.
-	GlobalReferences.wall_pool.presize(160)
+	# Wall maps spawn tens of walls a second (Gloom: 12,340 in one song). Measured peak usage on
+	# that map is 569 live walls, so a pool below that grows during play; 256 covers every normal
+	# map without presizing 570 nodes at startup, and the growth on Gloom is amortised.
+	GlobalReferences.wall_pool.presize(256)
 	
 	var xr_camera := $XROrigin3D/XRCamera3D as XRCamera3D
 	vr.initialize(

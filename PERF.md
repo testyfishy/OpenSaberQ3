@@ -503,10 +503,23 @@ Somewhere Out There went from unusable (65 fps, two thirds of frames dropped) to
 from any other map. HEARTATTACK is unchanged, so the fix cost nothing elsewhere; arcs and bombs were
 never the problem.
 
-Gloom still drops 2.14% of frames - 11x better than before, but not the 0.01% the other maps show.
-That is the residual per-active-wall cost (a BoxMesh, an Area3D and an AnimationPlayer per live
-wall, ~150-220 at once), which the advisor flagged as the next step if pooling alone did not finish
-the job.
+Gloom still drops 2.14% of frames - 11x better, but not the 0.01% the other maps show. Two further
+measurements on that map:
+
+| Gloom variant | fps | on time | dropped | p99 |
+|---|---|---|---|---|
+| pooled, AnimationPlayer per wall | 119.1 | 66.1% | 2.14% | 13.62 ms |
+| pooled, spawn animation skipped entirely | 119.8 | 68.4% | **0.82%** | 12.33 ms |
+| pooled, scale-in done in `_physics_process` (shipped) | 119.8 | 65.6% | 1.70% | 12.95 ms |
+
+So the AnimationPlayer node was worth 1.3 points, and doing the same scale-in in code recovers most
+but not all of it: writing `scale` on an animating wall is itself a transform update, and ~30 walls
+are mid-animation at any moment on that map. The animation is kept because it is the wall's only
+motion cue; the cost is recorded rather than hidden.
+
+Also measured: **wall_pool_peak = 569** live walls on Gloom. The pool is presized to 256 (enough for
+every normal map) and grows once during that song, because presizing 570 nodes at boot costs more
+than the amortised growth.
 ## Rejected
 
 Changes that were measured, did not beat the noise, and were reverted (SC-002 scenario 2).

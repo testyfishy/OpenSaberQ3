@@ -494,6 +494,7 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 	# GPU attribution: hide the floor pad, which is a large screen-area surface with per-pixel
 	# streak, grid and flash maths. If it is a big share of GPU%, simplifying it beats dropping
 	# resolution, because it costs sharpness nowhere.
+
 	if bool(cfg.get_value("bench", "floor_off", false)):
 		@warning_ignore("unsafe_property_access")
 		_game.standing_ground.visible = false
@@ -1175,6 +1176,7 @@ func _poll_player_capture() -> void:
 func _finish_player() -> void:
 	_player_capture = false
 	_finish("player_song_end", false)
+
 
 
 

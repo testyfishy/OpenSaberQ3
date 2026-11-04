@@ -18,18 +18,27 @@ var _base_mat: Material
 # The size the last spawn gave this wall.
 var _size := Vector3.ONE
 
+
+var _spawn_age := SPAWN_ANIM_S
 var despawn_z: float
 var speed: float
 
+const SPAWN_ANIM_S := 0.45
+
 func _physics_process(delta: float) -> void:
 	if Scoreboard.paused: return
+	if _spawn_age < SPAWN_ANIM_S:
+		_spawn_age += delta
+		var t := clampf(_spawn_age / SPAWN_ANIM_S, 0.0, 1.0)
+		var eased := 1.0 - pow(1.0 - t, 3.0)
+		$WallMeshOrientation.scale = Vector3(1.0, lerpf(0.1, 1.0, eased), 1.0)
 	transform.origin.z += speed * delta
 	
 	# remove children that go to far
 	if transform.origin.z > despawn_z:
 		if Cost.enabled: Cost.objs_freed += 1
 		# Pooled, not freed. A wall map can spawn ~74 walls a second; instantiating and freeing a
-		# whole Mesh + Area3D + AnimationPlayer tree at that rate was the single largest cost
+		# whole Mesh + Area3D + AnimationPlayer tree at that rate was the single largest cost. The
 		# measured across the map matrix (Gloom: 92.9 fps, 24% dropped; Empires, no walls: 120).
 		_despawn()
 
@@ -76,7 +85,12 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	transform.origin.z = (current_beat - wall_info.beat) * Constants.BEAT_DISTANCE - depth
 	
 	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute / 60.0
-	($AnimationPlayer as AnimationPlayer).play(&"Spawn")
+	# Scale-in on spawn, done in code. This used to be an AnimationPlayer per wall: on a wall map
+	# with ~570 walls live that is 570 AnimationMixers processing every frame, and removing them
+	# recovered 1.3 points of dropped frames. The visual is the same: 10% -> 100% height over a
+	# few tenths of a second as the wall approaches.
+	_spawn_age = 0.0
+	$WallMeshOrientation.scale = Vector3(1.0, 0.1, 1.0)
 
 func _wall_mesh() -> MeshInstance3D:
 	if _mesh_cache == null:
