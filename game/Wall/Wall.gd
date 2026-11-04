@@ -23,15 +23,26 @@ var _spawn_age := SPAWN_ANIM_S
 var despawn_z: float
 var speed: float
 
-const SPAWN_ANIM_S := 0.45
+# Matches the AnimationPlayer this replaced: 1.0 s, height 0.1 -> 1.0, with the original curve's
+# slow start (transition 0.0884) and fast finish (1.0), evaluated as a cubic Hermite so the wall
+# grows the way it used to rather than snapping up in half the time.
+const SPAWN_ANIM_S := 1.0
+const SPAWN_START_H := 0.1
+const SPAWN_TANGENT_IN := 0.0884
+const SPAWN_TANGENT_OUT := 1.0
 
 func _physics_process(delta: float) -> void:
 	if Scoreboard.paused: return
 	if _spawn_age < SPAWN_ANIM_S:
 		_spawn_age += delta
 		var t := clampf(_spawn_age / SPAWN_ANIM_S, 0.0, 1.0)
-		var eased := 1.0 - pow(1.0 - t, 3.0)
-		$WallMeshOrientation.scale = Vector3(1.0, lerpf(0.1, 1.0, eased), 1.0)
+		var span := 1.0 - SPAWN_START_H
+		var h00 := 2.0 * t * t * t - 3.0 * t * t + 1.0
+		var h10 := t * t * t - 2.0 * t * t + t
+		var h01 := -2.0 * t * t * t + 3.0 * t * t
+		var h11 := t * t * t - t * t
+		var h := h00 * SPAWN_START_H + h10 * SPAWN_TANGENT_IN * span + h01 * 1.0 + h11 * SPAWN_TANGENT_OUT * span
+		$WallMeshOrientation.scale = Vector3(1.0, h, 1.0)
 	transform.origin.z += speed * delta
 	
 	# remove children that go to far
