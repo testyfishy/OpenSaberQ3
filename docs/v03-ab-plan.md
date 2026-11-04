@@ -22,9 +22,9 @@ the record.
 
 | Feature | Off arm | On arm | Why it needs an arm | Status |
 |---|---|---|---|---|
-| **Debris shards** (FR-013) | `visual_off="debris"` | defaults (shards on) | 128-instance MultiMesh + 10 buffer writes per cut + one uniform/frame | queued |
-| **Bloom / glow** | `glow=false` | `glow=true` (bench-only) | the removal was reasoned, never measured; the answer decides whether a cheaper glow is worth building | queued |
-| **Environment palette** (FR-027/028) | `environment="classic"` | `environment="map"` | per-map colours write the same uniforms as before; the arm verifies "free" rather than assuming it | queued |
+| **Debris shards** (FR-013) | `visual_off="debris"` | defaults (shards on) | 128-instance MultiMesh + 10 buffer writes per cut + one uniform/frame | queued (battery) |
+| **Bloom / glow** | `glow="false"` | `glow="cheap"` and `glow="true"` (bench-only) | the removal was reasoned, never measured; three arms separate "off" from Godot's seven-pass glow and from a single-level glow that keeps the resolve but drops six blur passes | queued (battery) |
+| **Environment palette** (FR-027/028) | `environment="classic"` | `environment="map"` | per-map colours write the same uniforms as before; the arm verifies "free" rather than assuming it | queued (battery) |
 | **Chroma event colours** | not applicable | not applicable | per-event colour is parsed at load and written once when the event fires; there is no per-frame work to isolate. Recorded as by-construction-zero, and checked by loading a Chroma map (`Somewhere Out There`) and reading the frame stats against `ODDS` only as a sanity check | recorded |
 | **BPM segments** (FR-025) | not applicable | not applicable | load-time parse plus two binary searches per spawn; no per-frame cost. Covered by the BPM unit test and a bot run on `FitBeat` (14 segments) | recorded |
 | **Fake-note filter** (FR-026) | not applicable | not applicable | fewer notes exist after load, so the arm would be "less work", not more. Logged at load: `fakes_filtered` | recorded |
@@ -44,4 +44,32 @@ the record.
 
 ## Results
 
-(appended as arms complete; raw captures in `perf/captures/`)
+### Blocked, 2026-11-03 night
+
+The headset reported **10% while on AC via the PC's USB port** and the level was falling, not
+charging. Running six 120 Hz arms would have risked shutting it down overnight, which the player
+explicitly asked us not to do. No device arms were run. Everything needed to run them is in
+place; the moment the headset is on a real charger at >= 40%:
+
+```
+pwsh -File tools/perf/feature-ab.ps1 -Feature debris
+pwsh -File tools/perf/feature-ab.ps1 -Feature environment
+pwsh -File tools/perf/bloom-ab.ps1
+```
+
+Each writes `perf/captures/<name>-*.{bench.csv,meta.txt}` and prints the table.
+
+### Harness bug found and fixed before any run
+
+A bare identifier in a bench flag (`visual_off=debris`, `environment=classic`) makes Godot's
+ConfigFile fail to parse, so the run aborts as `bad_config` and looks like a crash. The harness
+now quotes every string value, and `tools/tests/test_flag.tscn` reports the parse result without
+starting a run.
+
+### Measured off-device (not a substitute for the arms)
+
+- `environment="classic"` applies and logs `mode=1` with the old red/blue notes and red walls
+  (Gloom, desktop capture).
+- Glow renders on the desktop build (`glow=true` produces visible bloom on blades and HUD), so the
+  arm is exercising a real effect, not a no-op.
+

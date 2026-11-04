@@ -465,16 +465,25 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 	# Glow arm: the bloom removal was reasoned from the tiled-GPU mechanism but never measured
 	# on its own. `[bench] glow=true` re-enables Godot's glow for one arm so the cost is a
 	# number, not an argument. It is bench-only: nothing writes this to config.ini.
-	if bool(cfg.get_value("bench", "glow", false)):
+	# "true" is Godot's default glow (all seven blur levels). "cheap" keeps the resolve but
+	# drops to a single level, which is the middle ground worth measuring: same buffer cost,
+	# far fewer full-screen passes.
+	var glow_mode := str(cfg.get_value("bench", "glow", "false")).to_lower()
+	if glow_mode == "true" or glow_mode == "cheap":
 		var env_node := get_tree().get_first_node_in_group(&"enviroment") as WorldEnvironment
 		if env_node != null and env_node.environment != null:
-			env_node.environment.glow_enabled = true
-			env_node.environment.glow_intensity = 0.6
-			env_node.environment.glow_strength = 1.0
-			env_node.environment.glow_bloom = 0.0
-			env_node.environment.glow_hdr_threshold = 1.0
-			env_node.environment.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
-			applied.append("glow=true")
+			var env := env_node.environment
+			env.glow_enabled = true
+			env.glow_intensity = 0.6
+			env.glow_strength = 1.0
+			env.glow_bloom = 0.0
+			env.glow_hdr_threshold = 1.0
+			env.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
+			if glow_mode == "cheap":
+				for level in range(1, 8):
+					env.set_glow_level(level, 0.0)
+				env.set_glow_level(4, 1.0)
+			applied.append("glow=%s" % glow_mode)
 	# Environment palette arm (FR-027/FR-028): "classic" is the pre-v0.3 look, so an A/B can
 	# show whether the per-map palette costs anything at all.
 	if str(cfg.get_value("bench", "environment", "map")) == "classic":
