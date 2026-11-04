@@ -109,27 +109,36 @@ Beat Saber reference footage; the notes from memory are marked "verify".
   scheduled time. [verify: believed to be Beat Saber's behaviour]
 - **FR-020**: Each hit sound MUST be positioned at the cube, not at the saber.
 
-### Environment (FR-021..FR-024, from the G1 ambience consult)
+### Map data (FR-025..FR-030, from the map-data audit and its G1 consult)
 
-The user asked for per-map ambience, colour-coded to the track's own colours, with an
-old-school audio-reactive layer. The map already carries a hand-authored light show, which wins
-over any generated one.
+Source: `docs/map-data-audit.md` (43 real BeatSaver maps parsed offline). The user's instruction:
+ignore randomisation; do justice to what each map declares. Order: correctness first (no GPU
+cost), then the map's own room, then light-system completeness.
 
-- **FR-021**: The environment palette MUST come from the track, in this order: the map's
-  environment colours (v3 `_envColorLeft/Right`, boost variants), then its note colours
-  (`_colorLeft/_colorRight`), then the preset default. A player override of the note colours
-  wins over the map. Readability guards: environment colours stay at or below 0.6x note
-  brightness; if the two hues are within 30 degrees, or saturation is below 0.25, fall back to
-  the preset palette. Lane and note colours are never changed by this.
-- **FR-022**: `environment_name` MUST select an ambience preset from a short table of the stock
-  Beat Saber environment names. A map that names an environment, or supplies environment
-  colours, MUST NOT be randomised: the map is the designer and its choice wins. Only when a map
-  supplies neither does a preset get chosen from a stable hash of the map id, so the same map
-  always looks the same and unmapped songs still differ. Setting: "Environment: Auto / Classic",
-  where Classic is today's look.
-  - Follow-up, not v0.3: v3 `colorBoostBeatmapEvents` (the brighter light state on a boost) and
-    v4 `lightColorEventBoxGroups` are not parsed yet; `basicBeatmapEvents` already drive
-    `event_driver` today.
+- **FR-025**: BPM changes MUST be honoured. Parse v3 `bpmEvents`, v4 audio BPM data and v2 event
+  type 100 (legacy 10); one `beat_to_seconds()` MUST drive notes, obstacles, arcs/chains, light
+  events, the bot, the bench clock and practice seek. Obstacle end is `b2s(start+dur) - b2s(start)`.
+  Note-jump duration uses the Info BPM (verify this matches Beat Saber). Hit windows stay in
+  seconds. Acceptance: a synthetic two-segment map keeps arrival error under 20 ms on both sides
+  of the change; measured, not judged.
+- **FR-026**: Fake notes, fake bombs and fake obstacles MUST be hidden and excluded from note
+  count, max score, combo and the bot. They are not drawn as ghosts: their positions come from
+  Noodle motion we do not implement.
+- **FR-027**: `environment_name` MUST select a room profile and that environment's default
+  colour scheme. The UI MUST say plainly that the colours follow the map's environment while the
+  room is ours ("Colours: <environment> · Room: OpenSaber"); no fidelity claim is made.
+- **FR-028**: The palette order is: map `environmentColor0/1` (+Boost) when present, else the
+  environment default scheme, else today's palette; `obstaclesColor` tints walls. The player's
+  colour override wins and note lane colours are never changed. Readability guards from FR-021
+  still apply (environment at or below 0.6x note brightness; fall back if the hues are too close
+  or too desaturated).
+- **FR-029**: Light boost MUST be honoured: v2 event type 5 and v3 `colorBoostBeatmapEvents`
+  switch to the boost colour pair.
+- **FR-030**: Unsupported map characteristics MUST be stated in the browser rather than silently
+  mis-played: 360/90 `rotationEvents` maps, box-group-only lightshows, and maps requiring Chroma,
+  Noodle, Vivify or custom asset bundles.
+- **FR-021**: Superseded by FR-027/FR-028 (same palette chain, with the environment default
+  scheme added). No randomisation: the map is the designer.
 - **FR-023**: An audio-reactive layer MAY modulate the environment, but MUST be subordinate to
   the map's own light events: it scales intensity of the sphere, rings and lasers and MUST NOT
   invent colour changes or beats. If a map averages fewer than one light event per 4 s, it may
@@ -170,6 +179,14 @@ over any generated one.
   more than 3 large-area luminance transitions.
 - **SC-011**: Audio-reactive on/off changes GPU% and on-time by less than the run-to-run noise
   band, measured on device.
+- **SC-012**: A synthetic map with a mid-song BPM change reports note-arrival error under 20 ms on
+  both sides of the change, and the bot's hit rate on it does not drop.
+- **SC-013**: A map with fake notes reports zero bad cuts from those notes and a max score that
+  excludes them.
+- **SC-014**: Two maps with different `environmentName` values load visibly different rooms and
+  palettes; the same map loads identically twice in a row (SC-009 still holds).
+- **SC-015**: Every map that uses a feature this build cannot render is flagged in the browser
+  with the feature's name, not silently played.
 
 ## GPU lever curve (Quest 3, ODDS ExpertPlus, 120 Hz, 40 s arms, VrApi GPU% median)
 
@@ -217,10 +234,12 @@ on-time figure by 0.6 points.
 7. Red dot (FR-012).
 8. Audio measurement, ducking, redesign (FR-005, FR-006, FR-007).
 9. Feedback research application (FR-004).
-10. Debris shards (FR-013) - approved at G1; implement behind `debris_shards`.
-11. Per-map ambience, environment colours, audio-reactive layer (FR-021..FR-024) - approved
-    at G1 as Auto/Classic plus an Off/Subtle/Strong analyser; only after SC-001 is green.
-12. Final optimisation pass and release.
+10. Debris shards (FR-013) - done.
+11. Map-data audit (FR-025..FR-030): corrected after G1 to correct BPM/fake notes first, then
+    the map's environment scheme and room profile, then boost. Only Phase B adds visuals and it
+    waits for SC-001. Box-group lighting and Chroma/Noodle move to v0.4.
+12. Audio-reactive layer (FR-023/FR-024) after SC-001.
+13. Final optimisation pass and release.
 
 ## Consultation Log
 
@@ -228,6 +247,7 @@ on-time figure by 0.6 points.
 |---|---|---|---|
 | G1 | Cut debris design and the sound-design spec | GO WITH CHANGES: MultiMesh shader pool (128, 10 per cut, opaque, shrink-out, custom_aabb, own `now`); reject RigidBody and GPUParticles; measure principal velocity axis, not the mean; FR-014..FR-020 added for hit layering, variation, 1/sqrt(n), sidechain duck, whoosh/clash, latency and cube-positioned audio | FR-013 written with the parameters; SC-008 corrected |
 | G1 | Per-map ambience, track colours, audio-reactive visuals | GO WITH CHANGES: use env colours then note colours then preset; player override wins; palette guards (<=0.6x brightness, 30-degree hue separation, 0.25 saturation); map light events outrank the analyser; bass-envelope intensity only; Auto/Classic and Off/Subtle/Strong settings; WCAG flash limit | FR-021..FR-024 and SC-009..SC-011 added; land after SC-001 |
+| G1 | What to do with the map data (43 maps audited) | GO WITH CHANGES: SC-001 baseline first, then BPM changes (all three sources, one beat_to_seconds everywhere) and fake-note exclusion, then environment default schemes + room profile, then boost; cut box-group lighting to v0.4; mark 360/90 unsupported instead of attempting it; event type 4 is centre lights (already handled) and v2 boost is type 5 | FR-025..FR-030 and SC-012..SC-015 added; docs/map-data-audit.md updated; UI wording must not claim fidelity |
 | G1 | Light / UI / sky / audio approach and order | GO WITH CHANGES: light A, sky A with ambient fix, HUD A + end card SubViewport, audio measure first then redesign | Recorded in the v0.3 order above |
 | measure | Is the v0.2 measurement method precise enough to attribute a 1-4 pp visual cost? | **NO.** Three 60 s runs of the same scenario (ODDS ExpertPlus, 120 Hz) gave 74.48 / 78.38 / 78.25% on time. The spread is ~4 pp, the same size as the effect being measured | FR-001 amended: comparisons need >=180 s runs or >=3 repeats; no per-feature claim below ~5 pp without both |
 | measure | Is the drop from the earlier 80.07% a regression? | Not established. 80.07 sits inside the same 4 pp band as today's 74.5-78.4. Thermal status 0 (no throttling), 47.9 C | Do not chase a regression until a 180 s baseline exists |
