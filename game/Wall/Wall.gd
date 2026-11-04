@@ -99,7 +99,7 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	transform.origin.y = (0.5 * wall_info.height + wall_info.line_layer) * Constants.LANE_DISTANCE
 	transform.origin.z = (current_beat - wall_info.beat) * Constants.BEAT_DISTANCE - depth
 	
-	speed = Constants.BEAT_DISTANCE * Map.bpm_at_beat(wall_info.beat) / 60.0
+	speed = NoteMotion.speed_at(wall_info.beat)
 	# Scale-in on spawn, done in code. This used to be an AnimationPlayer per wall: on a wall map
 	# with ~570 walls live that is 570 AnimationMixers processing every frame, and removing them
 	# recovered 1.3 points of dropped frames. The visual is the same: 10% -> 100% height over a

@@ -29,7 +29,7 @@ func on_miss() -> void:
 	queue_free()
 
 func spawn(info: BombInfo, current_beat: float) -> void:
-	speed = Constants.BEAT_DISTANCE * Map.bpm_at_beat(info.beat) / 60.0
+	speed = NoteMotion.speed_at(info.beat)
 	beat = info.beat
 	
 	var distance: float = info.beat - current_beat
