@@ -84,6 +84,55 @@ const PROFILES := {
 		"env_right": Color(0.95, 0.95, 0.95),
 		"wall": Color(0.60, 0.05, 0.05),
 	},
+	"LizzoEnvironment": {
+		"note_left": Color(0.95, 0.55, 0.10),
+		"note_right": Color(0.55, 0.20, 0.95),
+		"env_left": Color(1.00, 0.60, 0.12),
+		"env_right": Color(0.60, 0.22, 1.00),
+		"wall": Color(0.55, 0.28, 0.04),
+	},
+	"TheWeekndEnvironment": {
+		"note_left": Color(0.90, 0.10, 0.25),
+		"note_right": Color(0.20, 0.55, 0.95),
+		"env_left": Color(0.95, 0.12, 0.30),
+		"env_right": Color(0.22, 0.60, 1.00),
+		"wall": Color(0.45, 0.05, 0.15),
+	},
+	"MonstercatEnvironment": {
+		"note_left": Color(0.95, 0.35, 0.10),
+		"note_right": Color(0.10, 0.75, 0.85),
+		"env_left": Color(1.00, 0.40, 0.12),
+		"env_right": Color(0.12, 0.80, 0.90),
+		"wall": Color(0.40, 0.16, 0.04),
+	},
+	"CrabRaveEnvironment": {
+		"note_left": Color(0.95, 0.20, 0.55),
+		"note_right": Color(0.20, 0.85, 0.95),
+		"env_left": Color(1.00, 0.22, 0.60),
+		"env_right": Color(0.22, 0.90, 1.00),
+		"wall": Color(0.40, 0.06, 0.28),
+	},
+	"OverkillEnvironment": {
+		"note_left": Color(0.85, 0.15, 0.10),
+		"note_right": Color(0.15, 0.55, 0.95),
+		"env_left": Color(0.90, 0.16, 0.12),
+		"env_right": Color(0.16, 0.60, 1.00),
+		"wall": Color(0.35, 0.06, 0.05),
+	},
+	"AngelVoicesEnvironment": {
+		"note_left": Color(0.95, 0.85, 0.55),
+		"note_right": Color(0.45, 0.65, 1.00),
+		"env_left": Color(1.00, 0.88, 0.60),
+		"env_right": Color(0.50, 0.70, 1.00),
+		"wall": Color(0.42, 0.36, 0.20),
+	},
+	"KDAEnvironment": {
+		"note_left": Color(0.75, 0.20, 0.95),
+		"note_right": Color(0.20, 0.85, 0.95),
+		"env_left": Color(0.80, 0.22, 1.00),
+		"env_right": Color(0.22, 0.90, 1.00),
+		"wall": Color(0.32, 0.08, 0.45),
+	},
 	"SkrillexEnvironment": {
 		"note_left": Color(0.85, 0.10, 0.35),
 		"note_right": Color(0.10, 0.75, 0.95),
@@ -95,11 +144,33 @@ const PROFILES := {
 
 static func get_profile(name: String) -> Dictionary:
 	var wanted := name.strip_edges().to_lower()
-	var found: Dictionary = DEFAULT
+	var found: Dictionary = {}
+	var matched := false
 	for key: String in PROFILES:
 		if key.to_lower() == wanted:
 			found = PROFILES[key]
+			matched = true
 			break
+	# Unknown or future environments (or a map with no name) still get a palette: a stable hash
+	# of the name picks two opposite hues. The same map always looks the same, two unknown
+	# environments differ, and the readability guards in Map still apply. The room geometry is
+	# ours either way, so nothing here can be "wrong" - only unmapped.
+	if not matched and not wanted.is_empty():
+		found = _derived_profile(name)
 	var out := DEFAULT.duplicate()
 	out.merge(found, true)
 	return out
+
+static func _derived_profile(name: String) -> Dictionary:
+	var h := float(absi(hash(name)) % 360) / 360.0
+	var left := Color.from_hsv(h, 0.78, 0.80)
+	var right := Color.from_hsv(fposmod(h + 0.5, 1.0), 0.78, 0.80)
+	return {
+		"note_left": left,
+		"note_right": right,
+		"env_left": left.darkened(0.1),
+		"env_right": right.darkened(0.1),
+		"boost_left": Color(1.0, 0.95, 0.95),
+		"boost_right": right.lightened(0.5),
+		"wall": left.darkened(0.45),
+	}

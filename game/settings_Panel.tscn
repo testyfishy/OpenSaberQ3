@@ -322,8 +322,7 @@ size_flags_horizontal = 3
 [node name="music_label" type="Label" parent="ScrollContainer/VBox/audio/music"]
 layout_mode = 2
 theme = SubResource("3")
-text = "Music
-"
+text = "Music"
 
 [node name="music_slider" type="HSlider" parent="ScrollContainer/VBox/audio/music"]
 layout_mode = 2
@@ -355,7 +354,7 @@ text = "Refresh Rate: "
 
 [node name="refresh_rate" type="OptionButton" parent="ScrollContainer/VBox/RefreshRateRow"]
 layout_mode = 2
-size_flags_horizontal = 3
+custom_minimum_size = Vector2(150, 0)
 tooltip_text = "Display refresh rate. Physics runs at the same rate so hit detection samples every displayed frame."
 theme = SubResource("5")
 theme_override_fonts/font = SubResource("4")
@@ -396,7 +395,7 @@ text = "Anti-Aliasing: "
 
 [node name="msaa" type="OptionButton" parent="ScrollContainer/VBox/MSAARow"]
 layout_mode = 2
-size_flags_horizontal = 3
+custom_minimum_size = Vector2(150, 0)
 tooltip_text = "MSAA. Changing it rebuilds render pipelines, so the image may hitch for a moment. Takes effect immediately."
 theme = SubResource("5")
 theme_override_fonts/font = SubResource("4")
@@ -412,7 +411,7 @@ text = "Foveated Rendering: "
 
 [node name="foveation" type="OptionButton" parent="ScrollContainer/VBox/FoveationRow"]
 layout_mode = 2
-size_flags_horizontal = 3
+custom_minimum_size = Vector2(150, 0)
 tooltip_text = "Renders the edges of the view at lower resolution. Trades peripheral sharpness for performance."
 theme = SubResource("5")
 theme_override_fonts/font = SubResource("4")
@@ -493,11 +492,13 @@ text = "Limit Debris: "
 
 [node name="environment_mode" type="OptionButton" parent="ScrollContainer/VBox"]
 layout_mode = 2
+custom_minimum_size = Vector2(150, 0)
 tooltip_text = "Very low performance impact\nAuto uses the colours and mood of the environment the map was made for (the room itself is ours, not Beat Saber's art). Classic is the old look: your colours, the fixed red walls."
 theme = SubResource("3")
 
 [node name="sky_style" type="OptionButton" parent="ScrollContainer/VBox"]
 layout_mode = 2
+custom_minimum_size = Vector2(150, 0)
 tooltip_text = "What is behind the play space. Black void is the default and the cheapest to draw; ambient light is set explicitly so the scene does not go dull without a sky. Gradient is a texture-free horizon. Panorama is the original background art."
 theme = SubResource("3")
 
@@ -543,7 +544,7 @@ text = "Saber Type:"
 
 [node name="saber" type="OptionButton" parent="ScrollContainer/VBox/SaberTypeRow"]
 layout_mode = 2
-size_flags_horizontal = 3
+custom_minimum_size = Vector2(200, 0)
 theme = SubResource("5")
 theme_override_fonts/font = SubResource("4")
 flat = true
@@ -604,18 +605,21 @@ text = "Position:"
 
 [node name="posx" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
 layout_mode = 2
+custom_minimum_size = Vector2(58, 0)
 min_value = -1.0
 max_value = 1.0
 step = 0.001
 
 [node name="posy" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
 layout_mode = 2
+custom_minimum_size = Vector2(58, 0)
 min_value = -1.0
 max_value = 1.0
 step = 0.001
 
 [node name="posz" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
 layout_mode = 2
+custom_minimum_size = Vector2(58, 0)
 min_value = -1.0
 max_value = 1.0
 step = 0.001
@@ -630,18 +634,21 @@ text = "Rotation:"
 
 [node name="rotx" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
 layout_mode = 2
+custom_minimum_size = Vector2(58, 0)
 min_value = -180.0
 max_value = 180.0
 step = 0.5
 
 [node name="roty" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
 layout_mode = 2
+custom_minimum_size = Vector2(58, 0)
 min_value = -180.0
 max_value = 180.0
 step = 0.5
 
 [node name="rotz" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
 layout_mode = 2
+custom_minimum_size = Vector2(58, 0)
 min_value = -180.0
 max_value = 180.0
 step = 0.5
@@ -663,18 +670,21 @@ text = "Position:"
 
 [node name="posx" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
 layout_mode = 2
+custom_minimum_size = Vector2(58, 0)
 min_value = -1.0
 max_value = 1.0
 step = 0.001
 
 [node name="posy" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
 layout_mode = 2
+custom_minimum_size = Vector2(58, 0)
 min_value = -1.0
 max_value = 1.0
 step = 0.001
 
 [node name="posz" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
 layout_mode = 2
+custom_minimum_size = Vector2(58, 0)
 min_value = -1.0
 max_value = 1.0
 step = 0.001
@@ -689,18 +699,21 @@ text = "Rotation:"
 
 [node name="rotx" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
 layout_mode = 2
+custom_minimum_size = Vector2(58, 0)
 min_value = -180.0
 max_value = 180.0
 step = 0.5
 
 [node name="roty" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
 layout_mode = 2
+custom_minimum_size = Vector2(58, 0)
 min_value = -180.0
 max_value = 180.0
 step = 0.5
 
 [node name="rotz" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
 layout_mode = 2
+custom_minimum_size = Vector2(58, 0)
 min_value = -180.0
 max_value = 180.0
 step = 0.5

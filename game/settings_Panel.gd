@@ -89,12 +89,17 @@ func _fit_scroll_area() -> void:
 
 func _allow_wrapping(node: Node) -> void:
 	for child in node.get_children():
-		# Label, Button and CheckButton all expose autowrap_mode in Godot 4; the `in` guard keeps
-		# this from erroring on any other control type in the list.
-		if "autowrap_mode" in child:
-			child.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		if child is Label or child is Button:
-			child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		# Only full-width text (a Label that sits directly in the vertical list) should wrap and
+		# expand. A Label inside an HBox row is a column heading - wrapping it turns
+		# "Left Saber Offset:" into three lines and squeezes the spin boxes next to it.
+		var in_row := child.get_parent() is HBoxContainer
+		if not in_row:
+			# Label, Button and CheckButton all expose autowrap_mode in Godot 4; the `in` guard
+			# keeps this from erroring on any other control type in the list.
+			if "autowrap_mode" in child:
+				child.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			if child is Label or child is Button:
+				child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_allow_wrapping(child)
 
 # The same thumbstick scroller the BeatSaver list uses, pointed at this list.
