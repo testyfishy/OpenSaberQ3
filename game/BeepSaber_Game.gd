@@ -489,6 +489,7 @@ func _apply_glow() -> void:
 		return
 	var mode := Settings.glow_mode
 	env.glow_enabled = mode != 0
+	vr.log_info("GLOW mode=%d enabled=%s" % [mode, env.glow_enabled])
 	if mode == 0:
 		return
 	env.glow_intensity = 0.6
