@@ -163,6 +163,9 @@ static var environment_name := ""
 # FR-030: map features this build cannot fully render. Surfaced in the pause menu and logged,
 # instead of a map silently playing half its design.
 static var unsupported_features := PackedStringArray()
+# Diagnostics: how many decorative entries were filtered and how many tempo segments exist.
+static var fakes_filtered := 0
+static var bpm_segments := 1
 
 static func _read_colour(data: Dictionary, key: String, fallback: Color) -> Color:
 	if data.has(key) and data[key] is Dictionary:
@@ -236,6 +239,11 @@ static func _detect_unsupported(map_data: Dictionary) -> void:
 		if cd.has(key):
 			found.append("Chroma/Noodle animation")
 			break
+	# Noodle keeps decorative notes in their own arrays; we never load them, which is the
+	# right outcome but has to show up in the diagnostic or the filter looks inert.
+	var cd_all := Utils.get_dict(map_data, "customData", {})
+	for key: String in ["fakeColorNotes", "fakeBombNotes", "fakeObstacles"]:
+		fakes_filtered += Utils.get_array(cd_all, key, []).size()
 	if current_info != null and current_info.custom_data.has("_assetBundle"):
 		found.append("custom Unity assets")
 	unsupported_features = found
@@ -279,6 +287,7 @@ static func load_note_stack_v2(note_data: Array) -> void:
 			if _is_fake_v2(note_dict):
 				# FR-026: decorative note from Noodle/Chroma. Hidden and unscored, not a ghost:
 				# its real position depends on animation we do not implement.
+				fakes_filtered += 1
 				i += 1
 				continue
 			if note_type == 3 and Settings.bombs_enabled:
@@ -623,6 +632,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 	# v4 splits the beatmap and the lightshow into two files and references shared geometry
 	# through index arrays. Expand it into the flat v3 shape once, up front, so every object
 	# type keeps a single parser (the v3 loaders below) instead of gaining a second one.
+	fakes_filtered = 0
 	if Utils.get_str(map_data, "version", "").begins_with("4."):
 		_v4_to_v3(map_data, lightshow_data)
 		map_data["version"] = "3.0.0"
@@ -633,7 +643,9 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 		else:
 			map_data["version"] = info.version
 	_load_bpm_events(map_data, info.beats_per_minute, audio_data)
+	bpm_segments = _bpm_beats.size()
 	_detect_unsupported(map_data)
+	vr.log_info("MAP data: bpm_segments=%d fakes_filtered=%d unsupported=%s" % [bpm_segments, fakes_filtered, str(unsupported_features)])
 	
 	if map_data.has("_version"):
 		#note_thread_0.start(load_note_stack_v2.bind(Utils.get_array(map_data, "_notes", [])))

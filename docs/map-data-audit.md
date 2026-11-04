@@ -107,9 +107,12 @@ correctness work, then the presentation work. Correctness items cost no GPU.
 ### Phase C — light system completeness
 
 - **C1. Event types 6/7** (and any future type we can map to an existing light group).
-- ~~C2. Box-group lighting~~ — **cut from v0.3** (G1). It only makes sense on v3-native
-  environment geometry we do not have; even maps that use it would map over badly. Revisit in
-  v0.4. Record the coverage number there rather than here.
+- ~~C2. Box-group lighting~~ — **cut from v0.3** (G1), and the re-measurement supports that:
+  a second sample of 2024+ curated/verified maps (7 maps, all v2.1 Info with v3 difficulties)
+  again found **0/7** using `lightColorEventBoxGroups`, `lightRotationEventBoxGroups`,
+  `lightTranslationEventBoxGroups`, boost events or rotation events. Across both samples that is
+  **0/33**. Official-editor-style box-group shows exist, but they are not what the popular
+  library is made of. Revisit in v0.4 only if that ratio changes.
 - **C3. `basicEventTypesWithKeywords`** — v0.4.
 
 ### Phase D — modded maps (separate project)

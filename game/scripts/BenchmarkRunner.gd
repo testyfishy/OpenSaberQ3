@@ -462,6 +462,19 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		Settings.debris_shards = false
 		Settings.mirror_reflections = false
 		applied.append("visuals_none=true")
+	# Glow arm: the bloom removal was reasoned from the tiled-GPU mechanism but never measured
+	# on its own. `[bench] glow=true` re-enables Godot's glow for one arm so the cost is a
+	# number, not an argument. It is bench-only: nothing writes this to config.ini.
+	if bool(cfg.get_value("bench", "glow", false)):
+		var env_node := get_tree().get_first_node_in_group(&"enviroment") as WorldEnvironment
+		if env_node != null and env_node.environment != null:
+			env_node.environment.glow_enabled = true
+			env_node.environment.glow_intensity = 0.6
+			env_node.environment.glow_strength = 1.0
+			env_node.environment.glow_bloom = 0.0
+			env_node.environment.glow_hdr_threshold = 1.0
+			env_node.environment.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
+			applied.append("glow=true")
 	# Per-feature attribution: `[bench] visual_off=mirrors,sky` turns individual features
 	# off from the full set, which is how the cost of each one is isolated (removing one from
 	# all-on captures the interactions, adding one to defaults does not).

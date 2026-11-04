@@ -93,7 +93,7 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	shape.size = Vector3(x_size, y_size, z_size)
 
 	despawn_z = Constants.MISS_Z + depth
-	_apply_material(Vector3(x_size, y_size, z_size))
+	_apply_material(Vector3(x_size, y_size, z_size), wall_info.custom_color)
 	
 	transform.origin.x = (0.5 * wall_info.width + wall_info.line_index - 2) * Constants.LANE_DISTANCE
 	transform.origin.y = (0.5 * wall_info.height + wall_info.line_layer) * Constants.LANE_DISTANCE
@@ -112,7 +112,7 @@ func _wall_mesh() -> MeshInstance3D:
 		_mesh_cache = get_node_or_null(^"WallMeshOrientation/WallMesh") as MeshInstance3D
 	return _mesh_cache
 
-func _apply_material(size_in: Vector3) -> void:
+func _apply_material(size_in: Vector3, shard_color := Color(0.0, 0.0, 0.0, 0.0)) -> void:
 	_size = size_in
 	var mesh := _wall_mesh()
 	if mesh == null:
@@ -127,5 +127,7 @@ func _apply_material(size_in: Vector3) -> void:
 		# FR-028: the map's obstaclesColor (or the environment's wall colour) tints the panel.
 		# The shader multiplies its noise by this value, so keep it HDR-ish like the original.
 		var w := Map.wall_color
+		if shard_color.a > 0.0:
+			w = shard_color
 		(_base_mat as ShaderMaterial).set_shader_parameter(
 			&"albedo_color", Vector4(w.r * 1.8, w.g * 1.8, w.b * 1.8, 0.0))
