@@ -542,3 +542,23 @@ Changes that were measured, did not beat the noise, and were reverted (SC-002 sc
   ways, measure, keep the winner. Compatibility is the incumbent and is the only one where
   `xr/openxr/foveation_level` is known to work.
 
+## v0.3 feature cost arms (Quest 3, ODDS ExpertPlus, 120 Hz, Performance preset pinned)
+
+Each feature was run as an arm pair back to back in one session, 60 s per arm, bot at 0% miss,
+with `render_scale=1.0`, `msaa=1`, `foveation=2`. VrApi `GPU%` and `App` are the runtime's own
+numbers; `on_time`, `dropped` and `p99` come from the bench CSV (`tools/perf/frame_stats.py`).
+
+| feature | off | on | delta | decision |
+|---|---|---|---|---|
+| Glow (full chain) | 0.75 GPU / 4.98 ms | 0.78 GPU / 5.13 ms | +0.03 GPU, +0.15 ms, p99 +0.15 | setting, default Subtle |
+| Glow (single level) | - | 0.78 GPU / 5.08 ms | +0.12 ms | the MSAA resolve dominates; Subtle is the default |
+| Cut debris | 0.75 GPU / 4.94 ms | 0.76 GPU / 4.97 ms | +0.01 GPU, +0.03 ms, p99 +0.16 | on by default |
+| Environment palette | 0.76 GPU / 5.06 ms | 0.75 GPU / 4.93 ms | inside noise | on by default |
+
+The glow result matters because the previous removal was reasoned from the tiled-GPU mechanism
+but never measured: the real cost is about 2-3% of the GPU budget, not the 1-2 ms that reasoning
+implied. The single-level and full chains are within 0.04 ms of each other - the MSAA resolve,
+not the blur count, is what costs.
+
+Reproduce: `pwsh -File tools/perf/bloom-ab.ps1` and
+`pwsh -File tools/perf/feature-ab.ps1 -Feature debris|environment`.

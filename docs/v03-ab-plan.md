@@ -75,8 +75,10 @@ starting a run.
 | bloom full | 0.78 | 5.12 ms | 49.17% | 0.20% | 9.98 ms |
 | **repeat** bloom off | 0.75 | 4.98 ms | - | - | - |
 | **repeat** bloom full | 0.78 | 5.13 ms | - | - | - |
-| debris off | 0.75 | 4.94 ms | - | - | - |
-| debris on | 0.76 | 4.97 ms | - | - | - |
+| debris off | 0.75 | 4.94 ms | 47.72% | 0.13% | 9.75 ms |
+| debris on | 0.76 | 4.97 ms | 47.01% | 0.13% | 9.91 ms |
+| environment classic | 0.76 | 5.06 ms | 46.39% | 0.18% | 10.01 ms |
+| environment map | 0.75 | 4.93 ms | 45.54% | 0.17% | 9.95 ms |
 
 Readings: **glow costs about 0.03 GPU (2-3% relative) and 0.15 ms of app time**, both repeats
 agreeing, which is small but real - not free, and not the 1-2 ms the earlier reasoning predicted.
@@ -86,7 +88,9 @@ The MSAA resolve dominates: the single-level "cheap" arm costs almost the same a
 Decisions from these numbers:
 - Glow becomes a setting (Off / Subtle / Full), **default Subtle**: the cheapest glowing option,
   with Full available for players who prefer the authored chain.
-- Debris stays on by default; the arm shows it is free.
+- Debris stays on by default; the arm shows it is free (+0.01 GPU, +0.03 ms, p99 +0.16).
+- The per-map environment palette is free within noise (map is 0.01 GPU and 0.13 ms *better* than
+  classic, which is ordering noise): default stays Map.
 
 ### Measured off-device (not a substitute for the arms)
 
