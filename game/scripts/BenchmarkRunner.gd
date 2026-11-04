@@ -50,11 +50,8 @@
 #   counter itself stays off the measured frame path; the peak is still caught because
 #   debris lives ~27 frames at 90 Hz.
 #
-#   There is deliberately no "live particle count": GPUParticles3D has no live count,
-#   the game never clears `slice_particles.visible`/`c1.emitting` after a burst (only
-#   the next spawn's reset() does), and on Android the GPUParticles3D is freed at
-#   startup (BeepCube_SliceParticles.gd:9-10). A burst counter is the honest measure
-#   of particle load, and it works on device because the wrapper Node3D still toggles.
+#   Since v0.3 the debris is a fixed 128-shard MultiMesh (spec FR-013): the pool size is
+#   constant, so the honest per-burst measure is still a burst counter, not a live count.
 #
 #   The flag is renamed to bench.flag.consumed before the run starts, so a crash in
 #   the middle of a benchmark cannot trap every later launch in benchmark mode.
@@ -164,6 +161,7 @@ var _last_cubes := 0
 var _last_links := 0
 var _last_debris := 0
 var _last_bursts := 0
+var _debris_bursts_seen := 0
 var _bursts_total := 0
 var _burst_state: Dictionary = {}
 var _cube_cache: Array[BeepCube] = []
@@ -427,7 +425,8 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		Settings.event_tint = true
 		Settings.floor_grid = true
 		Settings.sky_style = 2
-		Settings.debris_cap = true
+		Settings.debris_cap = false
+		Settings.debris_shards = true
 		Settings.mirror_reflections = true
 		applied.append("visuals_all=true")
 	# Settings live in memory per process: only the settings panel and the BeatSaver panel call
@@ -444,6 +443,7 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		Settings.floor_grid = true
 		Settings.sky_style = 0
 		Settings.debris_cap = false
+		Settings.debris_shards = true
 		Settings.mirror_reflections = false
 		applied.append("visuals_default=true")
 	# Everything off in one key. The comma-list `visual_off` form below fails ConfigFile
@@ -459,6 +459,7 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		Settings.floor_grid = false
 		Settings.sky_style = 0
 		Settings.debris_cap = false
+		Settings.debris_shards = false
 		Settings.mirror_reflections = false
 		applied.append("visuals_none=true")
 	# Per-feature attribution: `[bench] visual_off=mirrors,sky` turns individual features
@@ -471,7 +472,7 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 				"mirrors": Settings.mirror_reflections = false
 				"halo": Settings.saber_halo = false
 				"floor_light": Settings.floor_light = false
-				"debris": Settings.debris_cap = false
+				"debris": Settings.debris_shards = false
 				"note_glow": Settings.note_edge_glow = false
 				"flash": Settings.hit_flash = false
 				"grid": Settings.floor_grid = false
@@ -852,16 +853,14 @@ func _sample_counters() -> void:
 			_last_debris += 1
 		if cube.piece_right != null and cube.piece_right.visible:
 			_last_debris += 1
-		# Count slice-particle bursts started since the last sample: fire() sets
-		# the wrapper visible, the next spawn's reset() clears it. Guarded
-		# because the inner GPUParticles3D is freed on Android.
-		if not is_instance_valid(cube.slice_particles):
-			continue
-		var fired := cube.slice_particles.visible
-		if fired and not bool(_burst_state.get(cube, false)):
-			_last_bursts += 1
-			_bursts_total += 1
-		_burst_state[cube] = fired
+	# Debris bursts since the last sample: the field counts them as it emits, which is the
+	# only honest measure now that the pool size is fixed (spec FR-013).
+	if DebrisField.instance != null:
+		var burst_total := DebrisField.instance.bursts_total
+		if burst_total > _debris_bursts_seen:
+			_last_bursts += burst_total - _debris_bursts_seen
+			_bursts_total += burst_total - _debris_bursts_seen
+			_debris_bursts_seen = burst_total
 
 func _refresh_cube_cache() -> void:
 	_cube_cache.clear()

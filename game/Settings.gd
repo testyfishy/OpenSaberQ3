@@ -215,6 +215,13 @@ var debris_cap: bool:
 	set(value):
 		debris_cap = value
 		set_and_emit(&"debris_cap", value)
+# Cut shards (spec FR-013): the shader-driven debris pool. On by default - it is one draw call
+# and it is the only debris that exists on the headset, since the old per-cube GPU particles
+# were freed on Android.
+var debris_shards: bool:
+	set(value):
+		debris_shards = value
+		set_and_emit(&"debris_shards", value)
 
 # --- BeatSaver browser state (specs/005-beatsaver-browser, FR-011). Only the sort and the filter
 # set are remembered; the search text and the current page are deliberately not.
@@ -319,6 +326,7 @@ var default_values = {
 	perf_preset = 2,
 	sky_style = 0,
 	debris_cap = false,
+	debris_shards = true,
 	beatsaver_order = "Latest",
 	beatsaver_curated = false,
 	beatsaver_verified = false,

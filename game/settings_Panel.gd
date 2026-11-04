@@ -16,6 +16,7 @@ signal apply()
 @onready var floor_grid_control := $ScrollContainer/VBox/floor_grid as CheckButton
 @onready var event_tint_control := $ScrollContainer/VBox/event_tint as CheckButton
 @onready var debris_cap_control := $ScrollContainer/VBox/debris_cap as CheckButton
+@onready var debris_shards_control := $ScrollContainer/VBox/debris_shards as CheckButton
 @onready var sky_style_control := $ScrollContainer/VBox/sky_style as OptionButton
 var perf_control: OptionButton
 @onready var saber_thickness := $ScrollContainer/VBox/SaberThicknessRow/saber_thickness as HSlider
@@ -126,6 +127,7 @@ func set_controls_from_settings() -> void:
 	floor_grid_control.button_pressed = Settings.floor_grid
 	event_tint_control.button_pressed = Settings.event_tint
 	debris_cap_control.button_pressed = Settings.debris_cap
+	debris_shards_control.button_pressed = Settings.debris_shards
 	_populate_sky_style()
 	_populate_perf_preset()
 	d_background.button_pressed = Settings.events
@@ -250,6 +252,9 @@ func _on_event_tint_toggled(button_pressed: bool) -> void:
 
 func _on_debris_cap_toggled(button_pressed: bool) -> void:
 	Settings.debris_cap = button_pressed
+
+func _on_debris_shards_toggled(button_pressed: bool) -> void:
+	Settings.debris_shards = button_pressed
 
 func _populate_sky_style() -> void:
 	if sky_style_control.item_count == 0:

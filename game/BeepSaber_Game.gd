@@ -401,8 +401,12 @@ func on_settings_changed(key: StringName) -> void:
 			_apply_light_tint()
 		&"sky_style":
 			_apply_sky()
+		# FR-013: one pool for the whole game, so the switch is one node's visibility.
+		&"debris_shards":
+			if DebrisField.instance != null:
+				DebrisField.instance.set_enabled(Settings.debris_shards)
 		&"debris_cap":
-			BeepCubeSliceParticles.apply_cap_setting()
+			pass
 
 # --- Light tint (specs/007-visual-options FR-005) ---------------------------------------
 #

@@ -52,6 +52,22 @@ player's words:
   without HRTF.
 - **FR-007**: An in-game debug analyser MUST exist to show per-hit level, spectrum and pan,
   off by default, so audio quality can be inspected while playing.
+- **FR-013**: A cut cube MUST shed debris shards that fly the way the slice implies: the burst
+  direction comes from the cut-plane normal and the blade's own velocity, shards tumble, fall
+  under gravity and fade, and none of it is per-shard CPU physics. It MUST run as a fixed-size
+  GPU-animated pool (one draw call, no allocation on a hit) and MUST have its own setting. The
+  debris MUST be directional enough to tell a horizontal slice from a diagonal one.
+  - Pool: 128 instances on one shared BoxMesh, 10 shards per cut, 0.5 s life, 3-4 cm cubes.
+  - Opaque, unshaded, note-coloured; they fade by shrinking to zero, not by alpha blending,
+    so they add no overdraw or sort work.
+  - Motion is entirely in the vertex shader from per-instance custom data
+    `(birth_time, vx, vy, vz)`: `p += v*t + 0.5*g*t*t`, plus a hashed tumble. Slots are a ring;
+    the oldest is overwritten when full. Dead slots collapse to zero size in the shader, so
+    there is no per-frame CPU work beyond one `now` uniform.
+  - `custom_aabb` covers the play volume, or the moving shards get culled with the mesh bounds.
+  - `now` comes from game time, not shader `TIME` (which wraps and runs through pause).
+  - Velocity: shards on each side of the cut move along +/-n at 2-2.5 m/s, plus 0.2x the blade
+    velocity, plus a ~20 degree cone of spread.
 
 ### Presentation
 
@@ -71,6 +87,60 @@ player's words:
 - **FR-012**: The intermittent red dot during play MUST be identified and either removed or
   explained. It MUST NOT remain an unexplained artefact.
 
+### Sound (spec FR-014..FR-020, from the G1 sound-design consult)
+
+Direction from the G1 consult. These are requirements to verify against the headset and against
+Beat Saber reference footage; the notes from memory are marked "verify".
+
+- **FR-014**: Each hit MUST layer a transient (attack under 5 ms, most energy 2-6 kHz), a body
+  (150-800 Hz) and a short tail (300 ms or less), with separate sounds for a good cut, a bad cut
+  and a miss; a bad cut MUST be audibly duller. [verify against the video]
+- **FR-015**: Each hit MUST get random pitch of +/-3-5% and rotate through at least 3 sample
+  variants, so dense streams do not sound like a machine gun.
+- **FR-016**: When several cuts land within 30 ms, each voice MUST be attenuated by 1/sqrt(n).
+  Total SFX peaks MUST stay at or below -1 dBFS. Voice stealing is oldest-first and logged.
+- **FR-017**: The music MUST be ducked by a compressor on the Music bus sidechained from SFX
+  (`AudioEffectCompressor`), attack 1-5 ms, release 100-150 ms, 2-4 dB of gain reduction, capped
+  at 4 dB, and MUST have its own setting.
+- **FR-018**: A continuous swing whoosh MUST scale with saber speed, and blades touching MUST
+  play a separate clash sound.
+- **FR-019**: A hit sound MUST start within 20 ms of the cut event, with the measured offset
+  distribution recorded. An optional "snap to beat" setting MAY align the sound to the note's
+  scheduled time. [verify: believed to be Beat Saber's behaviour]
+- **FR-020**: Each hit sound MUST be positioned at the cube, not at the saber.
+
+### Environment (FR-021..FR-024, from the G1 ambience consult)
+
+The user asked for per-map ambience, colour-coded to the track's own colours, with an
+old-school audio-reactive layer. The map already carries a hand-authored light show, which wins
+over any generated one.
+
+- **FR-021**: The environment palette MUST come from the track, in this order: the map's
+  environment colours (v3 `_envColorLeft/Right`, boost variants), then its note colours
+  (`_colorLeft/_colorRight`), then the preset default. A player override of the note colours
+  wins over the map. Readability guards: environment colours stay at or below 0.6x note
+  brightness; if the two hues are within 30 degrees, or saturation is below 0.25, fall back to
+  the preset palette. Lane and note colours are never changed by this.
+- **FR-022**: `environment_name` MUST select an ambience preset from a short table of the stock
+  Beat Saber environment names. A map that names an environment, or supplies environment
+  colours, MUST NOT be randomised: the map is the designer and its choice wins. Only when a map
+  supplies neither does a preset get chosen from a stable hash of the map id, so the same map
+  always looks the same and unmapped songs still differ. Setting: "Environment: Auto / Classic",
+  where Classic is today's look.
+  - Follow-up, not v0.3: v3 `colorBoostBeatmapEvents` (the brighter light state on a boost) and
+    v4 `lightColorEventBoxGroups` are not parsed yet; `basicBeatmapEvents` already drive
+    `event_driver` today.
+- **FR-023**: An audio-reactive layer MAY modulate the environment, but MUST be subordinate to
+  the map's own light events: it scales intensity of the sphere, rings and lasers and MUST NOT
+  invent colour changes or beats. If a map averages fewer than one light event per 4 s, it may
+  drive the scene directly. Modulation is a 40-150 Hz bass envelope, attack ~20 ms, release
+  ~250 ms, gain +/-15% (Subtle) or +/-35% (Strong), written as one shared shader uniform, not
+  per material. Setting: "Audio-reactive: Off / Subtle / Strong", default Subtle.
+- **FR-024**: Photosensitivity: at most 3 large-area luminance transitions per second greater
+  than 10% (WCAG 2.3.1), counting map events and the analyser together; no saturated-red
+  full-field flashes. A "Reduce flashing" toggle MUST cap the analyser at Subtle and turn
+  flashes into fades.
+
 ## Success criteria
 
 - **SC-001**: v0.3 default configuration stutter metrics are at or better than v0.2's
@@ -87,6 +157,19 @@ player's words:
   10% (measured, not judged by eye).
 - **SC-007**: Every item in this sheet carries a before/after measurement or an explicit
   statement of why it could not be measured.
+- **SC-008**: Debris: a cut emits one burst whose **principal velocity axis** (not the mean
+  vector, which cancels when shards fly both ways along the normal) is within 30 degrees of the
+  cut-plane normal, and horizontal and diagonal slices produce measurably different principal
+  axes; the mean drift is within 30 degrees of the blade direction. The whole system costs one
+  draw call with no allocation on a hit. Cost measured on device as GPU% and on-time with the
+  setting on and off; if the delta is outside the run-to-run noise band the default changes,
+  not the requirement.
+- **SC-009**: The same map loads with the same ambience preset twice in a row; two maps with
+  different environment names produce different presets.
+- **SC-010**: A flash-rate counter logged over 60 s on ODDS reports no one-second window with
+  more than 3 large-area luminance transitions.
+- **SC-011**: Audio-reactive on/off changes GPU% and on-time by less than the run-to-run noise
+  band, measured on device.
 
 ## GPU lever curve (Quest 3, ODDS ExpertPlus, 120 Hz, 40 s arms, VrApi GPU% median)
 
@@ -112,7 +195,8 @@ on-time figure by 0.6 points.
 - Ray tracing, real-time GI, shadow maps for the floor light.
 - HRTF audio (Godot has none; Quest has no system HRTF for us).
 - Re-authoring the whole menu system; only the overlap defects and the end card are in scope.
-- Physics debris on Quest (the slice particles are freed on Android; see v0.2 notes).
+- Physics debris on Quest (the slice particles are freed on Android; see v0.2 notes). The new
+  shard pool is shader-animated, not physics bodies; shards do not collide with anything.
 
 ## Open questions
 
@@ -133,12 +217,17 @@ on-time figure by 0.6 points.
 7. Red dot (FR-012).
 8. Audio measurement, ducking, redesign (FR-005, FR-006, FR-007).
 9. Feedback research application (FR-004).
-10. Final optimisation pass and release.
+10. Debris shards (FR-013) - approved at G1; implement behind `debris_shards`.
+11. Per-map ambience, environment colours, audio-reactive layer (FR-021..FR-024) - approved
+    at G1 as Auto/Classic plus an Off/Subtle/Strong analyser; only after SC-001 is green.
+12. Final optimisation pass and release.
 
 ## Consultation Log
 
 | Gate | Question | Verdict | Follow-up |
 |---|---|---|---|
+| G1 | Cut debris design and the sound-design spec | GO WITH CHANGES: MultiMesh shader pool (128, 10 per cut, opaque, shrink-out, custom_aabb, own `now`); reject RigidBody and GPUParticles; measure principal velocity axis, not the mean; FR-014..FR-020 added for hit layering, variation, 1/sqrt(n), sidechain duck, whoosh/clash, latency and cube-positioned audio | FR-013 written with the parameters; SC-008 corrected |
+| G1 | Per-map ambience, track colours, audio-reactive visuals | GO WITH CHANGES: use env colours then note colours then preset; player override wins; palette guards (<=0.6x brightness, 30-degree hue separation, 0.25 saturation); map light events outrank the analyser; bass-envelope intensity only; Auto/Classic and Off/Subtle/Strong settings; WCAG flash limit | FR-021..FR-024 and SC-009..SC-011 added; land after SC-001 |
 | G1 | Light / UI / sky / audio approach and order | GO WITH CHANGES: light A, sky A with ambient fix, HUD A + end card SubViewport, audio measure first then redesign | Recorded in the v0.3 order above |
 | measure | Is the v0.2 measurement method precise enough to attribute a 1-4 pp visual cost? | **NO.** Three 60 s runs of the same scenario (ODDS ExpertPlus, 120 Hz) gave 74.48 / 78.38 / 78.25% on time. The spread is ~4 pp, the same size as the effect being measured | FR-001 amended: comparisons need >=180 s runs or >=3 repeats; no per-feature claim below ~5 pp without both |
 | measure | Is the drop from the earlier 80.07% a regression? | Not established. 80.07 sits inside the same 4 pp band as today's 74.5-78.4. Thermal status 0 (no throttling), 47.9 C | Do not chase a regression until a 180 s baseline exists |

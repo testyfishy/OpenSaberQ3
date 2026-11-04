@@ -1,6 +1,7 @@
-[gd_scene load_steps=44 format=3 uid="uid://dqb3ybvpsfcbw"]
+[gd_scene load_steps=45 format=3 uid="uid://dqb3ybvpsfcbw"]
 
 [ext_resource type="PackedScene" uid="uid://cs8e62lsifik5" path="res://game/floor.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://game/BeepCube/DebrisField.tscn" id="45_debris"]
 [ext_resource type="PackedScene" uid="uid://d04fmtjhjx4oy" path="res://OQ_Toolkit/OQ_UI2D/OQ_UI2DLabel.tscn" id="2"]
 [ext_resource type="PackedScene" uid="uid://crstqa7v6ehg3" path="res://OQ_Toolkit/OQ_UI2D/OQ_UI2DCanvas.tscn" id="3"]
 [ext_resource type="PackedScene" uid="uid://iglrdadxsqw4" path="res://game/Wall/Wall.tscn" id="3_73652"]
@@ -163,6 +164,8 @@ controller = NodePath("../..")
 [node name="StandingGround" parent="." instance=ExtResource("1")]
 
 [node name="event_driver" parent="." instance=ExtResource("13")]
+
+[node name="DebrisField" parent="." instance=ExtResource("45_debris")]
 
 [node name="MainMenu_OQ_UI2DCanvas" parent="." instance=ExtResource("3")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 1, 0, 1.5, -1)

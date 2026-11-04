@@ -479,9 +479,15 @@ tooltip_text = "Low Performance impact\nLight events in the map tint the light y
 theme = SubResource("3")
 text = "Map Light Tint: "
 
+[node name="debris_shards" type="CheckButton" parent="ScrollContainer/VBox"]
+layout_mode = 2
+tooltip_text = "Very low performance impact\nEvery cut throws ten little note-coloured shards. They fly along the cut plane, tumble, fall and shrink away. Drawn as one batch of 128 boxes - one draw call - and moved entirely on the GPU, so a cut allocates nothing."
+theme = SubResource("3")
+text = "Break Debris: "
+
 [node name="debris_cap" type="CheckButton" parent="ScrollContainer/VBox"]
 layout_mode = 2
-tooltip_text = "Saves performance\nCaps slice debris at 120 particles in total (four bursts, half-size). Extra bursts from cuts in a dense section are simply skipped. Unshaded additive quads, no depth write."
+tooltip_text = "Saves a little performance\nHalves each burst from ten shards to six, so the same 128-shard pool covers more cuts. Unlike the old slice particles, no burst is ever skipped."
 theme = SubResource("3")
 text = "Limit Debris: "
 
@@ -776,6 +782,7 @@ scroll_node_path = NodePath("../ScrollContainer")
 [connection signal="toggled" from="ScrollContainer/VBox/floor_grid" to="." method="_on_floor_grid_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/event_tint" to="." method="_on_event_tint_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/debris_cap" to="." method="_on_debris_cap_toggled"]
+[connection signal="toggled" from="ScrollContainer/VBox/debris_shards" to="." method="_on_debris_shards_toggled"]
 [connection signal="item_selected" from="ScrollContainer/VBox/sky_style" to="." method="_on_sky_style_selected"]
 [connection signal="toggled" from="ScrollContainer/VBox/show_debug" to="." method="_on_show_debug_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/show_collisions" to="." method="_on_show_collisions_toggled"]

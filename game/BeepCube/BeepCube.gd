@@ -8,7 +8,6 @@ signal cutted(correct_saber: bool)
 @onready var mi := $BeepCubeMesh as MeshInstance3D
 @onready var collision_big := $BeepCube_Big/CollisionBig as CollisionShape3D
 @onready var collision_small := $BeepCube_Small/CollisionSmall as CollisionShape3D
-@onready var slice_particles := $SliceParticles as BeepCubeSliceParticles
 
 # Visual-only addition (FR-047). The mirrored copy is a `next_pass` on this note's material
 # (see shaders/mirror_pass.gdshader): no node, no collision, nothing the physics server or
@@ -20,6 +19,8 @@ const MIRROR_SHADER := preload("res://game/shaders/mirror_pass.gdshader")
 static var _mirror_material: ShaderMaterial
 
 var which_saber: int
+# The colour this note was drawn in; a cut tints its debris with it.
+var _cut_color := Color.WHITE
 var is_dot: bool
 var line_index: int
 var line_layer: int
@@ -55,9 +56,6 @@ func _ready() -> void:
 	piece_left = CutPiece.new(self, _mesh, _mat.duplicate(true) as ShaderMaterial, true)
 	piece_right = CutPiece.new(self, _mesh, _mat.duplicate(true) as ShaderMaterial, true)
 	
-	# slice_particles are within cube's tree, but want then to move in global space
-	slice_particles.top_level = true
-	
 func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	# re-enable our process_mode first otherwise it seems like Godot-internals
 	# can behave weirdly (ex. AnimationPlayer won't always play correctly)
@@ -69,6 +67,7 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	# both, so settings win outright.
 	if Settings.note_map_colors and not Settings.disable_map_color and note_info.custom_color.a > 0.0:
 		color = note_info.custom_color
+	_cut_color = color
 	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute * 0.016666666666666667
 	beat = note_info.beat
 	which_saber = note_info.color
@@ -125,7 +124,6 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	anim.speed_scale = maxf(min_speed,anim_speed)
 	anim.play(&"Spawn")
 	
-	slice_particles.reset()
 	mi.visible = true
 	_set_mirror_pass(Settings.mirror_reflections)
 
@@ -218,7 +216,7 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 	if Settings.hit_flash and Floor.instance != null:
 		Floor.instance.flash_at(global_transform.origin)
 	if Settings.cube_cuts_falloff:
-		_start_cut_pieces(cut_plane)
+		_start_cut_pieces(cut_plane, cut_speed)
 		# release() will be called by Cuttable class when it sees both pieces die
 	else:
 		release() # release now instead of waiting for cut pieces to die off
@@ -226,7 +224,7 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 
 # cut the cube by creating two rigid bodies and using a CSGBox to create
 # the cut plane
-func _start_cut_pieces(cutplane: Plane) -> void:
+func _start_cut_pieces(cutplane: Plane, _cut_speed: Vector3) -> void:
 	piece_left.global_transform = global_transform
 	piece_right.global_transform = global_transform
 	
@@ -244,6 +242,7 @@ func _start_cut_pieces(cutplane: Plane) -> void:
 	piece_left.apply_central_impulse(-split_vector)
 	piece_right.apply_central_impulse(split_vector)
 	
-	slice_particles.global_transform.origin = global_transform.origin
-	slice_particles.rotation.z = cut_angle_abs+TAU*0.25
-	slice_particles.fire()
+	# FR-013: debris that follows the slice. One draw call for the whole pool; the burst is
+	# written as instance records and the vertex shader does the flight (no node, no physics).
+	if DebrisField.instance != null:
+		DebrisField.instance.emit_burst(global_transform.origin, cutplane.normal, _cut_speed, _cut_color)
