@@ -26,12 +26,18 @@ func _ready() -> void:
 		get_tree().quit(2)
 		return
 
+	# A root that is itself a map (Info.dat at the top) is dumped directly; otherwise every
+	# subdirectory is treated as one. One process per map keeps a native crash localised.
+	var single := FileAccess.file_exists(root.path_join("Info.dat")) or FileAccess.file_exists(root.path_join("info.dat"))
 	var folders := PackedStringArray()
-	for name in dir.get_directories():
-		folders.append(name)
+	if single:
+		folders.append(root.get_file())
+	else:
+		for name in dir.get_directories():
+			folders.append(name)
 	folders.sort()
 	for folder in folders:
-		var path := root.path_join(folder) + "/"
+		var path := (root + "/") if single else (root.path_join(folder) + "/")
 		print("DUMPMAP ", folder)
 		var info := Map.load_map_info(path)
 		if info == null:
