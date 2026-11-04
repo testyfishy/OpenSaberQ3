@@ -10,9 +10,11 @@ param(
 )
 
 # One A/B per feature, on the same map, bot and preset. See docs/v03-ab-plan.md.
-#   debris      -> defaults vs visual_off=debris
+#   debris      -> defaults vs visual_off="debris"
 #   glow        -> glow=false vs glow=true (bench-only override)
-#   environment -> environment=classic vs environment=map
+#   environment -> environment="classic" vs environment="map"
+#
+# String values MUST be quoted: ConfigFile parses a bare identifier as a Variant and fails.
 #
 # Refuses to run below 40% battery: overnight runs must not strand the headset.
 
@@ -28,7 +30,7 @@ if ($level -lt 40) {
 
 switch ($Feature) {
     "debris" {
-        $off = "visual_off=debris"
+        $off = 'visual_off="debris"'
         $on = ""
     }
     "glow" {
@@ -36,8 +38,8 @@ switch ($Feature) {
         $on = "glow=true"
     }
     "environment" {
-        $off = "environment=classic"
-        $on = "environment=map"
+        $off = 'environment="classic"'
+        $on = 'environment="map"'
     }
 }
 

@@ -22,9 +22,9 @@ the record.
 
 | Feature | Off arm | On arm | Why it needs an arm | Status |
 |---|---|---|---|---|
-| **Debris shards** (FR-013) | `visual_off=debris` | defaults (shards on) | 128-instance MultiMesh + 10 buffer writes per cut + one uniform/frame | queued |
+| **Debris shards** (FR-013) | `visual_off="debris"` | defaults (shards on) | 128-instance MultiMesh + 10 buffer writes per cut + one uniform/frame | queued |
 | **Bloom / glow** | `glow=false` | `glow=true` (bench-only) | the removal was reasoned, never measured; the answer decides whether a cheaper glow is worth building | queued |
-| **Environment palette** (FR-027/028) | `environment=classic` | `environment=map` | per-map colours write the same uniforms as before; the arm verifies "free" rather than assuming it | queued |
+| **Environment palette** (FR-027/028) | `environment="classic"` | `environment="map"` | per-map colours write the same uniforms as before; the arm verifies "free" rather than assuming it | queued |
 | **Chroma event colours** | not applicable | not applicable | per-event colour is parsed at load and written once when the event fires; there is no per-frame work to isolate. Recorded as by-construction-zero, and checked by loading a Chroma map (`Somewhere Out There`) and reading the frame stats against `ODDS` only as a sanity check | recorded |
 | **BPM segments** (FR-025) | not applicable | not applicable | load-time parse plus two binary searches per spawn; no per-frame cost. Covered by the BPM unit test and a bot run on `FitBeat` (14 segments) | recorded |
 | **Fake-note filter** (FR-026) | not applicable | not applicable | fewer notes exist after load, so the arm would be "less work", not more. Logged at load: `fakes_filtered` | recorded |
