@@ -44,6 +44,19 @@ After each refactor slice the dump must be byte-identical.
   frames, 22 events). Wall-clock duration is not usable as the stop condition because
   `--fixed-fps` runs the loop unthrottled; the frame cap is what makes the run reproducible.
 
+## Determinism status (2026-11-04)
+
+The first replay pair (unmodified v0.3) was byte-identical: 1,441 frames, 22 events, one hash.
+After the NoteMotion slice, one run still matched that baseline exactly, but the next run
+diverged while producing the same frame and event counts. That points at ordering, not content:
+the frame cap is checked in `_process` while some gameplay work is ordered by the physics step,
+so a frame with a different physics-tick alignment can reorder two events that land on the same
+frame.
+
+Do not treat replay as a green gate until two runs of the same build are identical three times in
+a row. Likely fix: drive both the cap and the log timestamp from a single physics-tick counter,
+and assert exactly one tick per replay frame.
+
 ## Still to build (in this order)
 
 1. **Replay log (FR-001).** Fixed `--fixed-fps`, seeded RNG (bot, debris, pitch jitter, sway), and
