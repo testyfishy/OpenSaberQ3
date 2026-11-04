@@ -117,6 +117,24 @@ correctness work, then the presentation work. Correctness items cost no GPU.
 - Chroma/Noodle `customEvents`, `environment` and `materials`; `_pointDefinitions`.
 - `_assetBundle` custom Unity assets: not feasible in Godot.
 
+## What losing Unity asset bundles actually costs
+
+Five of the 26 sampled maps (19%) ship `_assetBundle` entries: platform-keyed Unity bundles
+(`_windows2019`, `_windows2021`, `_android2021`). They contain the map's custom *environment*
+assets - meshes, textures, materials, sometimes custom note or saber models.
+
+What is inside them is cosmetic. Notes, walls, arcs, chains, timing, the light show and the
+scoring rules all live in the JSON, which we already read. So the gameplay of an asset-bundle map
+is unaffected; what is missing is the author's custom room, and it will render as our themed
+environment for that `environmentName` instead (B1/B2), with the map's own light show and
+palette on top.
+
+How we would know the difference: load one of those maps in Beat Saber and in ours side by side.
+The notes, timing and light cues match; the scenery differs. That is a visual-fidelity gap, not
+a playability one. Shipping converted Beat Saber environment art would also be a copyright
+problem, and converting author bundles needs each author's permission, so the honest path is our
+own lookalike rooms keyed by environment name.
+
 ## What this means for "per-map ambience"
 
 Replace "randomise the environment" with "**read the environment the map declares, and give it

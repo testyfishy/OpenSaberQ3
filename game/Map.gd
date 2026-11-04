@@ -28,7 +28,7 @@ static var _bpm_beats := PackedFloat32Array([0.0])
 static var _bpm_values := PackedFloat32Array([60.0])
 static var _bpm_times := PackedFloat32Array([0.0])
 
-static func _load_bpm_events(map_data: Dictionary, base_bpm: float) -> void:
+static func _load_bpm_events(map_data: Dictionary, base_bpm: float, audio_data: Dictionary = {}) -> void:
 	var points: Array[Vector2] = [Vector2(0.0, base_bpm)]
 	for e: Variant in Utils.get_array(map_data, "bpmEvents", []):
 		if not (e is Dictionary):
@@ -55,6 +55,22 @@ static func _load_bpm_events(map_data: Dictionary, base_bpm: float) -> void:
 			bpm = Utils.get_float(d, "_value", 0.0)
 		if bpm > 1.0 and beat >= 0.0:
 			points.append(Vector2(beat, bpm))
+	# v4 keeps BPM in the audio file: sample ranges plus the beat range they cover, so the
+	# tempo is derived rather than stored. Only used when the map itself has no bpmEvents.
+	if points.size() == 1:
+		var freq := Utils.get_float(audio_data, "songFrequency", 44100.0)
+		for seg: Variant in Utils.get_array(audio_data, "bpmData", []):
+			if not (seg is Dictionary):
+				continue
+			@warning_ignore("unsafe_cast")
+			var sd := seg as Dictionary
+			var sb := Utils.get_float(sd, "sb", 0.0)
+			var eb := Utils.get_float(sd, "eb", sb)
+			var si := Utils.get_float(sd, "si", 0.0)
+			var ei := Utils.get_float(sd, "ei", si)
+			var seconds := (ei - si) / maxf(freq, 1.0)
+			if seconds > 0.0 and eb > sb:
+				points.append(Vector2(sb, (eb - sb) / seconds * 60.0))
 	points.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.x < b.x)
 	var beats := PackedFloat32Array()
 	var values := PackedFloat32Array()
@@ -259,9 +275,6 @@ static func load_note_stack_v2(note_data: Array) -> void:
 			if not note_data[i] is Dictionary: continue
 			@warning_ignore("unsafe_cast")
 			var note_dict := note_data[i] as Dictionary
-			if _is_fake_v3(note_dict):
-				i += 1
-				continue
 			var note_type := int(Utils.get_float(note_dict, "_type", -1.0))
 			if _is_fake_v2(note_dict):
 				# FR-026: decorative note from Noodle/Chroma. Hidden and unscored, not a ghost:
@@ -606,7 +619,7 @@ static func _v4_expand_events(list: Array, data: Array) -> Array:
 	return out
 
 
-static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Dictionary, lightshow_data: Dictionary = {}) -> bool:
+static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Dictionary, lightshow_data: Dictionary = {}, audio_data: Dictionary = {}) -> bool:
 	# v4 splits the beatmap and the lightshow into two files and references shared geometry
 	# through index arrays. Expand it into the flat v3 shape once, up front, so every object
 	# type keeps a single parser (the v3 loaders below) instead of gaining a second one.
@@ -619,7 +632,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 			map_data["_version"] = info.version
 		else:
 			map_data["version"] = info.version
-	_load_bpm_events(map_data, info.beats_per_minute)
+	_load_bpm_events(map_data, info.beats_per_minute, audio_data)
 	_detect_unsupported(map_data)
 	
 	if map_data.has("_version"):

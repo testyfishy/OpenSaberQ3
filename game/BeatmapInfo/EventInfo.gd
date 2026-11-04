@@ -28,6 +28,8 @@ var beat: float
 var type: int
 var value: int
 var float_value: float
+# Chroma: a colour carried by this one event. Transparent means "use the side's colour".
+var color := Color(0.0, 0.0, 0.0, 0.0)
 
 @warning_ignore("shadowed_variable")
 func _init(beat: float, type: int, value: int, float_value: float) -> void:
@@ -37,17 +39,45 @@ func _init(beat: float, type: int, value: int, float_value: float) -> void:
 	self.float_value = float_value
 
 static func new_v2(event_dict: Dictionary) -> EventInfo:
-	return EventInfo.new(
+	var info := EventInfo.new(
 		Utils.get_float(event_dict, "_time", 0.0),
 		int(Utils.get_float(event_dict, "_type", 0)),
 		int(Utils.get_float(event_dict, "_value", 0)),
 		Utils.get_float(event_dict, "_floatValue", -1.0)
 	)
+	var cd := Utils.get_dict(event_dict, "_customData", {})
+	info.color = _chroma_color(cd.get("_color", cd.get("color", null)))
+	return info
 
 static func new_v3(event_dict: Dictionary) -> EventInfo:
-	return EventInfo.new(
+	var info := EventInfo.new(
 		Utils.get_float(event_dict, "b", 0.0),
 		int(Utils.get_float(event_dict, "et", 0)),
 		int(Utils.get_float(event_dict, "i", 0)),
 		Utils.get_float(event_dict, "f", -1.0)
 	)
+	var cd := Utils.get_dict(event_dict, "customData", {})
+	info.color = _chroma_color(cd.get("color", cd.get("_color", null)))
+	return info
+
+# Chroma writes a colour either as {r,g,b} (0-1) or as a hex string. Anything else means none.
+static func _chroma_color(value: Variant) -> Color:
+	if value is Dictionary:
+		@warning_ignore("unsafe_cast")
+		var d := value as Dictionary
+		return Color(
+			Utils.get_float(d, "r", 1.0),
+			Utils.get_float(d, "g", 1.0),
+			Utils.get_float(d, "b", 1.0),
+			1.0
+		)
+	if value is String:
+		var hex := (value as String).strip_edges().trim_prefix("#")
+		if hex.length() == 6:
+			return Color(
+				("0x" + hex.substr(0, 2)).hex_to_int() / 255.0,
+				("0x" + hex.substr(2, 2)).hex_to_int() / 255.0,
+				("0x" + hex.substr(4, 2)).hex_to_int() / 255.0,
+				1.0
+			)
+	return Color(0.0, 0.0, 0.0, 0.0)

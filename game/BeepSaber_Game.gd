@@ -96,6 +96,12 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 	var map_data := vr.load_json_file(map_filename)
 	# v4 keeps every lighting event in a separate lightshow file (FR: map formats v2/v3/v4).
 	var lightshow_data := {}
+	# v4 tempo lives in the audio file (FR-025), not in the beatmap.
+	var audio_data := {}
+	if info.version.begins_with("4."):
+		audio_data = vr.load_json_file(info.filepath + "AudioData.dat")
+		if audio_data == null:
+			audio_data = {}
 	if not map_difficulty.lightshow_filename.is_empty():
 		lightshow_data = vr.load_json_file(info.filepath + map_difficulty.lightshow_filename)
 		if lightshow_data == null:
@@ -108,7 +114,7 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 	
 	if (map_data == null):
 		vr.log_error("Could not read map data from " + map_filename)
-	if not Map.load_beatmap(info, map_difficulty, map_data, lightshow_data):
+	if not Map.load_beatmap(info, map_difficulty, map_data, lightshow_data, audio_data):
 		return
 	
 	_apply_map_colours()
