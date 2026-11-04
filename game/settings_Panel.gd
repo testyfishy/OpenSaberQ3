@@ -67,11 +67,42 @@ var _refresh_rates: Array[float] = []
 
 var _play_ui_sound_demo := false
 
+const VR_SLIDER := preload("res://game/vr_slider.tscn")
+
 func _ready() -> void:
 	UI_AudioEngine.attach_children(self)
 	
 	set_controls_from_settings()
 	_play_ui_sound_demo = true
+	_fit_scroll_area()
+	_add_scroll_slider()
+
+# The list used to be wider than the panel, which produced a horizontal scrollbar and cut words off
+# at the right edge. Horizontal scrolling is disabled and labels wrap instead, so the list only ever
+# moves vertically.
+func _fit_scroll_area() -> void:
+	var scroll := $ScrollContainer as ScrollContainer
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_allow_wrapping(scroll.get_node("VBox"))
+
+func _allow_wrapping(node: Node) -> void:
+	for child in node.get_children():
+		# Label, Button and CheckButton all expose autowrap_mode in Godot 4; the `in` guard keeps
+		# this from erroring on any other control type in the list.
+		if "autowrap_mode" in child:
+			child.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		if child is Label or child is Button:
+			child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_allow_wrapping(child)
+
+# The same thumbstick scroller the BeatSaver list uses, pointed at this list.
+func _add_scroll_slider() -> void:
+	if has_node("settings_slider"):
+		return
+	var slider := VR_SLIDER.instantiate()
+	slider.name = "settings_slider"
+	slider.scroll_node_path = NodePath("../ScrollContainer")
+	add_child(slider)
 
 func set_controls_from_settings() -> void:
 	saber_control.clear()
@@ -373,6 +404,16 @@ func _on_recenter_button_up() -> void:
 # (render scale / MSAA / foveation) mean nothing to a player, and they are only meaningful
 # together: the measured curve is Quality ~86% GPU, Balanced ~75%, Performance ~64%.
 func _populate_perf_preset() -> void:
+	# Refreshing the controls (which "Default" triggers) must reuse the row that already exists.
+	# Creating it unconditionally appended another identical row on every press, and nothing ever
+	# removed them - the player ended up with a stack of "Performance:" rows.
+	var vbox := $ScrollContainer/VBox
+	if perf_control != null and is_instance_valid(perf_control):
+		perf_control.select(clampi(Settings.perf_preset, 0, 2))
+		return
+	var existing := vbox.get_node_or_null("PerfPresetRow")
+	if existing != null:
+		existing.queue_free()
 	var row := HBoxContainer.new()
 	row.name = "PerfPresetRow"
 	var label := Label.new()
@@ -385,7 +426,6 @@ func _populate_perf_preset() -> void:
 	perf_control.item_selected.connect(_on_perf_preset_selected)
 	row.add_child(label)
 	row.add_child(perf_control)
-	var vbox := $ScrollContainer/VBox
 	vbox.add_child(row)
 	if sky_style_control != null:
 		vbox.move_child(row, sky_style_control.get_index())

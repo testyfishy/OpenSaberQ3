@@ -32,6 +32,9 @@ const JOYSTICK_ACCEL := 2600.0
 # Used by BenchmarkRunner's ui_scroll_probe to measure the scroll value sequence per frame.
 static var debug_stick := INF
 static var debug_hover := false
+# Countdown of frames left to log the stick reading, so a report of "it still does not scroll" can
+# be answered with whether the stick value ever arrived.
+static var _debug_frames := 0
 
 var _engaged := false
 # Fractional pixels carried between frames, so slow scrolling is not lost to rounding.
@@ -65,23 +68,30 @@ func _process(delta: float) -> void:
 	var newpos := -vr.rightController.rotation_degrees.x - (vr.rightController.transform.origin.y * 20.0)
 	var hovering := is_mouse_in or debug_hover
 	if hovering and vr.rightController.trigger_pressed():
-		# Scroll via "click & drag"
+		# Scroll via "click & drag" - still only while the pointer is on the list.
 		var moved := (relpos - newpos) * 20.0
 		v_scroll.value += moved
 		if moved != 0.0:
 			_request_refresh()
 		_speed = 0.0
-	elif hovering:
-		_stick_scroll(delta)
 	else:
-		_speed = 0.0
+		# The stick scrolls whenever this slider's page is up, not only while the pointer happens
+		# to be inside the scroll rect. Hover-gating the stick (the original behaviour) meant any
+		# wobble of the ray off the list silently disabled scrolling, which is what "the joystick
+		# does not scroll" turned out to be. Drag still requires the pointer, because dragging
+		# without it has no meaning.
+		_stick_scroll(delta)
 	relpos = newpos
 
 func _stick_scroll(delta: float) -> void:
-	if v_scroll == null:
+	if v_scroll == null or not _page_visible():
 		_speed = 0.0
 		return
 	var y_joy: float = debug_stick if is_finite(debug_stick) else vr.rightController.get_vector2("primary").y
+	if not is_finite(debug_stick) and _debug_frames > 0:
+		_debug_frames -= 1
+		if absf(y_joy) > 0.05:
+			vr.log_info("SCROLLCHK stick_y=%.2f applied" % y_joy)
 	var magnitude := absf(y_joy)
 	if _engaged:
 		if magnitude < JOYSTICK_SCROLL_RELEASE:
@@ -112,6 +122,16 @@ func _stick_scroll(delta: float) -> void:
 func _request_refresh() -> void:
 	if canvas != null and canvas.has_method(&"_input_update"):
 		canvas.call(&"_input_update")
+
+# True when the page that owns this slider is visible. The stick scrolls whenever the page is up;
+# only dragging needs the pointer on the list.
+func _page_visible() -> bool:
+	var n := get_parent()
+	while n != null:
+		if n is Control:
+			return (n as Control).is_visible_in_tree()
+		n = n.get_parent()
+	return true
 
 func _mouse_entered() -> void:
 	is_mouse_in = true
