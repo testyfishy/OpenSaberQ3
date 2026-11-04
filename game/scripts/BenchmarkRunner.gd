@@ -1150,9 +1150,14 @@ var _player_capture := false
 # total_count() the pool ran dry and instantiated during play, which is the spike pooling exists
 # to remove. Recording it makes the next run answer that instead of leaving it to inference.
 var _wall_pool_peak := 0
-# Bench-only: save one PNG a few seconds into the run. Used to verify a rendering change without
-# a headset (the wall mesh change scales the node instead of the mesh - identical in theory,
-# worth looking at once).
+# Bench-only: save one PNG a few seconds into the run. Used to verify a rendering change without a
+# headset (the wall mesh change scales the node instead of the mesh - identical in theory, worth
+# looking at once).
+#
+# It works on desktop only. On the headset it writes a correctly sized (1680x1760) but completely
+# black image: get_viewport().get_texture() is the window texture, not the XR eye buffers, which are
+# owned by the runtime's swapchain. In-headset captures have to come from the system screenshot
+# (Oculus button + trigger, saved to /sdcard/Oculus/Screenshots).
 var _screenshot_enabled := false
 var _screenshot_done := false
 # Read by BeepSaber_Game._on_score_changed when hud_off is set.
