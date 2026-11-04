@@ -111,10 +111,9 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 	if not Map.load_beatmap(info, map_difficulty, map_data, lightshow_data):
 		return
 	
-	update_left_color(Map.color_left)
-	update_right_color(Map.color_right)
+	_apply_map_colours()
 	if Map.event_stack.is_empty():
-		event_driver.set_all_on(Map.color_left, Map.color_right)
+		event_driver.set_all_on(Map.env_left, Map.env_right)
 	else:
 		event_driver.set_all_off()
 	
@@ -407,6 +406,9 @@ func on_settings_changed(key: StringName) -> void:
 				DebrisField.instance.set_enabled(Settings.debris_shards)
 		&"debris_cap":
 			pass
+		&"environment_mode":
+			Map.set_colors_from_custom_data()
+			_apply_map_colours()
 
 # --- Light tint (specs/007-visual-options FR-005) ---------------------------------------
 #
@@ -456,6 +458,16 @@ func _tinted_light(base: Color, k: float) -> Vector3:
 const SKY_GRADIENT_SHADER := preload("res://game/shaders/sky_gradient.gdshader")
 var _panorama_sky: Sky
 var _gradient_sky: Sky
+
+# FR-027/FR-028: the room follows the map's environment palette; the sabers keep the note
+# colours. Called at map start and when the Environment setting changes.
+func _apply_map_colours() -> void:
+	update_left_color(Map.env_left)
+	update_right_color(Map.env_right)
+	standing_ground.apply_visual_settings()
+	vr.log_info("MAP palette: env=%s notes=%s/%s room=%s/%s wall=%s mode=%d" % [
+		Map.environment_name, Map.color_left, Map.color_right, Map.env_left, Map.env_right,
+		Map.wall_color, Settings.environment_mode])
 
 func _apply_sky() -> void:
 	var env := ($WorldEnvironment as WorldEnvironment).environment

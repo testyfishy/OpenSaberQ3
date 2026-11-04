@@ -51,7 +51,7 @@ func _process_map(game: BeepSaber_Game) -> void:
 	var probe := Cost.enabled
 	var t0 := Time.get_ticks_usec() if probe else 0
 	
-	var current_beat := game.song_player.get_playback_position() * Map.current_info.beats_per_minute * 0.016666666666666667
+	var current_beat := Map.seconds_to_beat(game.song_player.get_playback_position())
 	var look_ahead := current_beat + BEATS_AHEAD
 	
 	# chains connect to a regular colornote and modify it, so we have to keep

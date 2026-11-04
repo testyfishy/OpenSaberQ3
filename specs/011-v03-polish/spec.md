@@ -128,10 +128,11 @@ cost), then the map's own room, then light-system completeness.
   colour scheme. The UI MUST say plainly that the colours follow the map's environment while the
   room is ours ("Colours: <environment> · Room: OpenSaber"); no fidelity claim is made.
 - **FR-028**: The palette order is: map `environmentColor0/1` (+Boost) when present, else the
-  environment default scheme, else today's palette; `obstaclesColor` tints walls. The player's
-  colour override wins and note lane colours are never changed. Readability guards from FR-021
-  still apply (environment at or below 0.6x note brightness; fall back if the hues are too close
-  or too desaturated).
+  environment default scheme, else today's palette; `obstaclesColor` tints walls. Notes take the
+  environment scheme's note colours when the map sets none (the player's decision, 2026-11-03);
+  the player's explicit colour override still wins, and the two note hues must stay far enough
+  apart to keep left/right readable. Room colours stay at or below 0.6x note brightness. Setting:
+  Environment: Auto (map) / Classic, where Classic is exactly the old look.
 - **FR-029**: Light boost MUST be honoured: v2 event type 5 and v3 `colorBoostBeatmapEvents`
   switch to the boost colour pair.
 - **FR-030**: Unsupported map characteristics MUST be stated in the browser rather than silently
@@ -253,4 +254,5 @@ on-time figure by 0.6 points.
 | measure | Is the drop from the earlier 80.07% a regression? | Not established. 80.07 sits inside the same 4 pp band as today's 74.5-78.4. Thermal status 0 (no throttling), 47.9 C | Do not chase a regression until a 180 s baseline exists |
 | measure | **180 s run, defaults vs all visuals off** | Visuals cost **nothing measurable**: 63.01% vs 64.28% on time, identical dropped (0.72%), p95 (10.40 vs 10.38), p99 (11.93 vs 11.98), sd (0.96 vs 0.97), hitches (140 vs 141) | The visual layer is exonerated. Stop attributing stutter to it |
 | measure | What does 180 s reveal that 60 s hid? | **The frame time drifts upward within the run**: 8.36 ms in the first 20 s, 9.04 ms in the last, on-time 80.7% -> 47.7%, and it does this identically with all visuals off. Correlates with notes live (1.1 -> 8.0) and the start of arc spawning | Two hypotheses queued: audio voice churn (`no_audio`) and CSG arcs (`arcs=false`) |
+| G1 | Which previously "impossible" items are actually impossible? | Two hard limits only: eye-tracked foveation (no eye tracker on Quest 3) and Unity AssetBundles. The rest were cost/priority dressed as impossible. Worth doing: fake glow shells instead of bloom, HRTF baked into the hit samples, the Chroma colour subset; 90 Hz is the cheapest stability lever if measurements support it. Box groups and 360 maps are 'later', not 'never' | Recorded; do not repeat the earlier absolute claims in the spec |
 | change | Per-note cost on the drift path | `Cuttable._physics_process` read `global_transform` twice per tick per live note though it already writes the local transform; notes are children of an origin-placed track, so local z is the same number | Replaced with one local read. Scales with live notes, which is the shape of the drift |

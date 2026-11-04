@@ -20,6 +20,96 @@ static var event_stack: Array[EventInfo]
 static var color_left: Color
 static var color_right: Color
 
+# --- BPM segments (FR-025) ---------------------------------------------------------------
+# Maps may change BPM mid-song. Every beat<->time conversion in the game goes through these
+# functions, so notes, walls, arcs, light events, the bot and the bench clock agree after a
+# change instead of drifting against the audio.
+static var _bpm_beats := PackedFloat32Array([0.0])
+static var _bpm_values := PackedFloat32Array([60.0])
+static var _bpm_times := PackedFloat32Array([0.0])
+
+static func _load_bpm_events(map_data: Dictionary, base_bpm: float) -> void:
+	var points: Array[Vector2] = [Vector2(0.0, base_bpm)]
+	for e: Variant in Utils.get_array(map_data, "bpmEvents", []):
+		if not (e is Dictionary):
+			continue
+		@warning_ignore("unsafe_cast")
+		var d := e as Dictionary
+		var beat := Utils.get_float(d, "b", 0.0)
+		var bpm := Utils.get_float(d, "m", 0.0)
+		if bpm > 1.0 and beat >= 0.0:
+			points.append(Vector2(beat, bpm))
+	# v2 keeps BPM changes in the event list: type 100 (older maps use 10). The new BPM is
+	# usually the event value; some tools write it as the float value.
+	for e: Variant in Utils.get_array(map_data, "_events", []):
+		if not (e is Dictionary):
+			continue
+		@warning_ignore("unsafe_cast")
+		var d := e as Dictionary
+		var t := int(Utils.get_float(d, "_type", -1))
+		if t != 100 and t != 10:
+			continue
+		var beat := Utils.get_float(d, "_time", 0.0)
+		var bpm := Utils.get_float(d, "_floatValue", -1.0)
+		if bpm <= 1.0:
+			bpm = Utils.get_float(d, "_value", 0.0)
+		if bpm > 1.0 and beat >= 0.0:
+			points.append(Vector2(beat, bpm))
+	points.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.x < b.x)
+	var beats := PackedFloat32Array()
+	var values := PackedFloat32Array()
+	for point in points:
+		if not beats.is_empty() and is_equal_approx(beats[beats.size() - 1], point.x):
+			values[values.size() - 1] = point.y
+		else:
+			beats.append(point.x)
+			values.append(point.y)
+	_bpm_beats = beats
+	_bpm_values = values
+	_bpm_times.resize(beats.size())
+	_bpm_times[0] = 0.0
+	for i in range(1, beats.size()):
+		_bpm_times[i] = _bpm_times[i - 1] + (beats[i] - beats[i - 1]) * 60.0 / maxf(values[i - 1], 1.0)
+
+static func bpm_at_beat(beat: float) -> float:
+	return _bpm_values[_segment_index_at_beat(beat)]
+
+static func beat_to_seconds(beat: float) -> float:
+	if _bpm_beats.is_empty():
+		return 0.0
+	if beat <= _bpm_beats[0]:
+		return beat * 60.0 / maxf(_bpm_values[0], 1.0)
+	var i := _segment_index_at_beat(beat)
+	return _bpm_times[i] + (beat - _bpm_beats[i]) * 60.0 / maxf(_bpm_values[i], 1.0)
+
+static func seconds_to_beat(seconds: float) -> float:
+	if _bpm_beats.is_empty():
+		return 0.0
+	if seconds <= 0.0:
+		return seconds * _bpm_values[0] / 60.0
+	var lo := 0
+	var hi := _bpm_times.size() - 1
+	while lo < hi:
+		@warning_ignore("integer_division")
+		var mid := (lo + hi + 1) >> 1
+		if _bpm_times[mid] <= seconds:
+			lo = mid
+		else:
+			hi = mid - 1
+	return _bpm_beats[lo] + (seconds - _bpm_times[lo]) * _bpm_values[lo] / 60.0
+
+static func _segment_index_at_beat(beat: float) -> int:
+	var lo := 0
+	var hi := _bpm_beats.size() - 1
+	while lo < hi:
+		@warning_ignore("integer_division")
+		var mid := (lo + hi + 1) >> 1
+		if _bpm_beats[mid] <= beat:
+			lo = mid
+		else:
+			hi = mid - 1
+	return lo
+
 # some simple multithreading, since larger maps can take a very long time to
 # load.  one particulary notable outlier is the beatmap of shrek, which took
 # around 48 milliseconds to load before even on a 7800x3d, and now takes around
@@ -43,48 +133,98 @@ static var chain_thread_1 := Thread.new()
 static var event_thread_0 := Thread.new()
 static var event_thread_1 := Thread.new()
 
-# not officially part of the spec, but used by mods a lot
+# --- Map colours (FR-027/FR-028) ---------------------------------------------------------
+# Notes, the room's lights and the walls each take a colour from the track, in order:
+# map environment colours -> map note colours -> the environment's default scheme -> the
+# player's settings. "Classic" skips the environment scheme and reproduces the old look.
+static var env_left: Color
+static var env_right: Color
+static var env_left_boost: Color
+static var env_right_boost: Color
+static var wall_color: Color
+static var boost_active := false
+static var environment_name := ""
+# FR-030: map features this build cannot fully render. Surfaced in the pause menu and logged,
+# instead of a map silently playing half its design.
+static var unsupported_features := PackedStringArray()
+
+static func _read_colour(data: Dictionary, key: String, fallback: Color) -> Color:
+	if data.has(key) and data[key] is Dictionary:
+		@warning_ignore("unsafe_cast")
+		var d := data[key] as Dictionary
+		return Color(
+			Utils.get_float(d, "r", fallback.r),
+			Utils.get_float(d, "g", fallback.g),
+			Utils.get_float(d, "b", fallback.b)
+		)
+	return fallback
+
 static func set_colors_from_custom_data() -> void:
+	environment_name = current_info.environment_name if current_info != null else ""
+	var profile := EnvironmentProfiles.get_profile(environment_name)
+	var classic := Settings.environment_mode == 1
+	color_left = Settings.color_left if classic else profile.note_left
+	color_right = Settings.color_right if classic else profile.note_right
+	env_left = Settings.color_left if classic else profile.env_left
+	env_right = Settings.color_right if classic else profile.env_right
+	env_left_boost = Settings.color_left if classic else profile.boost_left
+	env_right_boost = Settings.color_right if classic else profile.boost_right
+	wall_color = EnvironmentProfiles.DEFAULT.wall if classic else profile.wall
+	boost_active = false
 	if Settings.disable_map_color:
-		Map.color_left = Settings.color_left
-		Map.color_right = Settings.color_right
 		return
-	
-	var set_colors := func(data: Dictionary, color_name: String) -> bool:
-		var left_name := color_name % "Left"
-		var right_name := color_name % "Right"
-		if (
-			data.has(left_name) and data.has(right_name)
-			and data[left_name] is Dictionary and data[right_name] is Dictionary
-		):
-			@warning_ignore("unsafe_cast")
-			var left := data[left_name] as Dictionary
-			@warning_ignore("unsafe_cast")
-			var right := data[right_name] as Dictionary
-			Map.color_left = Color(
-				Utils.get_float(left, "r", Settings.color_left.r),
-				Utils.get_float(left, "g", Settings.color_left.g),
-				Utils.get_float(left, "b", Settings.color_left.b)
-			)
-			Map.color_right = Color(
-				Utils.get_float(right, "r", Settings.color_right.r),
-				Utils.get_float(right, "g", Settings.color_right.g),
-				Utils.get_float(right, "b", Settings.color_right.b)
-			)
-			return true
-		return false
-	var info_data := current_info.custom_data
-	var diff_data := current_difficulty.custom_data
-	var custom_colors_found := false
-	if set_colors.call(info_data, "_envColor%sBoost"): custom_colors_found = true
-	if set_colors.call(diff_data, "_envColor%sBoost"): custom_colors_found = true
-	if set_colors.call(info_data, "_envColor%s"): custom_colors_found = true
-	if set_colors.call(diff_data, "_envColor%s"): custom_colors_found = true
-	if set_colors.call(info_data, "_color%s"): custom_colors_found = true
-	if set_colors.call(diff_data, "_color%s"): custom_colors_found = true
-	if not custom_colors_found:
-		Map.color_left = Settings.color_left
-		Map.color_right = Settings.color_right
+
+	var info_data := current_info.custom_data if current_info != null else {}
+	var diff_data := current_difficulty.custom_data if current_difficulty != null else {}
+	color_left = _read_colour(diff_data, "_colorLeft", _read_colour(info_data, "_colorLeft", color_left))
+	color_right = _read_colour(diff_data, "_colorRight", _read_colour(info_data, "_colorRight", color_right))
+	env_left = _read_colour(diff_data, "_envColorLeft", _read_colour(info_data, "_envColorLeft", env_left))
+	env_right = _read_colour(diff_data, "_envColorRight", _read_colour(info_data, "_envColorRight", env_right))
+	env_left_boost = _read_colour(diff_data, "_envColorLeftBoost", _read_colour(info_data, "_envColorLeftBoost", env_left_boost))
+	env_right_boost = _read_colour(diff_data, "_envColorRightBoost", _read_colour(info_data, "_envColorRightBoost", env_right_boost))
+	wall_color = _read_colour(diff_data, "_obstacleColor", _read_colour(info_data, "_obstacleColor", wall_color))
+
+	# Readability guards (FR-028): the room stays below 0.6x the note brightness, and a palette
+	# whose two hues are nearly the same (or nearly grey) falls back to the environment default.
+	var guard := func(env: Color, note: Color, fallback: Color) -> Color:
+		if absf(env.h - note.h) < 0.0834 or env.s < 0.25:
+			return fallback
+		return env.darkened(maxf(0.0, env.v - note.v * 0.6))
+	env_left = guard.call(env_left, color_left, profile.env_left)
+	env_right = guard.call(env_right, color_right, profile.env_right)
+
+static func _is_fake_v3(entry: Dictionary) -> bool:
+	var cd := Utils.get_dict(entry, "customData", {})
+	return Utils.get_bool(cd, "fake", false)
+
+static func _is_fake_v2(entry: Dictionary) -> bool:
+	var cd := Utils.get_dict(entry, "_customData", {})
+	return Utils.get_bool(cd, "_fake", false)
+
+static func _detect_unsupported(map_data: Dictionary) -> void:
+	var found := PackedStringArray()
+	if not Utils.get_array(map_data, "lightColorEventBoxGroups", []).is_empty() \
+			or not Utils.get_array(map_data, "lightRotationEventBoxGroups", []).is_empty() \
+			or not Utils.get_array(map_data, "lightTranslationEventBoxGroups", []).is_empty():
+		found.append("box-group lighting")
+	if not Utils.get_array(map_data, "rotationEvents", []).is_empty():
+		found.append("360 rotation")
+	for e: Variant in Utils.get_array(map_data, "_events", []):
+		if e is Dictionary:
+			var t := int(Utils.get_float(e as Dictionary, "_type", -1))
+			if t == 14 or t == 15:
+				found.append("lane rotation")
+				break
+	var cd := Utils.get_dict(map_data, "customData", Utils.get_dict(map_data, "_customData", {}))
+	for key: String in ["customEvents", "_customEvents", "environment", "_environment", "materials"]:
+		if cd.has(key):
+			found.append("Chroma/Noodle animation")
+			break
+	if current_info != null and current_info.custom_data.has("_assetBundle"):
+		found.append("custom Unity assets")
+	unsupported_features = found
+	if not found.is_empty():
+		vr.log_warning("MAP unsupported features: %s" % ", ".join(found))
 
 static func load_map_info(load_path: String) -> MapInfo:
 	var info_dict := {}
@@ -119,7 +259,15 @@ static func load_note_stack_v2(note_data: Array) -> void:
 			if not note_data[i] is Dictionary: continue
 			@warning_ignore("unsafe_cast")
 			var note_dict := note_data[i] as Dictionary
+			if _is_fake_v3(note_dict):
+				i += 1
+				continue
 			var note_type := int(Utils.get_float(note_dict, "_type", -1.0))
+			if _is_fake_v2(note_dict):
+				# FR-026: decorative note from Noodle/Chroma. Hidden and unscored, not a ghost:
+				# its real position depends on animation we do not implement.
+				i += 1
+				continue
 			if note_type == 3 and Settings.bombs_enabled:
 				bomb_array.append(BombInfo.new_v2(note_dict))
 			elif note_type == 0 or note_type == 1:
@@ -471,6 +619,8 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 			map_data["_version"] = info.version
 		else:
 			map_data["version"] = info.version
+	_load_bpm_events(map_data, info.beats_per_minute)
+	_detect_unsupported(map_data)
 	
 	if map_data.has("_version"):
 		#note_thread_0.start(load_note_stack_v2.bind(Utils.get_array(map_data, "_notes", [])))
@@ -508,7 +658,18 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 			#chain_thread_0.start(load_chain_stack_v3.bind(Utils.get_array(map_data, "burstSliders", [])))
 			Utils.custom_thread_call(chain_thread_0, load_chain_stack_v3, [Utils.get_array(map_data, "burstSliders", [])])
 			#event_thread_0.start(load_event_stack_v3.bind(Utils.get_array(map_data, "basicBeatmapEvents", [])))
-			Utils.custom_thread_call(event_thread_0, load_event_stack_v3, [Utils.get_array(map_data, "basicBeatmapEvents", [])])
+			var event_list := Utils.get_array(map_data, "basicBeatmapEvents", [])
+			# FR-029: v3 keeps boost in its own array. Convert to the v2 type 5 event so one
+			# code path in event_driver handles both formats.
+			for b: Variant in Utils.get_array(map_data, "colorBoostBeatmapEvents", []):
+				if not (b is Dictionary):
+					continue
+				@warning_ignore("unsafe_cast")
+				var bd := b as Dictionary
+				event_list.append({"b": Utils.get_float(bd, "b", 0.0), "et": 5.0, "i": Utils.get_float(bd, "i", 0.0), "f": -1.0})
+			event_list.sort_custom(func(x: Variant, y: Variant) -> bool:
+				return Utils.get_float(x as Dictionary, "b", 0.0) < Utils.get_float(y as Dictionary, "b", 0.0))
+			Utils.custom_thread_call(event_thread_0, load_event_stack_v3, [event_list])
 			current_info = info
 			current_difficulty = difficulty
 			Map.set_colors_from_custom_data()

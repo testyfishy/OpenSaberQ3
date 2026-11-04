@@ -99,7 +99,7 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	transform.origin.y = (0.5 * wall_info.height + wall_info.line_layer) * Constants.LANE_DISTANCE
 	transform.origin.z = (current_beat - wall_info.beat) * Constants.BEAT_DISTANCE - depth
 	
-	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute / 60.0
+	speed = Constants.BEAT_DISTANCE * Map.bpm_at_beat(wall_info.beat) / 60.0
 	# Scale-in on spawn, done in code. This used to be an AnimationPlayer per wall: on a wall map
 	# with ~570 walls live that is 570 AnimationMixers processing every frame, and removing them
 	# recovered 1.3 points of dropped frames. The visual is the same: 10% -> 100% height over a
@@ -124,3 +124,8 @@ func _apply_material(size_in: Vector3) -> void:
 		mesh.material_override = _base_mat
 	if _base_mat is ShaderMaterial:
 		(_base_mat as ShaderMaterial).set_shader_parameter(&"size", size_in)
+		# FR-028: the map's obstaclesColor (or the environment's wall colour) tints the panel.
+		# The shader multiplies its noise by this value, so keep it HDR-ish like the original.
+		var w := Map.wall_color
+		(_base_mat as ShaderMaterial).set_shader_parameter(
+			&"albedo_color", Vector4(w.r * 1.8, w.g * 1.8, w.b * 1.8, 0.0))

@@ -75,6 +75,15 @@ static func new_v2(info_dict: Dictionary, load_path: String) -> MapInfo:
 			for i: Variant in beatmaps:
 				if i is Dictionary:
 					diffs.append(DifficultyInfo.load_v2(i as Dictionary))
+	var custom := Utils.get_dict(info_dict, "_customData", {})
+	var schemes_v2 := Utils.get_array(info_dict, "_colorSchemes", [])
+	if not schemes_v2.is_empty() and schemes_v2[0] is Dictionary:
+		@warning_ignore("unsafe_cast")
+		var folded := scheme_to_custom_data(schemes_v2[0] as Dictionary)
+		for key: String in folded:
+			if not custom.has(key):
+				custom[key] = folded[key]
+
 	return MapInfo.new(
 		Utils.get_str(info_dict, "_version", "2.0.0"),
 		Utils.get_str(info_dict, "_songName", ""),
@@ -88,7 +97,7 @@ static func new_v2(info_dict: Dictionary, load_path: String) -> MapInfo:
 		Utils.get_str(info_dict, "_coverImageFilename", ""),
 		Utils.get_str(info_dict, "_environmentName", ""),
 		Utils.get_float(info_dict, "_songTimeOffset", 0.0),
-		Utils.get_dict(info_dict, "_customData", {}),
+		custom,
 		load_path,
 		diffs
 	)
@@ -152,14 +161,32 @@ static func _color_scheme_custom_data(info_dict: Dictionary) -> Dictionary:
 		return {}
 	@warning_ignore("unsafe_cast")
 	var scheme := schemes[0] as Dictionary
-	# v2.1 nests the colours one level deeper; v3 and v4 have them directly on the entry.
-	var colors := Utils.get_dict(scheme, "colorScheme", scheme)
+	return scheme_to_custom_data(scheme)
 
-	var left: Variant = _scheme_color(colors, "saberAColor")
-	var right: Variant = _scheme_color(colors, "saberBColor")
-	if left == null or right == null:
-		return {}
-	return {"_colorLeft": left, "_colorRight": right}
+# Folds one colour scheme into the flat keys the rest of the game already reads. Only keys the
+# scheme actually carries are written, so a missing environment colour falls through to the
+# environment's default profile instead of becoming black (FR-027).
+static func scheme_to_custom_data(scheme: Dictionary) -> Dictionary:
+	# v2.1 nests the colours one level deeper; v3 and v4 have them directly on the entry.
+	var colors := Utils.get_dict(scheme, "colorScheme", Utils.get_dict(scheme, "_colorScheme", scheme))
+	var out := {}
+	var pairs := {
+		"saberAColor": "_colorLeft",
+		"saberBColor": "_colorRight",
+		"environmentColor0": "_envColorLeft",
+		"environmentColor1": "_envColorRight",
+		"environmentColor0Boost": "_envColorLeftBoost",
+		"environmentColor1Boost": "_envColorRightBoost",
+		"obstaclesColor": "_obstacleColor",
+	}
+	for source: String in pairs:
+		var value: Variant = _scheme_color(colors, source)
+		if value == null:
+			# v2 schemes prefix every key with an underscore.
+			value = _scheme_color(colors, "_" + source)
+		if value != null:
+			out[pairs[source]] = value
+	return out
 
 
 # Returns {r,g,b} for the existing colour reader, or null when the scheme omits the colour.

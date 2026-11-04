@@ -222,6 +222,11 @@ var debris_shards: bool:
 	set(value):
 		debris_shards = value
 		set_and_emit(&"debris_shards", value)
+# FR-027: 0 = the map's environment scheme (default), 1 = Classic (the pre-v0.3 look).
+var environment_mode: int:
+	set(value):
+		environment_mode = clampi(value, 0, 1)
+		set_and_emit(&"environment_mode", environment_mode)
 
 # --- BeatSaver browser state (specs/005-beatsaver-browser, FR-011). Only the sort and the filter
 # set are remembered; the search text and the current page are deliberately not.
@@ -327,6 +332,7 @@ var default_values = {
 	sky_style = 0,
 	debris_cap = false,
 	debris_shards = true,
+	environment_mode = 0,
 	beatsaver_order = "Latest",
 	beatsaver_curated = false,
 	beatsaver_verified = false,

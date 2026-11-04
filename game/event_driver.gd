@@ -79,7 +79,7 @@ func update_left_color(color: Color) -> void:
 func update_right_color(color: Color) -> void:
 	right_color = color
 	turn_light_on(EventInfo.TYPE_SQUARE_LASERS, color)
-	turn_light_on(EventInfo.TYPE_FLOOR_LIGHTS, color)
+	turn_light_on(EventInfo.TYPE_CENTRE_LIGHTS, color)
 
 func set_all_off() -> void:
 	if disabled:
@@ -98,6 +98,19 @@ func set_all_on(left: Color, right: Color) -> void:
 
 func process_event(data: EventInfo) -> void:
 	if disabled: return
+	if data.type == 5:
+		# FR-029: light boost (v2 type 5, and v3 colorBoostBeatmapEvents converted to it).
+		# It swaps the palette future on-events use; it does not force lights on.
+		Map.boost_active = data.value != 0
+		left_color = Map.env_left_boost if Map.boost_active else Map.env_left
+		right_color = Map.env_right_boost if Map.boost_active else Map.env_right
+		return
+	# 6/7 are the extra left/right light sets. Our room has one set per side, so they fold into
+	# the side they belong to instead of being dropped (FR-030 / C1).
+	if data.type == 6:
+		data.type = 2
+	elif data.type == 7:
+		data.type = 3
 	if data.type in range(0,5):
 		match data.value:
 			EventInfo.VALUE_LIGHTS_OFF:
@@ -158,7 +171,7 @@ func stop_prev_tween(type: int) -> void:
 func turn_light_off(type: int) -> void:
 	stop_prev_tween(type)
 	_on_Tween_tween_step(Color.BLACK, type)
-	if type == EventInfo.TYPE_FLOOR_LIGHTS:
+	if type == EventInfo.TYPE_CENTRE_LIGHTS:
 		_publish_light_color(Color.BLACK)
 	match type:
 		EventInfo.TYPE_DIAGONAL_LASERS:
@@ -173,7 +186,7 @@ func turn_light_off(type: int) -> void:
 		EventInfo.TYPE_RIGHT_WAVING_LASERS:
 			right_waving_lasers_holder.visible = false
 			right_waving_lasers_material.albedo_color = Color.BLACK
-		EventInfo.TYPE_FLOOR_LIGHTS:
+		EventInfo.TYPE_CENTRE_LIGHTS:
 			track_lights_holder.visible = false
 			track_lights_material.albedo_color = Color.BLACK
 			floor_material.albedo_color = Color.BLACK
@@ -182,7 +195,7 @@ func turn_light_on(type: int, color: Color) -> void:
 	sphere_material.set_shader_parameter(TINT_PARAMS[type], color)
 	stop_prev_tween(type)
 	_on_Tween_tween_step(color, type)
-	if type == EventInfo.TYPE_FLOOR_LIGHTS:
+	if type == EventInfo.TYPE_CENTRE_LIGHTS:
 		_publish_light_color(color)
 	match type:
 		EventInfo.TYPE_DIAGONAL_LASERS:
@@ -197,20 +210,20 @@ func turn_light_on(type: int, color: Color) -> void:
 		EventInfo.TYPE_RIGHT_WAVING_LASERS:
 			right_waving_lasers_holder.visible = true
 			right_waving_lasers_material.albedo_color = color
-		EventInfo.TYPE_FLOOR_LIGHTS:
+		EventInfo.TYPE_CENTRE_LIGHTS:
 			track_lights_holder.visible = true
 			track_lights_material.albedo_color = color
 			floor_material.albedo_color = color
 
 func flash_light_on(type: int, color: Color) -> void:
 	sphere_material.set_shader_parameter(TINT_PARAMS[type], color)
-	if type == EventInfo.TYPE_FLOOR_LIGHTS:
+	if type == EventInfo.TYPE_CENTRE_LIGHTS:
 		_publish_light_color(color)
 	fade_light(type, color * 3.0, color, false, Tween.TRANS_LINEAR, Tween.EASE_OUT)
 
 func flash_light_then_fade_off(type: int, color: Color) -> void:
 	sphere_material.set_shader_parameter(TINT_PARAMS[type], color)
-	if type == EventInfo.TYPE_FLOOR_LIGHTS:
+	if type == EventInfo.TYPE_CENTRE_LIGHTS:
 		_publish_light_color(color)
 	fade_light(type, color * 3.0, Color.BLACK, true, Tween.TRANS_QUAD, Tween.EASE_IN)
 
@@ -225,7 +238,7 @@ func fade_light_from_current(type: int, to_color: Color) -> void:
 			current_color = left_waving_lasers_material.albedo_color
 		EventInfo.TYPE_RIGHT_WAVING_LASERS:
 			current_color = right_waving_lasers_material.albedo_color
-		EventInfo.TYPE_FLOOR_LIGHTS:
+		EventInfo.TYPE_CENTRE_LIGHTS:
 			current_color = floor_material.albedo_color
 	fade_light(type, current_color, to_color, false, Tween.TRANS_LINEAR, Tween.EASE_IN)
 
@@ -248,7 +261,7 @@ func fade_light(type: int, from: Color, to: Color, turn_off_after_fade: bool, tr
 		EventInfo.TYPE_RIGHT_WAVING_LASERS:
 			group = right_waving_lasers_holder
 			_fade_materials.append(right_waving_lasers_material)
-		EventInfo.TYPE_FLOOR_LIGHTS:
+		EventInfo.TYPE_CENTRE_LIGHTS:
 			group = track_lights_holder
 			_fade_materials.append(track_lights_material)
 			_fade_materials.append(floor_material)
@@ -279,7 +292,7 @@ func _finish_fade(group: Node3D, turn_off_after_fade: bool, type: int, to: Color
 		_on_Tween_tween_step(Color.BLACK, type)
 	# The tint follows the fade only when it is over: a map that fades the room to black must
 	# not leave the last flash colour on the floor until the next event (FR-005).
-	if type == EventInfo.TYPE_FLOOR_LIGHTS:
+	if type == EventInfo.TYPE_CENTRE_LIGHTS:
 		_publish_light_color(Color.BLACK if turn_off_after_fade else to)
 
 func _on_Tween_tween_step(value: Color, id: int) -> void:

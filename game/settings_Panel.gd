@@ -17,6 +17,7 @@ signal apply()
 @onready var event_tint_control := $ScrollContainer/VBox/event_tint as CheckButton
 @onready var debris_cap_control := $ScrollContainer/VBox/debris_cap as CheckButton
 @onready var debris_shards_control := $ScrollContainer/VBox/debris_shards as CheckButton
+@onready var environment_mode_control := $ScrollContainer/VBox/environment_mode as OptionButton
 @onready var sky_style_control := $ScrollContainer/VBox/sky_style as OptionButton
 var perf_control: OptionButton
 @onready var saber_thickness := $ScrollContainer/VBox/SaberThicknessRow/saber_thickness as HSlider
@@ -128,6 +129,10 @@ func set_controls_from_settings() -> void:
 	event_tint_control.button_pressed = Settings.event_tint
 	debris_cap_control.button_pressed = Settings.debris_cap
 	debris_shards_control.button_pressed = Settings.debris_shards
+	if environment_mode_control.item_count == 0:
+		environment_mode_control.add_item("Auto (map)")
+		environment_mode_control.add_item("Classic")
+	environment_mode_control.select(clampi(Settings.environment_mode, 0, 1))
 	_populate_sky_style()
 	_populate_perf_preset()
 	d_background.button_pressed = Settings.events
@@ -255,6 +260,9 @@ func _on_debris_cap_toggled(button_pressed: bool) -> void:
 
 func _on_debris_shards_toggled(button_pressed: bool) -> void:
 	Settings.debris_shards = button_pressed
+
+func _on_environment_mode_selected(index: int) -> void:
+	Settings.environment_mode = index
 
 func _populate_sky_style() -> void:
 	if sky_style_control.item_count == 0:

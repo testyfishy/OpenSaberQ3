@@ -68,7 +68,7 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	if Settings.note_map_colors and not Settings.disable_map_color and note_info.custom_color.a > 0.0:
 		color = note_info.custom_color
 	_cut_color = color
-	speed = Constants.BEAT_DISTANCE * Map.current_info.beats_per_minute * 0.016666666666666667
+	speed = Constants.BEAT_DISTANCE * Map.bpm_at_beat(note_info.beat) * 0.016666666666666667
 	beat = note_info.beat
 	which_saber = note_info.color
 	is_dot = note_info.cut_direction == 8

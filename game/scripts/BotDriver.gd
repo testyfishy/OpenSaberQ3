@@ -205,8 +205,7 @@ func _apply_sway() -> void:
 func _queue_notes() -> void:
 	if Map.current_info == null:
 		return
-	var bpm := Map.current_info.beats_per_minute
-	if bpm <= 0.0:
+	if Map.current_info.beats_per_minute <= 0.0:
 		return
 	var stack: Array = Map.note_stack.duplicate()
 	stack.reverse()
@@ -218,7 +217,7 @@ func _queue_notes() -> void:
 		if note == null:
 			continue
 		var hand := 0 if note.color == 0 else 1
-		var t := note.beat / bpm * 60.0
+		var t := Map.beat_to_seconds(note.beat)
 		# Dense notes get a shorter window so consecutive swings never overlap;
 		# the arc stays 0.6 m, so the peak speed rises above 4 m/s (as it does
 		# for a real player) instead of notes being dropped.
