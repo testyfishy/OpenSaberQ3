@@ -225,6 +225,8 @@ func _ready() -> void:
 	debug_info_label.visible = Settings.show_debug_info
 	set_colors_from_settings()
 	_apply_sky()
+	_capture_glow_levels()
+	_apply_glow()
 	@warning_ignore("return_value_discarded")
 	event_driver.light_event_color.connect(_on_light_event_color)
 	_apply_light_tint()
@@ -415,6 +417,8 @@ func on_settings_changed(key: StringName) -> void:
 		&"environment_mode":
 			Map.set_colors_from_custom_data()
 			_apply_map_colours()
+		&"glow_mode":
+			_apply_glow()
 
 # --- Light tint (specs/007-visual-options FR-005) ---------------------------------------
 #
@@ -467,6 +471,39 @@ var _gradient_sky: Sky
 
 # FR-027/FR-028: the room follows the map's environment palette; the sabers keep the note
 # colours. Called at map start and when the Environment setting changes.
+# FR-031: glow. Godot's default chain is measured at ~1% GPU on Quest 3, so it ships as a
+# setting; Subtle keeps one blur level, Full restores Godot's authored levels.
+var _glow_base_levels := PackedFloat32Array()
+
+func _capture_glow_levels() -> void:
+	_glow_base_levels.clear()
+	var env := ($WorldEnvironment as WorldEnvironment).environment
+	if env == null:
+		return
+	for i in range(1, 8):
+		_glow_base_levels.append(env.get_glow_level(i))
+
+func _apply_glow() -> void:
+	var env := ($WorldEnvironment as WorldEnvironment).environment
+	if env == null:
+		return
+	var mode := Settings.glow_mode
+	env.glow_enabled = mode != 0
+	if mode == 0:
+		return
+	env.glow_intensity = 0.6
+	env.glow_strength = 1.0
+	env.glow_bloom = 0.0
+	env.glow_hdr_threshold = 1.0
+	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
+	if mode == 1:
+		for i in range(1, 8):
+			env.set_glow_level(i, 0.0)
+		env.set_glow_level(4, 1.0)
+	elif _glow_base_levels.size() == 7:
+		for i in range(1, 8):
+			env.set_glow_level(i, _glow_base_levels[i - 1])
+
 func _apply_map_colours() -> void:
 	update_left_color(Map.env_left)
 	update_right_color(Map.env_right)

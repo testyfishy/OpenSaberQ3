@@ -18,6 +18,7 @@ signal apply()
 @onready var debris_cap_control := $ScrollContainer/VBox/debris_cap as CheckButton
 @onready var debris_shards_control := $ScrollContainer/VBox/debris_shards as CheckButton
 @onready var environment_mode_control := $ScrollContainer/VBox/environment_mode as OptionButton
+@onready var glow_mode_control := $ScrollContainer/VBox/glow_mode as OptionButton
 @onready var sky_style_control := $ScrollContainer/VBox/sky_style as OptionButton
 var perf_control: OptionButton
 @onready var saber_thickness := $ScrollContainer/VBox/SaberThicknessRow/saber_thickness as HSlider
@@ -135,9 +136,14 @@ func set_controls_from_settings() -> void:
 	debris_cap_control.button_pressed = Settings.debris_cap
 	debris_shards_control.button_pressed = Settings.debris_shards
 	if environment_mode_control.item_count == 0:
-		environment_mode_control.add_item("Auto (map)")
-		environment_mode_control.add_item("Classic")
+		environment_mode_control.add_item("Environment: Auto (map)")
+		environment_mode_control.add_item("Environment: Classic")
 	environment_mode_control.select(clampi(Settings.environment_mode, 0, 1))
+	if glow_mode_control.item_count == 0:
+		glow_mode_control.add_item("Glow: Off")
+		glow_mode_control.add_item("Glow: Subtle")
+		glow_mode_control.add_item("Glow: Full")
+	glow_mode_control.select(clampi(Settings.glow_mode, 0, 2))
 	_populate_sky_style()
 	_populate_perf_preset()
 	d_background.button_pressed = Settings.events
@@ -269,11 +275,16 @@ func _on_debris_shards_toggled(button_pressed: bool) -> void:
 func _on_environment_mode_selected(index: int) -> void:
 	Settings.environment_mode = index
 
+func _on_glow_mode_selected(index: int) -> void:
+	Settings.glow_mode = index
+
 func _populate_sky_style() -> void:
 	if sky_style_control.item_count == 0:
-		sky_style_control.add_item("Black void")
-		sky_style_control.add_item("Gradient")
-		sky_style_control.add_item("Panorama")
+		# These option buttons are full-width bars with no separate label, so each item names
+		# its own setting. "Auto (map)" alone left the player guessing what it belonged to.
+		sky_style_control.add_item("Sky: Black void")
+		sky_style_control.add_item("Sky: Gradient")
+		sky_style_control.add_item("Sky: Panorama")
 	sky_style_control.select(clampi(Settings.sky_style, 0, 2))
 
 func _on_sky_style_selected(index: int) -> void:

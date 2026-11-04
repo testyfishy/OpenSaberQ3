@@ -223,6 +223,13 @@ var debris_shards: bool:
 		debris_shards = value
 		set_and_emit(&"debris_shards", value)
 # FR-027: 0 = the map's environment scheme (default), 1 = Classic (the pre-v0.3 look).
+# Glow (measured free on device: ~1% GPU, ~0.15 ms app). 0 off, 1 subtle (one blur level),
+# 2 full (Godot's default chain). Subtle is the default because it reads as glow without the
+# multi-level chain.
+var glow_mode: int:
+	set(value):
+		glow_mode = clampi(value, 0, 2)
+		set_and_emit(&"glow_mode", glow_mode)
 var environment_mode: int:
 	set(value):
 		environment_mode = clampi(value, 0, 1)
@@ -333,6 +340,7 @@ var default_values = {
 	debris_cap = false,
 	debris_shards = true,
 	environment_mode = 0,
+	glow_mode = 1,
 	beatsaver_order = "Latest",
 	beatsaver_curated = false,
 	beatsaver_verified = false,

@@ -135,6 +135,10 @@ cost), then the map's own room, then light-system completeness.
   Environment: Auto (map) / Classic, where Classic is exactly the old look.
 - **FR-029**: Light boost MUST be honoured: v2 event type 5 and v3 `colorBoostBeatmapEvents`
   switch to the boost colour pair.
+- **FR-031**: Glow MUST be a setting (Off / Subtle / Full), default Subtle. The device A/B
+  measured glow at about 0.03 GPU (2-3% relative) and 0.15 ms of app time, with the single-level
+  and full chains within 0.04 ms of each other because the MSAA resolve dominates; Subtle keeps
+  one blur level, Full restores Godot's authored levels.
 - **FR-030**: Unsupported map characteristics MUST be stated in the browser rather than silently
   mis-played: 360/90 `rotationEvents` maps, box-group-only lightshows, and maps requiring Chroma,
   Noodle, Vivify or custom asset bundles.
@@ -186,6 +190,9 @@ cost), then the map's own room, then light-system completeness.
   excludes them.
 - **SC-014**: Two maps with different `environmentName` values load visibly different rooms and
   palettes; the same map loads identically twice in a row (SC-009 still holds).
+- **SC-016**: Glow on/off differs from the baseline by less than the drop budget on three
+  device runs (measured: +0.03 GPU, +0.15 ms), and the default is the cheaper of the two glowing
+  modes. Recorded in docs/v03-ab-plan.md.
 - **SC-015**: Every map that uses a feature this build cannot render is flagged in the browser
   with the feature's name, not silently played.
 

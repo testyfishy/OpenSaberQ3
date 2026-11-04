@@ -22,6 +22,11 @@ func _ready() -> void:
 	print("UISHOT top ", ProjectSettings.globalize_path("user://ui_settings_top.png"))
 
 	var scroll := panel.get_node("ScrollContainer") as ScrollContainer
+	scroll.scroll_vertical = 500
+	for i in 4:
+		await get_tree().process_frame
+	viewport.get_texture().get_image().save_png("user://ui_settings_mid.png")
+	print("UISHOT mid ", ProjectSettings.globalize_path("user://ui_settings_mid.png"))
 	scroll.scroll_vertical = 100000
 	for i in 4:
 		await get_tree().process_frame

@@ -66,6 +66,28 @@ ConfigFile fail to parse, so the run aborts as `bad_config` and looks like a cra
 now quotes every string value, and `tools/tests/test_flag.tscn` reports the parse result without
 starting a run.
 
+### Device results (Quest 3, ODDS ExpertPlus, 120 Hz, Performance preset pinned, 60 s arms)
+
+| arm | GPU% median | App median | on-time | dropped | p99 |
+|---|---|---|---|---|---|
+| bloom off | 0.77 | 4.96 ms | 46.83% | 0.22% | 9.84 ms |
+| bloom cheap (1 level) | 0.78 | 5.08 ms | 48.90% | 0.18% | 10.08 ms |
+| bloom full | 0.78 | 5.12 ms | 49.17% | 0.20% | 9.98 ms |
+| **repeat** bloom off | 0.75 | 4.98 ms | - | - | - |
+| **repeat** bloom full | 0.78 | 5.13 ms | - | - | - |
+| debris off | 0.75 | 4.94 ms | - | - | - |
+| debris on | 0.76 | 4.97 ms | - | - | - |
+
+Readings: **glow costs about 0.03 GPU (2-3% relative) and 0.15 ms of app time**, both repeats
+agreeing, which is small but real - not free, and not the 1-2 ms the earlier reasoning predicted.
+The MSAA resolve dominates: the single-level "cheap" arm costs almost the same as the full chain.
+**Debris costs 0.01 GPU and 0.03 ms**, i.e. inside the noise band.
+
+Decisions from these numbers:
+- Glow becomes a setting (Off / Subtle / Full), **default Subtle**: the cheapest glowing option,
+  with Full available for players who prefer the authored chain.
+- Debris stays on by default; the arm shows it is free.
+
 ### Measured off-device (not a substitute for the arms)
 
 - `environment="classic"` applies and logs `mode=1` with the old red/blue notes and red walls
