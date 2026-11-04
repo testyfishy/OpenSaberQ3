@@ -484,6 +484,10 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 					env.set_glow_level(level, 0.0)
 				env.set_glow_level(4, 1.0)
 			applied.append("glow=%s" % glow_mode)
+	# Deterministic replay (v0.4 harness): fixed clock and seeded RNG, so the log can be diffed.
+	if bool(cfg.get_value("bench", "replay", false)):
+		Harness.begin(float(cfg.get_value("bench", "refresh_hz", 72.0)), int(cfg.get_value("bench", "replay_frames", 1440)))
+		applied.append("replay=true")
 	# Environment palette arm (FR-027/FR-028): "classic" is the pre-v0.3 look, so an A/B can
 	# show whether the per-map palette costs anything at all.
 	if str(cfg.get_value("bench", "environment", "map")) == "classic":
@@ -742,6 +746,9 @@ func _physics_process(_delta: float) -> void:
 		Cost.physics_ticks += 1
 
 func _process(delta: float) -> void:
+	if Harness.replay and Harness.frame >= Harness.max_frames and _recording:
+		_finish("replay_frames")
+		return
 	if _player_capture and not _recording:
 		_poll_player_capture()
 		return
@@ -982,6 +989,7 @@ func _consume_flag() -> void:
 		DirAccess.remove_absolute(from)
 
 func _finish(reason: String, quit_after: bool = true) -> void:
+	Harness.finish("user://replay.log")
 	if not _recording:
 		return
 	_recording = false

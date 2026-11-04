@@ -34,6 +34,16 @@ After each refactor slice the dump must be byte-identical.
 2. a v0.3-era file with unknown keys still loads the known ones;
 3. a missing key falls back to its declared default.
 
+## Baseline recorded on harness-base
+
+- 45 maps (the 43-map audit set plus the bundled song and one duplicate export): `map_dump_all.ps1`
+  reports `maps dumped: 45 failed: 0`; dump SHA256 `6FEFDF86DEB803A833DB4096671BD9BFE186775D1C4126F951905E491027C619`, lines ``. The dump is
+  regenerated rather than committed (it is several MB of text and deterministic).
+- Replay: `[bench] replay=true, replay_frames=1440, refresh_hz=72` with
+  `--fixed-fps 72 --disable-vsync` produced **two byte-identical logs** (same SHA256, 1,441
+  frames, 22 events). Wall-clock duration is not usable as the stop condition because
+  `--fixed-fps` runs the loop unthrottled; the frame cap is what makes the run reproducible.
+
 ## Still to build (in this order)
 
 1. **Replay log (FR-001).** Fixed `--fixed-fps`, seeded RNG (bot, debris, pitch jitter, sway), and

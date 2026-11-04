@@ -51,7 +51,9 @@ func _process_map(game: BeepSaber_Game) -> void:
 	var probe := Cost.enabled
 	var t0 := Time.get_ticks_usec() if probe else 0
 	
-	var current_beat := Map.seconds_to_beat(game.song_player.get_playback_position())
+	Harness.tick()
+	var song_position := Harness.song_time() if Harness.replay else game.song_player.get_playback_position()
+	var current_beat := Map.seconds_to_beat(song_position)
 	var look_ahead := current_beat + BEATS_AHEAD
 	
 	# chains connect to a regular colornote and modify it, so we have to keep
@@ -66,6 +68,7 @@ func _process_map(game: BeepSaber_Game) -> void:
 		var note := GlobalReferences.cube_pool.acquire() as BeepCube
 		var note_info := Map.note_stack.pop_back() as ColorNoteInfo
 		note.spawn(note_info, current_beat)
+		Harness.log_spawn(note_info)
 		note_info_refs.append(note_info)
 		cube_refs.append(note)
 	

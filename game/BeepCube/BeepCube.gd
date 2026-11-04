@@ -171,6 +171,7 @@ func make_chain_head() -> void:
 	piece_right.set_chain_head(true)
 
 func on_miss() -> void:
+	Harness.log_miss(beat)
 	Scoreboard.reset_combo()
 	hide_cube()
 	release()
@@ -201,6 +202,7 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 		# allows a bit of save margin where the beat is considered 100% correct
 		var beat_accuracy := clampf((1.0 - absf(global_transform.origin.z)) / 0.5, 0.0, 1.0)
 		Scoreboard.note_cut(transform.origin, beat_accuracy, cut_angle_accuracy, cut_distance_accuracy, travel_distance_factor)
+		Harness.log_cut(beat, true, cut_angle_accuracy, cut_distance_accuracy, travel_distance_factor, beat_accuracy)
 		cutted.emit(true)
 		info.angle_acc = cut_angle_accuracy
 		info.dist_acc = cut_distance_accuracy
@@ -208,6 +210,7 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 		info.beat_acc = beat_accuracy
 	else:
 		Scoreboard.bad_cut(transform.origin)
+		Harness.log_cut(beat, false, 0.0, 0.0, 0.0, 0.0)
 		cutted.emit(false)
 		info.kind = HitInfo.Kind.BAD
 		info.is_correct_saber = false

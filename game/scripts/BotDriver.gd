@@ -174,7 +174,7 @@ func _physics_process(delta: float) -> void:
 func _advance_clock(delta: float) -> void:
 	var prev := _song_time
 	_song_time += delta
-	if _song != null and _song.playing:
+	if not Harness.replay and _song != null and _song.playing:
 		var target := _song.get_playback_position() + clampf(
 			AudioServer.get_time_since_last_mix(), 0.0, 0.1)
 		# Only resync off a clock that is actually moving: a frozen audio clock
