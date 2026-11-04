@@ -1,6 +1,7 @@
 # v4 live test checklist
 
-**Build:** `F:\Dev\BeepSaberBin\OpenSaber-v4-test.apk` (from branch `v4/cleanup`).
+**Build:** `F:\Dev\BeepSaberBin\OpenSaber-v4-test.apk` (89,547,695 bytes, 2026-11-04 12:18, branch `v4/cleanup`).
+The APK contains `NoteMotion`, `PaletteResolver` and the exported `wall_shared` material (681 entries).
 **Rollback:** `F:\Dev\BeepSaberBin\OpenSaber-v03-rollback.apk` plus the pulled user data in
 `F:\Dev\BeepSaberBin\v03-backup-*`. Reinstall with `adb install -r`, then push the `files` folder
 back if anything is lost.
@@ -40,6 +41,16 @@ refactor work done so far.
    streams.
 7. **End card**: score, record and combo readable, nothing hidden behind a saber.
 8. **Frame feel**: any stutter, especially in wall-heavy sections.
+
+## Gate status at build time
+
+- Parse/shader errors: none.
+- Settings round-trip: PASS (48 keys, plus a legacy config with unknown keys).
+- Replay: byte-identical pair achieved earlier; a later pair diverged with identical frame/event
+  counts, so replay is recorded as a known flaky gate, not a green one.
+- Map dump: the 45 maps dump with zero failures, but the stored baseline hash was produced by an
+  interrupted earlier run and no longer matches line-for-line. Two maps re-dumped and compared
+  section-by-section were identical. The baseline needs regenerating from a clean run.
 
 ## Known limitations to expect
 
