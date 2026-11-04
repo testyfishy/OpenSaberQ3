@@ -37,7 +37,7 @@ After each refactor slice the dump must be byte-identical.
 ## Baseline recorded on harness-base
 
 - 45 maps (the 43-map audit set plus the bundled song and one duplicate export): `map_dump_all.ps1`
-  reports `maps dumped: 45 failed: 0`; dump SHA256 `6FEFDF86DEB803A833DB4096671BD9BFE186775D1C4126F951905E491027C619`, lines ``. The dump is
+  reports `maps dumped: 45 failed: 0`; dump SHA256 `6FEFDF86DEB803A833DB4096671BD9BFE186775D1C4126F951905E491027C619`, lines 687292. The dump is
   regenerated rather than committed (it is several MB of text and deterministic).
 - Replay: `[bench] replay=true, replay_frames=1440, refresh_hz=72` with
   `--fixed-fps 72 --disable-vsync` produced **two byte-identical logs** (same SHA256, 1,441
