@@ -488,6 +488,25 @@ of headroom in it.
 Consequence for v0.3: the target ("worst case under 8.33 ms with margin to 7 ms") is a GPU
 budget problem. The levers are resolution, MSAA and foveation - all measurable as GPU% - and
 the visual cost of each has to be weighed by the player, not decided by me.
+### Wall pooling, measured - 2026-11-03
+
+Same maps, same harness, same settings, before and after walls stopped being instantiated per spawn:
+
+| map | before | after |
+|---|---|---|
+| Gloom (12,340 walls) | 92.9 fps, 27.5% on time, **24.07% dropped**, p99 19.35 ms | **119.1 fps, 66.1% on time, 2.14% dropped**, p99 13.62 ms |
+| Somewhere Out There (3,530 walls, 50 notes/s peaks) | 65.1 fps, 6.2% on time, **66.29% dropped**, p99 34.79 ms | **120.0 fps, 70.9% on time, 0.01% dropped**, p99 10.60 ms |
+| HEARTATTACK (567 walls, 575 bombs, 153 arcs) | 120.0 fps, 71.8% on time, 0.00% dropped | 120.0 fps, 70.5% on time, 0.00% dropped |
+| ODDS&ENDS default, 180 s | 76.6% on time, 0.01% dropped, p99 9.97 ms | 76.7% on time, 0.01% dropped, p99 9.95 ms |
+
+Somewhere Out There went from unusable (65 fps, two thirds of frames dropped) to indistinguishable
+from any other map. HEARTATTACK is unchanged, so the fix cost nothing elsewhere; arcs and bombs were
+never the problem.
+
+Gloom still drops 2.14% of frames - 11x better than before, but not the 0.01% the other maps show.
+That is the residual per-active-wall cost (a BoxMesh, an Area3D and an AnimationPlayer per live
+wall, ~150-220 at once), which the advisor flagged as the next step if pooling alone did not finish
+the job.
 ## Rejected
 
 Changes that were measured, did not beat the noise, and were reverted (SC-002 scenario 2).
