@@ -82,9 +82,13 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	var depth := z_size * 0.5
 	# Scale the mesh node, not the mesh. The BoxMesh is shared and unit-sized: mutating a
 	# per-wall mesh (`resource_local_to_scene`) rebuilt and re-uploaded its buffers on every
-	# spawn, which on a wall map is ~74 times a second. A BoxMesh's UVs are 0..1 per face at any
-	# size, so scaling the node renders identically. The collision shape still needs its own
+	# spawn, which on a wall map is ~74 times a second. The collision shape still needs its own
 	# size - that is a cheap shape update, not a mesh rebuild.
+	#
+	# The wall shader reads VERTEX, so with a unit mesh it now multiplies by the `size` uniform
+	# itself (wall_shared.tres). That is what makes node scaling render the same as the old
+	# per-wall mesh did; without it the border and noise maths ran in a 1 m cube and the walls
+	# turned into stretched red smears.
 	mesh.scale = Vector3(x_size, y_size, z_size)
 	shape.size = Vector3(x_size, y_size, z_size)
 

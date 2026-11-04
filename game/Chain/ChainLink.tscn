@@ -70,7 +70,9 @@ _data = {
 [node name="ChainLink" type="Node3D"]
 script = ExtResource("1_8l7tk")
 
-[node name="Mesh" parent="." instance=ExtResource("2_jgcvi")]
+[node name="LinkBody" type="Node3D" parent="."]
+
+[node name="Mesh" parent="LinkBody" instance=ExtResource("2_jgcvi")]
 layers = 3
 material_override = ExtResource("3_c2d47")
 
@@ -84,7 +86,7 @@ shape = SubResource("BoxShape3D_thkam")
 disabled = true
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
-root_node = NodePath("../Mesh")
+root_node = NodePath("../LinkBody/Mesh")
 libraries = {
 "": SubResource("AnimationLibrary_7xfev")
 }

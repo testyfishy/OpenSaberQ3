@@ -6,7 +6,8 @@ var _mesh: Mesh
 var _mat: ShaderMaterial
 @export var min_speed := 0.5
 
-@onready var mi := $Mesh as MeshInstance3D
+@onready var mi := $LinkBody/Mesh as MeshInstance3D
+@onready var _link_body := $LinkBody as Node3D
 
 var piece_left : CutPiece = null
 var piece_right : CutPiece = null
@@ -67,6 +68,31 @@ static func construct_chain(chain_info: ChainInfo, current_beat: float, note_inf
 		chain_link.spawn(chain_info, current_beat, head_pos, tail_pos, mid_pos, i)
 		i += 1
 
+static func _bezier_point(head_pos: Vector2, mid_pos: Vector2, tail_pos: Vector2, t: float) -> Vector2:
+	var q0 := head_pos.lerp(mid_pos, t)
+	var q1 := mid_pos.lerp(tail_pos, t)
+	return q0.lerp(q1, t)
+
+# Distance from this link to its neighbour, along the same curve the positions come from.
+# The link mesh is 0.5 m deep; slices are one beat-step apart, which on a fast chain is over a
+# metre, so without this the links render as detached squares.
+static func _link_length(chain_info: ChainInfo, head_pos: Vector2, mid_pos: Vector2, tail_pos: Vector2, t0: float) -> float:
+	var links := maxi(chain_info.slice_count - 1, 1)
+	var dt := chain_info.squish_factor / float(links)
+	if dt <= 0.00001:
+		return 0.5
+	var t1 := t0 + dt
+	if t1 > 1.0 + 0.0001:
+		t1 = t0 - dt   # last link: measure back to the one before it
+	var p0 := _bezier_point(head_pos, mid_pos, tail_pos, t0)
+	var p1 := _bezier_point(head_pos, mid_pos, tail_pos, clampf(t1, 0.0, 1.0))
+	var dz := (
+		lerpf(chain_info.head_beat, chain_info.tail_beat, clampf(t1, 0.0, 1.0))
+		- lerpf(chain_info.head_beat, chain_info.tail_beat, t0)
+	) * Constants.BEAT_DISTANCE
+	# Clamped so a malformed slice count cannot produce a link metres long.
+	return clampf(Vector3(p1.x - p0.x, p1.y - p0.y, dz).length(), 0.1, 4.0)
+
 func spawn(chain_info: ChainInfo, current_beat: float, head_pos: Vector2, tail_pos: Vector2, mid_pos: Vector2, link_index: int) -> void:
 	# re-enable our process_mode first otherwise it seems like Godot-internals
 	# can behave weirdly (ex. AnimationPlayer won't always play correctly)
@@ -88,6 +114,13 @@ func spawn(chain_info: ChainInfo, current_beat: float, head_pos: Vector2, tail_p
 	transform.origin.z = -(beat - current_beat) * Constants.BEAT_DISTANCE
 	
 	rotation.z = q0.angle_to_point(q1) - TAU*0.25
+	
+	# The link model is a 0.5 m plate, but slices are far apart: a 1-beat chain with two links
+	# puts them 2 m apart, so the old build showed a row of detached squares with a gap between
+	# each. Stretch each link along z to exactly span the distance to its neighbour (plus 6% so
+	# the ends meet at bends), which is what the hitbox already assumed - it is 1 m deep while
+	# the mesh was 0.5 m. The last link measures backwards to the one before it.
+	_link_body.scale = Vector3(1.0, 1.0, _link_length(chain_info, head_pos, mid_pos, tail_pos, lerp_factor) * 2.12)
 	
 	# little bit of forgiveness.  if the chain link is more than a meter away
 	# from the chain head, its hitbox is extended to halfway between the link

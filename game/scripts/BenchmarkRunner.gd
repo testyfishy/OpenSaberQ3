@@ -504,7 +504,9 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 	# go below it.
 	if bool(cfg.get_value("bench", "screenshot", false)):
 		_screenshot_enabled = true
-		applied.append("screenshot=true")
+		var at := float(cfg.get_value("bench", "screenshot_at", 4.0))
+		_screenshot_at_usec = int(maxf(at, 0.1) * 1000000.0)
+		applied.append("screenshot=true at=%.1fs" % at)
 
 	if bool(cfg.get_value("bench", "no_notes", false)):
 		Map.spawn_disabled = true
@@ -718,7 +720,7 @@ func _process(delta: float) -> void:
 	if not _recording:
 		return
 	var now := Time.get_ticks_usec()
-	if _screenshot_enabled and not _screenshot_done and now - _start_usec > 4000000:
+	if _screenshot_enabled and not _screenshot_done and now - _start_usec > _screenshot_at_usec:
 		_screenshot_done = true
 		var img := get_viewport().get_texture().get_image()
 		var path := _out_dir.path_join("screenshot.png")
@@ -1159,6 +1161,7 @@ var _wall_pool_peak := 0
 # owned by the runtime's swapchain. In-headset captures have to come from the system screenshot
 # (Oculus button + trigger, saved to /sdcard/Oculus/Screenshots).
 var _screenshot_enabled := false
+var _screenshot_at_usec := 4000000
 var _screenshot_done := false
 # Read by BeepSaber_Game._on_score_changed when hud_off is set.
 static var _hud_disabled := false

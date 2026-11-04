@@ -8,7 +8,7 @@
 [ext_resource type="ArrayMesh" uid="uid://ku0r0adowu8p" path="res://game/data/background/endpath.obj" id="8_krd13"]
 [ext_resource type="Texture2D" uid="uid://tunmi5sdu42a" path="res://game/data/background/bg_3.png" id="9"]
 [ext_resource type="Texture2D" uid="uid://mtc2b2mfx2wd" path="res://game/data/background/bg_1.png" id="10"]
-[ext_resource type="Material" uid="uid://mu4iyylnwc38" path="res://game/Wall/wall_new2.material" id="10_3fiaj"]
+[ext_resource type="Material" path="res://game/Wall/wall_shared.tres" id="10_3fiaj"]
 
 [sub_resource type="Shader" id="4"]
 code = "shader_type spatial;
