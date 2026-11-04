@@ -122,12 +122,14 @@ func _apply_material(size_in: Vector3, shard_color := Color(0.0, 0.0, 0.0, 0.0))
 		_base_mat = mesh.material_override
 	if mesh.material_override != _base_mat:
 		mesh.material_override = _base_mat
-	if _base_mat is ShaderMaterial:
-		(_base_mat as ShaderMaterial).set_shader_parameter(&"size", size_in)
-		# FR-028: the map's obstaclesColor (or the environment's wall colour) tints the panel.
-		# The shader multiplies its noise by this value, so keep it HDR-ish like the original.
-		var w := Map.wall_color
+	# One shared material, per-wall values as instance uniforms: no material switch per wall.
+	if mesh != null:
+		mesh.set_instance_shader_parameter(&"size", size_in)
+		var tint := Map.wall_color
 		if shard_color.a > 0.0:
-			w = shard_color
-		(_base_mat as ShaderMaterial).set_shader_parameter(
-			&"albedo_color", Vector4(w.r * 1.8, w.g * 1.8, w.b * 1.8, 0.0))
+			tint = shard_color
+		# Cap the rim below note emission so a wall never outshines the thing to be cut.
+		var cap := maxf(Map.color_left.v, Map.color_right.v) * 0.8
+		if tint.v > cap and cap > 0.0:
+			tint = tint.darkened(tint.v - cap)
+		mesh.set_instance_shader_parameter(&"wall_color", tint)

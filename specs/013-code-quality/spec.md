@@ -73,6 +73,17 @@ limiter, and only the bench-gating and pooled-node items could plausibly move a 
   because it is the riskiest change for signal order; the autoload initialisation order MUST be
   preserved.
 
+### Wall look (v0.4 visual work, G1 recipe)
+
+- **FR-014**: Walls MUST be a translucent additive panel with a metric-sized bright frame, a
+  vertical gradient and a near-camera fade, not a noise dissolve. One shared material, per-wall
+  values as instance uniforms (`wall_color`, `size`); `blend_add`, `depth_draw_never`, `cull_back`.
+  Colour priority: per-wall Chroma colour, then `obstaclesColor`, then the environment default,
+  capped below note emission. Boost does not recolour walls. Fake walls stay skipped for now and
+  are noted in the spec.
+- **SC-014**: Worst-case wall fill (3-4 overlapping walls at arm's length for 30 s) keeps GPU p99
+  no worse than the v0.3 baseline, and the draw-call/material-switch count does not rise.
+
 ## Success criteria
 
 - **SC-001**: Replay log byte-identical to the v0.3 baseline after every slice.
