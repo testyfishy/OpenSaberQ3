@@ -475,6 +475,11 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 			env_node.environment.glow_hdr_threshold = 1.0
 			env_node.environment.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
 			applied.append("glow=true")
+	# Environment palette arm (FR-027/FR-028): "classic" is the pre-v0.3 look, so an A/B can
+	# show whether the per-map palette costs anything at all.
+	if str(cfg.get_value("bench", "environment", "map")) == "classic":
+		Settings.environment_mode = 1
+		applied.append("environment=classic")
 	# Per-feature attribution: `[bench] visual_off=mirrors,sky` turns individual features
 	# off from the full set, which is how the cost of each one is isolated (removing one from
 	# all-on captures the interactions, adding one to defaults does not).

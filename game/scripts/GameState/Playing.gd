@@ -78,6 +78,11 @@ func _process_map(game: BeepSaber_Game) -> void:
 	
 	# spawn obstacles (walls)
 	while not Map.obstacle_stack.is_empty() and Map.obstacle_stack[-1].beat <= look_ahead:
+		# FR-026: a fake wall is decorative and must never block or score. Popped without
+		# acquiring, so the pool is not touched at all.
+		if Map.obstacle_stack[-1].fake:
+			Map.obstacle_stack.pop_back()
+			continue
 		if probe: Cost.objs_spawned += 1
 		# Pooled, not instantiated. The pool adds its scene to the track at creation, so the
 		# node is already in the tree and spawn() can apply its material immediately.

@@ -83,8 +83,13 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	else:
 		(collision_big.shape as BoxShape3D).size.y = 0.5
 	
-	transform.origin.x = Constants.LANE_DISTANCE * float(note_info.line_index) + Constants.LANE_ZERO_X
-	transform.origin.y = Constants.LANE_DISTANCE * float(note_info.line_layer) + Constants.LAYER_ZERO_Y
+	if note_info.has_custom_position:
+		# Noodle Extensions: the mapper placed this note in world space.
+		transform.origin.x = note_info.custom_position.x
+		transform.origin.y = note_info.custom_position.y
+	else:
+		transform.origin.x = Constants.LANE_DISTANCE * float(note_info.line_index) + Constants.LANE_ZERO_X
+		transform.origin.y = Constants.LANE_DISTANCE * float(note_info.line_layer) + Constants.LAYER_ZERO_Y
 	transform.origin.z = -(note_info.beat - current_beat) * Constants.BEAT_DISTANCE
 	
 	rotation.z = Constants.CUBE_ROTATIONS[note_info.cut_direction] + deg_to_rad(note_info.angle_offset)
