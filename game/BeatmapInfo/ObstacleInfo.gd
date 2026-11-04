@@ -42,7 +42,7 @@ static func new_v2(obstacle_dict: Dictionary) -> ObstacleInfo:
 		h
 	)
 	var cd := Utils.get_dict(obstacle_dict, "_customData", {})
-	obstacle.custom_color = _chroma_color(cd.get("_color", cd.get("color", null)))
+	obstacle.custom_color = PaletteResolver.chroma_color(cd.get("_color", cd.get("color", null)))
 	obstacle.fake = Utils.get_bool(cd, "_fake", false)
 	return obstacle
 
@@ -56,22 +56,7 @@ static func new_v3(obstacle_dict: Dictionary) -> ObstacleInfo:
 		int(Utils.get_float(obstacle_dict, "h", 0))
 	)
 	var cd := Utils.get_dict(obstacle_dict, "customData", {})
-	obstacle.custom_color = _chroma_color(cd.get("color", cd.get("_color", null)))
+	obstacle.custom_color = PaletteResolver.chroma_color(cd.get("color", cd.get("_color", null)))
 	obstacle.fake = Utils.get_bool(cd, "fake", false)
 	return obstacle
 
-static func _chroma_color(value: Variant) -> Color:
-	if value is Dictionary:
-		@warning_ignore("unsafe_cast")
-		var d := value as Dictionary
-		return Color(Utils.get_float(d, "r", 1.0), Utils.get_float(d, "g", 1.0), Utils.get_float(d, "b", 1.0), 1.0)
-	if value is String:
-		var hex := (value as String).strip_edges().trim_prefix("#")
-		if hex.length() == 6:
-			return Color(
-				("0x" + hex.substr(0, 2)).hex_to_int() / 255.0,
-				("0x" + hex.substr(2, 2)).hex_to_int() / 255.0,
-				("0x" + hex.substr(4, 2)).hex_to_int() / 255.0,
-				1.0
-			)
-	return Color(0.0, 0.0, 0.0, 0.0)

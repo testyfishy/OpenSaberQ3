@@ -21,7 +21,8 @@ pwsh -File tools/harness/map_dump_all.ps1 -Root <songs-dir> -Out <outfile>   # o
 ```
 
 One process per map (the driver script) because a native crash in one map must not lose the whole
-baseline. The 43-map audit set is extracted under `%TEMP%\toolchain\allsongs`.
+baseline; the driver retries a map once, because a Godot process occasionally exits without
+writing even on unchanged code (observed on two of 45 maps, both identical on retry). The 43-map audit set is extracted under `%TEMP%\toolchain\allsongs`.
 
 Baseline: generated on `harness-base` from the v0.3 commit, stored with the source commit hash.
 After each refactor slice the dump must be byte-identical.
