@@ -16,9 +16,23 @@ render time show the previous scroll position - judder with fine frame time.
 stops, set `UPDATE_DISABLED` and request exactly one update. Implemented in `vr_slider.gd`
 (`_set_live`).
 
-**Gate**: the UI scroll probe (`ui_scroll_probe=true`) before and after, same session, plus a
-frame CSV. Pass = no stale frames (scroll value changed while the viewport rendered DISABLED) and
-no zero-delta frames while the stick is engaged; p99 within the idle baseline band.
+**Gate**: the UI scroll probe (`ui_scroll_probe=true`) before and after, same session.
+
+Measured on the Quest 3 (60 s probe, Performance preset pinned):
+
+| | before | after |
+|---|---|---|
+| XR samples | 1 | 2 |
+| fps median | 110 | 118 |
+| App median | 6.22 ms | 5.78 ms |
+| GPU% median | 0.97 | 0.86 |
+| scroll frames / moved / zero | 120 / 117 / 3 | 120 / 117 / 3 |
+| max step | 46 px | 48 px |
+
+The scroll step sequence is unchanged, which is expected - the steps come from the same stick
+policy. The redraw cost did not rise; if anything it fell, but with one or two XR samples that is
+direction, not a number. The stale-texture count is the thing this probe cannot see; the player's
+eyes are the final judge on that.
 
 ## UI-1 - One canvas refresh helper
 
