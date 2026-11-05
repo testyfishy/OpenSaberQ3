@@ -13,6 +13,7 @@ var v_scroll: VScrollBar
 var is_mouse_in := false
 var relpos := 0.0
 var scrollpos := 0.0
+var _live := false
 
 # Scrolls only while the pointer is over the list - that is the intended interaction: point at
 # the list, then push the stick. Hover does not gate the smoothness, it gates the permission.
@@ -81,6 +82,7 @@ func _process(delta: float) -> void:
 func _stick_scroll(delta: float) -> void:
 	if v_scroll == null or not _page_visible():
 		_speed = 0.0
+		_set_live(false)
 		return
 	var y_joy: float = debug_stick if is_finite(debug_stick) else vr.rightController.get_vector2("primary").y
 	if not is_finite(debug_stick) and _debug_frames > 0:
@@ -95,6 +97,8 @@ func _stick_scroll(delta: float) -> void:
 		_engaged = true
 	if not _engaged:
 		_speed = move_toward(_speed, 0.0, JOYSTICK_ACCEL * delta)
+		if _speed <= 0.0:
+			_set_live(false)
 		# Keep the accumulator's remainder, but do not resume at the old speed next time.
 		return
 	var span := 1.0 - JOYSTICK_SCROLL_ENGAGE
@@ -110,7 +114,9 @@ func _stick_scroll(delta: float) -> void:
 		var before := v_scroll.value
 		v_scroll.value += whole
 		if v_scroll.value != before:
-			_request_refresh()
+			# Render every frame while the list is actually moving; the texture then cannot be
+			# one or more frames behind the scroll value.
+			_set_live(true)
 
 # The canvas redraws only when asked. One call per changed frame is the same thing every other
 # panel state change does (BeatSaverPanel._canvas_input_update).
@@ -135,3 +141,18 @@ func _mouse_exited() -> void:
 	is_mouse_in = false
 	_engaged = false
 	_speed = 0.0
+
+# Switching the owning SubViewport between ALWAYS and DISABLED is the whole redraw policy. On stop
+# we request exactly one update, so the last frame is drawn and no coroutine is left pending.
+func _set_live(value: bool) -> void:
+	if value == _live:
+		return
+	_live = value
+	var vp := get_viewport()
+	if vp == null:
+		return
+	if value:
+		vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	else:
+		vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		_request_refresh()
