@@ -182,6 +182,7 @@ func set_controls_from_settings() -> void:
 # Builds the performance rows from what the current XR session actually offers, so a headset
 # without XR_FB_foveation or without adjustable refresh rates simply does not show those rows.
 func _set_up_performance_controls() -> void:
+	_snapshot_settings()
 	var iface := XRServer.primary_interface
 	
 	# Refresh rate: only the rates the panel reports are offered, because anything else is
@@ -531,3 +532,19 @@ func _set_tab(index: int) -> void:
 			elif row != null and "visible" in row:
 				row.visible = tab == _tab
 	($ScrollContainer as ScrollContainer).scroll_vertical = 0
+
+# --- Back (v4 FR-004) ----------------------------------------------------------------------
+# Settings apply live (resolution, foveation and colours change as you touch them), so Back has
+# to put the values back, not merely skip Settings.save().
+var _snapshot := {}
+
+func _snapshot_settings() -> void:
+	_snapshot.clear()
+	for key: String in Settings.default_values:
+		_snapshot[key] = Settings.get(key)
+
+func _on_back_pressed() -> void:
+	for key: String in _snapshot:
+		Settings.set(key, _snapshot[key])
+	# Same close path as Apply, but no Settings.save(): the file keeps the last applied state.
+	apply.emit()
