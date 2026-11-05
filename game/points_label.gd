@@ -20,6 +20,9 @@ func show_points(_position: Vector3, value: String, color: Color):
 	global_position = _position
 	if Cost.enabled: Cost.text_mesh_writes += 1
 	text_mesh.text = value
+	# A miss is deliberately much larger than a score number: the player is looking down the
+	# track, not at the cube, so the old 6 pt red "x" was invisible.
+	text_mesh.font_size = 28 if value == "x" else 6
 	(text_mesh.material as StandardMaterial3D).albedo_color = color
 	player.stop()
 	player.play("hit")
