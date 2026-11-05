@@ -44,4 +44,5 @@ func _set_text(percent: int) -> void:
 		return
 	_shown_percent = percent
 	if Cost.enabled: Cost.text_mesh_writes += 1
-	label.text = "%d%%" % percent
+	# The player read this ring as song progress. Name what it is.
+	label.text = "%d%%\nACCURACY" % percent
