@@ -62,6 +62,7 @@ static func finish(path: String) -> void:
 	for line in lines:
 		f.store_line(line)
 	f.close()
+	replay = false
 	print("HARNESS replay wrote %s lines=%d frames=%d" % [ProjectSettings.globalize_path(path), lines.size(), frame])
 
 static func _q(value: float) -> int:

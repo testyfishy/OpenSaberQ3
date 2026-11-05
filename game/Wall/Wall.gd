@@ -130,6 +130,8 @@ func _apply_material(size_in: Vector3, shard_color := Color(0.0, 0.0, 0.0, 0.0))
 			tint = shard_color
 		# Cap the rim below note emission so a wall never outshines the thing to be cut.
 		var cap := maxf(Map.color_left.v, Map.color_right.v) * 0.8
-		if tint.v > cap and cap > 0.0:
-			tint = tint.darkened(tint.v - cap)
+		if cap > 0.0 and tint.v > cap:
+			# Scale to the cap. darkened() multiplies by (1 - amount), which turns an HDR
+			# obstacle colour black and makes an additive wall invisible.
+			tint = Color(tint.r, tint.g, tint.b) * (cap / tint.v)
 		mesh.set_instance_shader_parameter(&"wall_color", tint)

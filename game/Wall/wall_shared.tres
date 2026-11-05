@@ -15,11 +15,13 @@ instance uniform vec3 size = vec3(1.0);
 const float RIM_M = 0.015;
 
 varying vec3 local_pos;
-varying float view_dist;
+varying vec3 local_n;
 
 void vertex() {
 	local_pos = VERTEX * size;
-	view_dist = abs((MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).z);
+	// NORMAL is view-space in the fragment stage, so the face chosen for the rim would change
+	// with head orientation. This is the model-space normal, valid for an unrotated box.
+	local_n = NORMAL;
 }
 
 void fragment() {
@@ -29,9 +31,9 @@ void fragment() {
 	// Distance to the nearest edge of the face we are shading, in metres. Using the two in-face
 	// axes means a thin wall and a wide wall get the same rim thickness.
 	float d;
-	if (abs(NORMAL.x) > 0.5) {
+	if (abs(local_n.x) > 0.5) {
 		d = min(half_size.y - abs(p.y), half_size.z - abs(p.z));
-	} else if (abs(NORMAL.y) > 0.5) {
+	} else if (abs(local_n.y) > 0.5) {
 		d = min(half_size.x - abs(p.x), half_size.z - abs(p.z));
 	} else {
 		d = min(half_size.x - abs(p.x), half_size.y - abs(p.y));
@@ -50,7 +52,8 @@ void fragment() {
 
 	vec3 col = wall_color.rgb * (body + rim_gain);
 	// Near-camera fade: a wall against the player's face must not flood the screen.
-	float near = smoothstep(0.25, 1.0, view_dist);
+	// Fragment-stage VERTEX is view space: the true per-pixel distance to the camera.
+	float near = smoothstep(0.25, 1.0, abs(VERTEX.z));
 	ALBEDO = col * near;
 }
 "
