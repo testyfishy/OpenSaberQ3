@@ -80,6 +80,7 @@ func _ready() -> void:
 	_play_ui_sound_demo = true
 	_fit_scroll_area()
 	_add_scroll_slider()
+	_build_tabs()
 
 # The list used to be wider than the panel, which produced a horizontal scrollbar and cut words off
 # at the right edge. Horizontal scrolling is disabled and labels wrap instead, so the list only ever
@@ -470,3 +471,63 @@ func _populate_perf_preset() -> void:
 func _on_perf_preset_selected(index: int) -> void:
 	Settings.perf_preset = index
 	Settings._apply_perf_preset(index)
+
+# --- Tabs (v4 FR-004/tabs) -----------------------------------------------------------------
+# The panel is one long list; the player asked for tabs. The advisor's layout: a top bar, five
+# tabs, and hidden rows simply not visible (a hidden Control gets no input, so the ray cannot hit
+# a control on another tab). Rows are hidden in place rather than rebuilt, so scroll positions and
+# control state survive a tab switch; the stick scroller keeps pointing at the same container.
+const TAB_NAMES := ["Audio", "Sabers", "Visuals", "Performance", "Debug"]
+const TAB_ROWS := {
+	0: ["audio", "hit_sound", "UI_VolumeRow"],
+	1: ["recenter", "cut_blocks", "bombs_enabled", "SaberThicknessRow", "SaberTypeRow",
+		"SaberColorsRow", "left_saber_offset", "right_saber_offset", "player_height_offset"],
+	2: ["d_background", "floor_light", "saber_halo", "mirror_reflections", "saber_tail",
+		"hit_flash", "floor_grid", "event_tint", "debris_shards", "debris_cap",
+		"environment_mode", "glow_mode", "sky_style", "disable_map_color"],
+	3: ["PerfHeader", "RefreshRateRow", "RenderScaleRow", "MSAARow", "FoveationRow", "PerfNote",
+		"PerfPresetRow"],
+	4: ["show_debug", "show_collisions", "spectator_view", "spectator_hud", "upload_server"],
+}
+
+var _tab_buttons: Array[Button] = []
+var _tab := 2
+
+func _build_tabs() -> void:
+	if not _tab_buttons.is_empty():
+		return
+	var bar := HBoxContainer.new()
+	bar.name = "TabBar"
+	bar.position = Vector2(16, 46)
+	bar.size = Vector2(864, 34)
+	bar.add_theme_constant_override("separation", 6)
+	for i in TAB_NAMES.size():
+		var b := Button.new()
+		b.text = TAB_NAMES[i]
+		b.toggle_mode = true
+		b.custom_minimum_size = Vector2(160, 32)
+		b.pressed.connect(_on_tab_pressed.bind(i))
+		bar.add_child(b)
+		_tab_buttons.append(b)
+	add_child(bar)
+	# Make room for the bar without touching the list's authored width.
+	var sc := $ScrollContainer as Control
+	sc.offset_top += 84
+	_set_tab(_tab)
+
+func _on_tab_pressed(index: int) -> void:
+	_set_tab(index)
+
+func _set_tab(index: int) -> void:
+	_tab = clampi(index, 0, TAB_NAMES.size() - 1)
+	for i in _tab_buttons.size():
+		_tab_buttons[i].button_pressed = i == _tab
+	var vbox := $ScrollContainer/VBox
+	for tab: int in TAB_ROWS:
+		for row_name: String in TAB_ROWS[tab]:
+			var row := vbox.get_node_or_null(NodePath(row_name))
+			if row is CanvasItem:
+				(row as CanvasItem).visible = tab == _tab
+			elif row != null and "visible" in row:
+				row.visible = tab == _tab
+	($ScrollContainer as ScrollContainer).scroll_vertical = 0
