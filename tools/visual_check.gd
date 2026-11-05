@@ -35,7 +35,7 @@ func _ready() -> void:
 	_cam = Camera3D.new()
 	add_child(_cam)
 	_cam.fov = 70.0
-	_cam.look_at_from_position(Vector3(0.0, 1.7, 5.0), Vector3(0.0, 1.7, -6.0))
+	_cam.look_at_from_position(Vector3(0.0, 1.7, -0.4), Vector3(0.0, 1.7, -3.0))
 	_cam.make_current()
 
 func _make_floor() -> void:

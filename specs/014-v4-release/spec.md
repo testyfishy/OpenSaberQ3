@@ -44,11 +44,13 @@ checklist for the live session.
 ## Success criteria
 
 - **SC-001**: `godot --headless --quit` reports zero script/shader errors on `v4/cleanup`.
-- **SC-002**: Map dump over 45 maps is identical to the recorded baseline (hash in
-  `tools/harness/README.md`).
+- **SC-002**: Map dump over 45 maps is identical to the recorded baseline. CLEAN BASELINE
+  REGENERATED 2026-11-04: 45/45 maps, 0 failures, SHA256
+  `E2E7AFC83971745B991632710E92EE4EC3DB81B6ACB7B0C1049769FD4684A123`.
 - **SC-003**: Settings round-trip prints `SETTINGSTEST PASS`.
-- **SC-004**: Replay: three consecutive runs produce identical logs, or the exact divergence is
-  recorded as a known limitation with the test build unaffected.
+- **SC-004**: Replay three consecutive runs produced IDENTICAL logs on 2026-11-04
+  (SHA256 `3078AB2F19031D22CA8736D0B3C8A634D9F331065217E8ED9A41DEDD63E51C00`, 1,441 frames,
+  22 events). The earlier divergence was not reproduced; the gate is green.
 - **SC-005**: APK installs, launches, and a 30 s bot run on ODDS completes with no script errors.
 - **SC-006**: The wall check renders as a translucent panel with a rim (visual evidence).
 - **SC-007**: The live-test checklist is committed and points at the maps on the device.

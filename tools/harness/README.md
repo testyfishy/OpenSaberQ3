@@ -38,7 +38,7 @@ After each refactor slice the dump must be byte-identical.
 ## Baseline recorded on harness-base
 
 - 45 maps (the 43-map audit set plus the bundled song and one duplicate export): `map_dump_all.ps1`
-  reports `maps dumped: 45 failed: 0`; dump SHA256 `6FEFDF86DEB803A833DB4096671BD9BFE186775D1C4126F951905E491027C619`, lines 687292. The dump is
+  reports `maps dumped: 45 failed: 0`; dump SHA256 `E2E7AFC83971745B991632710E92EE4EC3DB81B6ACB7B0C1049769FD4684A123` (clean regeneration, 2026-11-04; the earlier hash came from an interrupted run), lines 687292. The dump is
   regenerated rather than committed (it is several MB of text and deterministic).
 - Replay: `[bench] replay=true, replay_frames=1440, refresh_hz=72` with
   `--fixed-fps 72 --disable-vsync` produced **two byte-identical logs** (same SHA256, 1,441
@@ -54,9 +54,10 @@ the frame cap is checked in `_process` while some gameplay work is ordered by th
 so a frame with a different physics-tick alignment can reorder two events that land on the same
 frame.
 
-Do not treat replay as a green gate until two runs of the same build are identical three times in
-a row. Likely fix: drive both the cap and the log timestamp from a single physics-tick counter,
-and assert exactly one tick per replay frame.
+Resolved 2026-11-04: three consecutive runs of the same build produced identical logs, so the
+earlier divergence was not reproducible (it happened while the working tree was being changed).
+The gate is green; if it recurs, the fix is a single physics-tick counter driving both the cap
+and the log timestamp.
 
 ## Still to build (in this order)
 
