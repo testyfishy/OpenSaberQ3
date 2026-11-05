@@ -19,6 +19,7 @@ signal apply()
 @onready var debris_shards_control := $ScrollContainer/VBox/debris_shards as CheckButton
 @onready var environment_mode_control := $ScrollContainer/VBox/environment_mode as OptionButton
 @onready var glow_mode_control := $ScrollContainer/VBox/glow_mode as OptionButton
+@onready var hit_sound_control := $ScrollContainer/VBox/hit_sound as OptionButton
 @onready var sky_style_control := $ScrollContainer/VBox/sky_style as OptionButton
 var perf_control: OptionButton
 @onready var saber_thickness := $ScrollContainer/VBox/SaberThicknessRow/saber_thickness as HSlider
@@ -144,6 +145,10 @@ func set_controls_from_settings() -> void:
 		glow_mode_control.add_item("Glow: Subtle")
 		glow_mode_control.add_item("Glow: Full")
 	glow_mode_control.select(clampi(Settings.glow_mode, 0, 2))
+	if hit_sound_control.item_count == 0:
+		hit_sound_control.add_item("Hit sound: Classic")
+		hit_sound_control.add_item("Hit sound: Thump")
+	hit_sound_control.select(clampi(Settings.hit_sound, 0, 1))
 	_populate_sky_style()
 	_populate_perf_preset()
 	d_background.button_pressed = Settings.events
@@ -277,6 +282,9 @@ func _on_environment_mode_selected(index: int) -> void:
 
 func _on_glow_mode_selected(index: int) -> void:
 	Settings.glow_mode = index
+
+func _on_hit_sound_selected(index: int) -> void:
+	Settings.hit_sound = index
 
 func _populate_sky_style() -> void:
 	if sky_style_control.item_count == 0:

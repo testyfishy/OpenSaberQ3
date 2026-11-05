@@ -226,6 +226,11 @@ var debris_shards: bool:
 # Glow (measured free on device: ~1% GPU, ~0.15 ms app). 0 off, 1 subtle (one blur level),
 # 2 full (Godot's default chain). Subtle is the default because it reads as glow without the
 # multi-level chain.
+# 0 = Classic (shipped v0.3 impacts), 1 = Thump (low-heavy re-derivation). Both sets ship.
+var hit_sound: int:
+	set(value):
+		hit_sound = clampi(value, 0, 1)
+		set_and_emit(&"hit_sound", hit_sound)
 var glow_mode: int:
 	set(value):
 		glow_mode = clampi(value, 0, 2)
@@ -341,6 +346,7 @@ var default_values = {
 	debris_shards = true,
 	environment_mode = 0,
 	glow_mode = 1,
+	hit_sound = 0,
 	beatsaver_order = "Latest",
 	beatsaver_curated = false,
 	beatsaver_verified = false,

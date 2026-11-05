@@ -65,6 +65,33 @@ const GAIN_MIN_DB := -8.5
 const GAIN_MAX_DB := 0.5
 
 # Layer thresholds.
+# The "thump" set: same files, re-derived with a low-shelf boost, a 2.5 kHz cut and soft
+# clipping (tools/audio/make_thump_set.py). Selectable in settings, so the old sound is not lost.
+const THUMP_SOFT: Array[AudioStream] = [
+preload("res://game/data/hits_thump/soft_01.wav"),
+preload("res://game/data/hits_thump/soft_02.wav"),
+preload("res://game/data/hits_thump/soft_03.wav"),
+]
+const THUMP_HARD: Array[AudioStream] = [
+preload("res://game/data/hits_thump/hard_01.wav"),
+preload("res://game/data/hits_thump/hard_02.wav"),
+preload("res://game/data/hits_thump/hard_03.wav"),
+]
+const THUMP_ACCENT: Array[AudioStream] = [
+preload("res://game/data/hits_thump/accent_01.wav"),
+]
+const THUMP_DULL: Array[AudioStream] = [
+preload("res://game/data/hits_thump/dull_01.wav"),
+preload("res://game/data/hits_thump/dull_02.wav"),
+]
+
+# Active pools. Swapped as a set, never between _pick() and playback, so a live voice keeps the
+# stream it started with.
+var _soft: Array[AudioStream] = SOFT
+var _hard: Array[AudioStream] = HARD
+var _accent: Array[AudioStream] = ACCENT
+var _dull: Array[AudioStream] = DULL
+
 const LAYER_SOFT_MAX_SPEED := 3.0   # below this -> soft layer
 const LAYER_HARD_MAX_SPEED := 7.0   # above this -> hard + accent
 const ANGLE_SOFT_THRESHOLD := 0.5   # glancing cut sounds dull whatever the speed
@@ -124,6 +151,8 @@ var _last_variant := {}
 var _pending_hits: Array[Dictionary] = []
 
 func _ready() -> void:
+	_apply_hit_sound_set(Settings.hit_sound)
+	Settings.changed.connect(_on_setting_changed)
 	set_process(false)
 	quickhide()
 	set_halo_enabled(Settings.saber_halo)
@@ -218,18 +247,18 @@ func _fire(info: HitInfo, from_offset: float) -> void:
 	if audio_disabled:
 		return
 	var gain_db := 0.0
-	var pool: Array = HARD
+	var pool: Array = _hard
 	var pool_key := &"hard"
 	var accent := false
 	
 	if info == null:
 		# Chain link: no scoring data, keep the old "a cut happened" cue.
-		pool = SOFT
+		pool = _soft
 		pool_key = &"soft"
 		gain_db = CHAIN_TAP_GAIN_DB
 	elif info.kind == HitInfo.Kind.BAD:
 		# A different, duller set: the sound should tell you it was wrong.
-		pool = DULL
+		pool = _dull
 		pool_key = &"dull"
 		gain_db = BAD_CUT_GAIN_DB
 	else:
@@ -243,13 +272,13 @@ func _fire(info: HitInfo, from_offset: float) -> void:
 			GAIN_MIN_DB, GAIN_MAX_DB)
 		
 		if info.angle_acc < ANGLE_SOFT_THRESHOLD or info.speed_len < LAYER_SOFT_MAX_SPEED:
-			pool = SOFT
+			pool = _soft
 			pool_key = &"soft"
 		elif info.speed_len <= LAYER_HARD_MAX_SPEED:
-			pool = HARD
+			pool = _hard
 			pool_key = &"hard"
 		else:
-			pool = HARD
+			pool = _hard
 			pool_key = &"hard"
 			# Far off the beat, the accent would only smear the timing.
 			accent = info.beat_acc >= BEAT_ACCENT_MIN
@@ -266,7 +295,7 @@ func _fire(info: HitInfo, from_offset: float) -> void:
 	if accent:
 		# The accent stacks on top of the hard layer, so it must sit below it or the pair
 		# breaches the 9 dB total budget. -4 dB is a tuning start (G4).
-		_play(_pick(ACCENT, &"accent"), gain_db - 4.0, semitones, from_offset)
+		_play(_pick(_accent, &"accent"), gain_db - 4.0, semitones, from_offset)
 
 # Round-robin with no immediate repeat (research.md §3 row 13).
 func _pick(pool: Array, key: StringName) -> AudioStream:
@@ -344,3 +373,22 @@ func _steal_oldest() -> bool:
 			return true
 	return false
 
+
+func _on_setting_changed(key: StringName) -> void:
+	if key == &"hit_sound":
+		_apply_hit_sound_set(Settings.hit_sound)
+
+func _apply_hit_sound_set(index: int) -> void:
+	if index == 1:
+		_soft = THUMP_SOFT
+		_hard = THUMP_HARD
+		_accent = THUMP_ACCENT
+		_dull = THUMP_DULL
+	else:
+		_soft = SOFT
+		_hard = HARD
+		_accent = ACCENT
+		_dull = DULL
+	# The sets have different variant counts; restart the round-robin so it cannot index past
+	# the end of the new pool.
+	_last_variant.clear()
