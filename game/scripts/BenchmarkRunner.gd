@@ -95,6 +95,7 @@ const Cost := preload("res://game/scripts/CostProbe.gd")
 const BotDriverScript := preload("res://game/scripts/BotDriver.gd")
 const HitResolver := preload("res://game/scripts/HitResolver.gd")
 
+var _bench_cfg: ConfigFile = null
 var _game: Node3D
 var _song_player: AudioStreamPlayer
 var _track: Node3D
@@ -413,6 +414,7 @@ func _begin() -> void:
 # None of them exist outside benchmark mode (FR-031: no app-imposed frame cap in
 # normal operation; `max_fps` here only pins conditions while measuring).
 func _apply_overrides(cfg: ConfigFile) -> void:
+	_bench_cfg = cfg
 	var applied := PackedStringArray()
 	# Stress-test switch: force every visual setting on so the frame budget can be measured
 	# with the full feature set, which is what the shipped defaults must eventually hold.
@@ -1109,6 +1111,8 @@ func _peak_of(values: PackedInt32Array) -> int:
 const VRSlider := preload("res://game/vr_slider.gd")
 
 func _run_ui_scroll_probe() -> void:
+	const VRSliderScript := preload("res://game/vr_slider.gd")
+	VRSliderScript.debug_noredraw = _bench_cfg != null and bool(_bench_cfg.get_value("bench", "ui_panel_noredraw", false))
 	var panel: Node = _game.find_child("BeatSaverPanel", true, false)
 	if panel == null:
 		_meta["probe_error"] = "panel node missing"

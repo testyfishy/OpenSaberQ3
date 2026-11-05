@@ -151,6 +151,11 @@ func _find_canvas() -> OQ_UI2DCanvas:
 
 
 func _canvas_input_update() -> void:
+	# Route through the canvas's single refresh authority instead of calling the canvas directly.
+	var refresh := CanvasRefresh.of(self)
+	if refresh != null:
+		refresh.request()
+		return
 	var canvas := _find_canvas()
 	if canvas != null:
 		canvas._input_update()

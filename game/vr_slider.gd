@@ -14,6 +14,13 @@ var is_mouse_in := false
 var relpos := 0.0
 var scrollpos := 0.0
 var _live := false
+# Measurement (v4 panel-cost work): when live, accumulate the viewport's own render time. The
+# A/B is `debug_noredraw`, which keeps the viewport DISABLED while the stick moves, so the redraw
+# cost is the difference between the two probe runs.
+static var debug_noredraw := false
+var _meas_frames := 0
+var _meas_cpu := PackedFloat32Array()
+var _meas_gpu := PackedFloat32Array()
 
 # Scrolls only while the pointer is over the list - that is the intended interaction: point at
 # the list, then push the stick. Hover does not gate the smoothness, it gates the permission.
@@ -66,6 +73,12 @@ func _ready() -> void:
 	scroll_node.connect(&"mouse_exited", Callable(self, &"_mouse_exited"))
 
 func _process(delta: float) -> void:
+	if _live:
+		var vp := get_viewport()
+		if vp != null:
+			_meas_frames += 1
+			_meas_cpu.append(RenderingServer.viewport_get_measured_render_time_cpu(vp.get_viewport_rid()))
+			_meas_gpu.append(RenderingServer.viewport_get_measured_render_time_gpu(vp.get_viewport_rid()))
 	var newpos := -vr.rightController.rotation_degrees.x - (vr.rightController.transform.origin.y * 20.0)
 	# Scrolling is stick-only. Drag-scrolling was removed because pressing the trigger while
 	# pointing at a list (to select a card or a setting) also pushed the list, which read as
@@ -121,8 +134,10 @@ func _stick_scroll(delta: float) -> void:
 # The canvas redraws only when asked. One call per changed frame is the same thing every other
 # panel state change does (BeatSaverPanel._canvas_input_update).
 func _request_refresh() -> void:
-	if canvas != null and canvas.has_method(&"_input_update"):
-		canvas.call(&"_input_update")
+	# One authority decides when the canvas renders; see game/ui/CanvasRefresh.gd.
+	var refresh := CanvasRefresh.of(self)
+	if refresh != null:
+		refresh.request()
 
 # True when the page that owns this slider is visible. The stick scrolls whenever the page is up;
 # only dragging needs the pointer on the list.
@@ -152,7 +167,32 @@ func _set_live(value: bool) -> void:
 	if vp == null:
 		return
 	if value:
-		vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		if not debug_noredraw:
+			var refresh := CanvasRefresh.of(self)
+			if refresh != null:
+				refresh.begin_live(self)
+		RenderingServer.viewport_set_measure_render_time(vp.get_viewport_rid(), true)
+		_meas_frames = 0
+		_meas_cpu = PackedFloat32Array()
+		_meas_gpu = PackedFloat32Array()
 	else:
-		vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		var refresh := CanvasRefresh.of(self)
+		if refresh != null:
+			refresh.end_live(self)
+		_report_measurement()
 		_request_refresh()
+
+func _report_measurement() -> void:
+	if _meas_frames < 10:
+		return
+	var cpu := _meas_cpu.duplicate(); cpu.sort()
+	var gpu := _meas_gpu.duplicate(); gpu.sort()
+	var mean := func(a: PackedFloat32Array) -> float:
+		var total := 0.0
+		for v in a: total += v
+		return total / maxf(float(a.size()), 1.0)
+	var p95 := func(a: PackedFloat32Array) -> float:
+		return a[mini(a.size() - 1, int(a.size() * 0.95))]
+	vr.log_info("PANELCOST frames=%d noredraw=%s cpu_mean=%.3fms cpu_p95=%.3fms gpu_mean=%.3fms gpu_p95=%.3fms" % [
+		_meas_frames, str(debug_noredraw),
+		mean.call(cpu), p95.call(cpu), mean.call(gpu), p95.call(gpu)])
