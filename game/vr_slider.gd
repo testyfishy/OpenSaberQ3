@@ -66,15 +66,10 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	var newpos := -vr.rightController.rotation_degrees.x - (vr.rightController.transform.origin.y * 20.0)
-	var hovering := is_mouse_in or debug_hover
-	if hovering and vr.rightController.trigger_pressed():
-		# Scroll via "click & drag" - still only while the pointer is on the list.
-		var moved := (relpos - newpos) * 20.0
-		v_scroll.value += moved
-		if moved != 0.0:
-			_request_refresh()
-		_speed = 0.0
-	else:
+	# Scrolling is stick-only. Drag-scrolling was removed because pressing the trigger while
+	# pointing at a list (to select a card or a setting) also pushed the list, which read as
+	# "the screen moves when I click".
+	if true:
 		# The stick scrolls whenever this slider's page is up, not only while the pointer happens
 		# to be inside the scroll rect. Hover-gating the stick (the original behaviour) meant any
 		# wobble of the ray off the list silently disabled scrolling, which is what "the joystick

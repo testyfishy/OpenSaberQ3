@@ -11,6 +11,7 @@ render_mode unshaded, blend_add, depth_draw_never, cull_back;
 
 instance uniform vec4 wall_color : source_color = vec4(1.0, 0.08, 0.08, 1.0);
 instance uniform vec3 size = vec3(1.0);
+instance uniform float fade = 1.0;
 
 const float RIM_M = 0.015;
 
@@ -54,7 +55,7 @@ void fragment() {
 	// Near-camera fade: a wall against the player's face must not flood the screen.
 	// Fragment-stage VERTEX is view space: the true per-pixel distance to the camera.
 	float near = smoothstep(0.25, 1.0, abs(VERTEX.z));
-	ALBEDO = col * near;
+	ALBEDO = col * near * fade;
 }
 "
 

@@ -113,7 +113,24 @@ func spawn(chain_info: ChainInfo, current_beat: float, head_pos: Vector2, tail_p
 	transform.origin.y = bezier_pos.y
 	transform.origin.z = -(beat - current_beat) * Constants.BEAT_DISTANCE
 	
-	rotation.z = q0.angle_to_point(q1) - TAU*0.25
+	# Orient the link along the chord to the next link in 3D. Rotating only in the XY plane left
+	# the link's length axis pointing down world z while the chain curved sideways, so a curved
+	# chain rendered as parallel bars running past each other ("a line between the boxes").
+	var t_next := clampf(lerp_factor + chain_info.squish_factor / float(maxi(chain_info.slice_count - 1, 1)), 0.0, 1.0)
+	var q0n := head_pos.lerp(mid_pos, t_next)
+	var q1n := mid_pos.lerp(tail_pos, t_next)
+	var next_pos := q0n.lerp(q1n, t_next)
+	var next_z := -(lerpf(chain_info.head_beat, chain_info.tail_beat, t_next) - current_beat) * Constants.BEAT_DISTANCE
+	var here := Vector3(bezier_pos.x, bezier_pos.y, transform.origin.z)
+	var there := Vector3(next_pos.x, next_pos.y, next_z)
+	var chord := there - here
+	if chord.length_squared() > 0.000001:
+		var dir := chord.normalized()
+		var side := Vector3.UP.cross(dir)
+		if side.length_squared() < 0.000001:
+			side = Vector3.RIGHT
+		side = side.normalized()
+		transform.basis = Basis(side, dir.cross(side), dir)
 	
 	# The link model is a 0.5 m plate, but slices are far apart: a 1-beat chain with two links
 	# puts them 2 m apart, so the old build showed a row of detached squares with a gap between

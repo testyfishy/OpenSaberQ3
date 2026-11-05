@@ -508,6 +508,11 @@ func _apply_glow() -> void:
 func _apply_map_colours() -> void:
 	update_left_color(Map.env_left)
 	update_right_color(Map.env_right)
+	# FR-001: the blades are the same colour as the cubes they cut. The map wins unless the
+	# player has explicitly overridden colours.
+	if not Settings.disable_map_color:
+		left_saber.set_color(Map.color_left)
+		right_saber.set_color(Map.color_right)
 	standing_ground.apply_visual_settings()
 	vr.log_info("MAP palette: env=%s notes=%s/%s room=%s/%s wall=%s mode=%d" % [
 		Map.environment_name, Map.color_left, Map.color_right, Map.env_left, Map.env_right,

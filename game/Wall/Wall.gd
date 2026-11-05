@@ -20,6 +20,9 @@ var _size := Vector3.ONE
 
 
 var _spawn_age := SPAWN_ANIM_S
+# 1.0 normally; lowered when the camera is inside this wall so the player can see out of it.
+var _fade := 1.0
+var _camera: Camera3D
 var despawn_z: float
 var speed: float
 
@@ -43,6 +46,7 @@ func _physics_process(delta: float) -> void:
 		var h11 := t * t * t - t * t
 		var h := h00 * SPAWN_START_H + h10 * SPAWN_TANGENT_IN * span + h01 * 1.0 + h11 * SPAWN_TANGENT_OUT * span
 		$WallMeshOrientation.scale = Vector3(1.0, h, 1.0)
+	_update_inside_fade()
 	transform.origin.z += speed * delta
 	
 	# remove children that go to far
@@ -135,3 +139,21 @@ func _apply_material(size_in: Vector3, shard_color := Color(0.0, 0.0, 0.0, 0.0))
 			# obstacle colour black and makes an additive wall invisible.
 			tint = Color(tint.r, tint.g, tint.b) * (cap / tint.v)
 		mesh.set_instance_shader_parameter(&"wall_color", tint)
+
+# A crouch under an overhead wall can put the camera inside the box. With back-face culling no
+# face is drawn then, so the player sees nothing and is surprised by the collision box. Fading the
+# wall while the camera is inside makes the situation legible without making every wall two-sided.
+func _update_inside_fade() -> void:
+	if _camera == null or not is_instance_valid(_camera):
+		_camera = get_viewport().get_camera_3d() as Camera3D
+		if _camera == null:
+			return
+	var local := global_transform.affine_inverse() * _camera.global_position
+	var half := _size * 0.5
+	var inside := absf(local.x) < half.x and absf(local.y) < half.y and absf(local.z) < half.z
+	var target := 0.12 if inside else 1.0
+	if not is_equal_approx(target, _fade):
+		_fade = target
+		var mesh := _wall_mesh()
+		if mesh != null:
+			mesh.set_instance_shader_parameter(&"fade", _fade)
