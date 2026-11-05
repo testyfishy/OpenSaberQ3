@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-04
 
-**Status**: Draft
+**Status**: In progress
 
 **Input**: First v4 play test. The player likes the build, especially the walls, and listed eight
 fixes to ship v4.
@@ -37,6 +37,14 @@ enlarging the combo readout and explaining the percentage.
   clearly named values.
 - **FR-007**: The hit sound MUST be rebuilt around a low-frequency thump: most energy under
   ~150 Hz, a short transient, and clearly less 2-6 kHz energy than the current samples.
+- **FR-009**: The classic hit set MUST remain selectable; a "Hit sound" setting chooses between
+  Classic and Thump, and the two sets swap as a unit without preloading cost concerns (both are
+  small WAVs and ship).
+- **FR-010**: The settings panel MUST be split into tabs (Audio, Sabers & Controls, Visuals,
+  Performance, Debug) with a top tab bar, hidden tabs not reachable by the ray, and the stick
+  scroller following the active tab.
+- **FR-011**: The end-of-song card MUST not overlap: score and record columns must be clear of the
+  saved-score mesh, the percent ring and the buttons.
 - **FR-008**: The broken chain links MUST be diagnosed from the data and rendering path and fixed,
   so a chain reads as a continuous path from head to tail with no detachments or stray lines.
 
@@ -71,4 +79,5 @@ enlarging the combo readout and explaining the percentage.
 
 | Gate | Asked | Verdict | Action taken |
 |---|---|---|---|
-| G0 | Scope and approach for the eight play-test fixes, plus chain diagnosis | pending | - |
+| G0 | Scope and approach for the eight play-test fixes, plus chain diagnosis | GO WITH CHANGES: add a "Use map colours" path for sabers; chain stretch is the likely bug (orient along the 3D tangent or revert); for walls the camera is probably *inside* the box, so log camera vs wall bottom rather than making walls two-sided; bass needs harmonics (160->55 Hz sweep, 220 Hz body, 1-2.5 kHz click); miss marker must be opaque geometry, not a large alpha quad | Applied: FR-009..011 added; chain links oriented along the 3D chord; walls fade when the camera is inside; miss label 28 pt; sound derived with a low shelf and 2.5 kHz cut |
+| G1 | Settings tab taxonomy, hit-sound variants, end-card overlap | GO WITH CHANGES: top tab bar with five tabs, per-tab scroll container, no lazy rebuild; sound global and persisted, swap pools as a unit; end card is hand-placed 3D text, move NR above Details and separate z | Tabs built as a top bar with hidden-in-place rows; sound setting added; end card moved and z-separated |
