@@ -53,13 +53,13 @@ var perf_control: OptionButton
 @onready var spectator_hud_control := $ScrollContainer/VBox/spectator_hud as CheckButton
 
 # Performance rows (FR-040). Each one is hidden when the running XR interface cannot apply it.
-@onready var refresh_rate_row := $ScrollContainer/VBox/RefreshRateRow as HBoxContainer
-@onready var refresh_rate_control := $ScrollContainer/VBox/RefreshRateRow/refresh_rate as OptionButton
-@onready var render_scale_control := $ScrollContainer/VBox/RenderScaleRow/render_scale as HSlider
-@onready var render_scale_value := $ScrollContainer/VBox/RenderScaleRow/render_scale_value as Label
-@onready var msaa_control := $ScrollContainer/VBox/MSAARow/msaa as OptionButton
-@onready var foveation_row := $ScrollContainer/VBox/FoveationRow as HBoxContainer
-@onready var foveation_control := $ScrollContainer/VBox/FoveationRow/foveation as OptionButton
+@onready var refresh_rate_row := %RefreshRateRow as HBoxContainer
+@onready var refresh_rate_control := %refresh_rate as OptionButton
+@onready var render_scale_control := %render_scale as HSlider
+@onready var render_scale_value := %render_scale_value as Label
+@onready var msaa_control := %msaa as OptionButton
+@onready var foveation_row := %FoveationRow as HBoxContainer
+@onready var foveation_control := %foveation as OptionButton
 
 # Index in these arrays is the OptionButton id, the value is the engine value. MSAA matches
 # Viewport.MSAA (and rendering/anti_aliasing/quality/msaa_3d): 0 = off, 1 = 2x, 2 = 4x.
