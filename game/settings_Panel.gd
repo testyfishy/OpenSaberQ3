@@ -46,9 +46,9 @@ var perf_control: OptionButton
 @onready var right_saber_roty_control := %right_roty as SpinBox
 @onready var right_saber_rotz_control := %right_rotz as SpinBox
 @onready var player_height_offset_control := $ScrollContainer/VBox/player_height_offset/pos as SpinBox
-@onready var audio_master_control := $ScrollContainer/VBox/audio/master/master_slider as HSlider
-@onready var audio_music_control := $ScrollContainer/VBox/audio/music/music_slider as HSlider
-@onready var audio_sfx_control := $ScrollContainer/VBox/audio/sfx/sfx_slider as HSlider
+@onready var audio_master_control := %master_slider as HSlider
+@onready var audio_music_control := %music_slider as HSlider
+@onready var audio_sfx_control := %sfx_slider as HSlider
 @onready var spectator_view_control := $ScrollContainer/VBox/spectator_view as CheckButton
 @onready var spectator_hud_control := $ScrollContainer/VBox/spectator_hud as CheckButton
 
