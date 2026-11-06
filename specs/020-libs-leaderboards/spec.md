@@ -142,8 +142,10 @@ game: they serve Beat Saber modding, map authoring or capture, not play.
 
 ### Release v0.6.0
 
-- `OpenSaber-v060.apk`, 83,625,810 bytes (first build), SHA-256 `E801854F...`; versionName 0.6.0,
-  versionCode 10, RELEASE, same certificate (`d204a2...`), no `application-debuggable`.
+- `F:\Dev\BeepSaberBin\OpenSaber-v060.apk`, 83,624,298 bytes, SHA-256
+  `B06A108B806A644F420CA988115E39126A3E5BBE7F9FD10EC42F8091D2CC518F`, built from `29b2d98`;
+  versionName 0.6.0, versionCode 10, RELEASE, same certificate (`d204a2...`), no
+  `application-debuggable`.
 - Upgrade test 0.5.1 -> 0.6.0 with data kept: `config.ini` SHA-256 `d4cfb1a6...`,
   `profiles.json` `fed011f7...` and `highscores.json` `1131ab71...` unchanged; the release
   ignores a pushed bench flag (no meta, CSV or consumed marker). v0.5.1 remains the fallback
@@ -175,5 +177,6 @@ game: they serve Beat Saber modding, map authoring or capture, not play.
 
 | Gate | Asked | Verdict | Action taken |
 |---|---|---|---|
-| G3 | After slice 1 + BeatLeader | CONTINUE: accept the design; filter auto-select is fine if an empty view disables Play; BeastSaber (a) needs G1; build 0.6.0 now and record v0.5.1 as the fallback | Empty view shows "No maps match this source." and disables Play/Delete/Leaderboard; device probe, stop-during-play bench and 0.5.1->0.6.0 upgrade recorded; release built |
+| G3 | After slice 1 + BeatLeader | CONTINUE: accept the design; filter auto-select is fine if an empty view disables Play; BeastSaber (a) needs G1; build 0.6.0 now and record v0.5.1 as the fallback | Empty view shows "No maps match this source." and disables Play/Delete/Leaderboard; device probe, stop-during-play bench and 0.5.1->0.6.0 upgrade recorded; release built |
+
 | G0 | Scope of BeastSaber/BeatLeader, source-tag storage, phasing | GO WITH CHANGES: hash is recoverable (verified); add backfill FR-007, menu-only networking FR-008, atomic/schema sidecar FR-009, BeatLeader mapping/states FR-010; ask the player what BeastSaber means before the import; ship slices as v0.6.0, not 0.5.2 | Slice 1 (sidecar, backfill, source filter) starts; BeastSaber import waits on the player's answer; BeatLeader read-only next |
