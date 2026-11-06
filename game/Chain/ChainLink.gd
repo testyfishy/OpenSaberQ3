@@ -16,10 +16,10 @@ func _ready() -> void:
 	_mat = mi.material_override as ShaderMaterial
 	_mesh = mi.mesh
 	
-	if bool(ProjectSettings.get_setting(SETTING_ISOLATE_SHAPES, false)):
-		# spawn() mutates size.z per link; without a private copy every live
-		# link would share the most recently spawned link's hitbox.
-		var cs := $Area3D/CollisionShape3D as CollisionShape3D
+	# spawn() sets size.z to this link's segment; without a private copy every live link
+	# would share the most recently spawned link's hitbox.
+	var cs := $Area3D/CollisionShape3D as CollisionShape3D
+	if cs.shape != null:
 		cs.shape = cs.shape.duplicate()
 	
 	# init our cut pieces with unique copies of our own material for reference,
@@ -73,25 +73,23 @@ static func _bezier_point(head_pos: Vector2, mid_pos: Vector2, tail_pos: Vector2
 	var q1 := mid_pos.lerp(tail_pos, t)
 	return q0.lerp(q1, t)
 
-# Distance from this link to its neighbour, along the same curve the positions come from.
-# The link mesh is 0.5 m deep; slices are one beat-step apart, which on a fast chain is over a
-# metre, so without this the links render as detached squares.
-static func _link_length(chain_info: ChainInfo, head_pos: Vector2, mid_pos: Vector2, tail_pos: Vector2, t0: float) -> float:
+# One point on the chain curve, in 3D: bezier XY plus the beat's distance along z.
+# `t` runs 0..squish along the chain (the spawner's range), not 0..1 of the raw tail.
+static func chain_point(chain_info: ChainInfo, head_pos: Vector2, mid_pos: Vector2, tail_pos: Vector2, t: float, current_beat: float) -> Vector3:
+	var q0 := head_pos.lerp(mid_pos, t)
+	var q1 := mid_pos.lerp(tail_pos, t)
+	var xy := q0.lerp(q1, t)
+	var beat := lerpf(chain_info.head_beat, chain_info.tail_beat, t)
+	return Vector3(xy.x, xy.y, -(beat - current_beat) * Constants.BEAT_DISTANCE)
+
+# The segment link_index occupies: link 1 spans head -> first slice point, the last spans the
+# previous point -> the tail point. Both t values are inside 0..squish.
+static func link_segment_t(chain_info: ChainInfo, link_index: int) -> Vector2:
 	var links := maxi(chain_info.slice_count - 1, 1)
-	var dt := chain_info.squish_factor / float(links)
-	if dt <= 0.00001:
-		return 0.5
-	var t1 := t0 + dt
-	if t1 > 1.0 + 0.0001:
-		t1 = t0 - dt   # last link: measure back to the one before it
-	var p0 := _bezier_point(head_pos, mid_pos, tail_pos, t0)
-	var p1 := _bezier_point(head_pos, mid_pos, tail_pos, clampf(t1, 0.0, 1.0))
-	var dz := (
-		lerpf(chain_info.head_beat, chain_info.tail_beat, clampf(t1, 0.0, 1.0))
-		- lerpf(chain_info.head_beat, chain_info.tail_beat, t0)
-	) * Constants.BEAT_DISTANCE
-	# Clamped so a malformed slice count cannot produce a link metres long.
-	return clampf(Vector3(p1.x - p0.x, p1.y - p0.y, dz).length(), 0.1, 4.0)
+	return Vector2(
+		float(link_index - 1) / float(links) * chain_info.squish_factor,
+		float(link_index) / float(links) * chain_info.squish_factor
+	)
 
 func spawn(chain_info: ChainInfo, current_beat: float, head_pos: Vector2, tail_pos: Vector2, mid_pos: Vector2, link_index: int) -> void:
 	# re-enable our process_mode first otherwise it seems like Godot-internals
@@ -102,61 +100,56 @@ func spawn(chain_info: ChainInfo, current_beat: float, head_pos: Vector2, tail_p
 	speed = NoteMotion.speed_at(chain_info.head_beat)
 	which_saber = chain_info.color
 	
-	var lerp_factor := float(link_index) / float(chain_info.slice_count - 1) * chain_info.squish_factor
-	beat = lerpf(chain_info.head_beat, chain_info.tail_beat, lerp_factor)
-	
-	var q0 := head_pos.lerp(mid_pos, lerp_factor)
-	var q1 := mid_pos.lerp(tail_pos, lerp_factor)
-	var bezier_pos := q0.lerp(q1, lerp_factor)
-	
-	transform.origin.x = bezier_pos.x
-	transform.origin.y = bezier_pos.y
-	transform.origin.z = -(beat - current_beat) * Constants.BEAT_DISTANCE
-	
-	# Orient the link along the chord to the next link in 3D. Rotating only in the XY plane left
-	# the link's length axis pointing down world z while the chain curved sideways, so a curved
-	# chain rendered as parallel bars running past each other ("a line between the boxes").
-	var t_next := clampf(lerp_factor + chain_info.squish_factor / float(maxi(chain_info.slice_count - 1, 1)), 0.0, 1.0)
-	var q0n := head_pos.lerp(mid_pos, t_next)
-	var q1n := mid_pos.lerp(tail_pos, t_next)
-	var next_pos := q0n.lerp(q1n, t_next)
-	var next_z := -(lerpf(chain_info.head_beat, chain_info.tail_beat, t_next) - current_beat) * Constants.BEAT_DISTANCE
-	var here := Vector3(bezier_pos.x, bezier_pos.y, transform.origin.z)
-	var there := Vector3(next_pos.x, next_pos.y, next_z)
-	var chord := there - here
-	if chord.length_squared() > 0.000001:
-		var dir := chord.normalized()
+	var span := link_segment_t(chain_info, link_index)
+	var p0 := chain_point(chain_info, head_pos, mid_pos, tail_pos, span.x, current_beat)
+	var p1 := chain_point(chain_info, head_pos, mid_pos, tail_pos, span.y, current_beat)
+	var segment := p1 - p0
+	var segment_len := segment.length()
+	var center := (p0 + p1) * 0.5
+	beat = lerpf(chain_info.head_beat, chain_info.tail_beat, (span.x + span.y) * 0.5)
+	transform.origin = center
+	if segment_len > 0.0001:
+		var dir := segment / segment_len
 		var side := Vector3.UP.cross(dir)
 		if side.length_squared() < 0.000001:
 			side = Vector3.RIGHT
 		side = side.normalized()
-		transform.basis = Basis(side, dir.cross(side), dir)
+		transform.basis = Basis(side, dir.cross(side).normalized(), dir)
 	
-	# The link model is a 0.5 m plate, but slices are far apart: a 1-beat chain with two links
-	# puts them 2 m apart, so the old build showed a row of detached squares with a gap between
-	# each. Stretch each link along z to exactly span the distance to its neighbour (plus 6% so
-	# the ends meet at bends), which is what the hitbox already assumed - it is 1 m deep while
-	# the mesh was 0.5 m. The last link measures backwards to the one before it.
-	_link_body.scale = Vector3(1.0, 1.0, _link_length(chain_info, head_pos, mid_pos, tail_pos, lerp_factor) * 2.12)
+	# The mesh spans exactly its segment, plus half its width at each end so the outside of a
+	# bend is covered instead of showing a wedge-shaped gap. The link material is additive, so
+	# the small joint overlap brightens the joint rather than z-fighting.
+	var aabb := _mesh.get_aabb()
+	var width := maxf(aabb.size.x, 0.0001)
+	var depth := maxf(aabb.size.z, 0.0001)
+	_link_body.scale = Vector3(1.0, 1.0, (segment_len + width) / depth)
 	
-	# little bit of forgiveness.  if the chain link is more than a meter away
-	# from the chain head, its hitbox is extended to halfway between the link
-	# and the head.
-	var z_distance_from_head := (beat - chain_info.head_beat) * Constants.BEAT_DISTANCE
-	if z_distance_from_head > 1.0:
-		var collision := $Area3D/CollisionShape3D as CollisionShape3D
-		var new_size := z_distance_from_head * 0.5
-		(collision.shape as BoxShape3D).size.z = new_size
-		collision.transform.origin.z = new_size * 0.5 - 0.25
+	# The hitbox is the exact segment: segments touch but never overlap, so a swing cannot hit
+	# two links out of order. The old "forgiveness" extension to the head is gone with it.
+	var cs := $Area3D/CollisionShape3D as CollisionShape3D
+	var box := cs.shape as BoxShape3D
+	if box != null:
+		box.size.z = maxf(segment_len, 0.05)
+	cs.transform.origin = Vector3.ZERO
 	
 	piece_left.set_color(color)
 	piece_right.set_color(color)
+	# The cut halves only belong on screen after a cut; a freshly pooled link can still have
+	# them visible from the scene's default state, which reads as white patches over the line.
+	piece_left.hide_piece()
+	piece_right.hide_piece()
 	_mat.set_shader_parameter(&"color", color)
 	
+	# Do NOT play the authored "Spawn" fly-in: its scale track shrinks the mesh to 10% for
+	# 0.8 s and its position track pulls it 2 m back. On a note cube that is a spawn pop; on a
+	# chain link it breaks the line between the boxes into detached dashes. Reset the mesh
+	# transform so a reused pooled link cannot inherit the middle of a previous animation.
 	var anim := $AnimationPlayer as AnimationPlayer
-	var anim_speed := Map.current_difficulty.note_jump_movement_speed / 9.0
-	anim.speed_scale = maxf(min_speed,anim_speed)
-	anim.play(&"Spawn")
+	anim.stop()
+	var mesh_node := $LinkBody/Mesh as MeshInstance3D
+	mesh_node.position = Vector3.ZERO
+	mesh_node.rotation_degrees = Vector3.ZERO
+	mesh_node.scale = Vector3.ONE
 	
 	mi.visible = true
 
