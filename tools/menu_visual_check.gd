@@ -18,6 +18,10 @@ func _ready() -> void:
 
 	var canvas := game.get_node("MainMenu_OQ_UI2DCanvas") as OQ_UI2DCanvas
 	var menu := canvas.ui_control as MainMenu
+	# The default cover texture is the app logo; capture it before a song replaces it.
+	canvas._input_update()
+	await get_tree().process_frame
+	_save("user://visual_menu_logo.png")
 	menu._select_song(0)
 	# The menu canvas renders only on input; programmatic changes need this nudge.
 	canvas._input_update()

@@ -1,22 +1,8 @@
-# itch.io page — draft
+# itch.io page copy
 
-## Do not publish yet
-
-Publication is gated on v0.3 being finished and verified. This is a fork that improves existing
-work so people can play it — it is not a new game from us, and it must never be presented that way.
-The page leads with the upstream credit, and the known-issues block stays in even after the wall fix
-lands.
-
-Gate — all must be true before the page goes live:
-
-- [ ] Wall-heavy maps hold their frame budget (Gloom and Somewhere Out There measured).
-- [ ] Arcs attach to their head note in play.
-- [ ] HUD and end-of-map card have no overlapping text.
-- [ ] Every other item in `specs/011-v03-polish/spec.md` is done or explicitly cut.
-- [ ] A tag builds an APK that installs cleanly over an older build.
-
-Everything below is ready to paste. The one thing still needed is **screenshots from the headset**;
-the desktop simulator shot has a keyboard overlay and does not represent the game.
+**Target build:** 0.6.1, the first APK with the new icon and menu logo. The 0.6.0 APK still uses
+the previous icon, so do not upload it while the store art shows the new mark. Publish gate and
+upload steps: [itch-push.md](itch-push.md).
 
 ## Project fields
 
@@ -27,96 +13,95 @@ the desktop simulator shot has a keyboard overlay and does not represent the gam
 | Classification | Game |
 | Kind of project | Downloadable |
 | Pricing | No payments (free) |
-| Release status | Released (or In development until the wall fix is verified) |
+| Release status | In development |
 | Platforms | Android |
-| Tags | `vr`, `oculus-quest`, `rhythm`, `godot`, `beat-saber-like`, `open-source`, `sideload` |
+| Genre | Rhythm |
+| Tags | `vr`, `meta-quest`, `rhythm`, `open-source`, `sidequest`, `beatsaver` |
+| AI disclosure | Yes — Graphics |
+| Links | GitHub source, MIT licence |
 
-## Tagline (itch allows ~120 characters)
+## Tagline
 
-> A Beat Saber-style rhythm game for Quest 3, built in Godot: 120 Hz, every map format, maps
-> downloaded in-headset.
+> Open-source rhythm game for Meta Quest 3. BeatSaver maps at 120 Hz, with an in-VR browser and
+> BeatLeader scores.
 
 ## Short description
 
-> Free, MIT-licensed, side-loadable. Native Quest 3 rendering at 120 Hz, v2/v3/v4 Beat Saber map
-> support, and a built-in BeatSaver browser so you can search and download maps without a PC.
+> Free, MIT-licensed and sideloadable. Plays BeatSaver custom maps in v2, v3 and v4 at 120 Hz,
+> filters the library by source, and shows BeatLeader scores in the menu.
 
 ## Full description
 
-> **OpenSaberQ3** is an open-source fork of [BeepSaber](https://github.com/leandrodreamer/BeepSaber)
-> (MIT), working toward better frame stability, clearer rendering and a friendlier map workflow on
-> the Meta Quest 3.
+> **OpenSaberQ3** is an open-source rhythm game for Meta Quest 3, built in Godot 4.6 and based on
+> [BeepSaber](https://github.com/leandrodreamer/BeepSaber) (MIT).
 >
-> **Credit where it belongs:** the game, its engine port and its content pipeline are the work of the
-> BeepSaber authors and the projects it descends from — NeoSpark314's BeepSaber and the Godot Oculus
-> Quest Toolkit. This fork tunes and fixes; it did not invent. The full chain is in `UPSTREAM.md` and
-> `ATTRIBUTION.md` in the repository.
+> - **120 Hz** with physics matched to the display, and Performance / Balanced / Quality presets.
+> - **BeatSaver maps in v2, v3 and v4**, including the hybrid format BeatSaver serves.
+> - **An in-VR map browser**: search, sort, filter and download without a PC.
+> - **Source tags and a source filter** for the library, with automatic backfill for old maps.
+> - **BeatLeader top 10** for the selected map and difficulty, read-only, no account.
+> - Layered hit audio, per-event haptics and an optional in-game analyser.
 >
-> **What it does**
+> Benchmark harness and raw captures: <https://github.com/testyfishy/OpenSaberQ3/blob/godot-4-port/PERF.md>.
+> The shipped default holds **120 fps with 0.01% dropped frames** over three minutes (2 frames in
+> 21,348), and a 2,913-note map holds **120 fps at 0.14% dropped** on Quest 3 at the Performance
+> preset.
 >
-> - Runs at **120 Hz** with the render resolution, MSAA and physics tuned per headset, and a
->   Performance / Balanced / Quality preset if you prefer a different trade.
-> - Loads **v2, v3 and v4 Beat Saber maps**, including the mixed format BeatSaver actually serves.
-> - **Searches and downloads BeatSaver maps from inside the headset** — no PC, no cable.
-> - Has a **local upload page** if you would rather drop a zip in from a browser on your network.
-> - Ten visual options, each with its own switch, applied without restarting.
+> **Credits.** The game, engine port and content pipeline are the work of the BeepSaber authors
+> and the projects it descends from — NeoSpark314's BeepSaber and the Godot Oculus Quest Toolkit.
+> This fork tunes and fixes. The full chain is in the repository's `UPSTREAM.md` and
+> `ATTRIBUTION.md`.
 >
-> **How it is measured**
->
-> Every claim in the repository has a capture behind it, taken with the project's own benchmark
-> harness on a Quest 3. The shipped default holds **120 fps with 0.01% dropped frames over three
-> minutes** (2 frames in 21,348), p99 frame time 9.97 ms against an 8.33 ms budget. The harness, the
-> raw numbers and the failures are all published in the repo.
->
-> **Known rough edges** — please read before downloading
->
-> - **Wall-heavy maps stutter.** Maps with thousands of obstacles (e.g. "Gloom", "Somewhere Out
->   There") drop frames on the current release. A fix is implemented and being verified.
-> - Some HUD text overlaps at the bottom right, and the end-of-map card does not lay out cleanly.
-> - Hit audio is serviceable but still being redesigned; haptics were reworked recently.
-> - Quest 3 is the tested target. Other headsets will probably work, but are untested.
+> **AI-generated content: Graphics.** The logo, app icon and cover are AI-generated vector artwork,
+> created with AI assistants from a design brief; the sources and provenance are in `docs/brand/`.
+> The code is human-directed with AI assistance.
 >
 > **Install**
 >
-> 1. Enable Developer Mode for your headset in the Meta Horizon app.
+> 1. Enable **Developer Mode** for the headset in the Meta Horizon app.
 > 2. Download the APK below.
-> 3. `adb install -r OpenSaberQ3.apk`, or use a sideloading tool.
-> 4. Launch **Open Saber Q3** from Unknown Sources.
+> 3. `adb install -r OpenSaberQ3-0.6.1.apk`, or use SideQuest.
+> 4. Launch **Open Saber Q3** from *Unknown Sources*.
 >
-> No Beat Saber assets are included, and this project is not affiliated with Beat Games or Meta.
+> itch is a download host: it does not install Android apps for you. Sideloading is required.
+>
+> **Known issues**
+>
+> - White highlights at chain joints are cosmetic.
+> - After a long idle the headset's audio session can freeze; reboot the headset.
+> - No HRTF: left/right is stereo panning, above/below is not reproduced.
+> - 360°/90° lane rotation is parsed but not applied; v4 event-box groups and VFX boxes are
+>   ignored.
+> - The BeastSaber `.bplist` import is not in this build.
+>
+> Quest 3 is the tested target. Other headsets may work but are untested.
+>
+> No Beat Saber assets are included. Not affiliated with or endorsed by Beat Games, Meta,
+> BeatSaver or BeatLeader.
 >
 > Source, issues and the full measurement log: <https://github.com/testyfishy/OpenSaberQ3>
+
+## Screenshot captions
+
+Use these under the real captures, in this order:
+
+1. **Mid-song on a dense map** — sabers, notes and HUD.
+2. **BeatSaver browser** — search results with covers.
+3. **Library by source** — the source filter and tags.
+4. **BeatLeader** — the top 10 for the selected map.
+5. **Settings** — the Performance preset and visual toggles.
+6. **End-of-map card** — the score summary.
 
 ## Assets
 
 | asset | spec | status |
 |---|---|---|
-| Cover image | 630×500 minimum (itch recommends 630×500) | `docs/images/itch-cover.png` — done |
-| Screenshots | 3–5, 16:9, 1280×720 or larger | **needs headset capture** |
-| Gameplay GIF/video | optional but strongly recommended | needs headset capture |
-| Upload | `build/OpenSaberQ3-<version>.apk` (~84 MB) | built per release |
+| Cover | 630×500 | `docs/images/itch-cover.png` — ready |
+| Banner | 1280×640 | `docs/images/banner.png` — ready |
+| Icon | 512×512 | `docs/images/logo.png` — ready |
+| Screenshots | 3–5, 16:9, 1280×720 or larger | **needs real headset captures** |
+| Gameplay clip | 15–30 s, optional but recommended | **needs real headset capture** |
+| Upload | Android APK, 0.6.1 | built with the new icon |
 
-Screenshot list worth taking, in order:
-
-1. Mid-song on a dense map, sabers and notes visible, HUD readable.
-2. The BeatSaver browser with results and covers.
-3. Settings, showing the Performance preset and the visual toggles.
-4. End-of-map score card.
-
-## Publish checklist
-
-- [ ] Headset capture: screenshots + a 15–30 s clip.
-- [ ] Tag the release in git and rebuild the APK from that tag.
-- [ ] Verify the APK installs cleanly on a headset that already has an older build.
-- [ ] Confirm the known-issues text matches what is actually true at that commit.
-- [ ] Upload the APK, set the version string, mark Android.
-- [ ] Paste the description above, add tags, set the cover image.
-- [ ] Publish, then link the itch page from the GitHub README and the release notes.
-
-## Notes
-
-- itch.io does not install Android apps for the user; it is a download host. Say "sideload" plainly
-  so nobody expects a store install.
-- Do not claim "all maps supported" until the wall fix is verified.
-- If the page goes up before v0.3 lands, set **Release status: In development** and say which
-  release the download is.
+The menu and leaderboard renders in `docs/images/` are desktop captures with the simulator overlay;
+they are not store screenshots. Take the real ones in the headset.

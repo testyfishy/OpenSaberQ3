@@ -19,8 +19,10 @@ redistribution are permitted by that licence provided the notice is kept — whi
 
 | Asset | Author | License | Notes |
 |---|---|---|---|
-| "Time Lapse" demo track | TheFatRat | per upstream `LICENSE`/credits | bundled demo song, not part of the engine work |
-| BeepSaber logo, UI art, saber models | upstream authors | MIT unless noted | inherited; see `LICENSE` |
+| "Time Lapse" demo track | TheFatRat | **not documented in this repo** | bundled by upstream; no licence grant is recorded here. Remove it from the itch build and the next release unless permission is confirmed. |
+| BeepSaber UI art and saber models (the old BeepSaber logo/icon is replaced by the artwork below) | upstream authors | MIT unless noted | inherited; see `LICENSE` |
+| Logo, app icon, banner and wordmarks | AI-generated vector artwork created with AI assistants (DeepSeek V4 Flash wrote the SVG; Claude Opus 5.5 wrote the design brief), via OpenCode; reviewed by the project owner | MIT | original SVG in `docs/brand/`; no image-generation model, stock image or third-party artwork; text set in Roboto and converted to paths |
+| Roboto Medium | Google | **Apache-2.0** | wordmark typeface, `OQ_Toolkit/OQ_UI2D/theme/Roboto-Medium.ttf`; only glyph paths are embedded in the brand SVGs |
 | Nightsky skybox | ESO / S. Brunier | **CC-BY-4.0** | `https://www.eso.org/public/images/eso0932a/` — attribution required. Present in `arpruss/OpenSaberPlus`, **not** in this fork's base. If cherry-picked, this credit must ship with it |
 | Hit-feedback one-shots — `game/data/hits/{soft,hard,dull}_0{1,2,3}.wav`, `accent_01.wav` (9 files) | generated for this fork by `tools/audio/gen_hitsounds.py` | **MIT** (same as this repository) | No third-party samples, so no attribution obligation. Synthesised from scratch (deterministic seeds); regenerating produces byte-identical files. Provenance: created 2026-11-01 for `specs/002-hit-audio-research` |
 
@@ -29,6 +31,8 @@ below), so it was removed 2026-11-01 and replaced by the generated one-shots abo
 `game/sabers/particles/sword_clash.{8a,10}.ogg` are inherited from upstream BeepSaber and are
 still referenced by the particle saber's animation track; no upstream provenance record exists
 for them either — they are no longer used for hit feedback.
+
+The current logo, app icon, banner and wordmarks are AI-generated vector artwork: an AI coding assistant (DeepSeek V4 Flash) wrote the SVG from a design brief by Claude Opus 5.5 (Anthropic), both via OpenCode. The sources, the render script and the provenance note are in `docs/brand/` and `docs/brand.md`. They contain no third-party images.
 
 If an asset's provenance cannot be established, it does not ship. See spec FR-029.
 

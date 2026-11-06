@@ -9,7 +9,7 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 [![Godot](https://img.shields.io/badge/Godot-4.6.3-478cbf)](UPSTREAM.md)
 [![Quest 3](https://img.shields.io/badge/Meta-Quest%203-1c1e21)](https://www.meta.com/quest/quest-3/)
 
-![OpenSaberQ3](docs/images/cover.png)
+![OpenSaberQ3](docs/images/banner.png)
 
 **v0.6.0** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
 [install](#download-and-install). Built on BeepSaber and its lineage
@@ -72,7 +72,8 @@ adb install -r OpenSaberQ3-0.6.0.apk
 
 Launch **Open Saber Q3** from *Unknown Sources*. Installs alongside upstream BeepSaber; songs and
 scores stay separate. Upgrading over 0.5.x keeps maps, scores and settings. Builds are test-signed,
-not store builds.
+not store builds. The new icon and menu logo ship in 0.6.1; the 0.6.0 APK still uses the previous
+icon.
 
 ## Documentation
 
@@ -99,7 +100,11 @@ Versions, commands and known gaps: [UPSTREAM.md](UPSTREAM.md).
   ignored. Basic lighting events are supported.
 - The white highlights at chain joints are cosmetic.
 
-## License
+## Credits and license
+
+**Artwork:** logo, icon and banner are AI-generated vector artwork created with AI assistants
+(DeepSeek V4 Flash and Claude Opus 5.5) from a design brief, reviewed by the owner; sources,
+palette and provenance are in [docs/brand.md](docs/brand.md).
 
 MIT — [LICENSE](LICENSE) retains the original copyright (© 2020 Holger Dammertz). Contains no Beat
 Saber assets and does not use the Beat Saber name, logo or branding. Not affiliated with or

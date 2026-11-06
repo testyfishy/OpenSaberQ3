@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+<radialGradient id="bgs" cx="50%" cy="42%" r="72%"><stop offset="0" stop-color="#0E1A2B"/><stop offset="1" stop-color="#050A12"/></radialGradient>
+<clipPath id="tiles"><rect x="0" y="0" width="512" height="512" rx="112"/></clipPath>
+<clipPath id="reds"><polygon points="815.40,-151.56 -331.42,651.44 -732.92,78.04 413.89,-724.97"/></clipPath>
+<clipPath id="blues"><polygon points="843.42,-139.44 -303.40,663.56 98.11,1236.97 1244.92,433.96"/></clipPath>
+</defs>
+<g clip-path="url(#tiles)">
+<rect width="512" height="512" fill="url(#bgs)"/>
+<rect x="131.0" y="131.0" width="250.0" height="250.0" rx="40.0" fill="#E8364F" clip-path="url(#reds)"/>
+<rect x="131.0" y="131.0" width="250.0" height="250.0" rx="40.0" fill="#2F7BFF" clip-path="url(#blues)"/>
+<line x1="70.9" y1="385.6" x2="447.7" y2="121.8" stroke="#31D7F5" stroke-width="30" stroke-linecap="round" opacity="0.06"/>
+<line x1="70.9" y1="385.6" x2="447.7" y2="121.8" stroke="#31D7F5" stroke-width="18" stroke-linecap="round" opacity="0.12"/>
+<line x1="70.9" y1="385.6" x2="108.6" y2="359.2" stroke="#FFA53A" stroke-width="18" stroke-linecap="round"/>
+<line x1="108.6" y1="359.2" x2="447.7" y2="121.8" stroke="#31D7F5" stroke-width="11" stroke-linecap="round"/>
+</g>
+</svg>
