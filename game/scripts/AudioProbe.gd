@@ -2,81 +2,103 @@ extends Node
 
 # Bench-only audio probe (part 6 instrument).
 #
-# Taps the Master bus after music, SFX and the hit limiter, and writes a 16-bit stereo WAV for
-# offline analysis with tools/perf/audio_probe.py. This is the signal the player is meant to hear;
-# a headset microphone would add the room, the speakers and AGC to the measurement.
+# Taps two points on the mixer and writes 16-bit stereo WAVs for offline analysis:
+#   <prefix>.wav      - Master, after music, SFX and the hit limiter (what the player hears)
+#   <prefix>_sfx.wav  - SFX only, so hit levels can be measured without the music masking them
+#
+# A headset microphone would add the room, the speakers and AGC to the measurement; these taps are
+# the signal the game actually produces.
 #
 # Created by BenchmarkRunner only when the flag has `[bench] audio_probe=<seconds>`.
 
 const MAX_SECONDS := 60.0
+const TRACK_BUSES := [&"Master", &"SFX"]
 
-var _capture: AudioEffectCapture
-var _bus := 0
-var _effect_index := -1
+var _tracks: Array = []
 var _rate := 44100
-var _path := ""
-var _data := PackedByteArray()
-var _frames := 0
 var _limit_frames := 0
 var _recording := false
 
-func start(path: String, seconds: float) -> bool:
+func start(prefix: String, seconds: float) -> bool:
 	if _recording:
 		return false
-	_bus = AudioServer.get_bus_index(&"Master")
-	if _bus < 0:
-		vr.log_error("AUDIOPROBE: no Master bus")
-		return false
-	_capture = AudioEffectCapture.new()
-	_capture.buffer_length = 1.0
-	_effect_index = AudioServer.get_bus_effect_count(_bus)
-	AudioServer.add_bus_effect(_bus, _capture)
 	_rate = int(AudioServer.get_mix_rate())
-	_path = path
 	_limit_frames = int(clampf(seconds, 0.5, MAX_SECONDS) * _rate)
-	_frames = 0
-	_data = PackedByteArray()
-	_data.resize(_limit_frames * 4)
+	for bus_name: StringName in TRACK_BUSES:
+		var bus := AudioServer.get_bus_index(bus_name)
+		if bus < 0:
+			vr.log_error("AUDIOPROBE: no %s bus" % bus_name)
+			continue
+		var capture := AudioEffectCapture.new()
+		capture.buffer_length = 1.0
+		var effect_index := AudioServer.get_bus_effect_count(bus)
+		AudioServer.add_bus_effect(bus, capture)
+		var suffix := "" if bus_name == &"Master" else "_" + String(bus_name).to_lower()
+		# Packed arrays are value types: keep the buffer in the dictionary and write it back after
+		# each read. An `as`-cast resize would resize a copy and leave the stored buffer empty.
+		var buffer := PackedByteArray()
+		buffer.resize(_limit_frames * 4)
+		_tracks.append({
+			"bus": bus,
+			"effect": effect_index,
+			"capture": capture,
+			"path": prefix + suffix + ".wav",
+			"frames": 0,
+			"data": buffer,
+		})
+	if _tracks.is_empty():
+		return false
 	_recording = true
 	set_process(true)
-	vr.log_info("AUDIOPROBE: recording %.1fs to %s (%d Hz)" % [seconds, path, _rate])
+	vr.log_info("AUDIOPROBE: recording %.1fs to %s (%d Hz)" % [seconds, prefix, _rate])
 	return true
 
-func stop() -> String:
+func stop() -> Array[String]:
+	var written: Array[String] = []
 	if not _recording:
-		return ""
+		return written
 	_recording = false
 	set_process(false)
-	if _capture != null:
-		AudioServer.remove_bus_effect(_bus, _effect_index)
-		_capture = null
-		_effect_index = -1
-	_data.resize(_frames * 4)
-	var wav := AudioStreamWAV.new()
-	wav.format = AudioStreamWAV.FORMAT_16_BITS
-	wav.mix_rate = _rate
-	wav.stereo = true
-	wav.data = _data
-	var err := wav.save_to_wav(_path)
-	if err != OK:
-		vr.log_error("AUDIOPROBE: cannot write %s (%s)" % [_path, error_string(err)])
-		return ""
-	vr.log_info("AUDIOPROBE: wrote %s (%d frames)" % [_path, _frames])
-	return _path
+	for track: Dictionary in _tracks:
+		var capture: AudioEffectCapture = track["capture"]
+		AudioServer.remove_bus_effect(int(track["bus"]), int(track["effect"]))
+		var data: PackedByteArray = track["data"]
+		data.resize(int(track["frames"]) * 4)
+		var wav := AudioStreamWAV.new()
+		wav.format = AudioStreamWAV.FORMAT_16_BITS
+		wav.mix_rate = _rate
+		wav.stereo = true
+		wav.data = data
+		var path: String = track["path"]
+		var err := wav.save_to_wav(path)
+		if err == OK:
+			written.append(path)
+			vr.log_info("AUDIOPROBE: wrote %s (%d frames)" % [path, int(track["frames"])])
+		else:
+			vr.log_error("AUDIOPROBE: cannot write %s (%s)" % [path, error_string(err)])
+	_tracks.clear()
+	return written
 
 func _process(_delta: float) -> void:
-	if not _recording or _capture == null:
+	if not _recording:
 		return
-	var available := _capture.get_frames_available()
-	if available <= 0:
-		return
-	var frames := _capture.get_buffer(available)
-	for frame in frames:
-		if _frames >= _limit_frames:
-			break
-		var offset := _frames * 4
-		_data.encode_s16(offset, int(clampf(frame.x, -1.0, 1.0) * 32767.0))
-		_data.encode_s16(offset + 2, int(clampf(frame.y, -1.0, 1.0) * 32767.0))
-		_frames += 1
-	if _frames >= _limit_frames:
-		stop()
+	for track: Dictionary in _tracks:
+		var capture: AudioEffectCapture = track["capture"]
+		var available := capture.get_frames_available()
+		if available <= 0:
+			continue
+		var frames := capture.get_buffer(available)
+		var data: PackedByteArray = track["data"]
+		var count: int = track["frames"]
+		for frame in frames:
+			if count >= _limit_frames:
+				break
+			var offset := count * 4
+			data.encode_s16(offset, int(clampf(frame.x, -1.0, 1.0) * 32767.0))
+			data.encode_s16(offset + 2, int(clampf(frame.y, -1.0, 1.0) * 32767.0))
+			count += 1
+		track["frames"] = count
+		track["data"] = data
+		if count >= _limit_frames:
+			stop()
+			return

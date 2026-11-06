@@ -17,7 +17,7 @@ $pkg = "io.github.testyfishy.opensaberq3"
 $ext = "/sdcard/Android/data/$pkg/files"
 Wait-ForBattery -Adb $adb -Serial $d
 
-& $adb -s $d shell "am force-stop $pkg; am force-stop com.oculus.guardian; setprop debug.oculus.guardian_pause 1; rm -f $ext/bench.csv $ext/bench_meta.txt $ext/bench.flag $ext/bench.flag.consumed"
+& $adb -s $d shell "am force-stop $pkg; am force-stop com.oculus.guardian; setprop debug.oculus.guardian_pause 1; rm -f $ext/bench.csv $ext/bench_meta.txt $ext/bench.flag $ext/bench.flag.consumed $ext/audio_probe.wav $ext/audio_probe_sfx.wav"
 
 @"
 [bench]
