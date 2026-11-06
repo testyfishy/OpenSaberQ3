@@ -101,9 +101,9 @@ func process_event(data: EventInfo) -> void:
 	if data.type == 5:
 		# FR-029: light boost (v2 type 5, and v3 colorBoostBeatmapEvents converted to it).
 		# It swaps the palette future on-events use; it does not force lights on.
-		Map.boost_active = data.value != 0
-		left_color = Map.env_left_boost if Map.boost_active else Map.env_left
-		right_color = Map.env_right_boost if Map.boost_active else Map.env_right
+		MapPalette.boost_active = data.value != 0
+		left_color = MapPalette.env_left_boost if MapPalette.boost_active else MapPalette.env_left
+		right_color = MapPalette.env_right_boost if MapPalette.boost_active else MapPalette.env_right
 		return
 	# 6/7 are the extra left/right light sets. Our room has one set per side, so they fold into
 	# the side they belong to instead of being dropped (FR-030 / C1).

@@ -98,7 +98,7 @@ func spawn(chain_info: ChainInfo, current_beat: float, head_pos: Vector2, tail_p
 	# can behave weirdly (ex. AnimationPlayer won't always play correctly)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	
-	var color := Map.color_left if chain_info.color == 0 else Map.color_right
+	var color := MapPalette.color_left if chain_info.color == 0 else MapPalette.color_right
 	speed = NoteMotion.speed_at(chain_info.head_beat)
 	which_saber = chain_info.color
 	

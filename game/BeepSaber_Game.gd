@@ -119,7 +119,7 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 	
 	_apply_map_colours()
 	if Map.event_stack.is_empty():
-		event_driver.set_all_on(Map.env_left, Map.env_right)
+		event_driver.set_all_on(MapPalette.env_left, MapPalette.env_right)
 	else:
 		event_driver.set_all_off()
 	
@@ -506,17 +506,17 @@ func _apply_glow() -> void:
 			env.set_glow_level(i, _glow_base_levels[i - 1])
 
 func _apply_map_colours() -> void:
-	update_left_color(Map.env_left)
-	update_right_color(Map.env_right)
+	update_left_color(MapPalette.env_left)
+	update_right_color(MapPalette.env_right)
 	# FR-001: the blades are the same colour as the cubes they cut. The map wins unless the
 	# player has explicitly overridden colours.
 	if not Settings.disable_map_color:
-		left_saber.set_color(Map.color_left)
-		right_saber.set_color(Map.color_right)
+		left_saber.set_color(MapPalette.color_left)
+		right_saber.set_color(MapPalette.color_right)
 	standing_ground.apply_visual_settings()
 	vr.log_info("MAP palette: env=%s notes=%s/%s room=%s/%s wall=%s mode=%d" % [
-		Map.environment_name, Map.color_left, Map.color_right, Map.env_left, Map.env_right,
-		Map.wall_color, Settings.environment_mode])
+		MapPalette.environment_name, MapPalette.color_left, MapPalette.color_right, MapPalette.env_left, MapPalette.env_right,
+		MapPalette.wall_color, Settings.environment_mode])
 
 func _apply_sky() -> void:
 	var env := ($WorldEnvironment as WorldEnvironment).environment

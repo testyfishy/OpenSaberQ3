@@ -116,9 +116,9 @@ func _ready() -> void:
 				dump_line(f, line)
 			dump_line(f, "    BPM segments=%d" % Map.bpm_segments)
 			dump_line(f, "    PALETTE notes=%s/%s room=%s/%s wall=%s mode=%d" % [
-				Map.color_left.to_html(), Map.color_right.to_html(),
-				Map.env_left.to_html(), Map.env_right.to_html(),
-				Map.wall_color.to_html(), Settings.environment_mode])
+				MapPalette.color_left.to_html(), MapPalette.color_right.to_html(),
+				MapPalette.env_left.to_html(), MapPalette.env_right.to_html(),
+				MapPalette.wall_color.to_html(), Settings.environment_mode])
 
 	# Sentinel for the batch script: a crash mid-map also leaves a non-empty file, so
 	# "non-empty" is not "complete".

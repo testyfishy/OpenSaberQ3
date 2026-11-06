@@ -62,13 +62,6 @@ static var event_thread_1 := Thread.new()
 # Notes, the room's lights and the walls each take a colour from the track, in order:
 # map environment colours -> map note colours -> the environment's default scheme -> the
 # player's settings. "Classic" skips the environment scheme and reproduces the old look.
-static var env_left: Color
-static var env_right: Color
-static var env_left_boost: Color
-static var env_right_boost: Color
-static var wall_color: Color
-static var boost_active := false
-static var environment_name := ""
 # FR-030: map features this build cannot fully render. Surfaced in the pause menu and logged,
 # instead of a map silently playing half its design.
 static var unsupported_features := PackedStringArray()
@@ -76,50 +69,12 @@ static var unsupported_features := PackedStringArray()
 static var fakes_filtered := 0
 static var bpm_segments := 1
 
-static func _read_colour(data: Dictionary, key: String, fallback: Color) -> Color:
-	if data.has(key) and data[key] is Dictionary:
-		@warning_ignore("unsafe_cast")
-		var d := data[key] as Dictionary
-		return Color(
-			Utils.get_float(d, "r", fallback.r),
-			Utils.get_float(d, "g", fallback.g),
-			Utils.get_float(d, "b", fallback.b)
-		)
-	return fallback
-
+# --- Palette (FR-025/FR-028) --------------------------------------------------------------
+# The colour rules live in MapPalette (specs/013 FR-007); this wrapper keeps the loader and
+# the game on the Map facade.
 static func set_colors_from_custom_data() -> void:
-	environment_name = current_info.environment_name if current_info != null else ""
-	var profile := EnvironmentProfiles.get_profile(environment_name)
-	var classic := Settings.environment_mode == 1
-	color_left = Settings.color_left if classic else profile.note_left
-	color_right = Settings.color_right if classic else profile.note_right
-	env_left = Settings.color_left if classic else profile.env_left
-	env_right = Settings.color_right if classic else profile.env_right
-	env_left_boost = Settings.color_left if classic else profile.boost_left
-	env_right_boost = Settings.color_right if classic else profile.boost_right
-	wall_color = EnvironmentProfiles.DEFAULT.wall if classic else profile.wall
-	boost_active = false
-	if Settings.disable_map_color:
-		return
+	MapPalette.set_colors_from_custom_data(current_info, current_difficulty)
 
-	var info_data := current_info.custom_data if current_info != null else {}
-	var diff_data := current_difficulty.custom_data if current_difficulty != null else {}
-	color_left = _read_colour(diff_data, "_colorLeft", _read_colour(info_data, "_colorLeft", color_left))
-	color_right = _read_colour(diff_data, "_colorRight", _read_colour(info_data, "_colorRight", color_right))
-	env_left = _read_colour(diff_data, "_envColorLeft", _read_colour(info_data, "_envColorLeft", env_left))
-	env_right = _read_colour(diff_data, "_envColorRight", _read_colour(info_data, "_envColorRight", env_right))
-	env_left_boost = _read_colour(diff_data, "_envColorLeftBoost", _read_colour(info_data, "_envColorLeftBoost", env_left_boost))
-	env_right_boost = _read_colour(diff_data, "_envColorRightBoost", _read_colour(info_data, "_envColorRightBoost", env_right_boost))
-	wall_color = _read_colour(diff_data, "_obstacleColor", _read_colour(info_data, "_obstacleColor", wall_color))
-
-	# Readability guards (FR-028): the room stays below 0.6x the note brightness, and a palette
-	# whose two hues are nearly the same (or nearly grey) falls back to the environment default.
-	var guard := func(env: Color, note: Color, fallback: Color) -> Color:
-		if absf(env.h - note.h) < 0.0834 or env.s < 0.25:
-			return fallback
-		return env.darkened(maxf(0.0, env.v - note.v * 0.6))
-	env_left = guard.call(env_left, color_left, profile.env_left)
-	env_right = guard.call(env_right, color_right, profile.env_right)
 
 static func _is_fake_v3(entry: Dictionary) -> bool:
 	var cd := Utils.get_dict(entry, "customData", {})

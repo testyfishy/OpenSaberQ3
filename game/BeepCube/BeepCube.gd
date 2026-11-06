@@ -61,7 +61,7 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	# can behave weirdly (ex. AnimationPlayer won't always play correctly)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	
-	var color := Map.color_left if note_info.color == 0 else Map.color_right
+	var color := MapPalette.color_left if note_info.color == 0 else MapPalette.color_right
 	# FR-004: a colour the map puts on this one note wins over the scheme, which in turn
 	# already fell back to Settings when the map had none. `disable_map_color` suppresses
 	# both, so settings win outright.

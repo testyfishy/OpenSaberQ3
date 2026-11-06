@@ -11,9 +11,9 @@ var _before := OS.get_cmdline_user_args().has("before")
 
 func _ready() -> void:
 	# The tool runs without a map, so seed the palette statics the wall material reads.
-	Map.color_left = Color(0.85, 0.10, 0.12)
-	Map.color_right = Color(0.10, 0.25, 0.95)
-	Map.wall_color = Color(0.70, 0.06, 0.06)
+	MapPalette.color_left = Color(0.85, 0.10, 0.12)
+	MapPalette.color_right = Color(0.10, 0.25, 0.95)
+	MapPalette.wall_color = Color(0.70, 0.06, 0.06)
 	var env := WorldEnvironment.new()
 	var e := Environment.new()
 	e.background_mode = Environment.BG_COLOR
