@@ -34,6 +34,30 @@ policy. The redraw cost did not rise; if anything it fell, but with one or two X
 direction, not a number. The stale-texture count is the thing this probe cannot see; the player's
 eyes are the final judge on that.
 
+## BeatSaver panel cost - measured
+
+`panel_cost` in the bench meta, 60 live scroll frames, Quest 3, Performance preset:
+
+| | mean | p95 |
+|---|---|---|
+| CPU | 0.298 ms | 0.875 ms |
+| GPU | 0.380 ms | 1.204 ms |
+
+VrApi for the same run: fps 119, App 6.13 ms, **GPU 0.89** (in-game baseline with the panel closed
+is ~0.75-0.78).
+
+Conclusion: the per-frame redraw is **under the adviser's 0.5 ms GPU mean threshold**, so the
+"panel redraw is the hitch" theory is only partly right. What is left is the panel's own fill: a
+896x856 textured quad with `transparent_bg = true`, drawn into a VR scene. The texture-offset list
+would remove the redraw but **not** that fill, so it would not close the 0.89 -> 0.78 gap.
+
+Next, in order of expected return:
+1. `transparent_bg = false` on the BeatSaver canvas if the panel is fully opaque (removes blending
+   across a large screen area).
+2. Check the viewport for mipmaps/MSAA/HDR-2D left on (none found in the scene, worth re-checking
+   after any OQ update).
+3. Only then consider lowering the panel texture resolution, which costs text sharpness.
+
 ## UI-1 - One canvas refresh helper
 
 Replace the three separate refresh paths (`vr_slider._request_refresh`, `BeatSaverPanel._canvas_input_update`,
