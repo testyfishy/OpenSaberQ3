@@ -1,7 +1,7 @@
 extends GameState
 class_name GameStateMapComplete
 
-func _ready(game: BeepSaber_Game) -> void:
+func _ready(game) -> void:
 	# FR-036: no hit voice or music duck survives a state change.
 	if GlobalReferences.hit_audio != null:
 		GlobalReferences.hit_audio.call("stop_all")

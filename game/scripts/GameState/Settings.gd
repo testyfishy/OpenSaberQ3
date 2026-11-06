@@ -1,7 +1,7 @@
 extends GameState
 class_name GameStateSettings
 
-func _ready(game: BeepSaber_Game) -> void:
+func _ready(game) -> void:
 	game.main_menu._hide()
 	game.settings_canvas._show()
 	game.show_MapSourceDialogs(true)

@@ -1,7 +1,7 @@
 extends GameState
 class_name GameStateNewHighScore
 
-func _ready(game: BeepSaber_Game) -> void:
+func _ready(game) -> void:
 	# populate highscore panel with records
 	game.highscore_panel.load_highscores(
 		Map.current_info,Map.current_difficulty.difficulty_rank)
