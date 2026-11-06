@@ -169,6 +169,12 @@ the node and defers the add on a Window, so a desktop `_ready()` cannot trip the
 
 ## Remaining parts (after the UI)
 
+**Performance rule (player, 2026-11-05):** if a part regresses the measured performance, do not
+revert on sight. Consult the advisor on buying the performance back *with the feature still on*;
+if a viable fix exists, keep the feature and implement it. Only if no acceptable fix exists,
+revert that part and keep the rest of the work. Every part still needs its own before/after
+numbers (fps median, App ms, GPU %, p99/max frame interval) and must leave the game playable.
+
 5. **View state** - the game-state scripts.
 6. **Audio** - saber pool, ducking, analyser.
 7. **Pooling** - `PooledNode3D` unification.
