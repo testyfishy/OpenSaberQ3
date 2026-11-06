@@ -193,8 +193,23 @@ numbers (fps median, App ms, GPU %, p99/max frame interval) and must leave the g
    storage that a release build cannot `run-as` into. Pull a corpus (or install a debug build and
    copy them out) before slice 2.
    
-   Remaining slices, in order: `MapPalette` (colour rules; needs the map-dump corpus), `MapSupport`
-   (`unsupported_features`/fake detection), then `MapData` (the stacks and format loaders).
+   **Slice 2 done.** `MapPalette.gd` (78 lines) owns the note/room/wall colour rules, the Classic
+   override, map/difficulty custom data and the FR-028 readability guards. `Map.gd` keeps
+   `set_colors_from_custom_data()` as a facade and passes its info/difficulty in, so the palette
+   does not depend on the loader; note, chain, wall, event-driver and game reads use
+   `MapPalette.*`. `Map.gd` is now 580 lines (from 716). Gate: the hardened dump is
+   **byte-identical** across 21 maps / 260,156 lines, PALETTE lines included.
+
+   **The dump harness needed fixing first** (`da33454`). Two sources of false diffs: the stacks
+   are filled by two threads so append order varied, and a process that crashed mid-map still
+   left a non-empty file the batch accepted. Categories are now sorted and every run ends with an
+   `END` sentinel that the batch requires (three attempts). The corpus lives at
+   `F:\Dev\BeepSaberBin\map-corpus\Songs` (21 maps pulled from the headset with a debug build
+   and `run-as`).
+
+   Remaining slices, in order: `MapSupport` (`unsupported_features`/fake detection; the dump
+   covers fake filtering, add a synthetic check for the unsupported list), then `MapData` (the
+   stacks and format loaders - the largest and last).
 
 5. **View state - planned, not started.** The six `game/scripts/GameState/*.gd` classes repeat a
    ~20-line show/hide block, but the differences matter: Paused deliberately leaves the sabers
