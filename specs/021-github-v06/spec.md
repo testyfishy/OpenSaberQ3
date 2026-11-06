@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-06
 
-**Status**: In progress (G0 approved with changes)
+**Status**: In progress - G4 approved, publishing
 
 **Input**: Player: "Lets push this v6 to github and update the whole thing. The readme is a big
 too big. I just want enough detail to showcase the work and improvements from prior work and
@@ -113,4 +113,5 @@ release, which matches the existing v0.2 release and the "download the APK" link
 
 | Gate | Asked | Verdict | Action taken |
 |---|---|---|---|
+| G4 | 021 GitHub v0.6 publish (49a38e1 / e4afae3) | APPROVE: push branch + 4 tags and publish v0.6.0-q3; serial/LAN in history already public on origin, HEAD clean; qualify every perf claim with its conditions, add the non-affiliation line and the signing/upgrade line | Release notes drafted with conditions + disclaimers; pushing next |
 | G0 | README structure, subpage split, publish scope and release notes | GO WITH CHANGES: lead with a since-the-fork progress table (before -> now -> evidence link), then v0.6 bullets; cut Build/Limitations; push all four -q3 tags but only the v0.6.0 release; confirm no keystore/credentials in history and back up the keystore; add a pre-push hygiene scan and the public-reader release-note items; link check + rendered README after push | Spec updated (FR-012/FR-013, SC-007); implementation starts with the hygiene scan |
