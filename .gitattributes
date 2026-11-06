@@ -1,0 +1,14 @@
+# Line endings: LF in the repository, whatever the platform. Without this, a tool that rewrites a
+# file with CRLF shows up as a whole-file diff (see b6533c4, which is 5 real lines plus 3000 lines
+# of line-ending churn). Godot reads LF fine on every platform.
+* text=auto eol=lf
+
+# Binary assets: never inspect or normalise these.
+*.png binary
+*.gif binary
+*.wav binary
+*.ogg binary
+*.ttf binary
+*.glb binary
+*.obj binary
+*.mtl binary
