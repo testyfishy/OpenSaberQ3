@@ -1,6 +1,8 @@
 extends RefCounted
 class_name Map
 
+const MapTimer := preload("res://game/scripts/MapTimer.gd")
+
 # this would have basically been impossible to figure out without constantly
 # referencing the beat saber modding group wiki.
 # https://bsmg.wiki/mapping/map-format.html
@@ -21,110 +23,17 @@ static var color_left: Color
 static var color_right: Color
 
 # --- BPM segments (FR-025) ---------------------------------------------------------------
-# Maps may change BPM mid-song. Every beat<->time conversion in the game goes through these
-# functions, so notes, walls, arcs, light events, the bot and the bench clock agree after a
-# change instead of drifting against the audio.
-static var _bpm_beats := PackedFloat32Array([0.0])
-static var _bpm_values := PackedFloat32Array([60.0])
-static var _bpm_times := PackedFloat32Array([0.0])
-
-static func _load_bpm_events(map_data: Dictionary, base_bpm: float, audio_data: Dictionary = {}) -> void:
-	var points: Array[Vector2] = [Vector2(0.0, base_bpm)]
-	for e: Variant in Utils.get_array(map_data, "bpmEvents", []):
-		if not (e is Dictionary):
-			continue
-		@warning_ignore("unsafe_cast")
-		var d := e as Dictionary
-		var beat := Utils.get_float(d, "b", 0.0)
-		var bpm := Utils.get_float(d, "m", 0.0)
-		if bpm > 1.0 and beat >= 0.0:
-			points.append(Vector2(beat, bpm))
-	# v2 keeps BPM changes in the event list: type 100 (older maps use 10). The new BPM is
-	# usually the event value; some tools write it as the float value.
-	for e: Variant in Utils.get_array(map_data, "_events", []):
-		if not (e is Dictionary):
-			continue
-		@warning_ignore("unsafe_cast")
-		var d := e as Dictionary
-		var t := int(Utils.get_float(d, "_type", -1))
-		if t != 100 and t != 10:
-			continue
-		var beat := Utils.get_float(d, "_time", 0.0)
-		var bpm := Utils.get_float(d, "_floatValue", -1.0)
-		if bpm <= 1.0:
-			bpm = Utils.get_float(d, "_value", 0.0)
-		if bpm > 1.0 and beat >= 0.0:
-			points.append(Vector2(beat, bpm))
-	# v4 keeps BPM in the audio file: sample ranges plus the beat range they cover, so the
-	# tempo is derived rather than stored. Only used when the map itself has no bpmEvents.
-	if points.size() == 1:
-		var freq := Utils.get_float(audio_data, "songFrequency", 44100.0)
-		for seg: Variant in Utils.get_array(audio_data, "bpmData", []):
-			if not (seg is Dictionary):
-				continue
-			@warning_ignore("unsafe_cast")
-			var sd := seg as Dictionary
-			var sb := Utils.get_float(sd, "sb", 0.0)
-			var eb := Utils.get_float(sd, "eb", sb)
-			var si := Utils.get_float(sd, "si", 0.0)
-			var ei := Utils.get_float(sd, "ei", si)
-			var seconds := (ei - si) / maxf(freq, 1.0)
-			if seconds > 0.0 and eb > sb:
-				points.append(Vector2(sb, (eb - sb) / seconds * 60.0))
-	points.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.x < b.x)
-	var beats := PackedFloat32Array()
-	var values := PackedFloat32Array()
-	for point in points:
-		if not beats.is_empty() and is_equal_approx(beats[beats.size() - 1], point.x):
-			values[values.size() - 1] = point.y
-		else:
-			beats.append(point.x)
-			values.append(point.y)
-	_bpm_beats = beats
-	_bpm_values = values
-	_bpm_times.resize(beats.size())
-	_bpm_times[0] = 0.0
-	for i in range(1, beats.size()):
-		_bpm_times[i] = _bpm_times[i - 1] + (beats[i] - beats[i - 1]) * 60.0 / maxf(values[i - 1], 1.0)
-
+# The segments live in MapTimer (specs/013 FR-007). These wrappers keep the call sites on the
+# Map facade; the tempo state is deliberately not duplicated here.
 static func bpm_at_beat(beat: float) -> float:
-	return _bpm_values[_segment_index_at_beat(beat)]
+	return MapTimer.bpm_at_beat(beat)
 
 static func beat_to_seconds(beat: float) -> float:
-	if _bpm_beats.is_empty():
-		return 0.0
-	if beat <= _bpm_beats[0]:
-		return beat * 60.0 / maxf(_bpm_values[0], 1.0)
-	var i := _segment_index_at_beat(beat)
-	return _bpm_times[i] + (beat - _bpm_beats[i]) * 60.0 / maxf(_bpm_values[i], 1.0)
+	return MapTimer.beat_to_seconds(beat)
 
 static func seconds_to_beat(seconds: float) -> float:
-	if _bpm_beats.is_empty():
-		return 0.0
-	if seconds <= 0.0:
-		return seconds * _bpm_values[0] / 60.0
-	var lo := 0
-	var hi := _bpm_times.size() - 1
-	while lo < hi:
-		@warning_ignore("integer_division")
-		var mid := (lo + hi + 1) >> 1
-		if _bpm_times[mid] <= seconds:
-			lo = mid
-		else:
-			hi = mid - 1
-	return _bpm_beats[lo] + (seconds - _bpm_times[lo]) * _bpm_values[lo] / 60.0
+	return MapTimer.seconds_to_beat(seconds)
 
-static func _segment_index_at_beat(beat: float) -> int:
-	var lo := 0
-	var hi := _bpm_beats.size() - 1
-	while lo < hi:
-		@warning_ignore("integer_division")
-		var mid := (lo + hi + 1) >> 1
-		if _bpm_beats[mid] <= beat:
-			lo = mid
-		else:
-			hi = mid - 1
-	return lo
 
 # some simple multithreading, since larger maps can take a very long time to
 # load.  one particulary notable outlier is the beatmap of shrek, which took
@@ -642,8 +551,8 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 			map_data["_version"] = info.version
 		else:
 			map_data["version"] = info.version
-	_load_bpm_events(map_data, info.beats_per_minute, audio_data)
-	bpm_segments = _bpm_beats.size()
+	MapTimer.load_bpm_events(map_data, info.beats_per_minute, audio_data)
+	bpm_segments = MapTimer.segment_count()
 	_detect_unsupported(map_data)
 	vr.log_info("MAP data: bpm_segments=%d fakes_filtered=%d unsupported=%s" % [bpm_segments, fakes_filtered, str(unsupported_features)])
 	

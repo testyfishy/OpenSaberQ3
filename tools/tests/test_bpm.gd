@@ -4,6 +4,8 @@ extends Node
 # Runs as a scene (not --script) because Map.gd uses the Utils autoload.
 # Run: godot --headless --path . res://tools/tests/test_bpm.tscn
 
+const MapTimer := preload("res://game/scripts/MapTimer.gd")
+
 func _ready() -> void:
 	var info := MapInfo.new("3.0.0", "t", "", "a", "m", 120.0, 0.0, 0.0, "", "", "", 0.0, {}, "", [])
 	Map.current_info = info
@@ -14,7 +16,7 @@ func _ready() -> void:
 			{"b": 16.0, "m": 180.0},
 		],
 	}
-	Map._load_bpm_events(data, 120.0)
+	MapTimer.load_bpm_events(data, 120.0)
 
 	var ok := true
 	var cases := {0.0: 0.0, 8.0: 4.0, 16.0: 8.0, 24.0: 10.6667}
