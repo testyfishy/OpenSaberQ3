@@ -10,6 +10,7 @@ class_name BeatSaverPanel
 const BeatSaverApi := preload("res://game/ui/BeatSaverPanel/BeatSaverApi.gd")
 const BeatSaverCoversScript := preload("res://game/ui/BeatSaverPanel/BeatSaverCovers.gd")
 const MapCardScript := preload("res://game/ui/BeatSaverPanel/BeatSaverMapCard.gd")
+const BeatSaverQueryScript := preload("res://game/ui/BeatSaverPanel/BeatSaverQuery.gd")
 const HTTP_REQUEST_POOL := preload("res://game/scripts/HTTPRequestPool.tscn")
 const VR_SLIDER := preload("res://game/vr_slider.tscn")
 const PLACEHOLDER_COVER := preload("res://game/data/beepsaber_logo.png")
@@ -23,14 +24,6 @@ const SEARCH_DEBOUNCE_SECONDS := 0.4
 const SETTINGS_SAVE_DELAY := 1.0
 const MAX_HISTORY := 10
 
-const DURATION_LABELS: Array[String] = ["Any length", "<2 min", "2-4 min", "4+ min"]
-const DURATION_MIN: Array[int] = [-1, -1, 120, 241]
-const DURATION_MAX: Array[int] = [-1, 119, 240, -1]
-const NPS_LABELS: Array[String] = ["Any NPS", "Slow <4", "4-7 NPS", "7-10 NPS", "10+ NPS"]
-const NPS_MIN: Array[float] = [-1.0, -1.0, 4.0, 7.0, 10.0]
-const NPS_MAX: Array[float] = [-1.0, 4.0, 7.0, 10.0, -1.0]
-const SORT_WITH_QUERY: Array[String] = ["Latest", "Rating", "Curated", "Relevance"]
-const SORT_WITHOUT_QUERY: Array[String] = ["Latest", "Rating", "Curated"]
 
 const CHAR_TAG_NAMES := {
 	"OneSaber": "1S",
@@ -56,7 +49,12 @@ const SETTING_DIFFICULTIES := "beatsaver_difficulties"
 @export var keyboard: OQ_UI2DKeyboard
 
 # --- query and paging state ---
-var _query := {}
+# Query state and its settings persistence live in BeatSaverQuery (UI-4 step 1). `_query` is a
+# read-only view of the same dictionary for the existing read sites; writes mutate `query.data`.
+var query := BeatSaverQueryScript.new()
+var _query: Dictionary:
+	get:
+		return query.data
 var _seq := 0
 var _loading := false
 var _error_message := ""
@@ -123,7 +121,7 @@ var _is_first_show := true
 func _ready() -> void:
 	_build_ui()
 	_build_runtime_nodes()
-	_load_query_from_settings()
+	query.load_from_settings()
 	_update_controls()
 	UI_AudioEngine.attach_children(self)
 
@@ -404,71 +402,10 @@ func _make_pool(node_name: String, concurrency: int, handler: Callable) -> Node:
 	return pool
 
 
-# --- settings ----------------------------------------------------------------------------------
-
-func _load_query_from_settings() -> void:
-	var order := String(Settings.beatsaver_order)
-	if not BeatSaverApi.ORDERS.has(order) or order == "Relevance":
-		# Relevance needs a query; never start in it (FR-003).
-		order = BeatSaverApi.DEFAULT_ORDER
-	_query = {
-		"q": "",
-		"order": order,
-		"curated": bool(Settings.beatsaver_curated),
-		"verified": bool(Settings.beatsaver_verified),
-		"ranked": bool(Settings.beatsaver_ranked),
-		"playable_only": bool(Settings.beatsaver_playable_only),
-		"duration_index": clampi(int(Settings.beatsaver_duration), 0, DURATION_LABELS.size() - 1),
-		"nps_index": clampi(int(Settings.beatsaver_nps), 0, NPS_LABELS.size() - 1),
-		"difficulties": _parse_difficulties(String(Settings.beatsaver_difficulties)),
-		"min_duration": -1,
-		"max_duration": -1,
-		"min_nps": -1.0,
-		"max_nps": -1.0,
-	}
-	_apply_preset_bounds()
-
-
-func _apply_preset_bounds() -> void:
-	var duration_index: int = clampi(int(_query.get("duration_index", 0)), 0, DURATION_LABELS.size() - 1)
-	var nps_index: int = clampi(int(_query.get("nps_index", 0)), 0, NPS_LABELS.size() - 1)
-	_query["min_duration"] = DURATION_MIN[duration_index]
-	_query["max_duration"] = DURATION_MAX[duration_index]
-	_query["min_nps"] = NPS_MIN[nps_index]
-	_query["max_nps"] = NPS_MAX[nps_index]
-
-
-func _parse_difficulties(text: String) -> Array:
-	var out: Array = []
-	if text.strip_edges().is_empty():
-		return out
-	for part in text.split(",", false):
-		var index := int(part)
-		if index >= 0 and index < BeatSaverApi.DIFFICULTIES.size():
-			out.append(BeatSaverApi.DIFFICULTIES[index])
-	return out
-
-
-func _difficulties_to_setting() -> String:
-	var picked: Array = _query.get("difficulties", [])
-	var parts: PackedStringArray = PackedStringArray()
-	for i in BeatSaverApi.DIFFICULTIES.size():
-		if picked.has(BeatSaverApi.DIFFICULTIES[i]):
-			parts.append(str(i))
-	return ",".join(parts)
-
-
 ## Writes the sort + filter state into Settings and coalesces the file write, so a burst of
 ## button presses costs at most one config save.
 func _save_settings() -> void:
-	Settings.beatsaver_order = String(_query.get("order", BeatSaverApi.DEFAULT_ORDER))
-	Settings.beatsaver_curated = bool(_query.get("curated", false))
-	Settings.beatsaver_verified = bool(_query.get("verified", false))
-	Settings.beatsaver_ranked = bool(_query.get("ranked", false))
-	Settings.beatsaver_playable_only = bool(_query.get("playable_only", false))
-	Settings.beatsaver_duration = int(_query.get("duration_index", 0))
-	Settings.beatsaver_nps = int(_query.get("nps_index", 0))
-	Settings.beatsaver_difficulties = _difficulties_to_setting()
+	query.save_to_settings()
 	_save_timer.start()
 
 
@@ -484,8 +421,8 @@ func _update_controls() -> void:
 	_verified_toggle.set_pressed_no_signal(bool(_query.get("verified", false)))
 	_ranked_toggle.set_pressed_no_signal(bool(_query.get("ranked", false)))
 	_playable_toggle.set_pressed_no_signal(bool(_query.get("playable_only", false)))
-	_duration_button.text = "Length: %s" % DURATION_LABELS[int(_query.get("duration_index", 0))]
-	_nps_button.text = "NPS: %s" % NPS_LABELS[int(_query.get("nps_index", 0))]
+	_duration_button.text = "Length: %s" % BeatSaverQueryScript.DURATION_LABELS[int(_query.get("duration_index", 0))]
+	_nps_button.text = "NPS: %s" % BeatSaverQueryScript.NPS_LABELS[int(_query.get("nps_index", 0))]
 	var picked: Array = _query.get("difficulties", [])
 	for i in _difficulty_toggles.size():
 		_difficulty_toggles[i].set_pressed_no_signal(picked.has(BeatSaverApi.DIFFICULTIES[i]))
@@ -542,9 +479,7 @@ func _apply_query_text(text: String) -> void:
 
 
 func _sort_options() -> Array:
-	if String(_query.get("q", "")).strip_edges().is_empty():
-		return SORT_WITHOUT_QUERY
-	return SORT_WITH_QUERY
+	return query.sort_options()
 
 
 func _on_sort_pressed() -> void:
@@ -579,18 +514,18 @@ func _on_difficulty_toggled(_pressed: bool) -> void:
 
 
 func _on_duration_pressed() -> void:
-	var index: int = (int(_query.get("duration_index", 0)) + 1) % DURATION_LABELS.size()
+	var index: int = (int(_query.get("duration_index", 0)) + 1) % BeatSaverQueryScript.DURATION_LABELS.size()
 	_query["duration_index"] = index
-	_apply_preset_bounds()
+	query.apply_preset_bounds()
 	_update_controls()
 	_save_settings()
 	_new_search()
 
 
 func _on_nps_pressed() -> void:
-	var index: int = (int(_query.get("nps_index", 0)) + 1) % NPS_LABELS.size()
+	var index: int = (int(_query.get("nps_index", 0)) + 1) % BeatSaverQueryScript.NPS_LABELS.size()
 	_query["nps_index"] = index
-	_apply_preset_bounds()
+	query.apply_preset_bounds()
 	_update_controls()
 	_save_settings()
 	_new_search()
