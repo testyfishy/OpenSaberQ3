@@ -144,7 +144,7 @@ game: they serve Beat Saber modding, map authoring or capture, not play.
 ### Release v0.6.0
 
 - `F:\Dev\BeepSaberBin\OpenSaber-v060.apk`, 83,624,298 bytes, SHA-256
-  `B06A108B806A644F420CA988115E39126A3E5BBE7F9FD10EC42F8091D2CC518F`, built from `29b2d98`;
+  `ACCAA169C8DF85067600C33BF199C37C91C18AD4B1407E45F4D479C04074FB5A`, built from `df7be2c`;
   versionName 0.6.0, versionCode 10, RELEASE, same certificate (`d204a2...`), no
   `application-debuggable`.
 - Upgrade test 0.5.1 -> 0.6.0 with data kept: `config.ini` SHA-256 `d4cfb1a6...`,
@@ -189,8 +189,10 @@ game: they serve Beat Saber modding, map authoring or capture, not play.
 
 | Gate | Asked | Verdict | Action taken |
 |---|---|---|---|
-| G4 | 020 slices 1+3 (code 29b2d98) | APPROVE: tag v0.6.0-q3, no push; MED: JSON cause unconfirmed -> reword comments + diagnose() follow-up; MED: map-dump harness flaky -> fix before next Map work | Comments reworded to "cause unconfirmed"; follow-ups logged; release rebuilt from the reworded code and tagged |
-| G5 | 020 spec drift | FR-001..002 and FR-004..FR-010, SC-001..SC-004 match the recorded evidence; FR-003 Deferred (player choice: bplist vs label -> 0.6.1, own G1) | Status set to 0.6.0 done with FR-003 deferred; v0.5.1 recorded as fallback |
+| G4 | 020 slices 1+3 (code 29b2d98) | APPROVE: tag v0.6.0-q3, no push; MED: JSON cause unconfirmed -> reword comments + diagnose() follow-up; MED: map-dump harness flaky -> fix before next Map work | Comments reworded to "cause unconfirmed"; follow-ups logged; release rebuilt from the reworded code and tagged |
+
+| G5 | 020 spec drift | FR-001..002 and FR-004..FR-010, SC-001..SC-004 match the recorded evidence; FR-003 Deferred (player choice: bplist vs label -> 0.6.1, own G1) | Status set to 0.6.0 done with FR-003 deferred; v0.5.1 recorded as fallback |
+
 | G3 | After slice 1 + BeatLeader | CONTINUE: accept the design; filter auto-select is fine if an empty view disables Play; BeastSaber (a) needs G1; build 0.6.0 now and record v0.5.1 as the fallback | Empty view shows "No maps match this source." and disables Play/Delete/Leaderboard; device probe, stop-during-play bench and 0.5.1->0.6.0 upgrade recorded; release built |
 
 | G0 | Scope of BeastSaber/BeatLeader, source-tag storage, phasing | GO WITH CHANGES: hash is recoverable (verified); add backfill FR-007, menu-only networking FR-008, atomic/schema sidecar FR-009, BeatLeader mapping/states FR-010; ask the player what BeastSaber means before the import; ship slices as v0.6.0, not 0.5.2 | Slice 1 (sidecar, backfill, source filter) starts; BeastSaber import waits on the player's answer; BeatLeader read-only next |
