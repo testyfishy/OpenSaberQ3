@@ -98,6 +98,8 @@ func _fetch(key: String, hash: String, difficulty: String, mode: String) -> void
 		last_error = "board_http_%d" % int(board_res["code"])
 		_set_status("BeatLeader returned HTTP %d." % int(board_res["code"]))
 		return
+	# Parse here, in the panel's instance context: the API's static path was observed returning
+	# null for this valid body in the Android export (cause unconfirmed).
 	var board_body := (board_res["body"] as PackedByteArray).get_string_from_utf8()
 	var board := Api.parse_board_value(JSON.parse_string(board_body))
 	if not bool(board.get("ok", false)):

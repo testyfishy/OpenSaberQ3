@@ -112,8 +112,10 @@ static func compute_level_hash(dir_path: String) -> String:
 	if info_bytes.is_empty():
 		return ""
 	# Prefer the exact loader the game uses for map selection (the autoload's
-	# FileAccess.get_as_text + JSON.parse_string path). In the Android export our own copy of that
-	# path returned non-Dictionary for a valid, ASCII Info.dat, which silently disabled every hash.
+	# FileAccess.get_as_text + JSON.parse_string path). Observed in the Android export: our own
+	# copy of that path returned non-Dictionary for a valid, ASCII Info.dat, silently disabling
+	# every hash. The cause is unconfirmed (other static JSON callers still work); reusing the
+	# game's loader fixes it on device.
 	var info: Variant = vr.load_json_file(info_path)
 	if not (info is Dictionary) or (info as Dictionary).is_empty():
 		info = _read_json_file(info_path)

@@ -55,9 +55,9 @@ static func parse_board(body: PackedByteArray) -> Dictionary:
 	return parse_board_value(_parse_json(body))
 
 
-## Entry point for the panel: the JSON parse itself runs in the panel's (instance) context,
-## because JSON.parse_string inside a static function returned null for a valid body in the
-## Android export. The tests keep using `parse_board(body)`.
+## Entry point for the panel: the JSON parse itself runs in the panel's (instance) context.
+## Observed in the Android export: the API's static path returned null for a valid body; the cause
+## is unconfirmed. The tests keep using `parse_board(body)`.
 static func parse_board_value(parsed: Variant) -> Dictionary:
 	if not (parsed is Dictionary):
 		return {"ok": false, "error": "invalid_json"}
@@ -128,8 +128,8 @@ static func _parse_json(body: PackedByteArray) -> Variant:
 	var text := body.get_string_from_utf8()
 	if text.begins_with("\ufeff"):
 		text = text.substr(1)
-	# JSON.parse_string matches the proven BeatSaver path. JSON.new().parse() failed on the
-	# Android export for a valid body even when the same string parsed in another script.
+	# JSON.parse_string matches the proven BeatSaver path. Observed in the Android export: this
+	# and JSON.new().parse() returned null for a valid body. Cause unconfirmed.
 	return JSON.parse_string(text)
 
 

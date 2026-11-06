@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-06
 
-**Status**: Done for source tags/filter/backfill and the read-only BeatLeader board (v0.6.0); BeastSaber import (FR-003) pending the player's answer
+**Status**: Done for 0.6.0 (source tags/filter/backfill and the read-only BeatLeader board); FR-003 (BeastSaber) **Deferred** to 0.6.1, pending the player's choice
 
 **Input**: Player: "Maybe add beastsaber as well - but making sure there is a tag on each song in the
 library to identify the source library and a way to sort and filter the downloaded libraries. We
@@ -45,7 +45,8 @@ game: they serve Beat Saber modding, map authoring or capture, not play.
   tags it. Filtering MUST be a pure list operation (no per-frame cost).
 - **FR-003**: BeastSaber maps MUST be obtainable by importing a BeastSaber `.bplist` playlist:
   resolve each entry through BeatSaver, download it, and write `source=beastsaber` with the
-  BeatSaver id/hash. No scraping of bsaber.com pages.
+  BeatSaver id/hash. No scraping of bsaber.com pages. **[Deferred to 0.6.1: the player has not
+  chosen between the playlist import (own G1) and a source label only.]**
 - **FR-004**: A read-only BeatLeader leaderboard MUST be available for the selected map and
   difficulty when the map has a hash: top N scores (player name, score, accuracy, modifiers) from
   `GET /leaderboard/{hash}/{difficulty}/{mode}`. Without a hash the entry point says the map needs
@@ -157,6 +158,17 @@ game: they serve Beat Saber modding, map authoring or capture, not play.
 
 - FR-003 (BeastSaber `.bplist` import) waits on the player's answer to the first open question.
 
+## Follow-ups (post-0.6.0)
+
+- Determine the real cause of the Android export JSON failure before reusing the workaround: run
+  `MapSource.diagnose()` against both failure modes on the headset and record the output. Until
+  then, do not treat "static JSON is unsafe" as a rule for other files.
+- Harden `tools/harness/map_dump_all.ps1`: its retry loop can leave duplicate/partial `END`
+  sentinels, which made the full-file comparison flaky. Compare per map header and fail on a
+  duplicate section before the next Map/MapData change.
+- FR-003: after the player's answer, either build the `.bplist` import (own G1: network, batch
+  downloads, partial failures) or add the label path; target 0.6.1.
+
 ## Out of scope
 
 - BeatLeader score submission, login and replays (needs an account/OAuth and a replay format
@@ -177,6 +189,8 @@ game: they serve Beat Saber modding, map authoring or capture, not play.
 
 | Gate | Asked | Verdict | Action taken |
 |---|---|---|---|
+| G4 | 020 slices 1+3 (code 29b2d98) | APPROVE: tag v0.6.0-q3, no push; MED: JSON cause unconfirmed -> reword comments + diagnose() follow-up; MED: map-dump harness flaky -> fix before next Map work | Comments reworded to "cause unconfirmed"; follow-ups logged; release rebuilt from the reworded code and tagged |
+| G5 | 020 spec drift | FR-001..002 and FR-004..FR-010, SC-001..SC-004 match the recorded evidence; FR-003 Deferred (player choice: bplist vs label -> 0.6.1, own G1) | Status set to 0.6.0 done with FR-003 deferred; v0.5.1 recorded as fallback |
 | G3 | After slice 1 + BeatLeader | CONTINUE: accept the design; filter auto-select is fine if an empty view disables Play; BeastSaber (a) needs G1; build 0.6.0 now and record v0.5.1 as the fallback | Empty view shows "No maps match this source." and disables Play/Delete/Leaderboard; device probe, stop-during-play bench and 0.5.1->0.6.0 upgrade recorded; release built |
 
 | G0 | Scope of BeastSaber/BeatLeader, source-tag storage, phasing | GO WITH CHANGES: hash is recoverable (verified); add backfill FR-007, menu-only networking FR-008, atomic/schema sidecar FR-009, BeatLeader mapping/states FR-010; ask the player what BeastSaber means before the import; ship slices as v0.6.0, not 0.5.2 | Slice 1 (sidecar, backfill, source filter) starts; BeastSaber import waits on the player's answer; BeatLeader read-only next |
