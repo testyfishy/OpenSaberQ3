@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-05
 
-**Status**: In progress (G0 approved with changes)
+**Status**: In progress - release candidate installed for the play test; tag/merge pending
 
 **Input**: Player: "bump", "proper. the debug version is only for us", "not yet" (no upload),
 "whatever makes more sense and safer" (branch/tag), "it's a backup" (rollback APK stays).
@@ -54,6 +54,21 @@ a debug build labelled 0.3.0. Parts 5-9 of the cleanup start after this release.
   `user://OpenSaber/Songs`; the device reports 0.4.0; a bundled map plays to the end with no
   script/resource errors in logcat; one release stutter capture is compared with the debug
   baseline (or recorded as unsupported under FR-006).
+
+## Release verification findings (0.4.0)
+
+- **Startup crash (fixed, `db60313`)**: the first RELEASE export segfaulted on launch. The particle
+  sword extends `DefaultSaber` but has no `LightSaber_Mesh/Halo`; the required-node `@onready`
+  failed, left null materials, and the release build crashed where debug only logged. Halo nodes
+  are now optional and the setters guard them. The rebuilt APK installs and launches.
+- **First-call meta log noise (fixed, `5f58b7b`)**: `CanvasRefresh.of()` used
+  `get_meta(name, null)`, which still logs "does not have any meta values" on a fresh viewport.
+  `has_meta` makes it silent. This is in the tree but not in the installed test APK.
+- **Installed test build**: `OpenSaber-v04.apk`, versionCode 7 / versionName 0.4.0, release export,
+  test-signed with the debug keystore, installed over the debug build (settings and songs kept),
+  launched and confirmed as the top activity.
+- **Still open**: rebuild with `5f58b7b`, one release stutter capture (or record it unsupported
+  under FR-006), then tag `v0.4.0-q3` and fast-forward `godot-4-port`.
 
 ## Out of scope
 
