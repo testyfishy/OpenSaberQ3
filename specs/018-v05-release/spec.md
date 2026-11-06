@@ -66,10 +66,20 @@ closes the two gaps and makes the finished tree the artifact the player tests at
 - Note: after a long idle the headset's audio session was suspended (song position frozen at
   0.003 s in both debug and release builds). A device reboot restored it; all numbers above are
   post-reboot. The app was otherwise rendering at 120 fps.
-- **Release**: `OpenSaber-v05.apk`, 0.5.0 / code 8, same signing cert, no `application-debuggable`,
+- **Release**: `OpenSaber-v05.apk`, 83,563,334 bytes, SHA-256
+  `5CA43ED9C5BE654EC619C54FF7FA4F2BF76849F49E3D2D58CE0B94D91378F27E` (recorded after the tag;
+  the tag `v0.5.0-q3` points at code commit `bbdaa8c`), 0.5.0 / code 8, same signing cert, no
+  `application-debuggable`,
   installed over 0.4.0 -> 0.5.0 debug -> 0.5.0 release without uninstalling; config kept
   (`render_scale=1.1`), new keys at defaults; boots and is the top activity.
 - **Bench-ignore**: a valid flag on the release wrote no meta/CSV and logged no BENCH line.
+
+## Follow-up (not in v0.5)
+
+- Detect a stuck playback position (song position not advancing for more than 1 s while the state
+  is Playing) and restart the stream or show a hint. The long-idle audio session that froze the
+  bench was not a regression, but the player should not have to diagnose it. Hand-over hint:
+  if a song is silent or does not advance after a long idle, reboot the headset.
 
 ## Out of scope
 
@@ -84,6 +94,8 @@ None.
 
 | Gate | Asked | Verdict | Action taken |
 |---|---|---|---|
-| G4 | v0.5.0 release (6e48d2f, docs 7012d6e) | APPROVE; tree clean, bench gate restored, same cert, upgrade keeps config, release ignores bench | Tagged v0.5.0-q3, FF godot-4-port, no push |
-| G5 | 018 spec drift | FR-001..009, SC-001..005 match; notes: numbers from the post-reboot debug build of the same commit, stale-audio-session follow-up, full SHA-256 recorded | Done pending player home test |
+| G4 | v0.5.0 release (6e48d2f, docs 7012d6e) | APPROVE; tree clean, bench gate restored, same cert, upgrade keeps config, release ignores bench | Tagged v0.5.0-q3, FF godot-4-port, no push |
+
+| G5 | 018 spec drift | FR-001..009, SC-001..005 match; notes: numbers from the post-reboot debug build of the same commit, stale-audio-session follow-up, full SHA-256 recorded | Done pending player home test |
+
 | G0 | Verification scope and release mechanics for v0.5.0 | GO WITH CHANGES: add FR-007 (release ignores bench), FR-008 (upgrade keeps data/config), SC-005 (version visible); benches run on the DEBUG build of the same commit; log first-note scheduled beat and a spawn-lag bound; L/R must drop overlapping-hit windows | Added as FR-007..FR-009 and SC-005; plan unchanged otherwise |
