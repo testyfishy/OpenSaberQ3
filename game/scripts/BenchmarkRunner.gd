@@ -695,11 +695,15 @@ func _run_beatsaver_probe() -> void:
 		return
 	Utils.unzip(zippath, outdir)
 	DirAccess.remove_absolute(zippath)
+	# Exercise the same sidecar write the panel does, so the probe proves tagging end to end.
+	@warning_ignore("unsafe_property_access")
+	MapSource.write(outdir, MapSource.SOURCE_BEATSAVER, str(rec.id), str(rec.hash))
 	var info: MapInfo = Map.load_map_info(outdir)
 	_meta["probe_map_parsed"] = "true" if info != null else "false"
 	if info != null:
 		_meta["probe_map_version"] = info.version
 		_meta["probe_map_title"] = info.song_name
+		_meta["probe_map_source"] = info.source
 		_meta["probe_map_difficulties"] = str(info.difficulty_beatmaps.size())
 	_probe_done()
 

@@ -20,6 +20,12 @@ var custom_data: Dictionary
 var filepath: String
 var difficulty_beatmaps: Array[DifficultyInfo]
 
+# Source tag (specs/020). `source` is one of MapSource.SOURCES; `source_id` is the BeatSaver map
+# id when known; `level_hash` is the BeatSaver version hash, computed or read from the sidecar.
+var source := MapSource.SOURCE_UNKNOWN
+var source_id := ""
+var level_hash := ""
+
 @warning_ignore("shadowed_variable")
 func _init(
 	version: String, song_name: String, song_sub_name: String,
@@ -27,7 +33,9 @@ func _init(
 	preview_start_time: float, preview_duration: float, song_filename: String,
 	cover_image_filename: String, environment_name: String,
 	song_time_offset: float, custom_data: Dictionary, filepath: String,
-	difficulty_beatmaps: Array[DifficultyInfo]
+	difficulty_beatmaps: Array[DifficultyInfo],
+	source: String = MapSource.SOURCE_UNKNOWN, source_id: String = "",
+	level_hash: String = ""
 ) -> void:
 	self.version = version
 	self.song_name = song_name
@@ -45,6 +53,18 @@ func _init(
 	self.custom_data = custom_data
 	self.filepath = filepath
 	self.difficulty_beatmaps = difficulty_beatmaps
+	self.source = MapSource.normalize_source(source)
+	self.source_id = source_id.strip_edges()
+	self.level_hash = level_hash.strip_edges().to_lower()
+
+## Applies a sidecar read (MapSource.read) without touching song metadata.
+func apply_source(sidecar: Dictionary) -> void:
+	source = MapSource.normalize_source(str(sidecar.get("source", MapSource.SOURCE_UNKNOWN)))
+	source_id = str(sidecar.get("map_id", "")).strip_edges()
+	level_hash = str(sidecar.get("hash", "")).strip_edges().to_lower()
+
+func source_label() -> String:
+	return MapSource.label(source)
 
 func is_empty() -> bool:
 	return (
@@ -72,9 +92,12 @@ static func new_v2(info_dict: Dictionary, load_path: String) -> MapInfo:
 	for difficulty_set: Variant in difficulty_beatmap_sets:
 		if difficulty_set is Dictionary:
 			var beatmaps := Utils.get_array(difficulty_set as Dictionary, "_difficultyBeatmaps", [])
+			var characteristic := Utils.get_str(difficulty_set as Dictionary, "_beatmapCharacteristicName", "Standard")
 			for i: Variant in beatmaps:
 				if i is Dictionary:
-					diffs.append(DifficultyInfo.load_v2(i as Dictionary))
+					var diff := DifficultyInfo.load_v2(i as Dictionary)
+					diff.characteristic = characteristic
+					diffs.append(diff)
 	var custom := Utils.get_dict(info_dict, "_customData", {})
 	var schemes_v2 := Utils.get_array(info_dict, "_colorSchemes", [])
 	if not schemes_v2.is_empty() and schemes_v2[0] is Dictionary:

@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-06
 
-**Status**: In progress (G0 approved with changes; slice 1)
+**Status**: In progress - source tags/filter and the read-only BeatLeader board are implemented; BeastSaber import pending the player's answer
 
 **Input**: Player: "Maybe add beastsaber as well - but making sure there is a tag on each song in the
 library to identify the source library and a way to sort and filter the downloaded libraries. We
@@ -82,6 +82,50 @@ game: they serve Beat Saber modding, map authoring or capture, not play.
   restart; the main-menu screenshot shows the source tag and no overlap.
 - **SC-006**: `test_map_source` writes/reads all sources, rejects a corrupt sidecar, and the
   Phoenix hash check matches `bf2c367d...` on the corpus.
+
+## Results so far (2026-11-06)
+
+### Source tag and library filter (FR-001, FR-002, FR-007, FR-009, SC-001, SC-005, SC-006)
+
+- Sidecar `OpenSaber.meta` (INI, `schema`/`source`/`map_id`/`hash`) is written into the map folder
+  by BeatSaver downloads, manual uploads and the bench probe, atomically (temp + rename). A
+  missing, corrupt or future-schema sidecar reads as `unknown`; the map still loads.
+- `Map.load_map_info` applies it to the three new `MapInfo` fields (`source`, `source_id`,
+  `level_hash`), so the library sees the tag without a second file scan.
+- The level hash is SHA-1 over `Info.dat` + every difficulty file in declared order. Verified
+  against Phoenix (`bf2c367d...`); `GET /maps/hash/{hash}` returns map id 32693.
+- Backfill runs once per menu session, one map at a time with a frame between maps, only while the
+  menu is visible, and stops on map start. On this PC's real library it tagged FitBeat, Gloom,
+  ODDS&ENDS, Somewhere Out There and RAMFEAR as BeatSaver; TheFatRat Timelapse stayed Unknown
+  (its files are not the published version).
+- The main menu has a `SourceFilter` dropdown (All Sources / BeatSaver / BeastSaber / Uploaded /
+  Local / Unknown) next to the playlist selector, and every row and the Song Info panel show the
+  source. The selection persists through `Settings.library_source_filter`. Filtering is a pure
+  list operation and sorts the filtered view by author/title. Screenshots:
+  `visual_menu.png`, `visual_menu_filtered.png` (`tools/menu_visual_check.tscn`, desktop).
+- `MAPSOURCETEST PASS`: five-source round trip, missing/corrupt/future sidecar, the filter and
+  sort, and the Phoenix hash.
+
+### BeatLeader read-only board (FR-004, FR-005, FR-010, SC-003)
+
+- Two documented reads, no auth: `/leaderboard/{hash}/{difficulty}/{mode}` for the board id, then
+  `/leaderboard/{id}?page=1&count=10&sortBy=rank&order=desc` for the top ten. (`order=asc` sorts
+  the rank number upward and returns the worst scores, so `desc` is the top.)
+- New `BeatLeaderPanel` canvas with a `Leaderboard` button in the main menu. It shows rank,
+  player, score, accuracy, PP and modifiers; distinct messages for no hash, unsupported
+  characteristic, not found, no scores and offline; results are cached per hash/difficulty/mode
+  for the session; every request is menu-initiated with a 10 s timeout, and nothing runs on the
+  gameplay path.
+- `BEATLEADERTEST PASS` on a trimmed live Phoenix fixture plus URL/mode/format/characteristic
+  checks. Desktop live check: `visual_leaderboard.png` shows the real top 10
+  (OlbmaPhlee 1,247,685 / 98.07% / 662.78 pp, ...) and `visual_leaderboard_nohash.png` shows the
+  no-hash explanation.
+
+### Still open
+
+- FR-003 (BeastSaber `.bplist` import) waits on the player's answer to the first open question.
+- Device check of the panel and the filter at VR scale (the desktop render proves layout and
+  data, not headset legibility).
 
 ## Out of scope
 

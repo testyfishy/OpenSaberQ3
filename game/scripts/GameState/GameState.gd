@@ -9,7 +9,7 @@ class_name GameState
 
 const OVERLAYS: Array[String] = [
 	"main_menu", "settings_canvas", "endscore", "pause_menu", "highscore_canvas",
-	"name_selector_canvas", "highscore_keyboard", "online_search_keyboard",
+	"name_selector_canvas", "highscore_keyboard", "online_search_keyboard", "leaderboard_canvas",
 ]
 
 func _ready(game) -> void:

@@ -293,6 +293,11 @@ var beatsaver_nps: int:
 	set(value):
 		beatsaver_nps = value
 		set_and_emit(&"beatsaver_nps", value)
+# Library source filter (specs/020 FR-002): the selected source, "all" for unfiltered.
+var library_source_filter: String:
+	set(value):
+		library_source_filter = value
+		set_and_emit(&"library_source_filter", value)
 var beatsaver_difficulties: String:
 	set(value):
 		beatsaver_difficulties = value
@@ -379,6 +384,7 @@ const SCHEMA := {
 	"beatsaver_duration": {"default": 0},
 	"beatsaver_nps": {"default": 0},
 	"beatsaver_difficulties": {"default": ""},
+	"library_source_filter": {"default": "all"},
 }
 
 # Derived view for the loader, the panel and the tests. The platform patch in _ready() writes

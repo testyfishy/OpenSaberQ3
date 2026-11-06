@@ -4,6 +4,9 @@ class_name DifficultyInfo
 var difficulty: String
 var difficulty_rank: int
 var beatmap_filename: String
+# The characteristic the beatmap belongs to ("Standard", "OneSaber", "Lawless", ...). The loader
+# merges every set into one list, so this is what tells BeatLeader which leaderboard to ask for.
+var characteristic := "Standard"
 var note_jump_movement_speed: float
 var note_jump_start_beat_offset: float
 var custom_data: Dictionary
@@ -86,4 +89,5 @@ static func load_v3(diff_dict: Dictionary) -> DifficultyInfo:
 	# Only v4 splits the lightshow out; the field is simply absent in v3.
 	info.lightshow_filename = Utils.get_str(diff_dict, "lightshowDataFilename", "")
 	info.level_author = author
+	info.characteristic = Utils.get_str(diff_dict, "characteristic", "Standard")
 	return info

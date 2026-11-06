@@ -59,11 +59,15 @@ static func load_map_info(load_path: String) -> MapInfo:
 		return null
 	
 	if info_dict.has("_version"):
-		return MapInfo.new_v2(info_dict, load_path)
+		var v2 := MapInfo.new_v2(info_dict, load_path)
+		v2.apply_source(MapSource.read(load_path))
+		return v2
 	elif info_dict.has("version"):
 		var version := Utils.get_str(info_dict, "version", "")
 		if version.begins_with("3.") or version.begins_with("4."):
-			return MapInfo.new_v3(info_dict, load_path)
+			var v3 := MapInfo.new_v3(info_dict, load_path)
+			v3.apply_source(MapSource.read(load_path))
+			return v3
 		vr.log_warning("%s is an unsupported beatmap version: %s" % [load_path, version])
 		return null
 	else:

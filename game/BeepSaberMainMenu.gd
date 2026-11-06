@@ -12,6 +12,8 @@ signal difficulty_changed(map_info: MapInfo, diff_rank: int)
 signal settings_requested()
 signal users_requested()
 signal start_map(info: MapInfo, difficulty: DifficultyInfo)
+# emitted when the player wants the BeatLeader board for the selected map/difficulty
+signal leaderboard_requested(map_info: MapInfo, difficulty: DifficultyInfo)
 
 var _cover_texture_create_sw := StopwatchFactory.create("cover_texture_create",10,true)
 
@@ -22,7 +24,12 @@ var _cover_texture_create_sw := StopwatchFactory.create("cover_texture_create",1
 @export var song_uploader_ref: SongUploader
 
 @onready var playlist_selector := $PlaylistSelector as OptionButton
+@onready var source_filter := $SourceFilter as OptionButton
 @onready var _bg_img_loader := preload("res://game/scripts/BackgroundImgLoader.gd").new()
+
+# Source backfill (specs/020 FR-007): menu-only, one map at a time, once per session.
+const MapSourceBackfillScript := preload("res://game/scripts/MapSourceBackfill.gd")
+var _backfill: MapSourceBackfill
 
 @onready var cover := $cover as TextureRect
 @onready var songs_menu := $SongsMenu as ItemList
@@ -113,6 +120,7 @@ func _load_playlists() -> void:
 		_most_played_songs.append(song.info)
 	
 	refresh_playlist()
+	_start_backfill()
 	
 	var canvas := get_parent().get_parent()
 	if canvas is OQ_UI2DCanvas:
@@ -138,6 +146,9 @@ func _discover_all_songs(seek_path: String) -> void:
 			file_name = dir.get_next()
 
 func _set_cur_playlist(songs: Array[MapInfo]) -> void:
+	# The source filter is a view over whichever list was picked (FR-002), never a copy that
+	# changes the playlist, so switching sources back to All restores the original list.
+	songs = MapSource.filter_by_source(songs, Settings.library_source_filter)
 	_currently_selected_songlist_ref = songs
 	var current_id := songs_menu.get_selected_items()
 	
@@ -147,7 +158,9 @@ func _set_cur_playlist(songs: Array[MapInfo]) -> void:
 	var map_index := 0
 	for map in songs:
 		@warning_ignore("return_value_discarded")
-		songs_menu.add_item("%s - %s" % [map.song_author_name, map.song_name], default_song_icon)
+		songs_menu.add_item(
+			"%s - %s  [%s]" % [map.song_author_name, map.song_name, map.source_label()],
+			default_song_icon)
 		var filepath := map.filepath + map.cover_image_filename
 		_bg_img_loader.load_texture(filepath, _on_cover_loaded, false, map_index)
 		map_index += 1
@@ -216,10 +229,12 @@ func _select_song(id: int) -> void:
 	($SongInfo_Label as Label).text = """Song Author: %s
 	Song Title: %s
 	Beatmap Author: %s
+	Source: %s
 	Play Count: %d""" % [
 		map.song_author_name,
 		map.song_name,
 		map.level_author_name,
+		map.source_label(),
 		PlayCount.get_total_play_count(map)
 	]
 	
@@ -261,6 +276,10 @@ func _select_difficulty(id: int) -> void:
 
 func _load_map_and_start(map: MapInfo) -> void:
 	if map.is_empty(): return
+	
+	# No network work once play starts (FR-008).
+	if _backfill != null:
+		_backfill.stop()
 	
 	var set0 := map.difficulty_beatmaps
 	if (set0.size() == 0):
@@ -314,6 +333,28 @@ func _ready() -> void:
 	playlist_selector.add_item("Recently Added")
 	playlist_selector.add_item("Most Played")
 	
+	# Source filter (FR-002). It composes with the playlist choice above; the selection is
+	# persisted so a player who works from one library keeps that view across launches.
+	source_filter.clear()
+	source_filter.add_item(MapSource.label(MapSource.ALL))
+	for source: String in MapSource.SOURCES:
+		@warning_ignore("return_value_discarded")
+		source_filter.add_item(MapSource.label(source))
+	source_filter.select(_source_filter_index(Settings.library_source_filter))
+	if not source_filter.item_selected.is_connected(_on_SourceFilter_item_selected):
+		@warning_ignore("return_value_discarded")
+		source_filter.item_selected.connect(_on_SourceFilter_item_selected)
+	
+	# One-shot backfill of old maps' source tags (FR-007). It only runs while this menu is
+	# visible and stops the moment a map starts.
+	_backfill = MapSourceBackfillScript.new()
+	_backfill.name = "MapSourceBackfill"
+	add_child(_backfill)
+	@warning_ignore("return_value_discarded")
+	_backfill.map_updated.connect(_on_backfill_map_updated)
+	@warning_ignore("return_value_discarded")
+	_backfill.finished.connect(_on_backfill_finished)
+	
 	_load_playlists()
 	
 	await keyboard.ready
@@ -344,6 +385,18 @@ func _ready() -> void:
 func _on_Play_Button_pressed() -> void:
 	song_preview.stop()
 	_load_map_and_start(_currently_selected_songlist_ref[current_selected])
+
+
+func _on_Leaderboard_Button_pressed() -> void:
+	if _currently_selected_songlist_ref.is_empty():
+		return
+	if current_selected < 0 or current_selected >= _currently_selected_songlist_ref.size():
+		return
+	var map := _currently_selected_songlist_ref[current_selected]
+	if map == null or map.difficulty_beatmaps.is_empty():
+		return
+	var index := clampi(_map_difficulty, 0, map.difficulty_beatmaps.size() - 1)
+	leaderboard_requested.emit(map, map.difficulty_beatmaps[index])
 
 
 func _on_Exit_Button_pressed() -> void:
@@ -446,3 +499,42 @@ func _on_PlaylistSelector_item_selected(id: int) -> void:
 		_:
 			vr.log_warning("Unsupported playlist option %s" % id)
 			_set_cur_playlist(_all_songs)
+
+
+func _source_filter_index(source: String) -> int:
+	var wanted := source.strip_edges().to_lower()
+	if wanted == MapSource.ALL:
+		return 0
+	var index := MapSource.SOURCES.find(wanted)
+	return index + 1 if index >= 0 else 0
+
+
+func _on_SourceFilter_item_selected(index: int) -> void:
+	var source := MapSource.ALL
+	if index > 0 and index <= MapSource.SOURCES.size():
+		source = MapSource.SOURCES[index - 1]
+	Settings.library_source_filter = source
+	Settings.save()
+	refresh_playlist()
+	# The list was rebuilt, so the previous row is gone. Put the panel and the Play button on
+	# the first map of the new view instead of leaving the info from a map no longer shown.
+	if songs_menu.item_count > 0:
+		songs_menu.select(0)
+		_select_song(0)
+
+
+func _start_backfill() -> void:
+	if _backfill == null:
+		return
+	_backfill.start(_all_songs, func() -> bool: return is_visible_in_tree())
+
+
+func _on_backfill_map_updated(_info: MapInfo) -> void:
+	# Nothing per-map: the list is rebuilt once when the pass ends, so a filter on Unknown only
+	# changes when it can show a stable result.
+	pass
+
+
+func _on_backfill_finished(updated: int) -> void:
+	if updated > 0:
+		refresh_playlist()

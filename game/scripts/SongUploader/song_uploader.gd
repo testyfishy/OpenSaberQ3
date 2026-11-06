@@ -172,6 +172,9 @@ static func handle_post(post_headers: String, post_body: PackedByteArray, conten
 	var unzipped_dir := unzip_song(filename)
 	if unzipped_dir.is_empty() or DirAccess.get_files_at(unzipped_dir).is_empty():
 		return make_error_response("400 Unable to unzip file")
+	# Manual uploads have no BeatSaver identity; tag the folder so the library filter can
+	# separate them (specs/020 FR-001).
+	MapSource.write(unzipped_dir, MapSource.SOURCE_UPLOADED)
 	
 	# Send success response
 	var response_body := """<!DOCTYPE html>

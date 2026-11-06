@@ -36,6 +36,10 @@ var gamestate: GameState = gamestate_bootup
 @onready var settings_panel := settings_canvas.ui_control as SettingsPanel
 @onready var highscore_canvas := $Highscores_Canvas as OQ_UI2DCanvas
 @onready var highscore_panel := highscore_canvas.ui_control as HighscorePanel
+@onready var leaderboard_canvas := $Leaderboard_Canvas as OQ_UI2DCanvas
+# Untyped on purpose: the panel's class_name is not in the editor's global class cache on a
+# clean clone (same reason as the profile panel).
+@onready var leaderboard_panel = leaderboard_canvas.ui_control
 @onready var name_selector_canvas := $NameSelector_Canvas as OQ_UI2DCanvas
 @onready var highscore_keyboard := $Keyboard_highscore as OQ_UI2DKeyboard
 @onready var endscore := $EndScore as EndScore
@@ -708,6 +712,23 @@ var _main_menu_hidden_by_profile_panel := false
 
 func _users_button() -> void:
 	_open_profile_panel(false)
+
+
+# BeatLeader is read-only, menu-only (specs/020 FR-004/FR-005). The menu is hidden while the
+# board is up so the two world-space canvases never draw over each other.
+func _leaderboard_button(map_info: MapInfo, diff: DifficultyInfo) -> void:
+	if leaderboard_panel == null:
+		return
+	leaderboard_panel.open(map_info, diff)
+	if gamestate == gamestate_mapselection:
+		main_menu._hide()
+	leaderboard_canvas._show()
+
+
+func _on_leaderboard_closed() -> void:
+	leaderboard_canvas._hide()
+	if gamestate == gamestate_mapselection:
+		main_menu._show()
 
 func _on_endscore_switch_requested() -> void:
 	_open_profile_panel(true)

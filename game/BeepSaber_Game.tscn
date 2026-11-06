@@ -21,6 +21,7 @@
 [ext_resource type="PackedScene" uid="uid://f53k0dxxtenr" path="res://game/Pause_Panel.tscn" id="18"]
 [ext_resource type="PackedScene" uid="uid://biylg2wsontn3" path="res://game/settings_Panel.tscn" id="19"]
 [ext_resource type="PackedScene" uid="uid://383dbnh6gxd3" path="res://game/ui/BeatSaverPanel/BeatSaverPanel.tscn" id="20"]
+[ext_resource type="PackedScene" path="res://game/ui/BeatLeaderPanel/BeatLeaderPanel.tscn" id="46_leaderboard"]
 [ext_resource type="PackedScene" uid="uid://i5nhm2p2kqay" path="res://game/EndScore.tscn" id="20_fgfws"]
 [ext_resource type="PackedScene" uid="uid://spe4kya7ntv8" path="res://OQ_Toolkit/OQ_UI2D/OQ_UI2DKeyboard.tscn" id="21"]
 [ext_resource type="PackedScene" uid="uid://dmuvh1rllcn3e" path="res://game/Points_label_driver.tscn" id="22"]
@@ -264,6 +265,12 @@ offset_right = 752.0
 show_close_button = false
 show_song_info = false
 
+[node name="Leaderboard_Canvas" parent="." instance=ExtResource("3")]
+transform = Transform3D(2.3178, 0, 0, 0, 2.3178, 0, 0, 0, 2.3178, 0, 1.5, -1)
+visible = false
+
+[node name="BeatLeaderPanel" parent="Leaderboard_Canvas" instance=ExtResource("46_leaderboard")]
+
 [node name="NameSelector_Canvas" parent="." instance=ExtResource("3")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0.980611, -0.747554)
 visible = false
@@ -311,6 +318,8 @@ main_menu_ref = NodePath("../MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu")
 [connection signal="restart_button" from="PauseMenu_canvas/Pause_Panel" to="." method="_restart_button"]
 [connection signal="apply" from="Settings_canvas/settings_Panel" to="." method="_on_settings_Panel_apply"]
 [connection signal="users_requested" from="MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu" to="." method="_users_button"]
+[connection signal="leaderboard_requested" from="MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu" to="." method="_leaderboard_button"]
+[connection signal="closed" from="Leaderboard_Canvas/BeatLeaderPanel" to="." method="_on_leaderboard_closed"]
 [connection signal="switch_requested" from="EndScore" to="." method="_on_endscore_switch_requested"]
 [connection signal="user_chosen" from="Profile_canvas/ProfilePanel" to="." method="_on_profile_user_chosen"]
 [connection signal="new_user_requested" from="Profile_canvas/ProfilePanel" to="." method="_on_profile_new_user_requested"]

@@ -855,7 +855,7 @@ func _on_download_pressed() -> void:
 	var map = _rows[_selected_index]
 	if map.download_url.is_empty():
 		return
-	_download_queue.append([map.name, map.download_url])
+	_download_queue.append([map.name, map.download_url, map.id, map.hash])
 	_download_next()
 
 
@@ -903,6 +903,13 @@ func _on_download_completed(result: int, _response_code: int, _headers: PackedSt
 
 		if not has_error:
 			Utils.unzip(zippath, song_out_dir)
+			# The API record is the authoritative hash for this download (FR-001/FR-007).
+			# Written after the unzip so a failed download never leaves a tag behind.
+			MapSource.write(
+				song_out_dir,
+				MapSource.SOURCE_BEATSAVER,
+				str(_download_queue[0][2]),
+				str(_download_queue[0][3]))
 
 		DirAccess.remove_absolute(zippath)
 

@@ -1,0 +1,29 @@
+{
+  "_comment": "Trimmed from the live BeatLeader response for The Phoenix (hash bf2c367d29b133b66dc27f6f8e20467d0ec3301f), ExpertPlus/Standard, captured 2026-11-06. Only the fields the panel reads are kept; values are unchanged.",
+  "board": {
+    "id": "3269391",
+    "song": {
+      "hash": "bf2c367d29b133b66dc27f6f8e20467d0ec3301f",
+      "name": "The Phoenix",
+      "author": "Fall Out Boy"
+    },
+    "difficulty": {
+      "difficultyName": "ExpertPlus",
+      "modeName": "Standard"
+    }
+  },
+  "scores": {
+    "id": "3269391",
+    "scores": [
+      {"rank": 1, "modifiedScore": 1247685, "accuracy": 0.9806724, "pp": 662.7754, "modifiers": "SF", "player": {"name": "OlbmaPhlee"}},
+      {"rank": 2, "modifiedScore": 1252249, "accuracy": 0.98425967, "pp": 612.53674, "modifiers": "", "player": {"name": "gustav"}},
+      {"rank": 3, "modifiedScore": 1251649, "accuracy": 0.9837881, "pp": 600.75024, "modifiers": "", "player": {"name": "thog"}},
+      {"rank": 4, "modifiedScore": 1239906, "accuracy": 0.9745582, "pp": 583.6939, "modifiers": "SF", "player": {"name": "Bytesy"}},
+      {"rank": 5, "modifiedScore": 1250657, "accuracy": 0.9830084, "pp": 582.12177, "modifiers": "", "player": {"name": "Reddek"}}
+    ]
+  },
+  "empty_scores": {
+    "id": "9999999",
+    "scores": []
+  }
+}
