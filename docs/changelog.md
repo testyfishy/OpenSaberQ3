@@ -44,7 +44,8 @@ and fixed; walls moved to a pool. The full write-up is the [v0.3 report](v0.3-re
 
 **UI and code quality.** HUD overlap and the end-of-map card were rebuilt, the BeatSaver list
 scrolls smoothly (measured as a per-frame delta sequence), and the codebase went through the
-quality pass. Version code 7; upgrade over 0.3 kept settings and songs.
+quality pass. A miss now draws a 28 pt red X at the miss point; the old 6 pt marker was the
+reported "red dot". Version code 7; upgrade over 0.3 kept settings and songs.
 [Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.4.0-q3) ·
 [Spec](../specs/017-v04-release/spec.md)
 
@@ -67,6 +68,5 @@ audio research, the benchmark harness, and the first measured Quest 3 numbers.
 
 ## Next
 
-- **0.6.1** — BeastSaber playlist (`.bplist`) import, or a label-only path if that is what the
-  player means; waiting on the choice.
-- **0.6.x** — home-test findings from v0.6.0, the unexplained red dot, cosmetic chain joints.
+- **0.6.1** — BeastSaber playlist (`.bplist`) import.
+- **0.6.x** — home-test findings from v0.6.0 and cosmetic chain joints.

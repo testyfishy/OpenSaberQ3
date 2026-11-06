@@ -76,8 +76,8 @@ public face of the project is out of date and does not show the progress that ha
   debug keystore used by the release MUST be backed up offline and the backup location recorded.
 - **FR-013**: The release notes MUST include: install via SideQuest or `adb install -r`; that
   upgrading over 0.5.x keeps maps, scores and settings; the full SHA-256; the 0.5.1 fallback;
-  known issues (the unexplained red dot, white chain joints, audio stalling after a long idle
-  until a headset reboot); that BeatLeader is read-only and the project is not affiliated; and
+  known issues (white chain joints, audio stalling after a long idle until a headset reboot; the
+  old red dot is recorded as the resolved miss X); that BeatLeader is read-only and the project is not affiliated; and
   the upstream BeepSaber credit + MIT licence.
 
 ## Success criteria
@@ -134,7 +134,8 @@ release, which matches the existing v0.2 release and the "download the APK" link
 
 | Gate | Asked | Verdict | Action taken |
 |---|---|---|---|
-| G5 | 021 spec drift after publishing | SC-001..SC-007 met: README 85 lines, links 0 broken, docs + screenshots live, branch/tags/release verified, asset SHA matched, description/topics updated | Spec marked Done; follow-ups (0.6.1 BeastSaber, home-test fixes) remain |
+| G5 | 021 spec drift after publishing | SC-001..SC-007 met: README 85 lines, links 0 broken, docs + screenshots live, branch/tags/release verified, asset SHA matched, description/topics updated | Spec marked Done; follow-ups (0.6.1 BeastSaber, home-test fixes) remain |
+
 | G4 | 021 GitHub v0.6 publish (49a38e1 / e4afae3) | APPROVE: push branch + 4 tags and publish v0.6.0-q3; serial/LAN in history already public on origin, HEAD clean; qualify every perf claim with its conditions, add the non-affiliation line and the signing/upgrade line | Release notes drafted with conditions + disclaimers; pushing next |
 
 | G0 | README structure, subpage split, publish scope and release notes | GO WITH CHANGES: lead with a since-the-fork progress table (before -> now -> evidence link), then v0.6 bullets; cut Build/Limitations; push all four -q3 tags but only the v0.6.0 release; confirm no keystore/credentials in history and back up the keystore; add a pre-push hygiene scan and the public-reader release-note items; link check + rendered README after push | Spec updated (FR-012/FR-013, SC-007); implementation starts with the hygiene scan |

@@ -86,6 +86,9 @@ player's words:
 
 - **FR-012**: The intermittent red dot during play MUST be identified and either removed or
   explained. It MUST NOT remain an unexplained artefact.
+  **Resolved (v0.4.0):** the red dot is the miss "x" drawn at the miss position in
+  `points_label.gd`; it was 6 pt and is now 28 pt, deliberately larger than score text
+  (commit `d449f71`).
 
 ### Sound (spec FR-014..FR-020, from the G1 sound-design consult)
 
@@ -225,8 +228,6 @@ on-time figure by 0.6 points.
 
 ## Open questions
 
-- Which node draws the red dot? Not reproducible from code inspection alone; needs a capture
-  from a human-play session (FR-003) or a frame-by-frame recording.
 - How much of the perceived stutter is thermal throttling rather than the build? The stress
   protocol in PERF.md has never been run.
 

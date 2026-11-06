@@ -5,17 +5,13 @@ question, bot playing a real map through the real collision path. The full raw l
 and retractions are in [PERF.md](../PERF.md); the story of the v0.3 fix is in the
 [v0.3 report](v0.3-report.md).
 
-## How to read the numbers
-
-Two different things get called "performance", so both are always stated:
+## Metrics
 
 - **dropped** — a frame that missed a whole vsync slot (>= 1.5x the frame period). This is the one
   a player feels as a hitch.
-- **on time** — a frame delivered within ~1.05x the period. Stricter; it counts frames the
-  compositor still presented, so it is always the lower number.
+- **on time** — a frame delivered within ~1.05x the period. Always the lower number.
 
-Quoting the first without the second is how a 120 Hz build gets described as "99.8% perfect" while
-one frame in five lands late. Both are in every capture.
+Every capture reports both.
 
 ## Frame time through a song
 
@@ -24,22 +20,20 @@ one frame in five lands late. Both are in every capture.
 X is seconds from the start, y is the interval between consecutive frames. The shaded band is the
 min-to-max range within each second, the line through it is the median, the thin line is the
 slowest frame in that second, and the **red dots are frames that missed a vsync slot**, drawn when
-they happened. The triangles at the top are song-start pipeline compiles, pinned above the axis
-instead of being allowed to set its scale.
+they happened. The triangles at the top are song-start pipeline compiles, pinned above the axis.
 
 - **v0.1 is clean for about 28 seconds, then drops slots continuously to the end of the song** —
   119 of them.
 - **v0.2 has nine in three minutes.** Its median is identical to v0.1's (8.37 vs 8.43 ms); the
-  difference is entirely in the tail. That is why the trace replaced the percentile chart.
+  difference is entirely in the tail.
 
 Regenerate with `python tools/perf/plot_frametime.py`.
 
-## The stutter that was real
+## Stutter: a physics read in `Cuttable`
 
-An earlier "the stutter was the benchmark" conclusion was only half right. The harness *was*
-inflating early numbers, but a defect was also present: `Cuttable._physics_process` read
-`global_transform` twice per tick per live note. Frame time climbed 8.40 -> 8.95 ms across three
-minutes — worse the longer you played.
+`Cuttable._physics_process` read `global_transform` twice per tick per live note. Frame time
+climbed 8.40 -> 8.95 ms across three minutes — worse the longer you played.
+(PERF.md records the earlier harness-only conclusion and its retraction.)
 
 | | before | after |
 |---|---|---|
@@ -100,12 +94,11 @@ the arms and the conclusion.
 
 ## Human play
 
-`[bench] player_capture` records the same CSV while a person plays, not the bot, and writes it out
-when the song ends. That is the measurement that matters when the complaints are about feel rather
-than throughput; the method is in [tools/perf/benchmark.md](../tools/perf/benchmark.md).
+`[bench] player_capture` records the same CSV while a person plays instead of the bot, and writes
+it out when the song ends. Method: [tools/perf/benchmark.md](../tools/perf/benchmark.md).
 
 ## What is not achievable
 
 Ray tracing, physics ragdolls, HRTF spatialisation and per-hit music ducking at note rate are not
-on the table: Godot has no RT API on Quest, and the hardware/audio path cannot deliver the rest.
-The sky, reflections and audio that are shipped are the honest versions of those ideas.
+supported: Godot has no RT API on Quest, and the hardware/audio path cannot deliver the rest.
+Sky, reflections and audio ship in the forms Quest 3 runs at 120 Hz.
