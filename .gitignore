@@ -16,6 +16,7 @@ android/build/*
 # performance captures: raw logcat is local-only, summary*.json is the evidence that ships
 perf/captures/*.logcat.txt
 perf/captures/*.txt
+perf/captures/*.wav
 perf/captures/*.csv
 perf/captures/*.meta.txt
 perf_run_*

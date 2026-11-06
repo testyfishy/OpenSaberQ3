@@ -740,8 +740,8 @@ func _start_recording() -> void:
 		_audio_probe = AudioProbeScript.new()
 		_audio_probe.name = "AudioProbe"
 		add_child(_audio_probe)
-		var probe_path := _out_dir.path_join("audio_probe.wav")
-		if not _audio_probe.start(probe_path, probe_s):
+		var probe_prefix := _out_dir.path_join("audio_probe")
+		if not _audio_probe.start(probe_prefix, probe_s):
 			_meta["audio_probe_error"] = "probe did not start"
 			_audio_probe.queue_free()
 			_audio_probe = null
@@ -1012,9 +1012,9 @@ func _finish(reason: String, quit_after: bool = true) -> void:
 	_recording = false
 	set_process(false)
 	if _audio_probe != null:
-		var probe_path: String = _audio_probe.call("stop")
-		if not probe_path.is_empty():
-			_meta["audio_probe"] = probe_path
+		var probe_paths: Array = _audio_probe.call("stop")
+		if not probe_paths.is_empty():
+			_meta["audio_probe"] = ", ".join(PackedStringArray(probe_paths))
 		_audio_probe.queue_free()
 		_audio_probe = null
 	Cost.enabled = false
