@@ -175,11 +175,43 @@ if a viable fix exists, keep the feature and implement it. Only if no acceptable
 revert that part and keep the rest of the work. Every part still needs its own before/after
 numbers (fps median, App ms, GPU %, p99/max frame interval) and must leave the game playable.
 
-5. **View state** - the game-state scripts.
-6. **Audio** - saber pool, ducking, analyser.
-7. **Pooling** - `PooledNode3D` unification.
-8. **Map loading** - the `Map.gd` split already specified in `specs/013-code-quality`.
-9. **Bench tooling** - last, because it is the instrument the other gates use.
+### Overnight 2026-11-05 (after the v0.4.0 release)
+
+7. **Pooling - closed, already unified.** `PooledNode3D` owns `_is_released`/`release()`,
+   `ScenePool` owns presize/acquire/free-list, and both pooled scene types (`Wall`, `Cuttable`)
+   extend it. No second lifecycle implementation exists; `specs/013` FR-008's "five types" is
+   stale. No code change.
+
+8. **Map loading - slice 1 done.** `MapTimer.gd` (121 lines) owns the BPM state and the four
+   conversions; `Map.gd` dropped from 716 to 625 lines and keeps thin static wrappers, so call
+   sites and `bpm_segments` for the dump are unchanged. `load_bpm_events()` starts from an
+   explicit `reset()`, as FR-007 requires for static state. Gate: `BPMTEST PASS` (120->180 BPM,
+   four conversions, four round trips through the facade). Device, release build, 30 s ODDS:
+   **120 fps, App 4.99 ms, GPU 0.77 %** against the tagged release's 120 / 5.01 / 0.78 -
+   no regression. The canonical map-dump gate is **unavailable on this machine**: `src_data` is
+   absent, the v0.3 backup's `Songs` folders are empty, and the device's maps are in app-internal
+   storage that a release build cannot `run-as` into. Pull a corpus (or install a debug build and
+   copy them out) before slice 2.
+   
+   Remaining slices, in order: `MapPalette` (colour rules; needs the map-dump corpus), `MapSupport`
+   (`unsupported_features`/fake detection), then `MapData` (the stacks and format loaders).
+
+5. **View state - planned, not started.** The six `game/scripts/GameState/*.gd` classes repeat a
+   ~20-line show/hide block, but the differences matter: Paused deliberately leaves the sabers
+   untouched, Settings leaves swingcast alone, NewHighscore adds two keyboards. A declarative view
+   mask is a behavioural change that has to be judged by driving the menus, which is not possible
+   headless. Do it with the player available, one state per commit.
+
+6. **Audio - planned, not started.** The saber voice pool is already one implementation
+   (polyphonic playback, oldest-first steal, log). Ducking (`specs/016` FR-017) and the debug
+   analyser (FR-007) do not exist yet, and Godot's compressor has no sidechain input, so FR-017
+   needs a design before code. That is feature work, not cleanup, and it cannot be judged without
+   ears; do it with an offline sample measurement first.
+
+9. **Bench tooling - deferred on purpose.** The plan says it is the instrument the other gates use,
+   and it is 1262 lines. Splitting it now would invalidate the instrument while parts are still
+   open. `specs/013` FR-004 (exclude from release) also conflicts with a capability the v0.4.0
+   verification proved useful: a release build still runs captures through the external flag path.
 
 ## Verification assets
 

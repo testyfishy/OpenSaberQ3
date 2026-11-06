@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-05
 
-**Status**: In progress - UI parts (1-4) complete; remaining parts 5-9 open
+**Status**: In progress - UI parts (1-4) complete and released as v0.4.0; part 8 slice 1 done; 5, 6, rest of 8 and 9 open
 
 **Input**: "Do you wanna fix the scroll things? Also wanna plan out a specification for eloquent
 coding and cleaning up the software part by part. For now let's start with the UI."
