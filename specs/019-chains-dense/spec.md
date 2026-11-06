@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-06
 
-**Status**: Chain fix verified; v0.5.1 build pending
+**Status**: Done - v0.5.1 tagged, godot-4-port fast-forwarded, awaiting the home test
 
 **Input**: Player: "the gameplay mechanic about having a translucent line that connects between
 boxes - they are not connected well and it's still an issue from yesterday's gameplay. Also test
@@ -106,6 +106,10 @@ ecosystem/leaderboard question is research only.
   <=0.1 ms, shape re-enable ~0); the spike column is `process_usec`, not any note feature. No
   dense-note code change is justified by this evidence. The chain fix (removing the inflated
   overdraw) is the only measured visual optimisation.
+- Release: `OpenSaber-v051.apk`, 83,573,050 bytes, SHA-256
+  `91CAC306E8DFF0D373DEB126B0C5295CD6E4B0D76F4E9D86F9E1752F32290D13`, 0.5.1 / code 9, same
+  signing cert, no `application-debuggable`; installed over 0.5.0 without uninstalling (config
+  kept), boots, and a fresh launch with a valid bench flag wrote no meta/CSV and logged no BENCH.
 - Conclusion: keep the note path as is; recommend the Performance preset for hot sessions. If the
   player's own map still drops at home, capture that map with the bench and revisit.
 
@@ -122,6 +126,8 @@ None.
 
 | Gate | Asked | Verdict | Action taken |
 |---|---|---|---|
-| G4 | 019 chains+dense (7423062) | CHANGES NEEDED -> APPROVE after: `test_chain_cut` (all links, order, score), full SC-003 gates; LOW: spawn pop-in to eye-check | Added CHAINGCUT (passes); all SC-003 gates run; SC-004 reworded to the measured steady-state criterion; joint highlights/pop-in left for the home check |
-| G5 | 019 spec drift | SC-004 reworded to evidence (dense holds 120 fps, no note-path cost); SC-006 met by the cut test; joint highlights + pop-in pending home check | Fixes ready for v0.5.1 |
+| G4 | 019 chains+dense (7423062) | CHANGES NEEDED -> APPROVE after: `test_chain_cut` (all links, order, score), full SC-003 gates; LOW: spawn pop-in to eye-check | Added CHAINGCUT (passes); all SC-003 gates run; SC-004 reworded to the measured steady-state criterion; joint highlights/pop-in left for the home check |
+
+| G5 | 019 spec drift | SC-004 reworded to evidence (dense holds 120 fps, no note-path cost); SC-006 met by the cut test; joint highlights + pop-in pending home check | Fixes ready for v0.5.1 |
+
 | G0 | Chain segment model and dense-note profiling approach | GO WITH CHANGES: confirm the endpoints (no tail cube; last link at the tail point); midpoint + exact segment; cover bends by half-width and judge overlap against the material; hitbox exact and a cut-order test; profile spikes not averages, CPU/GPU first, one change per A/B; 0.5.1 only after measurement | Spec updated; implementation starts with the geometry + visual check |
