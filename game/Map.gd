@@ -30,6 +30,11 @@ static func seconds_to_beat(seconds: float) -> float:
 # map environment colours -> map note colours -> the environment's default scheme -> the
 # player's settings. "Classic" skips the environment scheme and reproduces the old look.
 static var bpm_segments := 1
+# Bench instrumentation (specs/018 FR-001): the parse time and the first spawned note's delay.
+static var last_load_ms := 0.0
+static var load_finished_usec := 0
+static var first_note_ms := -1.0
+static var first_note_beat := -1.0
 
 # --- Palette (FR-025/FR-028) --------------------------------------------------------------
 # The colour rules live in MapPalette (specs/013 FR-007); this wrapper keeps the loader and
@@ -37,6 +42,11 @@ static var bpm_segments := 1
 static func set_colors_from_custom_data() -> void:
 	MapPalette.set_colors_from_custom_data(current_info, current_difficulty)
 
+
+static func _finish_load(start_usec: int) -> void:
+	load_finished_usec = Time.get_ticks_usec()
+	last_load_ms = (load_finished_usec - start_usec) / 1000.0
+	vr.log_info("MAP load: %.1f ms" % last_load_ms)
 
 static func load_map_info(load_path: String) -> MapInfo:
 	var info_dict := {}
@@ -61,6 +71,9 @@ static func load_map_info(load_path: String) -> MapInfo:
 		return null
 
 static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Dictionary, lightshow_data: Dictionary = {}, audio_data: Dictionary = {}) -> bool:
+	var load_start := Time.get_ticks_usec()
+	first_note_ms = -1.0
+	first_note_beat = -1.0
 	# v4 splits the beatmap and the lightshow into two files and references shared geometry
 	# through index arrays. Expand it into the flat v3 shape once, up front, so every object
 	# type keeps a single parser (the v3 loaders below) instead of gaining a second one.
@@ -85,6 +98,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 		current_info = info
 		current_difficulty = difficulty
 		Map.set_colors_from_custom_data()
+		_finish_load(load_start)
 		return true
 	elif map_data.has("version"):
 		var version := Utils.get_str(map_data, "version", "")
@@ -93,6 +107,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 			current_info = info
 			current_difficulty = difficulty
 			Map.set_colors_from_custom_data()
+			_finish_load(load_start)
 			return true
 	vr.log_warning("selected map is an unsupported version")
 	return false

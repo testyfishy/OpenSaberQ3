@@ -52,6 +52,9 @@ func _process_map(game: BeepSaber_Game) -> void:
 	while not MapData.note_stack.is_empty() and MapData.note_stack[-1].beat <= look_ahead:
 		var note := GlobalReferences.cube_pool.acquire() as BeepCube
 		var note_info := MapData.note_stack.pop_back() as ColorNoteInfo
+		if Map.first_note_ms < 0.0:
+			Map.first_note_ms = (Time.get_ticks_usec() - Map.load_finished_usec) / 1000.0
+			Map.first_note_beat = note_info.beat
 		note.spawn(note_info, current_beat)
 		Harness.log_spawn(note_info)
 		note_info_refs.append(note_info)

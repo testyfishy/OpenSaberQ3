@@ -1039,6 +1039,19 @@ func _finish(reason: String, quit_after: bool = true) -> void:
 	_meta["cubes_peak"] = str(_peak_of(_col_cubes))
 	_meta["wall_pool_peak"] = str(_wall_pool_peak)
 	_meta["wall_pool_total"] = str(GlobalReferences.wall_pool.total_count()) if GlobalReferences.wall_pool != null else "0"
+	if _song_player != null:
+		_meta["song_playing"] = str(_song_player.playing)
+		_meta["song_stream"] = _song_player.stream.get_class() if _song_player.stream != null else "null"
+		_meta["song_length_s"] = "%.2f" % _song_player.stream.get_length() if _song_player.stream != null else "-1"
+		_meta["song_position_s"] = "%.3f" % _song_player.get_playback_position()
+	_meta["scoreboard_paused"] = str(Scoreboard.paused)
+	_meta["gamestate"] = str(_game.gamestate.get_script().resource_path.get_file()) if _game.gamestate != null else "null"
+	_meta["audio_device"] = AudioServer.get_output_device()
+	_meta["audio_mix_rate"] = str(AudioServer.get_mix_rate())
+	_meta["map_load_ms"] = "%.1f" % Map.last_load_ms
+	_meta["first_note_ms"] = "%.1f" % Map.first_note_ms
+	_meta["first_note_beat"] = "%.2f" % Map.first_note_beat
+	_meta["map_version"] = Map.current_info.version if Map.current_info != null else "?"
 	_meta["spikes"] = str(_spikes)
 	_meta["spike_threshold_usec"] = str(SPIKE_USEC)
 	while not _spike_queue.is_empty():
