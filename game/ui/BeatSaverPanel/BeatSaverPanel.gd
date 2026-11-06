@@ -147,14 +147,11 @@ func _find_canvas() -> OQ_UI2DCanvas:
 
 
 func _canvas_input_update() -> void:
-	# Route through the canvas's single refresh authority instead of calling the canvas directly.
+	# The canvas's single refresh authority (UI-1) creates itself on this viewport if needed. No
+	# code path calls the canvas's `_input_update()` any more: it would start a second update path.
 	var refresh := CanvasRefresh.of(self)
 	if refresh != null:
 		refresh.request()
-		return
-	var canvas := _find_canvas()
-	if canvas != null:
-		canvas._input_update()
 
 
 # override hide() method to handle case where UI is inside a OQ_UI2DCanvas
