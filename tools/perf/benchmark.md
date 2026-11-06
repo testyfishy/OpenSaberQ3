@@ -33,6 +33,11 @@ Lookup order, with output written next to the flag that was found:
 2. `/sdcard/Android/data/<package>/files/bench.flag` — works on any APK, no storage permission.
    The runner derives this path from its own internal data dir.
 
+> **Release builds are not debuggable**, so route 1 (`run-as`) is unavailable on the
+> `Oculus Quest (RELEASE)` preset. `tools/perf/run-vrapi.ps1` already uses route 2. Keep perf
+> captures on the DEBUG preset; if a pull from a release build fails, record that capture as
+> unsupported rather than changing the build under test.
+
 The flag is renamed to `bench.flag.consumed` **before** the run starts, so a crash mid-run cannot
 trap the next launch in benchmark mode.
 
