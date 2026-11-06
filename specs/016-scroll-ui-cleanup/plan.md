@@ -242,9 +242,14 @@ numbers (fps median, App ms, GPU %, p99/max frame interval) and must leave the g
      release measured 5.68 ms in the same session (cooler runs read ~5.0, so compare like with
      like). L/R: 4/4 non-silent lateral windows (>0.3 m) put the energy on the cube's side; 9 of
      13 lateral windows were silent in the SFX tap (capture/log timing) so the sample is small.
-   - Known gap: the attack is one frame (8-14 ms at 72-120 Hz), not the 3 ms in spec 011 FR-017.
-     A bus capture is pre-volume, so the Music tap could not show the duck; the gate reads the
-     applied bus gain instead. Both are recorded rather than hidden.
+   - FR-036: `HitAudio.stop_all()` stops every voice and releases the duck; Paused, MapComplete and
+     MapSelection call it, and the node processes always, so a pause or a menu cannot leave the
+     music down. Found by the G4 review (`d3df6d2`).
+   - Known gaps: the attack is one frame (8-14 ms at 72-120 Hz), not the 3 ms in spec 011 FR-017;
+     the L/R check has 4 usable lateral windows (the rest were silent in the SFX tap), so it agrees
+     with x but is not a large sample; ducking is read as applied bus gain (361 ducked frames in
+     15 s, ~30%, not a constant duck) because a bus capture is pre-volume. All recorded.
+   - Part 6 is closed. The part-6 build is installed on the headset; v0.4.0 remains tagged.
 
 9. **Bench tooling - deferred on purpose.** The plan says it is the instrument the other gates use,
    and it is 1262 lines. Splitting it now would invalidate the instrument while parts are still

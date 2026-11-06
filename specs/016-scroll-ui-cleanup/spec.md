@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-05
 
-**Status**: In progress - UI released as v0.4.0; map slices 1-3 done; part 6 (positioned hit pool + ducking) done and measured; 5, 9 and MapData open
+**Status**: In progress - UI released as v0.4.0; map slices 1-3 done; part 6 (positioned hit pool + ducking) done, fixed after G4 and closed; 5, 9 and MapData open
 
 **Input**: "Do you wanna fix the scroll things? Also wanna plan out a specification for eloquent
 coding and cleaning up the software part by part. For now let's start with the UI."
@@ -117,3 +117,6 @@ complaint; position and timbre are.
 | G4 | UI-4 split (`63a3c4f`..`6e6b0f7`) and UI-1..UI-4 as a whole | APPROVE: LOW items only - `CanvasRefresh.of()` on a Window must defer `add_child`, `render_frames` is SubViewport-only, check `_find_canvas` (still used, kept). Debt accepted: `_query` getter alias, code-built views | Deferred add_child + meta-first singleton + a Window case in `VERIFYCANVAS`; counter documented as SubViewport-only; `VERIFYCANVAS bad=0`, `VERIFYPANELBS bad=0` |
 | G5 | UI-1..UI-4 vs this spec/plan | Matches spec: 8 byte-identical states after every step; hold probe 0.996 vs 0.997; no view references `BeatSaverApi`/`HTTPRequest`/`_input_update`; buildable commits throughout | Recorded in plan.md; parts 5-9 remain open |
 | G0 | Part 6 work unit: positioned hit pool + ducking | GO WITH CHANGES: add FR-033 loudness bound and FR-035 default-off until measured; attack gap (8-14 ms, not 3 ms) must be stated; ducking ships off then flips; two commits (pool, then ducking); attenuate voices already in the 30 ms window; check own_world_3d/listener; note_pos global | Spec updated; G1 for the revised plan next |
+| G1 | Hit pool implementation: ownership, ducking default, verification | GO WITH CHANGES: measure the duck on the Music bus (hit body contaminates Master), prove L/R follows the cube x in the probe, one Music-bus writer, FR-036 reset paths, never stack attenuation, chain taps count | Implemented in e9e98fb/ca5c0be |
+| G4 | Part 6 final review (e9e98fb..f8ca01e) | CHANGES NEEDED -> APPROVE after fix: wire `stop_all()` into pause/end/restart, ducker `PROCESS_MODE_ALWAYS` | d3df6d2, HITAUDIOTEST PASS incl. stop_all |
+| G5 | Part 6 spec drift | FR-031..035 and SC-006..008 match; FR-036 met after d3df6d2. Gaps logged: one-frame attack (8-14 ms), L/R n=4, duck read as applied bus gain (361/15 s ~30%, not constant) | Part 6 closed; remaining 5, 9, MapData |
