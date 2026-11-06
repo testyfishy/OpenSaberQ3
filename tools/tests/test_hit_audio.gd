@@ -60,6 +60,20 @@ func _ready() -> void:
 		_check(float(hits[0]["x"]) > 0.0, "right-side hit has positive x")
 		_check(float(hits[1]["x"]) < 0.0, "left-side hit has negative x")
 
+	# FR-036: a state change stops the voices and releases the duck.
+	Settings.audio_ducking = true
+	pool.reset()
+	pool.play(wav, Vector3(0, 0, -1), 0.0, 1.0)
+	await get_tree().process_frame
+	var base: float = linear_to_db(maxf(Settings.audio_music, 0.0001))
+	var music_bus := AudioServer.get_bus_index(&"Music")
+	_check(AudioServer.get_bus_volume_db(music_bus) < base - 2.0, "duck applied before stop_all")
+	pool.stop_all()
+	var after: float = AudioServer.get_bus_volume_db(music_bus)
+	_check(absf(after - base) < 0.01, "stop_all restores the music base (%.3f vs %.3f)" % [after, base])
+	for i in pool.VOICES:
+		_check(not pool.voice_active(i), "stop_all stops voice %d" % i)
+
 	pool.queue_free()
 	print("HITAUDIOTEST ", "PASS" if _bad == 0 else "FAIL")
 	get_tree().quit(0 if _bad == 0 else 1)

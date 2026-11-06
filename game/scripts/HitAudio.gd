@@ -41,7 +41,8 @@ var duck_frames := 0
 func _ready() -> void:
 	# Voices pause with the game (and with a paused tree), so a paused song cannot keep hits
 	# echoing into the menu.
-	process_mode = Node.PROCESS_MODE_PAUSABLE
+	# The ducker must release even if the tree is paused; stop_all() handles the voices.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	for i in VOICES:
 		var player := AudioStreamPlayer3D.new()
 		player.name = "HitVoice%d" % i
@@ -89,17 +90,22 @@ func play(sample: AudioStream, pos: Vector3, gain_db: float, ratio: float, offse
 		_record_hit(pos)
 	return index
 
-func reset() -> void:
+# FR-036: called on pause, game end and a return to the menu. No voice survives a state
+# change and the music must never stay ducked. Probe state is left alone for the bench.
+func stop_all() -> void:
 	for i in VOICES:
 		_players[i].stop()
 		_players[i].stream = null
 		_active[i] = 0
 		_base_db[i] = 0.0
 		_started_usec[i] = 0
+	_release_duck()
+
+func reset() -> void:
+	stop_all()
 	steal_count = 0
 	_probe_enabled = false
 	_probe_hits.clear()
-	_release_duck()
 
 # --- music ducking (FR-035) -------------------------------------------------------------------
 
@@ -170,6 +176,7 @@ func _free_index() -> int:
 	var now := Time.get_ticks_usec()
 	for i in VOICES:
 		# A voice that stopped (or that a paused/driver-stalled player left marked) is free.
+		# Hit samples are under 1 s, so the 4 s cutoff can never truncate a real hit.
 		if _active[i] == 1 and (not _players[i].playing or now - _started_usec[i] > 4000000):
 			_active[i] = 0
 		if _active[i] == 0:

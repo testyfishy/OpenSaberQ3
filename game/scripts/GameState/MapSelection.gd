@@ -2,6 +2,9 @@ extends GameState
 class_name GameStateMapSelection
 
 func _ready(game: BeepSaber_Game) -> void:
+	# FR-036: no hit voice or music duck survives a state change.
+	if GlobalReferences.hit_audio != null:
+		GlobalReferences.hit_audio.call("stop_all")
 	game.main_menu._show()
 	game.settings_canvas._hide()
 	game.show_MapSourceDialogs(true)
