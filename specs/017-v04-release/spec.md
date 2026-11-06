@@ -24,7 +24,7 @@ a debug build labelled 0.3.0. Parts 5-9 of the cleanup start after this release.
   be the release file.
 - **FR-003**: The APK MUST be verified before it is called a release: version name/code read back
   from the package, the signing certificate is the one the installed build already uses (so
-  `adb install -r` upgrades in place), it installs and launches on `2G0YC1ZF9J0G2V`, and the
+  `adb install -r` upgrades in place), it installs and launches on `<headset-serial>`, and the
   reported version on device is `0.4.0`.
 - **FR-004**: The version bump MUST be committed on `v4/cleanup`, tagged **`v0.4.0-q3`**
   (annotated; `v0.4` is an upstream BeepSaber tag and must not be reused), and `godot-4-port`

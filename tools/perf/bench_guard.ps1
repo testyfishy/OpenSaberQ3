@@ -11,7 +11,8 @@
 
 $script:MinPercent = 20
 $script:ResumePercent = 95
-$script:Wireless = "192.168.86.250:5555"
+# Wireless adb address; set QUEST_WIRELESS (not tracked).
+$script:Wireless = $env:QUEST_WIRELESS
 
 function Write-Guard([string]$message) {
     $line = "{0}  {1}" -f (Get-Date -Format 'HH:mm:ss'), $message

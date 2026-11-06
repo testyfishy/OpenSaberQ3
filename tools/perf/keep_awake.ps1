@@ -12,8 +12,9 @@
 param(
     [int]$Hours = 12,
     [int]$IntervalSec = 3,
-    [string]$UsbSerial = "2G0YC1ZF9J0G2V",
-    [string]$Wireless = "192.168.86.250:5555"
+    # Pass -UsbSerial / -Wireless, or export QUEST_SERIAL / QUEST_WIRELESS; not tracked.
+    [string]$UsbSerial = $env:QUEST_SERIAL,
+    [string]$Wireless = $env:QUEST_WIRELESS
 )
 
 $adb = "$env:LOCALAPPDATA\Android\platform-tools\adb.exe"

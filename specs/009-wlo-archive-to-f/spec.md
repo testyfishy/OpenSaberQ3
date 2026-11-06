@@ -19,7 +19,7 @@
   - the git worktree `wlo-lane2`, whose `.git` file hardcodes `gitdir: C:/WLO-Revival/wlo-revival/.git/worktrees/wlo-lane2`;
   - `telemetry-venv` (absolute interpreter paths, `pyvenv.cfg`);
   - ~hundreds of **junctions inside the tree** (QA client dir sets, sandbox `consol` cases) with **absolute `C:\WLO-Revival\…` targets**;
-  - `C:\Users\user\WLO` → **junction** to `C:\WLO-Revival` (must keep resolving);
+  - `C:\Users\<user>\WLO` → **junction** to `C:\WLO-Revival` (must keep resolving);
   - Windows Firewall rules that match `aLogin.exe` / `Main.exe` by their old C: path (per `docs/f-drive-plan.md` §2).
 
 ## Facts measured before planning
@@ -30,7 +30,7 @@
 | F: free / size, FS | 5,794.9 / 7,452 GB, NTFS, `Fixed` | `Get-Volume` |
 | `C:\WLO-Revival` | **25.37 GB unique**, 162,247 regular files | `Move-WloToF.ps1 -Phase Inventory` (2026-11-02 21:50) |
 | `C:\WLO-Revival` (first estimate) | ~~51.19 GB~~ | **wrong**: `robocopy /L /BYTES` followed the 1,452 junctions and counted shared data up to six times. Corrected by enumerating only non-reparse files. |
-| `C:\Users\user\WLO` | **Junction → `C:\WLO-Revival`**, *not* a second copy | `Get-Item -Force` |
+| `C:\Users\<user>\WLO` | **Junction → `C:\WLO-Revival`**, *not* a second copy | `Get-Item -Force` |
 | Reparse points in tree | many junctions (6 at root + QA client dir sets + `fan-server\work\consol-sandbox-cases\*`); 3 unix sockets `run\*.sock` | `Get-ChildItem -Attributes ReparsePoint` |
 | Processes running from tree | none at 2026-11-02T22:0x | `Get-Process \| Where Path` |
 | Existing tool | `wlo-revival\tools\Lab\fmove.py` — copy → sha256 both sides → rename → junction; **table-driven and refuses folders with links inside** → cannot move the root | `fmove.py plan` output |
@@ -53,7 +53,7 @@
 - **FR-005a**: After hashing, a second `robocopy /L` against the source MUST report zero differences (nothing changed during the copy), and the junction count and target list MUST match on both sides.
 - **FR-006**: Verification results MUST be written to a log under `C:\WLO-Revival\evidence\` (or the new location if the pointer exists) before deletion. *(Written to `F:\WLO-Revival\moved\_wlo-move\` during the run — before the pointer existed — then copied to `F:\Dev\WLO-RI\evidence\wlo-move-2026-11-02\`, readable as `C:\WLO-Revival\evidence\wlo-move-2026-11-02\`, before the old copy was deleted.)*
 - **FR-007**: After the switch, reads through `C:\WLO-Revival\…` MUST be tested: root listing, biggest files, a sample byte-for-byte read, `git -C C:\WLO-Revival\wlo-revival status`, and `C:\WLO-Revival\telemetry-venv\Scripts\python.exe -V`.
-- **FR-008**: `C:\Users\user\WLO` MUST be left untouched and MUST still resolve (it points at `C:\WLO-Revival`, which becomes the new junction).
+- **FR-008**: `C:\Users\<user>\WLO` MUST be left untouched and MUST still resolve (it points at `C:\WLO-Revival`, which becomes the new junction).
 - **FR-009**: The operation MUST refuse to start or MUST stop if a process holds files open inside the tree.
 - **FR-010**: If any verification step fails, the operation MUST leave `C:\WLO-Revival` intact and report, rather than delete.
 - **FR-010a**: Rollback order is rename → `mklink /J` → tests. If the rename fails on an open handle, abort with C: untouched. If a test fails, remove the junction and rename the source back.
@@ -71,7 +71,7 @@
 
 - **SC-001**: C: free space increases by **≥ 24 GB** (from 18.5 GB to ~43 GB) — revised down from 50 GB when the junction-inflated 51.19 GB figure was disproved.
 - **SC-002**: **0** missing files and **0** sha256 mismatches between source and destination.
-- **SC-003**: `C:\WLO-Revival`, `C:\Users\user\WLO`, and every internal junction resolve after the switch; a sample file reads identically through the C: path.
+- **SC-003**: `C:\WLO-Revival`, `C:\Users\<user>\WLO`, and every internal junction resolve after the switch; a sample file reads identically through the C: path.
 - **SC-004**: `git -C C:\WLO-Revival\wlo-revival status` succeeds and `git worktree list` still shows `wlo-lane2`.
 - **SC-005**: `C:\WLO-Revival\telemetry-venv\Scripts\python.exe -V` prints a version through the pointer.
 - **SC-006**: The whole operation is reported with measured timings and a verification summary.

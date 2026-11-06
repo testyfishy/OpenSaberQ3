@@ -34,7 +34,7 @@ notice covers the whole chain; see `ATTRIBUTION.md`.
 
 ## Installed build on the user's headset (the reference, not the baseline)
 
-Established by `adb` on 2026-11-01, device `2G0YC1ZF9J0G2V` (`eureka`, Quest 3, Android 14 / SDK 34).
+Established by `adb` on 2026-11-01, device `<headset-serial>` (`eureka`, Quest 3, Android 14 / SDK 34).
 
 | Field | Value |
 |---|---|

@@ -20,7 +20,7 @@
 
 | Item | Value | Evidence |
 | --- | --- | --- |
-| `Documents` known folder | `C:\Users\user\Documents` — **local, not OneDrive-redirected** | `User Shell Folders\Personal` |
+| `Documents` known folder | `C:\Users\<user>\Documents` — **local, not OneDrive-redirected** | `User Shell Folders\Personal` |
 | `…\Default Project\duolinux` | **12.80 GB**, 3,238 regular files, **62 LX symlinks** (all under `out\`, build artifacts) | recursive enumeration |
 | Git | repo with `origin https://github.com/testyfishy/duolinux.git`, worktree **clean** | `git status` exit 0 |
 | Processes using it | none | `Get-Process \| Path` |
@@ -47,7 +47,7 @@
 
 - **SC-001**: C: free increases by **≥ 30 GB** (≈17.2 GB cache + ≈15 GB project).
 - **SC-002**: 0 source files missing at the destination; 0 sha256 mismatches; the 62 LX symlinks accounted for in the report.
-- **SC-003**: `C:\Users\user\Documents\Default Project\duolinux` and `…\Documents\duo-backups` are junctions resolving to F:.
+- **SC-003**: `C:\Users\<user>\Documents\Default Project\duolinux` and `…\Documents\duo-backups` are junctions resolving to F:.
 - **SC-004**: `git -C <old duolinux path> status` exits 0 and `git remote -v` still shows the origin.
 - **SC-005**: The HF model directory and the `xet` cache no longer exist; the two root metadata files remain.
 
@@ -90,7 +90,7 @@ Move script: `specs/012-duolinux-hf-move/Move-TreeToF.ps1`; logs in `%TEMP%\duol
 
 - **`out\` on F: is missing 62 LX symlinks.** `F:\Dev\duolinux\out\LX-SYMLINKS.txt` has **66 lines: a 4-line header plus 62 entries** (path TAB target). Rebuild `out\` from that manifest — or rebuild it under WSL ext4 — before relying on it. A build that consumes `out\` on NTFS may fail.
 - **`git status --ignored` prints `Function not implemented` warnings** for the directories that used to hold those LX symlinks. That is expected and harmless; `git status` itself exits 0.
-- **The junctions break if F: is not attached.** `C:\Users\user\Documents\Default Project\duolinux` and `…\Documents\duo-backups` dangle until F: is back. `F:\Dev\OpenSaberQ3` also lives on F:.
+- **The junctions break if F: is not attached.** `C:\Users\<user>\Documents\Default Project\duolinux` and `…\Documents\duo-backups` dangle until F: is back. `F:\Dev\OpenSaberQ3` also lives on F:.
 - **Moving back** means deleting the junction first (`cmd /c rmdir <path>`), then copying the tree back. Never delete into the junction — that would delete the F: data.
 - The HuggingFace model `Qwen3.8-27B-GGUF` is gone; re-download it if the Unsloth workflow needs it again. The two JSON files in `~\.cache\huggingface` are kept.
 

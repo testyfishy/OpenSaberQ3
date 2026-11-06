@@ -32,7 +32,8 @@ param(
     [string]$AppId = 'io.github.testyfishy.opensaberq3',
     [string]$LaunchActivity = 'com.godot.game.GodotAppLauncher',
     [string]$Pin = $env:OCULUS_TEST_PIN,
-    [string]$Serial = '2G0YC1ZF9J0G2V',
+    # Pass -Serial, or export QUEST_SERIAL; the device serial is not tracked.
+    [string]$Serial = $env:QUEST_SERIAL,
     [string]$Adb = "$env:LOCALAPPDATA\Android\platform-tools\adb.exe",
     [switch]$KeepAwake
 )

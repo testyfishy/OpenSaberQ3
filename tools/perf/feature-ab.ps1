@@ -23,7 +23,7 @@ if ($Tag -eq "") { $Tag = $Feature }
 $perf = "render_scale=1.0`nmsaa=1`nfoveation=2"
 
 $adb = "$env:LOCALAPPDATA\Android\platform-tools\adb.exe"
-$level = [int]((& $adb -s 2G0YC1ZF9J0G2V shell "dumpsys battery | grep level" 2>&1) -replace '\D', '')
+$level = [int]((& $adb -s $env:QUEST_SERIAL shell "dumpsys battery | grep level" 2>&1) -replace '\D', '')
 if ($level -lt 40) {
     throw "headset battery is ${level}%; refusing to run arms. Charge to 40% first."
 }

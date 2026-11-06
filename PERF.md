@@ -9,7 +9,7 @@ same row. A change that cannot show a number here does not ship (spec FR-019, SC
 
 | Field | Value |
 |---|---|
-| Model | Meta Quest 3 (`eureka`), serial `2G0YC1ZF9J0G2V` |
+| Model | Meta Quest 3 (`eureka`), serial `<headset-serial>` |
 | OS | Android 14 / SDK 34 |
 | Installed reference app | `org.godotengine.open_saber` 0.5.0 (code 5), built upstream on Godot 4.3 |
 | Installed app settings | defaults — `files/config.ini` is 0 bytes, so MSAA off and render scale 1.0 |

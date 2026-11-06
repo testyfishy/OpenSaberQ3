@@ -1,4 +1,4 @@
-# 0.6.0 device evidence (Quest 3, `2G0YC1ZF9J0G2V`)
+# 0.6.0 device evidence (Quest 3, `<headset-serial>`)
 
 Captured 2026-11-06 from the 0.6.0 debug build, then the 0.6.0 release for the upgrade test.
 Raw captures live in `perf/captures/` on this machine (gitignored); these are the lines that

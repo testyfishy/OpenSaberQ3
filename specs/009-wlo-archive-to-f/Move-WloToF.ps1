@@ -277,7 +277,7 @@ if ($Phase -eq 'Switch') {
     $tests = [ordered]@{}
     $tests['junction resolves'] = { (Get-Item -LiteralPath $Source -Force).LinkType -eq 'Junction' }
     $tests['root lists']        = { @(Get-ChildItem -LiteralPath $Source -Force).Count -gt 10 }
-    $tests['user WLO junction'] = { Test-Path -LiteralPath 'C:\Users\user\WLO\wlo-revival\Wlo.slnx' }
+    $tests['user WLO junction'] = { Test-Path -LiteralPath (Join-Path $env:USERPROFILE 'WLO\wlo-revival\Wlo.slnx') }
     $tests['sample byte-equal'] = {
       $a = Join-Path $Source 'lab-accounts.json'
       $b = Join-Path $Destination 'lab-accounts.json'
