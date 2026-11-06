@@ -12,6 +12,7 @@ const BeatSaverCoversScript := preload("res://game/ui/BeatSaverPanel/BeatSaverCo
 const MapCardScript := preload("res://game/ui/BeatSaverPanel/BeatSaverMapCard.gd")
 const BeatSaverQueryScript := preload("res://game/ui/BeatSaverPanel/BeatSaverQuery.gd")
 const DetailViewScript := preload("res://game/ui/BeatSaverPanel/BeatSaverDetailView.gd")
+const ResultsViewScript := preload("res://game/ui/BeatSaverPanel/BeatSaverResultsView.gd")
 const HTTP_REQUEST_POOL := preload("res://game/scripts/HTTPRequestPool.tscn")
 const VR_SLIDER := preload("res://game/vr_slider.tscn")
 const PLACEHOLDER_COVER := preload("res://game/data/beepsaber_logo.png")
@@ -105,11 +106,7 @@ var _playable_toggle: Button
 var _duration_button: Button
 var _nps_button: Button
 var _difficulty_toggles: Array[Button] = []
-var _scroll: ScrollContainer
-var _card_list: VBoxContainer
-var _cards: Array = []
-var _status_label: Label
-var _retry_button: Button
+var _results_view: Control
 var _detail_view: Control
 var _status_bar: Label
 
@@ -245,36 +242,12 @@ func _build_ui() -> void:
 		chip.toggled.connect(_on_difficulty_toggled)
 		_difficulty_toggles.append(chip)
 
-	_status_label = _make_label(Rect2(600, 138, 776, 54), "", 16, Color(0.8, 0.8, 0.8, 1))
-	_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_status_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-
-	_retry_button = _make_button(Rect2(1392, 138, 120, 54), "Retry")
-	_retry_button.pressed.connect(_on_retry_pressed)
-	_retry_button.visible = false
-
-	# Cards.
-	_scroll = ScrollContainer.new()
-	_scroll.name = "CardsScroll"
-	_scroll.position = Vector2(16, 204)
-	_scroll.size = Vector2(864, 636)
-	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	add_child(_scroll)
-
-	_card_list = VBoxContainer.new()
-	_card_list.name = "CardList"
-	_card_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_card_list.add_theme_constant_override("separation", 8)
-	_scroll.add_child(_card_list)
-
-	for i in PAGE_SIZE:
-		var card = MapCardScript.new()
-		card.name = "MapCard%d" % i
-		card.visible = false
-		_card_list.add_child(card)
-		card.pressed.connect(_on_card_pressed.bind(i))
-		_cards.append(card)
+	# Results pane (UI-4 step 3): cards, status line and Retry at their original rects.
+	_results_view = ResultsViewScript.new()
+	_results_view.card_pool_size = PAGE_SIZE
+	add_child(_results_view)
+	_results_view.card_pressed.connect(_on_card_pressed)
+	_results_view.retry_pressed.connect(_on_retry_pressed)
 
 	# Details pane (UI-4 step 2): the view builds its own cover/text/buttons at the same rects.
 	_detail_view = DetailViewScript.new()
@@ -293,7 +266,7 @@ func _build_ui() -> void:
 	if not has_node("list_slider"):
 		var slider := VR_SLIDER.instantiate()
 		slider.name = "list_slider"
-		slider.scroll_node_path = NodePath("../CardsScroll")
+		slider.scroll_node_path = NodePath("../ResultsView/CardsScroll")
 		add_child(slider)
 
 
@@ -566,8 +539,7 @@ func _new_search() -> void:
 	_has_more = false
 	_selected_index = -1
 	_clear_details()
-	for card: Variant in _cards:
-		card.clear()
+	_results_view.clear_cards()
 	_update_pager()
 	_start_display_page({"page": 0, "doc": 0})
 
@@ -638,19 +610,14 @@ func _finish_page(seq: int) -> void:
 
 
 func _render_rows() -> void:
-	for i in _cards.size():
-		var card = _cards[i]
-		if i < _rows.size():
-			card.set_map(_rows[i], i)
-			_covers.request(_rows[i].cover_url, _on_cover_ready.bind(card, _rows[i].cover_url))
-		else:
-			card.clear()
+	var requests: Array = _results_view.call("set_rows", _rows)
+	for request: Array in requests:
+		_covers.request(request[1], _on_cover_ready.bind(_results_view, request[0], request[1]))
 
 
-func _on_cover_ready(texture: Texture2D, card: Variant, url: String) -> void:
-	if not is_instance_valid(card):
-		return
-	card.apply_cover(url, texture)
+func _on_cover_ready(texture: Texture2D, view: Control, index: int, url: String) -> void:
+	if is_instance_valid(view):
+		view.call("apply_cover", index, url, texture)
 
 
 func _start_prefetch() -> void:
@@ -760,26 +727,33 @@ func _update_pager() -> void:
 	_next_button.disabled = _loading or not _has_more
 
 	if not _error_message.is_empty():
-		_status_label.text = _error_message
-		_retry_button.visible = true
+		_results_view.set_status(_error_message, true)
 		return
-	_retry_button.visible = false
 	if _loading:
-		_status_label.text = "Loading maps…"
+		_results_view.set_status("Loading maps…", false)
 		return
 	if _rows.is_empty():
 		var scope := "these filters" if String(_query.get("q", "")).is_empty() else "\"%s\"" % String(_query.get("q", ""))
-		_status_label.text = "No maps matched %s." % scope
+		_results_view.set_status("No maps matched %s." % scope, false)
 		return
 	var text := "%d maps" % _rows.size()
 	if _rejected > 0:
 		text += "  (%d hidden by Playable/Difficulty filters)" % _rejected
 	if _pending_docs_seen > _rows.size() and not _has_more:
 		text += "  - end of results"
-	_status_label.text = text
+	_results_view.set_status(text, false)
 
 
-# --- selection, details and download -----------------------------------------------------------
+# Node accessors for the screenshot/smoke harnesses and the frame probe. UI-4 moved the cards
+# under ResultsView; callers should not depend on that layout.
+func get_results_view() -> Control:
+	return _results_view
+
+func get_cards_list() -> Node:
+	return get_node_or_null("ResultsView/CardsScroll/CardList")
+
+func get_list_slider() -> Node:
+	return get_node_or_null("list_slider")
 
 func _on_card_pressed(index: int) -> void:
 	if index < 0 or index >= _rows.size():

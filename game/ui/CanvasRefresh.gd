@@ -36,7 +36,7 @@ static func of(node: Node) -> CanvasRefresh:
 	vp.set_meta(&"canvas_refresh", created)
 	return created
 
-var _viewport: SubViewport
+var _viewport: Viewport
 var _dirty := false
 var _live: Dictionary = {}
 # Diagnostic counter: frames on which the viewport was set to draw. This is the only honest "did it
@@ -61,8 +61,7 @@ func begin_live(owner: Object) -> void:
 	if owner is Node and not _watching.has(id):
 		_watching[id] = true
 		(owner as Node).tree_exiting.connect(_on_owner_exiting.bind(owner), CONNECT_ONE_SHOT)
-	if _viewport != null:
-		_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_set_mode(SubViewport.UPDATE_ALWAYS)
 	set_process(true)
 
 func end_live(owner: Object) -> void:
@@ -70,12 +69,16 @@ func end_live(owner: Object) -> void:
 		return
 	_live.erase(owner.get_instance_id())
 	if _live.is_empty():
-		if _viewport != null:
-			_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		_set_mode(SubViewport.UPDATE_DISABLED)
 		request()
 
 func keep_alive() -> void:
 	_last_keepalive = Time.get_ticks_msec() * 0.001
+
+# A Window (the desktop root) has no render target mode; only SubViewports do.
+func _set_mode(mode: SubViewport.UpdateMode) -> void:
+	if _viewport is SubViewport:
+		(_viewport as SubViewport).render_target_update_mode = mode
 
 func _on_owner_exiting(owner: Object) -> void:
 	if owner != null:
@@ -83,18 +86,17 @@ func _on_owner_exiting(owner: Object) -> void:
 	end_live(owner)
 
 func _process(_delta: float) -> void:
-	if _viewport != null and _viewport.render_target_update_mode != SubViewport.UPDATE_DISABLED:
+	if _viewport is SubViewport \
+			and (_viewport as SubViewport).render_target_update_mode != SubViewport.UPDATE_DISABLED:
 		render_frames += 1
 	var now := Time.get_ticks_msec() * 0.001
 	if not _live.is_empty() and now - _last_keepalive > WATCHDOG_S:
 		# An owner vanished without end_live. Stop rendering rather than pinning the viewport.
 		_live.clear()
-		if _viewport != null:
-			_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		_set_mode(SubViewport.UPDATE_DISABLED)
 		request()
 	if _dirty and _live.is_empty():
 		_dirty = false
-		if _viewport != null:
-			_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+		_set_mode(SubViewport.UPDATE_ONCE)
 	if _dirty == false and _live.is_empty():
 		set_process(false)

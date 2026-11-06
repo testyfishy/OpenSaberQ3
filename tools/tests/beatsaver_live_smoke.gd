@@ -32,7 +32,7 @@ func _process(delta: float) -> bool:
 		# _ready has run by now; open the panel exactly like MapDownloadPanel does.
 		_started = true
 		# The VR scroller expects a headset; it has no business running in this test.
-		var slider := _panel.get_node_or_null("list_slider")
+		var slider: Node = _panel.call("get_list_slider")
 		if slider != null:
 			slider.set_process(false)
 		_panel._show()

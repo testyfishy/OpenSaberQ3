@@ -10,6 +10,9 @@ extends Node
 # Run: godot --headless --path . res://tools/harness/verify_beatsaver_panel.tscn
 
 const PANEL := preload("res://game/ui/BeatSaverPanel/BeatSaverPanel.tscn")
+const API := preload("res://game/ui/BeatSaverPanel/BeatSaverApi.gd")
+const COVER_STUB := preload("res://tools/beatsaver_cover_stub.gd")
+const SEARCH_FIXTURE := "res://specs/003-beatsaver-api-research/samples/search-sc001.json"
 
 var _bad := 0
 
@@ -44,11 +47,43 @@ func _ready() -> void:
 			fail("DetailView size %s" % str(detail.size))
 
 	# The scroller still points at the cards list that exists.
-	var slider := panel.get_node_or_null("list_slider")
-	if slider == null:
+	var results := panel.get_node_or_null("ResultsView") as Control
+	if results == null:
+		fail("ResultsView missing")
+	else:
+		if results.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+			fail("ResultsView intercepts the mouse")
+		if results.size != Vector2(1536, 960):
+			fail("ResultsView size %s" % str(results.size))
+		if results.get_node_or_null("CardsScroll/CardList") == null:
+			fail("ResultsView/CardsScroll/CardList missing")
+
+	if panel.call("get_list_slider") == null:
 		fail("list_slider missing")
-	elif panel.get_node_or_null("CardsScroll/CardList") == null:
-		fail("CardsScroll/CardList missing")
+	if panel.call("get_cards_list") == null:
+		fail("get_cards_list() missing")
+	if panel.call("get_results_view") != results:
+		fail("get_results_view() does not return ResultsView")
+
+	# Click routing through the views: a card press selects, Download queues.
+	var docs: Array = API.parse_search(FileAccess.get_file_as_bytes(SEARCH_FIXTURE)).docs
+	var stub := COVER_STUB.new()
+	panel.add_child(stub)
+	panel.set("_covers", stub)
+	panel.set("_rows", docs)
+	panel.call("_render_rows")
+	var cards: Array = panel.call("get_results_view").cards
+	if cards.is_empty() or not cards[0].visible:
+		fail("card 0 not visible after set_rows")
+	else:
+		cards[0].pressed.emit()
+		if int(panel.get("_selected_index")) != 0:
+			fail("card press did not select index 0")
+		panel.get_node("DetailView").download_button.pressed.emit()
+		if (panel.get("_download_queue") as Array).is_empty():
+			fail("Download press did not queue a download")
+		(panel.get("_download_request") as HTTPRequest).cancel_request()
+		(panel.get("_download_queue") as Array).clear()
 
 	print("VERIFYPANELBS bad=%d" % _bad)
 	panel.queue_free()

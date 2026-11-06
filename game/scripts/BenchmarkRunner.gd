@@ -1125,7 +1125,7 @@ func _run_ui_scroll_probe() -> void:
 	# Give the first page time to arrive: there is nothing to scroll until cards exist.
 	for i in 300:
 		await get_tree().process_frame
-	var slider: Node = panel.get_node_or_null("list_slider")
+	var slider: Node = panel.call(&"get_list_slider")
 	if slider == null:
 		_meta["probe_error"] = "list_slider missing"
 		_probe_done()
@@ -1138,7 +1138,7 @@ func _run_ui_scroll_probe() -> void:
 	# If the page has not arrived (or the run has no network), give the list known content so
 	# the scroll mechanism itself can still be measured.
 	if float(bar.get("max_value")) <= 0.0:
-		var list_node: Node = panel.get_node_or_null("CardsScroll/CardList")
+		var list_node: Node = panel.call(&"get_cards_list")
 		if list_node == null:
 			_meta["probe_error"] = "CardList missing"
 			_probe_done()
