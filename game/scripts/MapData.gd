@@ -275,3 +275,168 @@ static func load_event_stack_v3(event_data: Array) -> void:
 	#_event_thread_1.wait_to_finish()
 	Utils.custom_thread_wait_to_finish(_event_thread_1)
 
+
+# --- v4 -> v3 expansion --------------------------------------------------------------------
+# v4 stores each object's geometry once in a `...Data` collection and references it by index,
+# so several objects can share one definition. The game needs a concrete object per note, so
+# the index is resolved here and the result written in the v3 field names.
+static func v4_to_v3(map_data: Dictionary, lightshow_data: Dictionary) -> void:
+	var note_data := Utils.get_array(map_data, "colorNotesData", [])
+	var bomb_data := Utils.get_array(map_data, "bombNotesData", [])
+	var obstacle_data := Utils.get_array(map_data, "obstaclesData", [])
+	var arc_data := Utils.get_array(map_data, "arcsData", [])
+	var chain_data := Utils.get_array(map_data, "chainsData", [])
+	var event_data := Utils.get_array(lightshow_data, "basicEventsData", [])
+
+	map_data["colorNotes"] = _v4_expand_notes(Utils.get_array(map_data, "colorNotes", []), note_data)
+	map_data["bombNotes"] = _v4_expand_bombs(Utils.get_array(map_data, "bombNotes", []), bomb_data)
+	map_data["obstacles"] = _v4_expand_obstacles(Utils.get_array(map_data, "obstacles", []), obstacle_data)
+	map_data["sliders"] = _v4_expand_arcs(
+		Utils.get_array(map_data, "arcs", []), note_data, arc_data)
+	map_data["burstSliders"] = _v4_expand_chains(
+		Utils.get_array(map_data, "chains", []), note_data, chain_data)
+	map_data["basicBeatmapEvents"] = _v4_expand_events(
+		Utils.get_array(lightshow_data, "basicEvents", []), event_data)
+
+
+static func _v4_at(entry: Dictionary, data: Array, key: String, default: int = -1) -> Dictionary:
+	var idx := int(Utils.get_float(entry, key, float(default)))
+	if idx < 0 or idx >= data.size() or not (data[idx] is Dictionary):
+		return {}
+	@warning_ignore("unsafe_cast")
+	return data[idx] as Dictionary
+
+
+static func _v4_expand_notes(list: Array, data: Array) -> Array:
+	var out: Array = []
+	for e: Variant in list:
+		if not (e is Dictionary):
+			continue
+		@warning_ignore("unsafe_cast")
+		var entry := e as Dictionary
+		var d := _v4_at(entry, data, "i")
+		if d.is_empty():
+			continue
+		out.append({
+			"b": Utils.get_float(entry, "b", 0.0),
+			"x": Utils.get_float(d, "x", 0.0),
+			"y": Utils.get_float(d, "y", 0.0),
+			"c": Utils.get_float(d, "c", -1.0),
+			"d": Utils.get_float(d, "d", 0.0),
+			"a": Utils.get_float(d, "a", 0.0),
+			"customData": entry.get("customData", d.get("customData", {})),
+		})
+	return out
+
+
+static func _v4_expand_bombs(list: Array, data: Array) -> Array:
+	var out: Array = []
+	for e: Variant in list:
+		if not (e is Dictionary):
+			continue
+		@warning_ignore("unsafe_cast")
+		var entry := e as Dictionary
+		var d := _v4_at(entry, data, "i")
+		if d.is_empty():
+			continue
+		out.append({
+			"b": Utils.get_float(entry, "b", 0.0),
+			"x": Utils.get_float(d, "x", 0.0),
+			"y": Utils.get_float(d, "y", 0.0),
+		})
+	return out
+
+
+static func _v4_expand_obstacles(list: Array, data: Array) -> Array:
+	var out: Array = []
+	for e: Variant in list:
+		if not (e is Dictionary):
+			continue
+		@warning_ignore("unsafe_cast")
+		var entry := e as Dictionary
+		var d := _v4_at(entry, data, "i")
+		if d.is_empty():
+			continue
+		out.append({
+			"b": Utils.get_float(entry, "b", 0.0),
+			"d": Utils.get_float(d, "d", 0.0),
+			"x": Utils.get_float(d, "x", 0.0),
+			"y": Utils.get_float(d, "y", 0.0),
+			"w": Utils.get_float(d, "w", 0.0),
+			"h": Utils.get_float(d, "h", 0.0),
+		})
+	return out
+
+
+static func _v4_expand_arcs(list: Array, note_data: Array, arc_data: Array) -> Array:
+	var out: Array = []
+	for e: Variant in list:
+		if not (e is Dictionary):
+			continue
+		@warning_ignore("unsafe_cast")
+		var entry := e as Dictionary
+		var head := _v4_at(entry, note_data, "hi")
+		var tail := _v4_at(entry, note_data, "ti")
+		var meta := _v4_at(entry, arc_data, "ai")
+		if head.is_empty() or tail.is_empty():
+			continue
+		out.append({
+			"c": Utils.get_float(head, "c", 0.0),
+			"b": Utils.get_float(entry, "hb", 0.0),
+			"x": Utils.get_float(head, "x", 0.0),
+			"y": Utils.get_float(head, "y", 0.0),
+			"d": Utils.get_float(head, "d", 0.0),
+			"mu": Utils.get_float(meta, "m", 1.0),
+			"tb": Utils.get_float(entry, "tb", 0.0),
+			"tx": Utils.get_float(tail, "x", 0.0),
+			"ty": Utils.get_float(tail, "y", 0.0),
+			"tc": Utils.get_float(tail, "d", 0.0),
+			"tmu": Utils.get_float(meta, "tm", 1.0),
+			"m": Utils.get_float(meta, "a", 0.0),
+		})
+	return out
+
+
+static func _v4_expand_chains(list: Array, note_data: Array, chain_data: Array) -> Array:
+	var out: Array = []
+	for e: Variant in list:
+		if not (e is Dictionary):
+			continue
+		@warning_ignore("unsafe_cast")
+		var entry := e as Dictionary
+		var head := _v4_at(entry, note_data, "i")
+		var meta := _v4_at(entry, chain_data, "ci")
+		if head.is_empty() or meta.is_empty():
+			continue
+		out.append({
+			"c": Utils.get_float(head, "c", 0.0),
+			"b": Utils.get_float(entry, "hb", 0.0),
+			"x": Utils.get_float(head, "x", 0.0),
+			"y": Utils.get_float(head, "y", 0.0),
+			"d": Utils.get_float(head, "d", 0.0),
+			"tb": Utils.get_float(entry, "tb", 0.0),
+			"tx": Utils.get_float(meta, "tx", 0.0),
+			"ty": Utils.get_float(meta, "ty", 0.0),
+			"sc": Utils.get_float(meta, "c", 0.0),
+			"s": Utils.get_float(meta, "s", 1.0),
+		})
+	return out
+
+
+static func _v4_expand_events(list: Array, data: Array) -> Array:
+	var out: Array = []
+	for e: Variant in list:
+		if not (e is Dictionary):
+			continue
+		@warning_ignore("unsafe_cast")
+		var entry := e as Dictionary
+		var d := _v4_at(entry, data, "i")
+		out.append({
+			"b": Utils.get_float(entry, "b", 0.0),
+			"et": Utils.get_float(d, "t", 0.0),
+			"i": Utils.get_float(d, "i", 0.0),
+			"f": Utils.get_float(d, "f", -1.0),
+		})
+	return out
+
+
