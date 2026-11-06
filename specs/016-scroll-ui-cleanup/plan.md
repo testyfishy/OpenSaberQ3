@@ -94,8 +94,12 @@ Gate: UI screenshots and the settings round-trip test.
 Done. `Settings.gd` has one `const SCHEMA`: key -> default plus optional min/max/step, in the
 historical insertion order. Everything else reads from it:
 
-- `default_values` is derived in `_derive_defaults()` (order preserved; only the platform patch
-  writes into it, never into `SCHEMA`);
+- `default_values` is derived in `_derive_defaults()` and initialised in its declaration (not in
+  `_ready()`), so a load before `_ready()` still sees the table; the order is preserved and only
+  the platform patch writes into it, never into `SCHEMA`;
+- the loader reads `default_values` through `_default()`, not `SCHEMA`, because the Web patch
+  writes platform defaults there (`saber_tail`, `cube_cuts_falloff`, `events` are off on Web);
+  `SCHEMA` supplies ranges and the fallback for a key outside the table;
 - `cast_or_default()` clamps every loaded value through `clamp_to_schema()`, so a hand-edited
   `config.ini` cannot store a value the panel could never produce;
 - the setters that had hand-written `clampi` calls (`perf_preset`, `sky_style`, `hit_sound`,

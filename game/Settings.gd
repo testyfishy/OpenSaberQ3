@@ -292,7 +292,6 @@ var beatsaver_difficulties: String:
 
 
 func _ready() -> void:
-	default_values = _derive_defaults()
 	if OS.get_name() in platform_default_values.keys():
 		for key in platform_default_values[OS.get_name()].keys():
 			default_values[key] = platform_default_values[OS.get_name()][key]
@@ -372,8 +371,9 @@ const SCHEMA := {
 }
 
 # Derived view for the loader, the panel and the tests. The platform patch in _ready() writes
-# into this dictionary, never into SCHEMA.
-var default_values: Dictionary = {}
+# into this dictionary, never into SCHEMA, so it must be the dictionary the loader reads: a
+# missing key on Web has to fall back to the Web default, not the shared one.
+var default_values: Dictionary = _derive_defaults()
 
 static func _derive_defaults() -> Dictionary:
 	var out := {}
@@ -396,15 +396,22 @@ static func clamp_to_schema(key: StringName, value: Variant) -> Variant:
 		value = hi
 	return value
 
+# The default a missing key loads as. Reads default_values so the platform patch and the
+# Web overrides still apply; SCHEMA only supplies the fallback for a key outside the table.
+func _default(key: String) -> Variant:
+	if key in default_values:
+		return default_values[key]
+	return SCHEMA[key]["default"] if key in SCHEMA else null
+
 func cast_or_default(key: String, to_type: int = -1) -> Variant:
-	var default: Variant = SCHEMA[key]["default"] if key in SCHEMA else null
+	var default: Variant = _default(key)
 	var raw: Variant = convert(config.get_value(SECTION, key, default), typeof(default) if to_type < 0 else to_type)
 	return clamp_to_schema(StringName(key), raw)
 
 func set_and_emit(key: StringName, value: Variant) -> void:
 	# Defaults are stored as null, not written, so a later build that changes a default is not
 	# pinned by an old config file.
-	var default: Variant = SCHEMA[String(key)]["default"] if String(key) in SCHEMA else null
+	var default: Variant = _default(String(key))
 	config.set_value(SECTION, String(key), value if default != value else null)
 	changed.emit(key)
 

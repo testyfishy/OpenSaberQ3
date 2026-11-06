@@ -80,6 +80,8 @@ func _ready() -> void:
 		if not fired[i] in preset_keys:
 			_fail("reload() emitted unexpected %s after the settings pass" % fired[i])
 
+	_check_platform_patch()
+
 	print("VERIFYSCHEMA keys=%d bad=%d" % [schema_keys.size(), _bad])
 	get_tree().quit(0 if _bad == 0 else 1)
 
@@ -131,6 +133,25 @@ func _check_range(key: String, spec: Dictionary, default: Variant) -> void:
 		_fail("%s: clamp gives %s/%s, expected %.4f/%.4f" % [key, str(below), str(above), lo, hi])
 	if typeof(default) == TYPE_INT and (typeof(below) != TYPE_INT or typeof(above) != TYPE_INT):
 		_fail("%s: clamping an int key returned a non-int" % key)
+
+func _check_platform_patch() -> void:
+	# The Web patch writes into default_values, not SCHEMA. `saber_tail` is false on Web and true
+	# everywhere else, so it is the one key that proves which table the loader reads.
+	var key := "saber_tail"
+	var saved: Variant = Settings.default_values[key]
+	Settings.default_values[key] = false
+	Settings.config.erase_section_key(Settings.SECTION, key)
+	var loaded: Variant = Settings.cast_or_default(key)
+	if loaded != false:
+		_fail("platform default ignored: a missing %s loaded %s" % [key, str(loaded)])
+
+	# A value equal to its default is stored as null, and ConfigFile drops a null key entirely, so
+	# "absent after the write" is the observable proof that the platform default was the one used.
+	Settings.set(key, false)
+	if Settings.config.has_section_key(Settings.SECTION, key):
+		_fail("set_and_emit compared against the shared default, not the platform one")
+
+	Settings.default_values[key] = saved
 
 func _on_changed(key: StringName) -> void:
 	_emitted.append(key)
