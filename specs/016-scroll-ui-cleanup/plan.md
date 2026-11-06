@@ -207,9 +207,14 @@ numbers (fps median, App ms, GPU %, p99/max frame interval) and must leave the g
    `F:\Dev\BeepSaberBin\map-corpus\Songs` (21 maps pulled from the headset with a debug build
    and `run-as`).
 
-   Remaining slices, in order: `MapSupport` (`unsupported_features`/fake detection; the dump
-   covers fake filtering, add a synthetic check for the unsupported list), then `MapData` (the
-   stacks and format loaders - the largest and last).
+   **Slice 3 (MapSupport) done**: unsupported features and fake filtering in `MapSupport.gd`, with
+   `SUPPORTTEST` on synthetic maps; dump byte-identical.
+   **Slice 4 (MapData) done**: the six stacks, twelve threads, v2/v3 loaders and the v4 expansion
+   moved in two commits, all call sites on `MapData.*`. `Map.gd` is now **99 lines** (716 before
+   the split) and only keeps metadata, version normalisation, BPM/palette/support and dispatch.
+   Gates: 21-map dump byte-identical after both commits; `RELOADTEST` (two loads, same sizes,
+   reset empty); grep shows no stack/Thread left in Map.gd. Known gap: no before/after load-time
+   number (the old build had no timestamp); correctness is the dump plus the reload test.
 
 5. **View state - planned, not started.** The six `game/scripts/GameState/*.gd` classes repeat a
    ~20-line show/hide block, but the differences matter: Paused deliberately leaves the sabers

@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-05
 
-**Status**: In progress - UI released as v0.4.0; map slices 1-3 done; part 6 (positioned hit pool + ducking) done, fixed after G4 and closed; 5, 9 and MapData open; audio analyser done
+**Status**: In progress - UI released as v0.4.0; map slices 1-3 done; part 6 done and closed; audio analyser done; MapData done (part 8 complete); 5 and 9 open
 
 **Input**: "Do you wanna fix the scroll things? Also wanna plan out a specification for eloquent
 coding and cleaning up the software part by part. For now let's start with the UI."
@@ -154,3 +154,4 @@ the spectrum while playing (the original sound spec's FR-007).
 
 | G5 | Part 6 spec drift | FR-031..035 and SC-006..008 match; FR-036 met after d3df6d2. Gaps logged: one-frame attack (8-14 ms), L/R n=4, duck read as applied bus gain (361/15 s ~30%, not constant) | Part 6 closed; remaining 5, 9, MapData |
 | G4 | Audio analyser (`ec531eb`) | CHANGES NEEDED -> APPROVE after fix: bars appended to placeholders, off/on lost the effect, freed label; test gaps | Fixed in `61c8977`: indexed bars, effect by identity, is_instance_valid + camera re-attach, `_bar_for_db`; ANALYSERTEST covers off/on, bars, gain text and a camera swap |
+| G0 | MapData slice 4: facade, threads, dispatch, split | GO WITH CHANGES: no facade (update all call sites), MapData owns all twelve threads with `is_started()` joins, Map keeps metadata/dispatch, two commits, add a reload test and a grep gate | Implemented in `af0a6f3` (4a) and the 4b commit |
