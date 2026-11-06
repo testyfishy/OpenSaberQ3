@@ -31,12 +31,8 @@ static var _event_thread_0 := Thread.new()
 static var _event_thread_1 := Thread.new()
 
 static func reset() -> void:
-	note_stack.clear()
-	bomb_stack.clear()
-	obstacle_stack.clear()
-	arc_stack.clear()
-	chain_stack.clear()
-	event_stack.clear()
+	# Join first: a thread that somehow outlived a load must finish before its stack is cleared.
+	# (load_v2/load_v3 are synchronous, so in practice this is a safety net.)
 	var threads: Array[Thread] = [
 		_note_thread_0, _note_thread_1, _bomb_thread_0, _bomb_thread_1,
 		_obstacle_thread_0, _obstacle_thread_1, _arc_thread_0, _arc_thread_1,
@@ -46,6 +42,12 @@ static func reset() -> void:
 		# wait_to_finish() on a thread that never started is an error.
 		if thread.is_started():
 			thread.wait_to_finish()
+	note_stack.clear()
+	bomb_stack.clear()
+	obstacle_stack.clear()
+	arc_stack.clear()
+	chain_stack.clear()
+	event_stack.clear()
 
 static func load_v2(map_data: Dictionary) -> void:
 	Utils.custom_thread_call(_note_thread_0, load_note_stack_v2, [Utils.get_array(map_data, "_notes", [])])
