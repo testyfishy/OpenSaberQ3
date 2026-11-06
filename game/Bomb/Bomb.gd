@@ -18,7 +18,7 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 	info.kind = HitInfo.Kind.BAD
 	info.speed_len = cut_speed.length()
 	info.is_correct_saber = false
-	info.note_pos = transform.origin
+	info.note_pos = global_position
 	if Cost.enabled: Cost.objs_freed += 1
 	queue_free()
 	return info

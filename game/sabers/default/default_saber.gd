@@ -4,18 +4,13 @@ class_name DefaultSaber
 # Hit-feedback audio. Design and every number here: specs/002-hit-audio-research/research.md
 # (§3 mapping, §5 mechanism). Summary:
 #
-#   * one AudioStreamPlayer3D per saber carrying an AudioStreamPolyphonic, so
-#     overlapping hits get a voice each instead of cutting each other off;
+#   * one global pool of 16 AudioStreamPlayer3D voices (game/scripts/HitAudio.gd), so
+#     overlapping hits get a voice each without allocating per hit;
 #   * per-voice sample, gain and pitch come from the cut data the note returned
 #     (HitInfo), which is why `hit()` takes the info rather than just a time;
-#   * all voices are mixed first and then panned/attenuated at this node's
-#     current transform, so the sound is always at the saber tip.
+#   * each voice is placed at the cube's world position (FR-020), so the sound comes
+#     from what was cut instead of from the saber.
 #
-# The player's `pitch_scale`/`volume_db` are node-wide and shared by every voice,
-# and `max_polyphony` cannot give a voice its own pitch — that is why neither is
-# used here.
-
-const POLYPHONY := 8
 
 # Audio verification counters (FR: prove hit audio really plays). Benchmark-only; reset and
 # read by BenchmarkRunner, which writes them into the run's meta file. Zero effect in play.
@@ -113,7 +108,6 @@ var is_extended := false
 @onready var _mat := light_mesh.material_override as ShaderMaterial
 @onready var tip := $tip as Marker3D
 @onready var tail := $tail as SaberTail
-@onready var hitsound := $hitsound as AudioStreamPlayer3D
 
 # Emissive glow (FR-046, 007 rule 3): a camera-facing quad strip, billboarded about the
 # blade axis in its own shader, instead of the 2.4x additive capsule shell it replaced. Its
@@ -129,16 +123,6 @@ var is_extended := false
 # from an instance uniform, so one shared material serves both blades.
 const MIRROR_SHADER := preload("res://game/shaders/mirror_pass.gdshader")
 static var _mirror_material: ShaderMaterial
-
-# The polyphonic playback, obtained once from the player. Every later hit is a
-# `play_stream` on this object; the player itself is never played again, because
-# a second play()/stop() creates a new playback and silences every live voice.
-var _voices: AudioStreamPlaybackPolyphonic = null
-
-# Fixed ring of voice ids, oldest at `_voice_next`. Used to steal the oldest
-# still-playing voice when the pool is full, instead of relying on engine order.
-var _voice_ids := PackedInt32Array()
-var _voice_next := 0
 
 # Last variant played per pool, so round-robin never repeats immediately.
 var _last_variant := {}
@@ -160,10 +144,6 @@ func _ready() -> void:
 	set_halo_enabled(Settings.saber_halo)
 	_set_mirror_pass(Settings.mirror_reflections)
 	# Exactly one play() for the lifetime of this node, then cache the playback.
-	if hitsound.stream is AudioStreamPolyphonic:
-		hitsound.play()
-		_voices = hitsound.get_stream_playback() as AudioStreamPlaybackPolyphonic
-
 func _process(delta: float) -> void:
 	if _pending_hits.is_empty():
 		set_process(false)
@@ -288,7 +268,8 @@ func _fire(info: HitInfo, from_offset: float) -> void:
 			accent = info.beat_acc >= BEAT_ACCENT_MIN
 	
 	var semitones := randf_range(-PITCH_JITTER_ST, PITCH_JITTER_ST)
-	_play(_pick(pool, pool_key), gain_db, semitones, from_offset)
+	var pos := info.note_pos if info != null else tip.global_position
+	_play(_pick(pool, pool_key), gain_db, semitones, from_offset, pos)
 	if probe_enabled:
 		match pool_key:
 			&"soft": probe_soft += 1
@@ -299,7 +280,7 @@ func _fire(info: HitInfo, from_offset: float) -> void:
 	if accent:
 		# The accent stacks on top of the hard layer, so it must sit below it or the pair
 		# breaches the 9 dB total budget. -4 dB is a tuning start (G4).
-		_play(_pick(_accent, &"accent"), gain_db - 4.0, semitones, from_offset)
+		_play(_pick(_accent, &"accent"), gain_db - 4.0, semitones, from_offset, pos)
 
 # Round-robin with no immediate repeat (research.md §3 row 13).
 func _pick(pool: Array, key: StringName) -> AudioStream:
@@ -313,70 +294,18 @@ func _pick(pool: Array, key: StringName) -> AudioStream:
 	_last_variant[key] = idx
 	return pool[idx] as AudioStream
 
-func _play(sample: AudioStream, gain_db: float, semitones: float, from_offset: float) -> void:
+func _play(sample: AudioStream, gain_db: float, semitones: float, from_offset: float, pos: Vector3) -> void:
 	if sample == null:
 		return
-	# Pause, a tree re-entry or a saber swap can stop the parent player, and the
-	# cached playback would then be dead without any error. Re-arm before each
-	# hit rather than assuming the _ready() play() still holds.
-	if not hitsound.playing:
-		hitsound.play()
-		_voices = hitsound.get_stream_playback() as AudioStreamPlaybackPolyphonic
-	if _voices == null:
+	var pool: Node = GlobalReferences.hit_audio
+	if pool == null:
 		return
-	
 	var ratio := pow(2.0, semitones / 12.0)
-	# Godot marks a stopped stream inactive only on the NEXT audio mix, so stopping a
-	# voice and immediately calling play_stream would still return INVALID_ID and the
-	# newest hit would be the one dropped. The stream is therefore configured with
-	# POLYPHONY + 2 slots (see the .tscn): we cap ourselves at POLYPHONY, so after a
-	# steal there is always a spare slot to play into without a retry.
-	if _active_voice_count() >= POLYPHONY:
-		_steal_oldest()
-	# p_bus is only honoured on the Web PLAYBACK_TYPE_SAMPLE path; on native the voice
-	# is mixed by the player and routed by the node's own `bus` property, which is SFX.
-	var id := _voices.play_stream(sample, from_offset, gain_db, ratio, 0, &"SFX")
+	var id := int(pool.call("play", sample, pos, gain_db, ratio, from_offset))
 	if probe_enabled:
 		probe_calls += 1
-	if id == AudioStreamPlaybackPolyphonic.INVALID_ID:
-		if probe_enabled:
+		if id < 0:
 			probe_invalid += 1
-		return
-	_remember(id)
-
-# Voices still actually playing. A stolen voice lingers here until the next mix, so
-# this is deliberately the same check the steal path uses.
-func _active_voice_count() -> int:
-	if _voices == null:
-		return 0
-	var count := 0
-	for id in _voice_ids:
-		if id != AudioStreamPlaybackPolyphonic.INVALID_ID and _voices.is_stream_playing(id):
-			count += 1
-	return count
-
-func _remember(id: int) -> void:
-	if _voice_ids.size() < POLYPHONY:
-		_voice_ids.append(id)
-		_voice_next = _voice_ids.size() % POLYPHONY
-	else:
-		_voice_ids[_voice_next] = id
-		_voice_next = (_voice_next + 1) % POLYPHONY
-
-# Oldest-first steal. Dead ids are skipped on the way past, so the ring cleans
-# itself up without a separate sweep.
-func _steal_oldest() -> bool:
-	var n := _voice_ids.size()
-	for k in n:
-		var idx := (_voice_next + k) % n
-		var id := _voice_ids[idx]
-		if id == AudioStreamPlaybackPolyphonic.INVALID_ID:
-			continue
-		if _voices != null and _voices.is_stream_playing(id):
-			_voices.stop_stream(id)
-			return true
-	return false
-
 
 func _on_setting_changed(key: StringName) -> void:
 	if key == &"hit_sound":

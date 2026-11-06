@@ -735,6 +735,8 @@ func _start_recording() -> void:
 			_meta["physics_ticks_settled"] = str(Engine.physics_ticks_per_second)
 			vr.log_info("BENCH: physics pinned to requested %.1f Hz (read-back at start was %.1f)" % [target_hz, settled])
 	_recording = true
+	if GlobalReferences.hit_audio != null:
+		GlobalReferences.hit_audio.call("begin_probe")
 	var probe_s := float(_bench_cfg.get_value("bench", "audio_probe", 0.0)) if _bench_cfg != null else 0.0
 	if probe_s > 0.0:
 		_audio_probe = AudioProbeScript.new()
@@ -1011,6 +1013,8 @@ func _finish(reason: String, quit_after: bool = true) -> void:
 		return
 	_recording = false
 	set_process(false)
+	if GlobalReferences.hit_audio != null:
+		_write_hit_probe(GlobalReferences.hit_audio.call("take_probe"))
 	if _audio_probe != null:
 		var probe_paths: Array = _audio_probe.call("stop")
 		if not probe_paths.is_empty():
@@ -1055,6 +1059,20 @@ func _abort(reason: String) -> void:
 	_write_meta()
 	vr.log_error("BENCH: exit=%s" % reason)
 	get_tree().quit(1)
+
+# FR-032: each hit's x in the camera frame, so the probe can check that the stereo image
+# follows the cube's side of the head.
+func _write_hit_probe(hits: Array) -> void:
+	var path := _out_dir.path_join("audio_hits.csv")
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		_meta["audio_hits_error"] = "cannot write " + path
+		return
+	f.store_line("usec,x")
+	for hit: Dictionary in hits:
+		f.store_line("%d,%.4f" % [int(hit.get("usec", 0)), float(hit.get("x", 0.0))])
+	_meta["audio_hits_csv"] = path
+	_meta["audio_hits"] = str(hits.size())
 
 func _write_csv() -> void:
 	var path := _out_dir.path_join(CSV_NAME)

@@ -190,7 +190,7 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 	# the sabre (specs/002-hit-audio-research/research.md §3).
 	var info := HitInfo.new()
 	info.speed_len = cut_speed.length()
-	info.note_pos = transform.origin
+	info.note_pos = global_position
 	
 	if saber_type == which_saber:
 		var cut_angle_accuracy := clampf((base_cut_angle_accuracy-0.7)/0.3, 0.0, 1.0)
