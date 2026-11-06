@@ -64,35 +64,35 @@ func _process_map(game: BeepSaber_Game) -> void:
 	var cube_refs: Array[BeepCube] = []
 	
 	# spawn notes
-	while not Map.note_stack.is_empty() and Map.note_stack[-1].beat <= look_ahead:
+	while not MapData.note_stack.is_empty() and MapData.note_stack[-1].beat <= look_ahead:
 		var note := GlobalReferences.cube_pool.acquire() as BeepCube
-		var note_info := Map.note_stack.pop_back() as ColorNoteInfo
+		var note_info := MapData.note_stack.pop_back() as ColorNoteInfo
 		note.spawn(note_info, current_beat)
 		Harness.log_spawn(note_info)
 		note_info_refs.append(note_info)
 		cube_refs.append(note)
 	
 	# spawn bombs
-	while not Map.bomb_stack.is_empty() and Map.bomb_stack[-1].beat <= look_ahead:
+	while not MapData.bomb_stack.is_empty() and MapData.bomb_stack[-1].beat <= look_ahead:
 		if probe: Cost.objs_spawned += 1
 		var bomb := bomb_template.instantiate() as Bomb
-		bomb.spawn(Map.bomb_stack.pop_back() as BombInfo, current_beat)
+		bomb.spawn(MapData.bomb_stack.pop_back() as BombInfo, current_beat)
 		game.track.add_child(bomb)
 	
 	# spawn obstacles (walls)
-	while not Map.obstacle_stack.is_empty() and Map.obstacle_stack[-1].beat <= look_ahead:
+	while not MapData.obstacle_stack.is_empty() and MapData.obstacle_stack[-1].beat <= look_ahead:
 		# FR-026: a fake wall is decorative and must never block or score. Popped without
 		# acquiring, so the pool is not touched at all.
-		if Map.obstacle_stack[-1].fake:
-			Map.obstacle_stack.pop_back()
+		if MapData.obstacle_stack[-1].fake:
+			MapData.obstacle_stack.pop_back()
 			continue
 		if probe: Cost.objs_spawned += 1
 		# Pooled, not instantiated. The pool adds its scene to the track at creation, so the
 		# node is already in the tree and spawn() can apply its material immediately.
 		var wall := GlobalReferences.wall_pool.acquire() as Wall
-		wall.spawn(Map.obstacle_stack.pop_back() as ObstacleInfo, current_beat)
+		wall.spawn(MapData.obstacle_stack.pop_back() as ObstacleInfo, current_beat)
 	
-	while not Map.arc_stack.is_empty() and Map.arc_stack[-1].head_beat <= look_ahead:
+	while not MapData.arc_stack.is_empty() and MapData.arc_stack[-1].head_beat <= look_ahead:
 		if probe:
 			Cost.objs_spawned += 1
 			Cost.arcs_spawned += 1
@@ -100,10 +100,10 @@ func _process_map(game: BeepSaber_Game) -> void:
 		# spawn. Disabling them is the cheap way to prove or eliminate that cost before
 		# rewriting them. The stack is still popped so timing/spawn order is unchanged.
 		if not Arc.spawn_enabled:
-			Map.arc_stack.pop_back()
+			MapData.arc_stack.pop_back()
 			continue
 		var arc := Arc.acquire() as Arc
-		var arc_info := Map.arc_stack.pop_back() as ArcInfo
+		var arc_info := MapData.arc_stack.pop_back() as ArcInfo
 		
 		# Find the arc's head note: beat within a tolerance, plus colour AND grid position.
 		# The old check compared beat and colour only, so with two same-colour notes on one beat
@@ -125,13 +125,13 @@ func _process_map(game: BeepSaber_Game) -> void:
 		arc.spawn(arc_info, current_beat, cube)
 		game.track.add_child(arc)
 	
-	while not Map.chain_stack.is_empty() and Map.chain_stack[-1].head_beat <= look_ahead:
-		var chain_info := Map.chain_stack.pop_back() as ChainInfo
+	while not MapData.chain_stack.is_empty() and MapData.chain_stack[-1].head_beat <= look_ahead:
+		var chain_info := MapData.chain_stack.pop_back() as ChainInfo
 		if chain_info.slice_count > 1: # skip if the chain doesn't have any links
 			ChainLink.construct_chain(chain_info, current_beat, note_info_refs, cube_refs)
 	
-	while not Map.event_stack.is_empty() and Map.event_stack[-1].beat <= current_beat:
-		game.event_driver.process_event(Map.event_stack.pop_back() as EventInfo)
+	while not MapData.event_stack.is_empty() and MapData.event_stack[-1].beat <= current_beat:
+		game.event_driver.process_event(MapData.event_stack.pop_back() as EventInfo)
 	
 	if probe:
 		Cost.spawn_usec += Time.get_ticks_usec() - t0

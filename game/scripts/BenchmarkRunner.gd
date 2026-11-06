@@ -410,7 +410,7 @@ func _begin() -> void:
 	_start_recording()
 
 # The bot is created here, in the same call stack as start_map(), i.e. before the
-# first physics tick can pop notes off Map.note_stack: it snapshots them itself.
+# first physics tick can pop notes off MapData.note_stack: it snapshots them itself.
 # Measurement-only switches, applied from the run's own flag so one build can
 # produce both arms of a comparison. Each one changes behaviour, so each one is
 # recorded in the meta file and each one defaults to "leave the shipped value".

@@ -199,7 +199,7 @@ func _apply_sway() -> void:
 		_base_origin.origin + _base_origin.basis.x * lean)
 
 # ── note queue ───────────────────────────────────────────────────────────────
-# Snapshot of Map.note_stack taken before the first physics tick: Playing.gd:58
+# Snapshot of MapData.note_stack taken before the first physics tick: Playing.gd:58
 # pops from it only once the song has started, and note_stack is reverse-ordered
 # (next note at index -1), so reversing the copy gives beat order.
 func _queue_notes() -> void:
@@ -207,7 +207,7 @@ func _queue_notes() -> void:
 		return
 	if Map.current_info.beats_per_minute <= 0.0:
 		return
-	var stack: Array = Map.note_stack.duplicate()
+	var stack: Array = MapData.note_stack.duplicate()
 	stack.reverse()
 	var track_xf := _track.global_transform
 	var last_t: Array[float] = [-INF, -INF]

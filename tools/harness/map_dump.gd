@@ -69,7 +69,7 @@ func _ready() -> void:
 			# the formatted lines inside each category: the dump is a diff target, not a reading
 			# order, and an unstable order made every comparison useless.
 			var notes := PackedStringArray()
-			for note in Map.note_stack:
+			for note in MapData.note_stack:
 				if note == null:
 					continue
 				notes.append("    NOTE b=%.6f x=%d y=%d c=%d d=%d col=%s pos=%s" % [
@@ -79,7 +79,7 @@ func _ready() -> void:
 			for line in notes:
 				dump_line(f, line)
 			var walls := PackedStringArray()
-			for wall in Map.obstacle_stack:
+			for wall in MapData.obstacle_stack:
 				if wall == null:
 					continue
 				walls.append("    WALL b=%.6f d=%.6f x=%d y=%d w=%d h=%d fake=%s col=%s" % [
@@ -89,7 +89,7 @@ func _ready() -> void:
 			for line in walls:
 				dump_line(f, line)
 			var arcs := PackedStringArray()
-			for arc in Map.arc_stack:
+			for arc in MapData.arc_stack:
 				if arc == null:
 					continue
 				arcs.append("    ARC head=%.6f tail=%.6f c=%d" % [arc.head_beat, arc.tail_beat, arc.color])
@@ -97,7 +97,7 @@ func _ready() -> void:
 			for line in arcs:
 				dump_line(f, line)
 			var chains := PackedStringArray()
-			for chain in Map.chain_stack:
+			for chain in MapData.chain_stack:
 				if chain == null:
 					continue
 				chains.append("    CHAIN head=%.6f tail=%.6f c=%d slices=%d squish=%.4f" % [
@@ -106,7 +106,7 @@ func _ready() -> void:
 			for line in chains:
 				dump_line(f, line)
 			var events := PackedStringArray()
-			for event in Map.event_stack:
+			for event in MapData.event_stack:
 				if event == null:
 					continue
 				events.append("    EVENT b=%.6f t=%d v=%d f=%.4f col=%s" % [

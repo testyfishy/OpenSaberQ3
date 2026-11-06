@@ -1,0 +1,277 @@
+extends RefCounted
+class_name MapData
+
+# The spawned-object stacks and their loaders (specs/013 FR-007, final Map split).
+#
+# Map keeps the metadata and the format dispatch; MapData owns the six stacks and the twelve
+# loader threads that fill them. Every load starts from reset(), which clears the stacks and joins
+# any thread a previous load left behind, so a second map cannot see the first map's notes.
+
+static var note_stack: Array[ColorNoteInfo]
+static var bomb_stack: Array[BombInfo]
+static var obstacle_stack: Array[ObstacleInfo]
+static var arc_stack: Array[ArcInfo]
+static var chain_stack: Array[ChainInfo]
+static var event_stack: Array[EventInfo]
+
+# Large maps take a long time to parse. Each per-type loader splits the array in half and parses
+# the two halves concurrently; the thread_1 worker is joined inside the loader, the thread_0
+# workers are started by load_v2()/load_v3() and joined before the map returns.
+static var _note_thread_0 := Thread.new()
+static var _note_thread_1 := Thread.new()
+static var _bomb_thread_0 := Thread.new()
+static var _bomb_thread_1 := Thread.new()
+static var _obstacle_thread_0 := Thread.new()
+static var _obstacle_thread_1 := Thread.new()
+static var _arc_thread_0 := Thread.new()
+static var _arc_thread_1 := Thread.new()
+static var _chain_thread_0 := Thread.new()
+static var _chain_thread_1 := Thread.new()
+static var _event_thread_0 := Thread.new()
+static var _event_thread_1 := Thread.new()
+
+static func reset() -> void:
+	note_stack.clear()
+	bomb_stack.clear()
+	obstacle_stack.clear()
+	arc_stack.clear()
+	chain_stack.clear()
+	event_stack.clear()
+	var threads: Array[Thread] = [
+		_note_thread_0, _note_thread_1, _bomb_thread_0, _bomb_thread_1,
+		_obstacle_thread_0, _obstacle_thread_1, _arc_thread_0, _arc_thread_1,
+		_chain_thread_0, _chain_thread_1, _event_thread_0, _event_thread_1,
+	]
+	for thread: Thread in threads:
+		# wait_to_finish() on a thread that never started is an error.
+		if thread.is_started():
+			thread.wait_to_finish()
+
+static func load_v2(map_data: Dictionary) -> void:
+	Utils.custom_thread_call(_note_thread_0, load_note_stack_v2, [Utils.get_array(map_data, "_notes", [])])
+	Utils.custom_thread_call(_obstacle_thread_0, load_obstacle_stack_v2, [Utils.get_array(map_data, "_obstacles", [])])
+	Utils.custom_thread_call(_event_thread_0, load_event_stack_v2, [Utils.get_array(map_data, "_events", [])])
+	Utils.custom_thread_call(_arc_thread_0, load_arc_stack_v2, [Utils.get_array(map_data, "_sliders", [])])
+	chain_stack.clear()
+	Utils.custom_thread_wait_to_finish(_note_thread_0)
+	Utils.custom_thread_wait_to_finish(_obstacle_thread_0)
+	Utils.custom_thread_wait_to_finish(_event_thread_0)
+	Utils.custom_thread_wait_to_finish(_arc_thread_0)
+
+static func load_v3(map_data: Dictionary) -> void:
+	Utils.custom_thread_call(_note_thread_0, load_note_stack_v3, [Utils.get_array(map_data, "colorNotes", [])])
+	Utils.custom_thread_call(_bomb_thread_0, load_bomb_stack_v3, [Utils.get_array(map_data, "bombNotes", [])])
+	Utils.custom_thread_call(_obstacle_thread_0, load_obstacle_stack_v3, [Utils.get_array(map_data, "obstacles", [])])
+	Utils.custom_thread_call(_arc_thread_0, load_arc_stack_v3, [Utils.get_array(map_data, "sliders", [])])
+	Utils.custom_thread_call(_chain_thread_0, load_chain_stack_v3, [Utils.get_array(map_data, "burstSliders", [])])
+	var event_list := Utils.get_array(map_data, "basicBeatmapEvents", [])
+	# FR-029: v3 keeps boost in its own array. Convert to the v2 type 5 event so one code path in
+	# event_driver handles both formats.
+	for b: Variant in Utils.get_array(map_data, "colorBoostBeatmapEvents", []):
+		if not (b is Dictionary):
+			continue
+		@warning_ignore("unsafe_cast")
+		var bd := b as Dictionary
+		event_list.append({"b": Utils.get_float(bd, "b", 0.0), "et": 5.0, "i": Utils.get_float(bd, "i", 0.0), "f": -1.0})
+	event_list.sort_custom(func(x: Variant, y: Variant) -> bool:
+		return Utils.get_float(x as Dictionary, "b", 0.0) < Utils.get_float(y as Dictionary, "b", 0.0))
+	Utils.custom_thread_call(_event_thread_0, load_event_stack_v3, [event_list])
+	Utils.custom_thread_wait_to_finish(_note_thread_0)
+	Utils.custom_thread_wait_to_finish(_bomb_thread_0)
+	Utils.custom_thread_wait_to_finish(_obstacle_thread_0)
+	Utils.custom_thread_wait_to_finish(_arc_thread_0)
+	Utils.custom_thread_wait_to_finish(_chain_thread_0)
+	Utils.custom_thread_wait_to_finish(_event_thread_0)
+
+# speed for the speed gods.  please forgive me for this.
+# - steve hocktail
+static func load_note_stack_v2(note_data: Array) -> void:
+	var load_range := func(start: int, end: int) -> Array[Array]:
+		var note_array: Array[ColorNoteInfo] = []
+		var bomb_array: Array[BombInfo] = []
+		var i := start
+		while i < end:
+			if not note_data[i] is Dictionary: continue
+			@warning_ignore("unsafe_cast")
+			var note_dict := note_data[i] as Dictionary
+			var note_type := int(Utils.get_float(note_dict, "_type", -1.0))
+			if MapSupport.is_fake_v2(note_dict):
+				# FR-026: decorative note from Noodle/Chroma. Hidden and unscored, not a ghost:
+				# its real position depends on animation we do not implement.
+				MapSupport.fakes_filtered += 1
+				i += 1
+				continue
+			if note_type == 3 and Settings.bombs_enabled:
+				bomb_array.append(BombInfo.new_v2(note_dict))
+			elif note_type == 0 or note_type == 1:
+				note_array.append(ColorNoteInfo.new_v2(note_dict))
+			i += 1
+		return [note_array, bomb_array]
+	var midpoint := note_data.size() >> 1
+	#_note_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(_note_thread_1, load_range, [0, midpoint])
+	var total_second_half : Array[Array] = load_range.bind(midpoint, note_data.size()).call()
+	#var total_first_half : Array[Array] = _note_thread_1.wait_to_finish()
+	var total_first_half : Array[Array] = Utils.custom_thread_wait_to_finish(_note_thread_1)
+	note_stack = total_first_half[0] + total_second_half[0]
+	bomb_stack = total_first_half[1] + total_second_half[1]
+	note_stack.reverse()
+	bomb_stack.reverse()
+
+static func load_obstacle_stack_v2(obstacle_data: Array) -> void:
+	var last_index := obstacle_data.size() - 1
+	var load_range := func(start: int, end: int) -> void:
+		var i := start
+		while i < end:
+			if obstacle_data[i] is Dictionary:
+				@warning_ignore("unsafe_cast")
+				obstacle_stack[last_index - i] = ObstacleInfo.new_v2(obstacle_data[i] as Dictionary)
+			i += 1
+	var midpoint := obstacle_data.size() >> 1
+	obstacle_stack.resize(obstacle_data.size())
+	#_obstacle_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(_obstacle_thread_1, load_range, [0, midpoint])
+	load_range.bind(midpoint, obstacle_data.size()).call()
+	#_obstacle_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(_obstacle_thread_1)
+
+static func load_arc_stack_v2(arc_data: Array) -> void:
+	var last_index := arc_data.size() - 1
+	var load_range := func(start: int, end: int) -> void:
+		var i := start
+		while i < end:
+			if arc_data[i] is Dictionary:
+				@warning_ignore("unsafe_cast")
+				arc_stack[last_index - i] = ArcInfo.new_v2(arc_data[i] as Dictionary)
+			i += 1
+	var midpoint := arc_data.size() >> 1
+	arc_stack.resize(arc_data.size())
+	#_arc_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(_arc_thread_1, load_range, [0, midpoint])
+	load_range.bind(midpoint, arc_data.size()).call()
+	#_arc_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(_arc_thread_1)
+	
+
+static func load_event_stack_v2(event_data: Array) -> void:
+	var last_index := event_data.size() - 1
+	var load_range := func(start: int, end: int) -> void:
+		var i := start
+		while i < end:
+			if event_data[i] is Dictionary:
+				@warning_ignore("unsafe_cast")
+				event_stack[last_index - i] = EventInfo.new_v2(event_data[i] as Dictionary)
+			i += 1
+	var midpoint := event_data.size() >> 1
+	event_stack.resize(event_data.size())
+	#_event_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(_event_thread_1, load_range, [0, midpoint])
+	load_range.bind(midpoint, event_data.size()).call()
+	#_event_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(_event_thread_1)
+
+static func load_note_stack_v3(note_data: Array) -> void:
+	var last_index := note_data.size() - 1
+	var load_range := func(start: int, end: int) -> void:
+		var i := start
+		while i < end:
+			if note_data[i] is Dictionary:
+				@warning_ignore("unsafe_cast")
+				note_stack[last_index - i] = ColorNoteInfo.new_v3(note_data[i] as Dictionary)
+			i += 1
+	var midpoint := note_data.size() >> 1
+	note_stack.resize(note_data.size())
+	#_note_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(_note_thread_1, load_range, [0, midpoint])
+	load_range.bind(midpoint, note_data.size()).call()
+	#_note_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(_note_thread_1)
+
+static func load_bomb_stack_v3(bomb_data: Array) -> void:
+	if not Settings.bombs_enabled:
+		bomb_stack.clear()
+		return
+	var last_index := bomb_data.size() - 1
+	var load_range := func(start: int, end: int) -> void:
+		var i := start
+		while i < end:
+			if bomb_data[i] is Dictionary:
+				@warning_ignore("unsafe_cast")
+				bomb_stack[last_index - i] = BombInfo.new_v3(bomb_data[i] as Dictionary)
+			i += 1
+	var midpoint := bomb_data.size() >> 1
+	bomb_stack.resize(bomb_data.size())
+	#_bomb_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(_bomb_thread_1, load_range, [0, midpoint])
+	load_range.bind(midpoint, bomb_data.size()).call()
+	#_bomb_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(_bomb_thread_1)
+
+static func load_obstacle_stack_v3(obstacle_data: Array) -> void:
+	var last_index := obstacle_data.size() - 1
+	var load_range := func(start: int, end: int) -> void:
+		var i := start
+		while i < end:
+			if obstacle_data[i] is Dictionary:
+				@warning_ignore("unsafe_cast")
+				obstacle_stack[last_index - i] = ObstacleInfo.new_v3(obstacle_data[i] as Dictionary)
+			i += 1
+	var midpoint := obstacle_data.size() >> 1
+	obstacle_stack.resize(obstacle_data.size())
+	#_obstacle_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(_obstacle_thread_1, load_range, [0, midpoint])
+	load_range.bind(midpoint, obstacle_data.size()).call()
+	#_obstacle_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(_obstacle_thread_1)
+
+static func load_arc_stack_v3(arc_data: Array) -> void:
+	var last_index := arc_data.size() - 1
+	var load_range := func(start: int, end: int) -> void:
+		var i := start
+		while i < end:
+			if arc_data[i] is Dictionary:
+				@warning_ignore("unsafe_cast")
+				arc_stack[last_index - i] = ArcInfo.new_v3(arc_data[i] as Dictionary)
+			i += 1
+	var midpoint := arc_data.size() >> 1
+	arc_stack.resize(arc_data.size())
+	#_arc_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(_arc_thread_1, load_range, [0, midpoint])
+	load_range.bind(midpoint, arc_data.size()).call()
+	#_arc_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(_arc_thread_1)
+
+static func load_chain_stack_v3(chain_data: Array) -> void:
+	var last_index := chain_data.size() - 1
+	var load_range := func(start: int, end: int) -> void:
+		var i := start
+		while i < end:
+			if chain_data[i] is Dictionary:
+				@warning_ignore("unsafe_cast")
+				chain_stack[last_index - i] = ChainInfo.new_v3(chain_data[i] as Dictionary)
+			i += 1
+	var midpoint := chain_data.size() >> 1
+	chain_stack.resize(chain_data.size())
+	#_chain_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(_chain_thread_1, load_range, [0, midpoint])
+	load_range.bind(midpoint, chain_data.size()).call()
+	#_chain_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(_chain_thread_1)
+
+static func load_event_stack_v3(event_data: Array) -> void:
+	var last_index := event_data.size() - 1
+	var load_range := func(start: int, end: int) -> void:
+		var i := start
+		while i < end:
+			if event_data[i] is Dictionary:
+				@warning_ignore("unsafe_cast")
+				event_stack[last_index - i] = EventInfo.new_v3(event_data[i] as Dictionary)
+			i += 1
+	var midpoint := event_data.size() >> 1
+	event_stack.resize(event_data.size())
+	#_event_thread_1.start(load_range.bind(0, midpoint))
+	Utils.custom_thread_call(_event_thread_1, load_range, [0, midpoint])
+	load_range.bind(midpoint, event_data.size()).call()
+	#_event_thread_1.wait_to_finish()
+	Utils.custom_thread_wait_to_finish(_event_thread_1)
+
