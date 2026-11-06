@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-05
 
-**Status**: In progress - UI released as v0.4.0; map slices 1-3 done; audio probe done; positioned hit pool + ducking next; 5, 9 and MapData open
+**Status**: In progress - UI released as v0.4.0; map slices 1-3 done; part 6 (positioned hit pool + ducking) done and measured; 5, 9 and MapData open
 
 **Input**: "Do you wanna fix the scroll things? Also wanna plan out a specification for eloquent
 coding and cleaning up the software part by part. For now let's start with the UI."

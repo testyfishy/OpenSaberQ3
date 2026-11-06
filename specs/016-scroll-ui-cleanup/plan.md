@@ -230,9 +230,21 @@ numbers (fps median, App ms, GPU %, p99/max frame interval) and must leave the g
    **Level is not the problem.** The hit voice is the saber's `AudioStreamPlayer3D`, not the cube
    (FR-020 asks for the cube), and the timbre is the old classic set; both match the complaint
    better than "too quiet".
-   Next: a positioned hit-voice pool (the part's "saber pool"), then ducking. Godot has no
-   sidechain compressor, so FR-017 needs a manual music envelope (attack 1-5 ms, release
-   100-150 ms, 2-4 dB), gated by the same probe (Master vs SFX).
+   **Both fixes are in and measured (2026-11-06).**
+   - `HitAudio.gd`: 16 preallocated `AudioStreamPlayer3D` voices on the SFX bus, oldest-first
+     steal, each placed at the cube's `global_position`; distance attenuation and doppler off so a
+     cube a metre away is not quieter than the saber; panning kept at 0.85; 1/sqrt(n) inside 30 ms.
+   - Ducking: a per-frame envelope on the Music bus (3 dB, 80 ms hold, 25 dB/s release), with the
+     `audio_ducking` setting on the Audio tab (default true after the measurement). HitAudio is the
+     only Music-bus writer.
+   - Device: SFX peak **-4.1 dBFS**, same as v0.4.0; duck off `audio_duck_min_db=0.00` / 0 frames,
+     duck on **-3.00 dB** / 361 frames; App 5.63 ms with the probe on in both arms, and the tagged
+     release measured 5.68 ms in the same session (cooler runs read ~5.0, so compare like with
+     like). L/R: 4/4 non-silent lateral windows (>0.3 m) put the energy on the cube's side; 9 of
+     13 lateral windows were silent in the SFX tap (capture/log timing) so the sample is small.
+   - Known gap: the attack is one frame (8-14 ms at 72-120 Hz), not the 3 ms in spec 011 FR-017.
+     A bus capture is pre-volume, so the Music tap could not show the duck; the gate reads the
+     applied bus gain instead. Both are recorded rather than hidden.
 
 9. **Bench tooling - deferred on purpose.** The plan says it is the instrument the other gates use,
    and it is 1262 lines. Splitting it now would invalidate the instrument while parts are still
