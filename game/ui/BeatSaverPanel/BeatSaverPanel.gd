@@ -11,6 +11,7 @@ const BeatSaverApi := preload("res://game/ui/BeatSaverPanel/BeatSaverApi.gd")
 const BeatSaverCoversScript := preload("res://game/ui/BeatSaverPanel/BeatSaverCovers.gd")
 const MapCardScript := preload("res://game/ui/BeatSaverPanel/BeatSaverMapCard.gd")
 const BeatSaverQueryScript := preload("res://game/ui/BeatSaverPanel/BeatSaverQuery.gd")
+const DetailViewScript := preload("res://game/ui/BeatSaverPanel/BeatSaverDetailView.gd")
 const HTTP_REQUEST_POOL := preload("res://game/scripts/HTTPRequestPool.tscn")
 const VR_SLIDER := preload("res://game/vr_slider.tscn")
 const PLACEHOLDER_COVER := preload("res://game/data/beepsaber_logo.png")
@@ -109,10 +110,7 @@ var _card_list: VBoxContainer
 var _cards: Array = []
 var _status_label: Label
 var _retry_button: Button
-var _details_cover: TextureRect
-var _song_data: RichTextLabel
-var _download_button: Button
-var _maps_by_button: Button
+var _detail_view: Control
 var _status_bar: Label
 
 var _is_first_show := true
@@ -278,31 +276,11 @@ func _build_ui() -> void:
 		card.pressed.connect(_on_card_pressed.bind(i))
 		_cards.append(card)
 
-	# Details pane.
-	_details_cover = TextureRect.new()
-	_details_cover.position = Vector2(904, 204)
-	_details_cover.size = Vector2(616, 264)
-	_details_cover.texture = PLACEHOLDER_COVER
-	_details_cover.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_details_cover.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	_details_cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_details_cover)
-
-	_song_data = RichTextLabel.new()
-	_song_data.name = "SongData"
-	_song_data.position = Vector2(904, 478)
-	_song_data.size = Vector2(616, 308)
-	_song_data.bbcode_enabled = true
-	_song_data.scroll_active = false
-	_song_data.text = "Select a map to see the details.\n\nPress Download to add it to your library."
-	add_child(_song_data)
-
-	_download_button = _make_button(Rect2(904, 796, 296, 56), "Download")
-	_download_button.pressed.connect(_on_download_pressed)
-
-	_maps_by_button = _make_button(Rect2(1216, 796, 304, 56), "Maps by…")
-	_maps_by_button.pressed.connect(_on_maps_by_pressed)
-	_maps_by_button.disabled = true
+	# Details pane (UI-4 step 2): the view builds its own cover/text/buttons at the same rects.
+	_detail_view = DetailViewScript.new()
+	add_child(_detail_view)
+	_detail_view.download_pressed.connect(_on_download_pressed)
+	_detail_view.maps_by_pressed.connect(_on_maps_by_pressed)
 
 	_status_bar = _make_label(Rect2(16, 868, 1264, 60), "", 16, Color(0.9, 0.9, 0.9, 1))
 	_status_bar.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -812,18 +790,12 @@ func _on_card_pressed(index: int) -> void:
 
 
 func _clear_details() -> void:
-	_song_data.text = "Select a map to see the details.\n\nPress Download to add it to your library."
-	_details_cover.texture = PLACEHOLDER_COVER
-	_maps_by_button.text = "Maps by…"
-	_maps_by_button.disabled = true
+	_detail_view.show_placeholder()
 
 
 func _show_details(map) -> void:
-	_details_cover.texture = PLACEHOLDER_COVER
+	_detail_view.show_map(map, _details_text(map))
 	_covers.request(map.cover_url, _on_details_cover_ready)
-	_maps_by_button.text = "Maps by %s" % map.mapper
-	_maps_by_button.disabled = map.uploader_name.is_empty() and map.mapper.is_empty()
-	_song_data.text = _details_text(map)
 	if _preview_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
 		_preview_request.cancel_request()
 	if not map.preview_url.is_empty():
@@ -831,8 +803,7 @@ func _show_details(map) -> void:
 
 
 func _on_details_cover_ready(texture: Texture2D) -> void:
-	if texture != null:
-		_details_cover.texture = texture
+	_detail_view.set_cover(texture)
 
 
 func _bb(text: String) -> String:
