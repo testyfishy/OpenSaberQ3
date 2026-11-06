@@ -9,13 +9,11 @@ class_name BeatSaverPanel
 
 const BeatSaverApi := preload("res://game/ui/BeatSaverPanel/BeatSaverApi.gd")
 const BeatSaverCoversScript := preload("res://game/ui/BeatSaverPanel/BeatSaverCovers.gd")
-const MapCardScript := preload("res://game/ui/BeatSaverPanel/BeatSaverMapCard.gd")
 const BeatSaverQueryScript := preload("res://game/ui/BeatSaverPanel/BeatSaverQuery.gd")
 const DetailViewScript := preload("res://game/ui/BeatSaverPanel/BeatSaverDetailView.gd")
 const ResultsViewScript := preload("res://game/ui/BeatSaverPanel/BeatSaverResultsView.gd")
 const HTTP_REQUEST_POOL := preload("res://game/scripts/HTTPRequestPool.tscn")
 const VR_SLIDER := preload("res://game/vr_slider.tscn")
-const PLACEHOLDER_COVER := preload("res://game/data/beepsaber_logo.png")
 
 ## Must match BeatSaverApi.PAGE_SIZE (kept as a literal so it is a compile-time constant here).
 const PAGE_SIZE := 20

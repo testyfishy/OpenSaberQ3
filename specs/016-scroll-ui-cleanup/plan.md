@@ -135,11 +135,32 @@ coverage both ways, type match, range sanity, clamp behaviour, `changed` contrac
 
 ## UI-4 - Split the BeatSaver panel
 
-`BeatSaverPanel.gd` is ~1,000 lines mixing API calls, list building and the detail view. Split into
-an API client, a list view and a detail view, keeping the public surface. This is the closest to a
-rewrite, so it goes last among the UI parts.
+Done in five buildable commits. `BeatSaverPanel.gd` went from 1048 to 928 lines and now only owns
+what a shell should: the search/filter bar, paging, the request pools, the cover cache, selection,
+downloads and show/hide. The API client (`BeatSaverApi`) was already pure; the new parts are:
 
-Gate: screenshots of every panel state (list, search, detail, download) plus the scroll probe.
+| File | Lines | Owns |
+|---|---|---|
+| `BeatSaverQuery.gd` | 88 | query dict, preset tables/bounds, difficulty parse/serialise, settings keys, sort list |
+| `BeatSaverDetailView.gd` | 84 | cover, SongData, Download, Maps-by; signals only |
+| `BeatSaverResultsView.gd` | 103 | card scroll, 20-card pool, status line, Retry; signals only |
+
+Both views are full-panel Controls with `MOUSE_FILTER_IGNORE`, so every child rect and raycast
+target is unchanged. They never touch `BeatSaverApi`, an `HTTPRequest` or the cover cache: the
+panel asks `set_rows()` for the cover requests and pushes textures back. The scroller points at
+`../ResultsView/CardsScroll`, and the panel exposes `get_results_view()` / `get_cards_list()` /
+`get_list_slider()` so harnesses stop depending on the layout.
+
+Gates:
+- `tools/beatsaver_shots.tscn`: eight states (loading, list, detail, downloading, downloaded,
+  error, empty, paging) built from the checked-in BeatSaver sample through the real parser, with a
+  stub cover source. All eight are **byte-identical** to the pre-split baseline after every step.
+- `VERIFYPANELBS bad=0`: every object-typed script variable resolves, both views exist at full
+  panel size and ignore the mouse, a card press selects index 0 and a Download press queues.
+- `VERIFYQUERY bad=0`, `beatsaver browser test: OK (76 checks)`, `SETTINGSTEST PASS`,
+  `VERIFYCANVAS bad=0`, `VERIFYPANEL nulls=0`, `VERIFYSCHEMA keys=49 bad=0`.
+- Device 3 s hold probe: **281/282 moving frames rendered (0.996)**, 111 fps median, App 5.39 ms,
+  GPU 0.81 %, panel redraw CPU 0.226 ms - no worse than the 0.997 / 112 fps / 5.50 ms baseline.
 
 ## Remaining parts (after the UI)
 
