@@ -129,6 +129,11 @@ func _ready() -> void:
 
 	var canvas := _find_canvas()
 	if canvas != null:
+		# This panel paints an opaque background across the whole canvas, so blending the
+		# 896x856 texture against the scene is pure fill cost. The settings panel keeps the
+		# shared default (it has rounded corners that need transparency).
+		if "viewport" in canvas and canvas.viewport != null:
+			(canvas.viewport as SubViewport).transparent_bg = false
 		canvas.visibility_changed.connect(_on_visibility_changed)
 
 	if keyboard != null:
