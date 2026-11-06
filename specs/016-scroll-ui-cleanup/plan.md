@@ -162,6 +162,11 @@ Gates:
 - Device 3 s hold probe: **281/282 moving frames rendered (0.996)**, 111 fps median, App 5.39 ms,
   GPU 0.81 %, panel redraw CPU 0.226 ms - no worse than the 0.997 / 112 fps / 5.50 ms baseline.
 
+Known debt, accepted at G4: `_query` is a read-only getter over `query.data` (two names until the
+reads move), and both views build their controls in code with the original absolute rects (a
+`.tscn` version is a separate change). `CanvasRefresh.of()` sets its viewport meta before adding
+the node and defers the add on a Window, so a desktop `_ready()` cannot trip the busy-parent error.
+
 ## Remaining parts (after the UI)
 
 5. **View state** - the game-state scripts.

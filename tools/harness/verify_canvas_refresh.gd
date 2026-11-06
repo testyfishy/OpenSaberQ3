@@ -29,6 +29,17 @@ func _ready() -> void:
 		finish()
 		return
 
+	# 0. The desktop/Window path: of() called from _ready must not crash and must stay a singleton.
+	var window_refresh := CanvasRefresh.of(self)
+	if window_refresh == null:
+		fail("CanvasRefresh.of() returned null on a Window viewport")
+	else:
+		await get_tree().process_frame
+		if CanvasRefresh.of(self) != window_refresh:
+			fail("of() created a second authority on a Window")
+		if window_refresh.get_parent() != get_viewport():
+			fail("deferred add_child did not attach the authority to the Window")
+
 	# 1. Heartbeat every frame for longer than the watchdog window.
 	var start := Time.get_ticks_msec()
 	var frames := 0

@@ -32,16 +32,22 @@ static func of(node: Node) -> CanvasRefresh:
 	var created := CanvasRefresh.new()
 	created.name = "CanvasRefresh"
 	created._viewport = vp
-	vp.add_child(created)
+	# The meta is set before the node enters the tree, so a second of() in the same frame reuses it.
+	# A Window (desktop root) refuses children while it is setting up its own, so defer there.
+	if vp is SubViewport:
+		vp.add_child(created)
+	else:
+		vp.add_child.call_deferred(created)
 	vp.set_meta(&"canvas_refresh", created)
 	return created
 
 var _viewport: Viewport
 var _dirty := false
 var _live: Dictionary = {}
-# Diagnostic counter: frames on which the viewport was set to draw. This is the only honest "did it
-# render" signal for a SubViewport (the measured render time keeps its last value when idle), and
-# the scroll probe uses it to prove a held scroll never goes dark.
+# Diagnostic counter: frames on which the viewport was set to draw. SubViewport only (a Window has
+# no render target mode, so it stays 0 there). This is the only honest "did it render" signal for a
+# SubViewport - the measured render time keeps its last value when idle - and the scroll probe uses
+# it to prove a held scroll never goes dark.
 var render_frames := 0
 # Owners whose `tree_exiting` is already connected. Checking `is_connected()` with a bound
 # Callable is not reliable, so the connection is tracked by instance id instead.

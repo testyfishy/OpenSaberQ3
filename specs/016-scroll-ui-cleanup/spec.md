@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-05
 
-**Status**: In progress
+**Status**: In progress - UI parts (1-4) complete; remaining parts 5-9 open
 
 **Input**: "Do you wanna fix the scroll things? Also wanna plan out a specification for eloquent
 coding and cleaning up the software part by part. For now let's start with the UI."
@@ -79,3 +79,5 @@ write the part-by-part cleanup specification the player asked for, beginning wit
 | G4 | UI-1..UI-3 together, before UI-4 (`0354122`) | RETHINK UI-1: the watchdog stops any scroll held longer than 0.5 s because `begin_live` only ran on the transition; `helper_UIArea` still calls `canvas._input_update()`, a second authority; fix owner tracking and restore modes. UI-2/UI-3 PASS. Do the line-ending renormalisation before UI-4 | `_set_live` heartbeats every moved frame; `_input_update` routes to `CanvasRefresh`; main menu folded in; `VERIFYCANVAS` added; device 3 s hold renders 289/290 moving frames; `.gitattributes` + renormalise commit `e5a2eb7` |
 | G4 (follow-up) | UI-1..UI-3 after the RETHINK fixes (`0354122`..`0457148`) | PASS: watchdog heartbeat, single authority, owner tracking and the 3 s render-count probe verified; `end_live` DISABLED accepted as the intended on-demand steady state. UI-4 goes to G1 | UI-1..UI-3 closed; UI-4 constraints recorded (views refresh through CanvasRefresh, heartbeat on every moved frame, state screenshots, 3 s hold probe, resolve gate per scene) |
 | G1 | UI-4 split: Query → DetailView → ResultsView → shell | GO WITH CHANGES: baseline shots + probe before touching code; pager stays in the shell; Covers stays a separate node; Query's timer injected (kept in the panel); keep `_query`/`_rows` compatible or update the smoke in the same commit; inject fixture bytes at the HTTP-completion handlers with stubbed covers; re-measure the line map | Step 0 shots/probe, then Query, DetailView, ResultsView and the shell tidy, each committed; all eight states byte-identical, device probe 0.996, panel 1048 → 928 lines |
+| G4 | UI-4 split (`63a3c4f`..`6e6b0f7`) and UI-1..UI-4 as a whole | APPROVE: LOW items only - `CanvasRefresh.of()` on a Window must defer `add_child`, `render_frames` is SubViewport-only, check `_find_canvas` (still used, kept). Debt accepted: `_query` getter alias, code-built views | Deferred add_child + meta-first singleton + a Window case in `VERIFYCANVAS`; counter documented as SubViewport-only; `VERIFYCANVAS bad=0`, `VERIFYPANELBS bad=0` |
+| G5 | UI-1..UI-4 vs this spec/plan | Matches spec: 8 byte-identical states after every step; hold probe 0.996 vs 0.997; no view references `BeatSaverApi`/`HTTPRequest`/`_input_update`; buildable commits throughout | Recorded in plan.md; parts 5-9 remain open |
