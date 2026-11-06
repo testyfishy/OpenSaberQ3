@@ -30,6 +30,8 @@ var _token := 0
 var _row_labels: Array[Array] = []
 var _map: MapInfo
 var _diff: DifficultyInfo
+## Last failure reason, for the device probe and support. Empty after a successful render.
+var last_error := ""
 
 func _ready() -> void:
 	UI_AudioEngine.attach_children(self)
@@ -53,6 +55,7 @@ func open(map_info: MapInfo, diff: DifficultyInfo) -> void:
 		_http.cancel_request()
 	_clear_rows()
 	_title.text = "BeatLeader"
+	last_error = ""
 	if map_info == null:
 		_song_info.text = ""
 		_set_status("No map selected.")
@@ -85,16 +88,20 @@ func _fetch(key: String, hash: String, difficulty: String, mode: String) -> void
 	if token != _token:
 		return
 	if not bool(board_res["ok"]):
+		last_error = "board_transport"
 		_set_status("Could not reach BeatLeader. Check the connection and try again.")
 		return
 	if int(board_res["code"]) == 404:
 		_finish(key, {"status": Api.STATUS_NOT_FOUND})
 		return
 	if int(board_res["code"]) != 200:
+		last_error = "board_http_%d" % int(board_res["code"])
 		_set_status("BeatLeader returned HTTP %d." % int(board_res["code"]))
 		return
-	var board := Api.parse_board(board_res["body"] as PackedByteArray)
+	var board_body := (board_res["body"] as PackedByteArray).get_string_from_utf8()
+	var board := Api.parse_board_value(JSON.parse_string(board_body))
 	if not bool(board.get("ok", false)):
+		last_error = "board_parse_%s" % str(board.get("error", ""))
 		_set_status("Could not read BeatLeader's board response.")
 		return
 
@@ -102,6 +109,7 @@ func _fetch(key: String, hash: String, difficulty: String, mode: String) -> void
 	if token != _token:
 		return
 	if not bool(scores_res["ok"]):
+		last_error = "scores_transport"
 		_set_status("Could not reach BeatLeader. Check the connection and try again.")
 		return
 	if int(scores_res["code"]) == 404:
@@ -110,8 +118,10 @@ func _fetch(key: String, hash: String, difficulty: String, mode: String) -> void
 	if int(scores_res["code"]) != 200:
 		_set_status("BeatLeader returned HTTP %d." % int(scores_res["code"]))
 		return
-	var parsed := Api.parse_scores(scores_res["body"] as PackedByteArray)
+	var scores_body := (scores_res["body"] as PackedByteArray).get_string_from_utf8()
+	var parsed := Api.parse_scores_value(JSON.parse_string(scores_body))
 	if not bool(parsed.get("ok", false)):
+		last_error = "scores_parse_%s" % str(parsed.get("error", ""))
 		_set_status("Could not read BeatLeader's scores response.")
 		return
 	var rows: Array = parsed.get("scores", [])
@@ -133,6 +143,7 @@ func _finish(key: String, result: Dictionary) -> void:
 
 func _apply(result: Dictionary) -> void:
 	var status := str(result.get("status", Api.STATUS_OFFLINE))
+	vr.log_info("BEATLEADER result %s" % status)
 	match status:
 		Api.STATUS_NOT_FOUND:
 			_set_status("BeatLeader has no leaderboard for this map and difficulty.")
@@ -194,6 +205,7 @@ func _cache_key(hash: String, difficulty: String, mode: String) -> String:
 ## One HTTP round trip. `ok` is false only for transport failures; HTTP status is left for the
 ## caller so 404 (no board) and 5xx (server/offline) stay distinct.
 func _http_get(url: String) -> Dictionary:
+	vr.log_info("BEATLEADER GET %s" % url)
 	var err := _http.request(url, PackedStringArray(["User-Agent: " + Api.USER_AGENT]))
 	if err != OK:
 		return {"ok": false, "code": 0, "body": PackedByteArray()}

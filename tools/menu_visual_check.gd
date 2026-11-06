@@ -32,6 +32,15 @@ func _ready() -> void:
 	for i in menu.songs_menu.item_count:
 		print("MENUVISUAL filtered ", menu.songs_menu.get_item_text(i))
 	_save("user://visual_menu_filtered.png")
+	# An empty filter view must show an explicit state and disable Play.
+	menu.source_filter.select(3)
+	menu._on_SourceFilter_item_selected(3)
+	canvas._input_update()
+	await get_tree().process_frame
+	var play_button := menu.get_node("Play_Button") as Button
+	print("MENUVISUAL empty play_disabled=", play_button.disabled, " items=", menu.songs_menu.item_count, " info=", (menu.get_node("SongInfo_Label") as Label).text)
+	_save("user://visual_menu_empty.png")
+
 	menu.source_filter.select(0)
 	menu._on_SourceFilter_item_selected(0)
 

@@ -307,6 +307,12 @@ func _begin() -> void:
 	# and records the scroll value every frame. "It feels notchy" is not measurable, but the
 	# per-frame delta sequence is: a smooth scroll moves a little on most frames, a notchy one
 	# alternates zero-delta frames with large jumps.
+	# Leaderboard probe: opens the real BeatLeader panel on the device and records the live
+	# state and row count. Reads should work on the headset's network too; this is the only way
+	# to prove it without a player driving the menu.
+	if bool(cfg.get_value("bench", "leaderboard_probe", false)):
+		_run_leaderboard_probe(cfg)
+		return
 	if bool(cfg.get_value("bench", "ui_scroll_probe", false)):
 		_run_ui_scroll_probe()
 		return
@@ -706,6 +712,66 @@ func _run_beatsaver_probe() -> void:
 		_meta["probe_map_source"] = info.source
 		_meta["probe_map_difficulties"] = str(info.difficulty_beatmaps.size())
 	_probe_done()
+
+
+func _run_leaderboard_probe(cfg: ConfigFile) -> void:
+	var menu: MainMenu = _game.menu
+	var wanted := str(cfg.get_value("bench", "leaderboard_map", "Phoenix")).to_lower()
+	# Several folders can share a title; pick the first one whose level hash computes, so the
+	# probe never reports "no hash" for a map that is simply incomplete on the device.
+	var candidates: Array[MapInfo] = []
+	for candidate: MapInfo in menu._all_songs:
+		if candidate.song_name.to_lower().contains(wanted):
+			candidates.append(candidate)
+	if candidates.is_empty():
+		candidates = menu._all_songs.duplicate()
+	if not candidates.is_empty():
+		var probe_map: MapInfo = candidates[0]
+		_meta["probe_hash_path"] = probe_map.filepath
+		_meta["probe_hash_result"] = MapSource.compute_level_hash(probe_map.filepath)
+	var map: MapInfo = null
+	for candidate: MapInfo in candidates:
+		if candidate.level_hash.is_empty():
+			candidate.level_hash = MapSource.compute_level_hash(candidate.filepath)
+		if not candidate.level_hash.is_empty() and not candidate.difficulty_beatmaps.is_empty():
+			map = candidate
+			break
+	if map == null:
+		_meta["probe_error"] = "no map with a computable hash"
+		_meta["probe_leaderboard_candidates"] = str(candidates.size())
+		_meta["samples"] = 0
+		_meta["exit_reason"] = "leaderboard_probe"
+		_write_meta()
+		get_tree().quit()
+		return
+	var diff: DifficultyInfo = map.difficulty_beatmaps[0]
+	for candidate: DifficultyInfo in map.difficulty_beatmaps:
+		if candidate.difficulty == "ExpertPlus" and candidate.characteristic == "Standard":
+			diff = candidate
+			break
+
+	_game._leaderboard_button(map, diff)
+	var panel = _game.leaderboard_panel
+	for _i in 300:
+		await get_tree().create_timer(0.1).timeout
+		if not String(panel._status.text).begins_with("Loading"):
+			break
+	_meta["probe_leaderboard_song"] = map.song_name
+	_meta["probe_leaderboard_hash"] = map.level_hash
+	_meta["probe_leaderboard_difficulty"] = diff.difficulty
+	_meta["probe_leaderboard_mode"] = diff.characteristic
+	_meta["probe_leaderboard_status"] = panel._status.text
+	_meta["probe_leaderboard_error"] = panel.last_error
+	var rows := 0
+	for label_row in panel._row_labels:
+		if (label_row[0].get_parent() as Control).visible:
+			rows += 1
+	_meta["probe_leaderboard_rows"] = str(rows)
+	_meta["samples"] = 0
+	_meta["exit_reason"] = "leaderboard_probe"
+	_write_meta()
+	vr.log_info("BENCH: leaderboard probe complete")
+	get_tree().quit()
 
 
 func _probe_done() -> void:

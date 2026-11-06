@@ -28,11 +28,17 @@ var _running := false
 var _stop := false
 var _can_run: Callable
 var _last_map_id := ""
+var _log_path := ""
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
 	_http.timeout = 10.0
 	add_child(_http)
+	# Debug builds keep a small on-device log: the headset has no stdout access, and a silent
+	# backfill failure is indistinguishable from "nothing to do" without it.
+	if OS.is_debug_build():
+		_log_path = Constants.APPDATA_PATH + "source_backfill.log"
+		_log("ready")
 
 func is_running() -> bool:
 	return _running
@@ -57,6 +63,8 @@ func start(maps: Array[MapInfo], can_run: Callable = Callable()) -> void:
 	_total = _queue.size()
 	_done = 0
 	_updated = 0
+	vr.log_info("SOURCEBACKFILL queued %d map(s)" % _total)
+	_log("queued %d" % _total)
 	if _total == 0:
 		_running = false
 		finished.emit(0)
@@ -66,6 +74,9 @@ func start(maps: Array[MapInfo], can_run: Callable = Callable()) -> void:
 ## Stops the pass without writing anything for the map in flight. Called when the player leaves
 ## the menu or starts a map.
 func stop() -> void:
+	if _running:
+		vr.log_info("SOURCEBACKFILL stopped")
+		_log("stopped at %d/%d" % [_done, _total])
 	_stop = true
 	_queue.clear()
 	if _http != null:
@@ -87,11 +98,14 @@ func _run() -> void:
 			hash = MapSource.compute_level_hash(info.filepath)
 			if hash.is_empty():
 				# Unreadable or incomplete map: leave it Unknown, do not write a guess.
+				_log("hash failed %s (%s)" % [info.filepath, MapSource.diagnose(info.filepath)])
 				_done += 1
 				progress.emit(_done, _total)
 				continue
 			info.level_hash = hash
+			_log("hash %s = %s" % [info.filepath, hash])
 		var code := await _lookup(hash)
+		_log("lookup %s -> %d" % [hash, code])
 		if _stop:
 			break
 		if code == 200:
@@ -99,17 +113,33 @@ func _run() -> void:
 			info.source = MapSource.SOURCE_BEATSAVER
 			info.source_id = _last_map_id
 			_updated += 1
+			vr.log_info("SOURCEBACKFILL %s -> beatsaver %s" % [info.filepath, _last_map_id])
 			map_updated.emit(info)
 		elif code == 404:
 			MapSource.write(info.filepath, MapSource.SOURCE_UNKNOWN, "", hash)
 			info.source = MapSource.SOURCE_UNKNOWN
 			info.source_id = ""
+			vr.log_info("SOURCEBACKFILL %s -> unknown (not on BeatSaver)" % info.filepath)
 		_done += 1
 		progress.emit(_done, _total)
 
 	_running = false
+	_log("finished updated=%d" % _updated)
 	if not _stop:
 		finished.emit(_updated)
+
+func _log(line: String) -> void:
+	if _log_path.is_empty():
+		return
+	var file := FileAccess.open(_log_path, FileAccess.READ_WRITE)
+	if file == null:
+		file = FileAccess.open(_log_path, FileAccess.WRITE)
+	if file == null:
+		return
+	file.seek_end()
+	file.store_line("%s %s" % [Time.get_datetime_string_from_system(false, true), line])
+	file.close()
+
 
 ## Returns the HTTP status, or -1 for any transport/parse failure (which must not be persisted).
 func _lookup(hash: String) -> int:

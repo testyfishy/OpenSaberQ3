@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-06
 
-**Status**: In progress - source tags/filter and the read-only BeatLeader board are implemented; BeastSaber import pending the player's answer
+**Status**: Done for source tags/filter/backfill and the read-only BeatLeader board (v0.6.0); BeastSaber import (FR-003) pending the player's answer
 
 **Input**: Player: "Maybe add beastsaber as well - but making sure there is a tag on each song in the
 library to identify the source library and a way to sort and filter the downloaded libraries. We
@@ -121,11 +121,39 @@ game: they serve Beat Saber modding, map authoring or capture, not play.
   (OlbmaPhlee 1,247,685 / 98.07% / 662.78 pp, ...) and `visual_leaderboard_nohash.png` shows the
   no-hash explanation.
 
+### Device evidence (0.6.0 debug build, Quest 3)
+
+- Backfill on the real headset library: 13 maps queued, 10 tagged BeatSaver, one 404 written as
+  Unknown + hash, two skipped because their Info.dat references a missing difficulty file. The
+  Phoenix hash computed on device is `bf2c367d29b133b66dc27f6f8e20467d0ec3301f`.
+- `[bench] leaderboard_probe=true` opened the real panel on the headset against the live API:
+  `Top 10 of 10 shown`, 10 rows, hash `bf2c...`, ExpertPlus/Standard
+  (`perf/captures/blprobe-final4.meta.txt`).
+- Play isolation: with 11 sidecars removed, a 30 s dense-map bench logged `queued 11`, one hash,
+  then `stopped at 0/11` when Playing began; no further lookups or writes and no BeatLeader
+  request. The same run held 120 fps median / App 5.08 ms / GPU 0.87 / cubes peak 7
+  (`perf/captures/v060-stop2.meta.txt`).
+- Android export quirk found and worked around: `JSON.parse_string` inside a static function of a
+  `class_name` script returned null for a valid body (the BeatLeader board, and every `Info.dat`)
+  in the exported APK, while the same parse in an autoload/nested-class method worked. MapSource
+  now reads map JSON through `vr.load_json_file`; BeatLeader parses in the panel (instance
+  context) and hands the dictionary to `BeatLeaderApi.parse_*_value`. Both are commented so the
+  workaround is not "simplified" back into the bug.
+
+### Release v0.6.0
+
+- `OpenSaber-v060.apk`, 83,625,810 bytes (first build), SHA-256 `E801854F...`; versionName 0.6.0,
+  versionCode 10, RELEASE, same certificate (`d204a2...`), no `application-debuggable`.
+- Upgrade test 0.5.1 -> 0.6.0 with data kept: `config.ini` SHA-256 `d4cfb1a6...`,
+  `profiles.json` `fed011f7...` and `highscores.json` `1131ab71...` unchanged; the release
+  ignores a pushed bench flag (no meta, CSV or consumed marker). v0.5.1 remains the fallback
+  build (`F:\Dev\BeepSaberBin\OpenSaber-v051.apk`, 83,573,050 bytes).
+- On the device the v0.6.0 release is the installed build; v0.5.1 was reinstalled briefly only for
+  the upgrade test.
+
 ### Still open
 
 - FR-003 (BeastSaber `.bplist` import) waits on the player's answer to the first open question.
-- Device check of the panel and the filter at VR scale (the desktop render proves layout and
-  data, not headset legibility).
 
 ## Out of scope
 
@@ -147,4 +175,5 @@ game: they serve Beat Saber modding, map authoring or capture, not play.
 
 | Gate | Asked | Verdict | Action taken |
 |---|---|---|---|
+| G3 | After slice 1 + BeatLeader | CONTINUE: accept the design; filter auto-select is fine if an empty view disables Play; BeastSaber (a) needs G1; build 0.6.0 now and record v0.5.1 as the fallback | Empty view shows "No maps match this source." and disables Play/Delete/Leaderboard; device probe, stop-during-play bench and 0.5.1->0.6.0 upgrade recorded; release built |
 | G0 | Scope of BeastSaber/BeatLeader, source-tag storage, phasing | GO WITH CHANGES: hash is recoverable (verified); add backfill FR-007, menu-only networking FR-008, atomic/schema sidecar FR-009, BeatLeader mapping/states FR-010; ask the player what BeastSaber means before the import; ship slices as v0.6.0, not 0.5.2 | Slice 1 (sidecar, backfill, source filter) starts; BeastSaber import waits on the player's answer; BeatLeader read-only next |

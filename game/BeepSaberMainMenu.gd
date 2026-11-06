@@ -52,6 +52,9 @@ var _all_songs: Array[MapInfo]
 var _recently_added_songs: Array[MapInfo] # newest is first, oldest is last
 var _most_played_songs: Array[MapInfo] # most played is first, least played is last
 var _currently_selected_songlist_ref: Array[MapInfo] = _all_songs # reference to whichever map list is the currently selected one
+# The map the info panel and Play button currently describe. Kept across a list rebuild (filter
+# change, backfill refresh) so the selection stays on the same song when it is still visible.
+var _selected_map: MapInfo = null
 
 # stop the preview player if the main song player is going
 func _physics_process(_delta: float) -> void:
@@ -165,7 +168,33 @@ func _set_cur_playlist(songs: Array[MapInfo]) -> void:
 		_bg_img_loader.load_texture(filepath, _on_cover_loaded, false, map_index)
 		map_index += 1
 	
-	if current_id.size() > 0:
+	# An empty view must not leave Play/Delete/Leaderboard pointing at a map the player cannot
+	# see, and a click on a stale difficulty must not index an empty list.
+	var play_button := $Play_Button as Button
+	play_button.disabled = song_count == 0
+	delete_button.disabled = song_count == 0
+	($Leaderboard_Button as Button).disabled = song_count == 0
+	if song_count == 0:
+		($SongInfo_Label as Label).text = "No maps match this source."
+		cover.texture = null
+		diff_menu.clear()
+		song_preview.stop()
+		return
+	
+	# Keep the same song selected across a rebuild (backfill refresh, filter change). A map that
+	# dropped out of the view falls back to the first visible one; the info panel and Play then
+	# describe the same row.
+	var wanted := -1
+	for i in songs.size():
+		if songs[i] == _selected_map:
+			wanted = i
+			break
+	if wanted < 0 and (current_id.size() > 0 or _selected_map != null):
+		wanted = 0
+	if wanted >= 0:
+		songs_menu.select(wanted)
+		_select_song(wanted)
+	elif current_id.size() > 0:
 		var selected_id := current_id[0]
 		if selected_id >= song_count:
 			selected_id = song_count - 1
@@ -226,6 +255,7 @@ func _select_song(id: int) -> void:
 	delete_button.disabled = false
 	
 	var map := _currently_selected_songlist_ref[id]
+	_selected_map = map
 	($SongInfo_Label as Label).text = """Song Author: %s
 	Song Title: %s
 	Beatmap Author: %s
@@ -266,12 +296,19 @@ func _on_stop_prev_timeout() -> void:
 var _map_difficulty := 0
 
 func _select_difficulty(id: int) -> void:
+	if _currently_selected_songlist_ref.is_empty():
+		return
+	if current_selected < 0 or current_selected >= _currently_selected_songlist_ref.size():
+		return
+	var map := _currently_selected_songlist_ref[current_selected]
+	if map == null or id < 0 or id >= map.difficulty_beatmaps.size():
+		return
 	_map_difficulty = id
 	diff_menu.select(id)
 	
 	# notify listeners that difficulty has changed
-	var difficulty := _currently_selected_songlist_ref[current_selected].difficulty_beatmaps[id]
-	difficulty_changed.emit(_currently_selected_songlist_ref[current_selected], difficulty.difficulty_rank)
+	var difficulty := map.difficulty_beatmaps[id]
+	difficulty_changed.emit(map, difficulty.difficulty_rank)
 
 
 func _load_map_and_start(map: MapInfo) -> void:
@@ -297,6 +334,10 @@ func _on_Delete_Button_button_up() -> void:
 		delete_button.text = "Delete"
 	else:
 		delete_button.text = "Delete"
+		if _currently_selected_songlist_ref.is_empty():
+			return
+		if current_selected < 0 or current_selected >= _currently_selected_songlist_ref.size():
+			return
 		_delete_map(_currently_selected_songlist_ref[current_selected])
 	
 func _delete_map(map: MapInfo) -> void:
@@ -354,6 +395,13 @@ func _ready() -> void:
 	_backfill.map_updated.connect(_on_backfill_map_updated)
 	@warning_ignore("return_value_discarded")
 	_backfill.finished.connect(_on_backfill_finished)
+	# The menu's visibility lives on the OQ_UI2DCanvas above the SubViewport, not on this Panel,
+	# so `is_visible_in_tree()` inside the panel cannot see the canvas being hidden. Watch the
+	# canvas itself: hiding it (starting a map, opening another overlay) stops the backfill.
+	var canvas := _parent_canvas()
+	if canvas != null and not canvas.visibility_changed.is_connected(_on_canvas_visibility_changed):
+		@warning_ignore("return_value_discarded")
+		canvas.visibility_changed.connect(_on_canvas_visibility_changed)
 	
 	_load_playlists()
 	
@@ -384,6 +432,10 @@ func _ready() -> void:
 
 func _on_Play_Button_pressed() -> void:
 	song_preview.stop()
+	if _currently_selected_songlist_ref.is_empty():
+		return
+	if current_selected < 0 or current_selected >= _currently_selected_songlist_ref.size():
+		return
 	_load_map_and_start(_currently_selected_songlist_ref[current_selected])
 
 
@@ -538,3 +590,18 @@ func _on_backfill_map_updated(_info: MapInfo) -> void:
 func _on_backfill_finished(updated: int) -> void:
 	if updated > 0:
 		refresh_playlist()
+
+
+func _parent_canvas() -> OQ_UI2DCanvas:
+	var node: Node = get_parent()
+	while node != null:
+		if node is OQ_UI2DCanvas:
+			return node as OQ_UI2DCanvas
+		node = node.get_parent()
+	return null
+
+
+func _on_canvas_visibility_changed() -> void:
+	var canvas := _parent_canvas()
+	if canvas != null and not canvas.visible and _backfill != null:
+		_backfill.stop()

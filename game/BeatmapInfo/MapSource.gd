@@ -111,7 +111,12 @@ static func compute_level_hash(dir_path: String) -> String:
 	var info_bytes := FileAccess.get_file_as_bytes(info_path)
 	if info_bytes.is_empty():
 		return ""
-	var info: Variant = _parse_json(info_bytes)
+	# Prefer the exact loader the game uses for map selection (the autoload's
+	# FileAccess.get_as_text + JSON.parse_string path). In the Android export our own copy of that
+	# path returned non-Dictionary for a valid, ASCII Info.dat, which silently disabled every hash.
+	var info: Variant = vr.load_json_file(info_path)
+	if not (info is Dictionary) or (info as Dictionary).is_empty():
+		info = _read_json_file(info_path)
 	if not (info is Dictionary):
 		return ""
 	var files := _difficulty_files(info as Dictionary)
@@ -167,28 +172,85 @@ static func _info_path(dir_path: String) -> String:
 ## across characteristics (Standard, OneSaber, Lawless, ...), not one characteristic at a time.
 static func _difficulty_files(info_dict: Dictionary) -> Array[String]:
 	var files: Array[String] = []
-	var sets := Utils.get_array(info_dict, "_difficultyBeatmapSets", [])
+	# Local dictionary access only: this runs from a static function, and the autoload helper
+	# path failed to read the sets in the Android export (every hash came back empty).
+	var sets := _array_of(info_dict, "_difficultyBeatmapSets")
 	if not sets.is_empty():
 		for set_entry: Variant in sets:
 			if not (set_entry is Dictionary):
 				continue
-			for diff: Variant in Utils.get_array(set_entry as Dictionary, "_difficultyBeatmaps", []):
+			for diff: Variant in _array_of(set_entry as Dictionary, "_difficultyBeatmaps"):
 				if diff is Dictionary:
-					files.append(Utils.get_str(diff as Dictionary, "_beatmapFilename", ""))
+					files.append(_string_of(diff as Dictionary, "_beatmapFilename", ""))
 		return files
 	# v3/v4: one flat array.
-	for diff: Variant in Utils.get_array(info_dict, "difficultyBeatmaps", []):
+	for diff: Variant in _array_of(info_dict, "difficultyBeatmaps"):
 		if diff is Dictionary:
-			files.append(Utils.get_str(diff as Dictionary, "beatmapFilename", ""))
+			files.append(_string_of(diff as Dictionary, "beatmapFilename", ""))
 	return files
 
 
-static func _parse_json(bytes: PackedByteArray) -> Variant:
-	var text := bytes.get_string_from_utf8()
-	# A UTF-8 BOM is legal in the wild and Godot's parser rejects it.
+static func _array_of(d: Dictionary, key: String) -> Array:
+	var v: Variant = d.get(key)
+	@warning_ignore("unsafe_cast")
+	return v as Array if v is Array else []
+
+
+static func _string_of(d: Dictionary, key: String, default: String) -> String:
+	var v: Variant = d.get(key)
+	return v as String if v is String else default
+
+
+## One-line reason a map hashes or fails, for the backfill's debug log on the headset.
+static func diagnose(dir_path: String) -> String:
+	var info_path := _info_path(dir_path)
+	if info_path.is_empty():
+		return "no_info_path"
+	var info_bytes := FileAccess.get_file_as_bytes(info_path)
+	if info_bytes.is_empty():
+		return "empty_info_bytes"
+	var file := FileAccess.open(info_path, FileAccess.READ)
+	if file == null:
+		return "open_failed"
+	var text := file.get_as_text()
+	file.close()
+	if text.is_empty():
+		return "text_empty"
+	var direct: Variant = JSON.parse_string(text)
+	if not (direct is Dictionary):
+		return "parse_text_failed(len=%d,head=%s)" % [text.length(), text.substr(0, 8)]
+	var lit: Variant = JSON.parse_string("{\"a\":1}")
+	if not (lit is Dictionary):
+		return "json_literal_failed"
+	var via_vr: Variant = vr.load_json_file(info_path)
+	var info: Variant = via_vr if (via_vr is Dictionary and not (via_vr as Dictionary).is_empty()) else direct
+	if not (info is Dictionary):
+		return "parse_failed"
+	var files := _difficulty_files(info as Dictionary)
+	if files.is_empty():
+		return "no_difficulty_files"
+	var missing: Array[String] = []
+	for file_name: String in files:
+		if file_name.is_empty() or not FileAccess.file_exists(dir_path.path_join(file_name)):
+			missing.append(file_name)
+	if not missing.is_empty():
+		return "missing:" + ",".join(missing)
+	var ctx := HashingContext.new()
+	if ctx.start(HashingContext.HASH_SHA1) != OK:
+		return "hash_start_failed"
+	ctx.update(info_bytes)
+	for file_name: String in files:
+		ctx.update(FileAccess.get_file_as_bytes(dir_path.path_join(file_name)))
+	return "ok:" + ctx.finish().hex_encode()
+
+
+static func _read_json_file(path: String) -> Variant:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return null
+	var text := file.get_as_text()
+	file.close()
+	# A UTF-8 BOM is legal in the wild and the JSON parser rejects it.
 	if text.begins_with("\ufeff"):
 		text = text.substr(1)
-	var json := JSON.new()
-	if json.parse(text) != OK:
-		return null
-	return json.data
+	return JSON.parse_string(text)

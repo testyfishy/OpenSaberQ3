@@ -52,7 +52,13 @@ static func scores_url(board_id: String, count: int = TOP_COUNT) -> String:
 
 ## Parses the board response. `ok=false` + `error` describes a shape problem, not a network state.
 static func parse_board(body: PackedByteArray) -> Dictionary:
-	var parsed: Variant = _parse_json(body)
+	return parse_board_value(_parse_json(body))
+
+
+## Entry point for the panel: the JSON parse itself runs in the panel's (instance) context,
+## because JSON.parse_string inside a static function returned null for a valid body in the
+## Android export. The tests keep using `parse_board(body)`.
+static func parse_board_value(parsed: Variant) -> Dictionary:
 	if not (parsed is Dictionary):
 		return {"ok": false, "error": "invalid_json"}
 	var d := parsed as Dictionary
@@ -73,7 +79,10 @@ static func parse_board(body: PackedByteArray) -> Dictionary:
 
 ## Parses the scores response into display-ready rows (rank order is the API's).
 static func parse_scores(body: PackedByteArray) -> Dictionary:
-	var parsed: Variant = _parse_json(body)
+	return parse_scores_value(_parse_json(body))
+
+
+static func parse_scores_value(parsed: Variant) -> Dictionary:
 	if not (parsed is Dictionary):
 		return {"ok": false, "error": "invalid_json"}
 	var rows: Array[Dictionary] = []
@@ -119,10 +128,9 @@ static func _parse_json(body: PackedByteArray) -> Variant:
 	var text := body.get_string_from_utf8()
 	if text.begins_with("\ufeff"):
 		text = text.substr(1)
-	var json := JSON.new()
-	if json.parse(text) != OK:
-		return null
-	return json.data
+	# JSON.parse_string matches the proven BeatSaver path. JSON.new().parse() failed on the
+	# Android export for a valid body even when the same string parsed in another script.
+	return JSON.parse_string(text)
 
 
 static func _str(d: Dictionary, key: String, default: String) -> String:
