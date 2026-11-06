@@ -41,7 +41,7 @@ var gamestate: GameState = gamestate_bootup
 @onready var endscore := $EndScore as EndScore
 
 # Untyped on purpose: the panel's class_name is not in the editor's global class cache on a
-# clean clone (same reason BenchmarkRunnerScript above is preloaded by path).
+# clean clone.
 @onready var profile_canvas := $Profile_canvas as OQ_UI2DCanvas
 @onready var profile_panel = profile_canvas.ui_control
 
