@@ -217,11 +217,22 @@ numbers (fps median, App ms, GPU %, p99/max frame interval) and must leave the g
    mask is a behavioural change that has to be judged by driving the menus, which is not possible
    headless. Do it with the player available, one state per commit.
 
-6. **Audio - planned, not started.** The saber voice pool is already one implementation
-   (polyphonic playback, oldest-first steal, log). Ducking (`specs/016` FR-017) and the debug
-   analyser (FR-007) do not exist yet, and Godot's compressor has no sidechain input, so FR-017
-   needs a design before code. That is feature work, not cleanup, and it cannot be judged without
-   ears; do it with an offline sample measurement first.
+6. **Audio - instrument done, finding recorded.** `game/scripts/AudioProbe.gd` records two mixer
+   taps to 16-bit WAVs, Master (music + SFX + hit limiter) and SFX (hits without the music);
+   `tools/perf/audio_probe.py` reports RMS, body (150-800 Hz) and transient (2-6 kHz) bands and
+   transients above the local bed; `run-vrapi -MissPercent` gives a no-hit A/B. The mic idea was
+   considered: it measures room + speakers + AGC, so it is a sanity check, not the instrument.
+   Probe cost when enabled: App 5.67 ms vs 5.01 (bench-only, two captures + PCM conversion).
+   Measured on device (ODDS, 15 s, 19 right notes):
+   - SFX hits peak **-4.1 dBFS** (at the -1 dB limiter) and the transient band reaches +5.9 in
+     the FFT metric;
+   - at hit windows the music's transient-band median is -28.9 dB, a ~35 dB margin.
+   **Level is not the problem.** The hit voice is the saber's `AudioStreamPlayer3D`, not the cube
+   (FR-020 asks for the cube), and the timbre is the old classic set; both match the complaint
+   better than "too quiet".
+   Next: a positioned hit-voice pool (the part's "saber pool"), then ducking. Godot has no
+   sidechain compressor, so FR-017 needs a manual music envelope (attack 1-5 ms, release
+   100-150 ms, 2-4 dB), gated by the same probe (Master vs SFX).
 
 9. **Bench tooling - deferred on purpose.** The plan says it is the instrument the other gates use,
    and it is 1262 lines. Splitting it now would invalidate the instrument while parts are still
