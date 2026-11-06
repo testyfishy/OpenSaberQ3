@@ -58,7 +58,6 @@
 # Tip travel is SWING_ARC_M, and the tip's peak speed is
 # SWING_ARC_M*PI/(2*window) ~= 4 m/s for the default window.
 extends Node
-class_name BotDriver
 
 # --- workload shape ---------------------------------------------------------
 const SWING_ARC_M := 0.6          # blade tip travel per swing

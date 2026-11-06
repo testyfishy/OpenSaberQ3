@@ -5,11 +5,10 @@
 extends Node3D
 class_name BeepSaber_Game
 
-# Benchmark mode is its own script; preloaded by path so it does not depend on the
-# editor's global class cache being up to date on a clean clone.
-const BenchmarkRunnerScript := preload("res://game/scripts/BenchmarkRunner.gd")
-
 var version := str(ProjectSettings.get_setting("application/config/version", "0.1.0"))
+# Set by the benchmark runner's `hud_off` arm. A plain member, because the runner class is not in
+# release builds (specs/013 FR-004).
+var bench_hud_disabled := false
 
 var gamestate_bootup := GameState.new()
 var gamestate_mapcomplete := GameStateMapComplete.new()
@@ -280,10 +279,16 @@ func _ready() -> void:
 	bomb_warm.queue_free()
 	wall_warm.queue_free()
 
-	# Deterministic benchmark mode. Only created when a bench flag file exists, so a
-	# normal launch behaves exactly as before. See game/scripts/BenchmarkRunner.gd.
-	if BenchmarkRunnerScript.has_bench_flag():
-		add_child(BenchmarkRunnerScript.new(self))
+	# Deterministic benchmark mode. The runner (and the bot) are excluded from release builds, so
+	# the script is loaded at runtime and only off a release build. See FR-004 in specs/013.
+	if not OS.has_feature("release"):
+		var runner: Script = load("res://game/scripts/BenchmarkRunner.gd")
+		if runner != null:
+			var instance: Node = runner.call("new", self)
+			if instance != null and bool(instance.call("is_flagged")):
+				add_child(instance)
+			elif instance != null:
+				instance.free()
 
 # Applies the four settings that decide what the headset actually renders. Called once at
 # startup, and again per setting whenever the user changes it (see on_settings_changed).
@@ -607,7 +612,7 @@ func _display_points() -> void:
 	# assignment re-triangulates glyphs and re-uploads the mesh. The displayed
 	# string is unchanged when the underlying value is unchanged, so only write
 	# when it actually differs. Same rendered pixels, fewer mesh rebuilds.
-	if BenchmarkRunner._hud_disabled:
+	if bench_hud_disabled:
 		return
 	if Scoreboard.points != _shown_points:
 		_shown_points = Scoreboard.points

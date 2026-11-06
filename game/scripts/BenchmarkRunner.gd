@@ -65,7 +65,6 @@
 # `VrApi` / OVR Metrics for those (FR-023). `focused` is 1 while the app has focus;
 # a drop to 0 means the headset was taken off mid-run and the run is not trustworthy.
 extends Node
-class_name BenchmarkRunner
 
 const FLAG_NAME := "bench.flag"
 const CONSUMED_NAME := "bench.flag.consumed"
@@ -179,6 +178,11 @@ func _init(game: Node3D) -> void:
 # when this is true, so a normal launch never pays for anything in this file.
 static func has_bench_flag() -> bool:
 	return not _find_flag_path().is_empty()
+
+# Instance entry point: the game loads this script at runtime (it is excluded from release
+# builds), so it cannot call the static function through a Script reference.
+func is_flagged() -> bool:
+	return has_bench_flag()
 
 static func _find_flag_path() -> String:
 	if FileAccess.file_exists("user://" + FLAG_NAME):
@@ -556,7 +560,7 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 	# HUD text writes are the other per-cut cost: every score change rewrites two TextMeshes and
 	# each write re-triangulates glyphs on the main thread.
 	if bool(cfg.get_value("bench", "hud_off", false)):
-		_hud_disabled = true
+		_game.bench_hud_disabled = true
 		applied.append("hud_off=true")
 
 	# Physics rate, decoupled from the display. The sweep fix means the ray fan accumulates
@@ -1272,7 +1276,6 @@ var _screenshot_enabled := false
 var _screenshot_at_usec := 4000000
 var _screenshot_done := false
 # Read by BeepSaber_Game._on_score_changed when hud_off is set.
-static var _hud_disabled := false
 
 func _poll_player_capture() -> void:
 	if _song_player == null:
