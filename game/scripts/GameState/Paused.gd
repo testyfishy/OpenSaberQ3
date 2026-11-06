@@ -5,25 +5,13 @@ func _ready(game) -> void:
 	# FR-036: no hit voice or music duck survives a state change.
 	if GlobalReferences.hit_audio != null:
 		GlobalReferences.hit_audio.call("stop_all")
-	game.main_menu._hide()
-	game.settings_canvas._hide()
+	_set_overlays(game, ["pause_menu"])
 	game.show_MapSourceDialogs(false)
-	game.endscore._hide()
-	game.pause_menu._show()
-	game.highscore_canvas._hide()
-	game.name_selector_canvas._hide()
-	game.multiplier_label.visible = true
-	game.point_label.visible = true
-	game.percent_indicator.visible = true
-	game.track.visible = false
-	game.left_ui_raycast.visible = true
-	game.right_ui_raycast.visible = true
-	game.highscore_keyboard._hide()
-	game.online_search_keyboard._hide()
-	game.left_saber.set_swingcast_enabled(false)
-	game.right_saber.set_swingcast_enabled(false)
+	_set_hud(game, true, false, true)
+	# Paused leaves the sabers visible but disables their swing hits.
+	_set_swingcast(game, false)
 	Scoreboard.paused = true
-	
+
 	game.pause_position = game.song_player.get_playback_position()
 	game.song_player.stop()
 	var pause_text := "%s By %s\nMap author: %s" % [

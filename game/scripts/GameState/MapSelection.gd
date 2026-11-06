@@ -2,27 +2,9 @@ extends GameState
 class_name GameStateMapSelection
 
 func _ready(game) -> void:
-	# FR-036: no hit voice or music duck survives a state change.
-	if GlobalReferences.hit_audio != null:
-		GlobalReferences.hit_audio.call("stop_all")
-	game.main_menu._show()
-	game.settings_canvas._hide()
+	_set_overlays(game, ["main_menu"])
 	game.show_MapSourceDialogs(true)
-	game.endscore._hide()
-	game.pause_menu._hide()
-	game.highscore_canvas._hide()
-	game.name_selector_canvas._hide()
-	game.left_saber._hide()
-	game.right_saber._hide()
-	game.multiplier_label.visible = false
-	game.point_label.visible = false
-	game.percent_indicator.visible = false
-	game.track.visible = false
-	game.left_ui_raycast.visible = true
-	game.right_ui_raycast.visible = true
-	game.highscore_keyboard._hide()
-	game.online_search_keyboard._hide()
-	game.left_saber.set_swingcast_enabled(false)
-	game.right_saber.set_swingcast_enabled(false)
+	_set_sabers(game, false, false)
+	_set_hud(game, false, false, true)
 	game.set_colors_from_settings()
 	game.hide_profile_panel()

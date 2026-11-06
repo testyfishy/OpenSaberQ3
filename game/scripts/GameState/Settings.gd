@@ -2,21 +2,9 @@ extends GameState
 class_name GameStateSettings
 
 func _ready(game) -> void:
-	game.main_menu._hide()
-	game.settings_canvas._show()
+	_set_overlays(game, ["settings_canvas"])
 	game.show_MapSourceDialogs(true)
-	game.endscore._hide()
-	game.pause_menu._hide()
-	game.highscore_canvas._hide()
-	game.name_selector_canvas._hide()
-	game.left_saber._hide()
-	game.right_saber._hide()
-	game.multiplier_label.visible = false
-	game.point_label.visible = false
-	game.percent_indicator.visible = false
-	game.track.visible = false
-	game.left_ui_raycast.visible = true
-	game.right_ui_raycast.visible = true
-	game.highscore_keyboard._hide()
-	game.online_search_keyboard._hide()
+	# Settings hides the sabers but leaves their swingcast flag as it was.
+	_set_sabers(game, false)
+	_set_hud(game, false, false, true)
 	game.hide_profile_panel()

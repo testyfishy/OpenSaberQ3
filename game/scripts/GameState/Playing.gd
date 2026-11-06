@@ -2,25 +2,10 @@ extends GameState
 class_name GameStatePlaying
 
 func _ready(game) -> void:
-	game.main_menu._hide()
-	game.settings_canvas._hide()
+	_set_overlays(game, [])
 	game.show_MapSourceDialogs(false)
-	game.endscore._hide()
-	game.pause_menu._hide()
-	game.highscore_canvas._hide()
-	game.name_selector_canvas._hide()
-	game.left_saber._show()
-	game.right_saber._show()
-	game.multiplier_label.visible = true
-	game.point_label.visible = true
-	game.percent_indicator.visible = true
-	game.track.visible = true
-	game.left_ui_raycast.visible = false
-	game.right_ui_raycast.visible = false
-	game.highscore_keyboard._hide()
-	game.online_search_keyboard._hide()
-	game.left_saber.set_swingcast_enabled(true)
-	game.right_saber.set_swingcast_enabled(true)
+	_set_sabers(game, true, true)
+	_set_hud(game, true, true, false)
 	Scoreboard.paused = false
 	game.hide_profile_panel()
 
