@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-05
 
-**Status**: In progress - UI released as v0.4.0; map slices 1-3 done; part 6 done and closed; audio analyser done; MapData done (part 8 complete); 5 and 9 open
+**Status**: In progress - UI released as v0.4.0; map slices 1-3 done; parts 5-9 complete; audio analyser done
 
 **Input**: "Do you wanna fix the scroll things? Also wanna plan out a specification for eloquent
 coding and cleaning up the software part by part. For now let's start with the UI."
@@ -135,6 +135,36 @@ the spectrum while playing (the original sound spec's FR-007).
 - **SC-010**: A headless test enables it, asserts the label and bus effect exist, disables it and
   asserts both are gone; the schema grows to 51 keys and the panel/schema gates pass.
 
+## Part 5 - view state
+
+The six `game/scripts/GameState/*.gd` classes repeat the same overlay/HUD/saber visibility blocks
+with small differences (Paused leaves the sabers alone, Settings leaves swingcast alone,
+NewHighscore shows two keyboards). Unify the repeated parts behind three helpers without changing
+any state's visibility.
+
+- **FR-042**: `GameState` MUST provide `_hide_overlays(game)`, `_set_hud(game, hud, track, rays)`
+  and `_set_sabers(game, visible, swingcast = null)`; each state MUST call them and keep only its
+  own logic. Every assignment made today MUST still be made, in a state-equivalent order.
+- **FR-043**: A headless `test_view_state` MUST assert the helper matrix for the three flags per
+  state and that the swingcast argument is only applied when given.
+- **SC-011**: `VIEWSTATETEST PASS`; the state scripts contain no direct `main_menu`, `endscore`,
+  `pause_menu`, `settings_canvas`, `highscore_canvas`, `name_selector_canvas`, HUD-label, track or
+  raycast visibility assignments outside the helpers; parse and existing tests pass.
+
+## Part 9 - bench tooling
+
+The bench is the instrument the other gates use, so it stays last. The concrete requirement is
+that the release build cannot run it.
+
+- **FR-044**: `BenchmarkRunner` and `BotDriver` MUST NOT be constructed in a release build. The
+  game loads the runner at runtime only when the build is not a release build; no gameplay code
+  may reference the runner class.
+- **SC-012**: The release APK installs, boots and logs no bench activity; a debug APK still finds
+  its flag through the runtime load and records a full run. Deviation recorded: Godot 4.6 does not
+  apply `exclude_filter` to resources (verified with `*.gd` in both an Android clean rebuild and a
+  Windows export), so the scripts remain in the APK but are unreachable in release; the build-time
+  feature tag is the mechanism the FR allows.
+
 ## Consultation Log
 
 | Gate | Asked | Verdict | Action taken |
@@ -155,5 +185,6 @@ the spectrum while playing (the original sound spec's FR-007).
 | G5 | Part 6 spec drift | FR-031..035 and SC-006..008 match; FR-036 met after d3df6d2. Gaps logged: one-frame attack (8-14 ms), L/R n=4, duck read as applied bus gain (361/15 s ~30%, not constant) | Part 6 closed; remaining 5, 9, MapData |
 | G4 | Audio analyser (`ec531eb`) | CHANGES NEEDED -> APPROVE after fix: bars appended to placeholders, off/on lost the effect, freed label; test gaps | Fixed in `61c8977`: indexed bars, effect by identity, is_instance_valid + camera re-attach, `_bar_for_db`; ANALYSERTEST covers off/on, bars, gain text and a camera swap |
 | G0 | MapData slice 4: facade, threads, dispatch, split | GO WITH CHANGES: no facade (update all call sites), MapData owns all twelve threads with `is_started()` joins, Map keeps metadata/dispatch, two commits, add a reload test and a grep gate | Implemented in `af0a6f3` (4a) and the 4b commit |
-| G4 | Part 8 slice 4 MapData (af0a6f3, 36e201e) | APPROVE; LOW: join before clear in reset(); synchronous loads make an end-of-song join unnecessary | Fixed in 755b652; RELOADTEST PASS, dump identical. Load-time baseline + a v2/v3/v4 device smoke still pending |
+| G4 | Part 8 slice 4 MapData (af0a6f3, 36e201e) | APPROVE; LOW: join before clear in reset(); synchronous loads make an end-of-song join unnecessary | Fixed in 755b652; RELOADTEST PASS, dump identical. Load-time baseline + a v2/v3/v4 device smoke still pending |
+
 | G5 | Part 8 spec drift | FR-037..039, SC-009 match; gaps: no load-time baseline yet, class cache refreshed with --import | Part 8 Done; 5 and 9 open |

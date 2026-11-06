@@ -216,11 +216,12 @@ numbers (fps median, App ms, GPU %, p99/max frame interval) and must leave the g
    reset empty); grep shows no stack/Thread left in Map.gd. Known gap: no before/after load-time
    number (the old build had no timestamp); correctness is the dump plus the reload test.
 
-5. **View state - planned, not started.** The six `game/scripts/GameState/*.gd` classes repeat a
-   ~20-line show/hide block, but the differences matter: Paused deliberately leaves the sabers
-   untouched, Settings leaves swingcast alone, NewHighscore adds two keyboards. A declarative view
-   mask is a behavioural change that has to be judged by driving the menus, which is not possible
-   headless. Do it with the player available, one state per commit.
+5. **View state - done.** `GameState` now applies the view through `_set_overlays(shown)`,
+   `_set_hud` and `_set_sabers` (swingcast optional). Each state declares its shown overlays and
+   flags; no state assigns overlay/HUD/saber visibility directly. A fake-game harness captured the
+   six states' final visibility and side-effect matrix **before** the refactor (`4e73f54`) and the
+   refactor passes it unchanged (`69a7cc3`). `_set_overlays` writes each overlay once, so a panel
+   that stays visible is not hidden and re-shown.
 
 6. **Audio - instrument done, finding recorded.** `game/scripts/AudioProbe.gd` records two mixer
    taps to 16-bit WAVs, Master (music + SFX + hit limiter) and SFX (hits without the music);
@@ -256,10 +257,12 @@ numbers (fps median, App ms, GPU %, p99/max frame interval) and must leave the g
      15 s, ~30%, not a constant duck) because a bus capture is pre-volume. All recorded.
    - Part 6 is closed. The part-6 build is installed on the headset; v0.4.0 remains tagged.
 
-9. **Bench tooling - deferred on purpose.** The plan says it is the instrument the other gates use,
-   and it is 1262 lines. Splitting it now would invalidate the instrument while parts are still
-   open. `specs/013` FR-004 (exclude from release) also conflicts with a capability the v0.4.0
-   verification proved useful: a release build still runs captures through the external flag path.
+9. **Bench tooling - done (release gate).** The runner is no longer preloaded by the game and is
+   loaded at runtime only off a release build (`709fc72`); the bot follows it, and the `hud_off`
+   arm writes a plain game member instead of a runner static. Release boots; debug runs a bench
+   through the runtime load (samples=2391, 120 fps). Godot does not apply `exclude_filter` to
+   resources (tested with `*.gd` on Android and Windows), so the scripts still ship but are
+   unreachable; recorded as a deviation from the FR's file-list check.
 
 ## Verification assets
 
