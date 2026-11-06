@@ -77,10 +77,26 @@ cleanup instead. The opaque change stays: it is a small, measured CPU win and ve
 
 Replace the three separate refresh paths (`vr_slider._request_refresh`, `BeatSaverPanel._canvas_input_update`,
 the settings panel's equivalent) with one helper exposing `begin_live()`, `end_live()` and
-`request()`, and remove the `update_once` re-entrancy. Fully mechanical: every call site keeps its
-current semantics.
+`request()`, and remove the `update_once` re-entrancy.
 
-Gate: UI screenshots pixel-diff within tolerance; scroll probe identical; frame CSV unchanged.
+Done, then fixed after the combined G4 review:
+
+- The first version called `begin_live()` only on the false->true transition, so the 0.5 s watchdog
+  treated a held stick as a lost owner and stopped rendering after half a second. It now runs on
+  every moved frame and doubles as the heartbeat; the one-time measurement reset only happens on
+  the transition.
+- `OQ_UI2DCanvas._input_update()` now routes to the viewport's `canvas_refresh` meta when one
+  exists, so `helper_UIArea`'s per-pointer-move call no longer starts the old `update_once`
+  coroutine alongside the authority. The main menu's direct call does the same; `vr_slider`'s dead
+  `canvas`/`canvas_path` members are gone.
+- Owners are tracked by instance id rather than `is_connected(bound_callable)`, and the canvas
+  exposes `render_frames` (frames it told the viewport to draw) because measured render time keeps
+  its last value when idle and cannot prove a scroll stayed lit.
+
+Gates: `VERIFYCANVAS bad=0` (heartbeat past the window, silence stops it, re-register recovers,
+end_live disables + one final frame); device scroll probe holds the stick 3 s and counts rendered
+moving frames: **289/290 = 0.997**, 348 render frames total (map ODDS, 112 fps median, App 5.50 ms);
+UI screenshots unchanged; frame CSV unchanged.
 
 ## UI-2 - Scene-unique names
 

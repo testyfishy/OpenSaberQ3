@@ -1156,23 +1156,32 @@ func _run_ui_scroll_probe() -> void:
 	# half-way through stops rendering while the value keeps moving, and that is the bug this
 	# counter exists to catch. A frame counts as rendered when the viewport reports render time.
 	var viewport: Viewport = panel.get_viewport()
-	var rid := viewport.get_viewport_rid() if viewport != null else RID()
 	_meta["probe_scroll_viewport"] = viewport.name if viewport != null else "none"
+	# Frames the viewport was actually told to draw, from the refresh authority itself. Measured
+	# render time is not usable here: it keeps its last value while the viewport is disabled.
+	var refresh := CanvasRefresh.of(panel)
+	if refresh != null:
+		refresh.render_frames = 0
 	VRSlider.debug_hover = true
 	VRSlider.debug_stick = -1.0
 	var steps: Array[float] = []
-	var rendered := 0
+	var moving := 0
+	var rendered_moving := 0
+	var last_render := 0
 	var last := float(bar.get("value"))
 	for i in 360:
 		await get_tree().process_frame
 		var now := float(bar.get("value"))
-		steps.append(now - last)
+		var step := now - last
+		steps.append(step)
 		last = now
-		if viewport != null:
-			var cpu := RenderingServer.viewport_get_measured_render_time_cpu(rid)
-			var gpu := RenderingServer.viewport_get_measured_render_time_gpu(rid)
-			if cpu > 0.0 or gpu > 0.0:
-				rendered += 1
+		if refresh != null:
+			var rendered_now := refresh.render_frames - last_render
+			last_render = refresh.render_frames
+			if absf(step) > 0.0:
+				moving += 1
+				if rendered_now > 0:
+					rendered_moving += 1
 	VRSlider.debug_stick = INF
 	VRSlider.debug_hover = false
 	var moved := 0
@@ -1187,8 +1196,10 @@ func _run_ui_scroll_probe() -> void:
 			zero += 1
 		biggest = maxf(biggest, absf(s))
 	_meta["probe_scroll_frames"] = str(steps.size())
-	_meta["probe_scroll_rendered_frames"] = str(rendered)
-	_meta["probe_scroll_rendered_ratio"] = "%.3f" % (float(rendered) / maxf(float(steps.size()), 1.0))
+	_meta["probe_scroll_moving_frames"] = str(moving)
+	_meta["probe_scroll_rendered_moving"] = str(rendered_moving)
+	_meta["probe_scroll_rendered_moving_ratio"] = "%.3f" % (float(rendered_moving) / maxf(float(moving), 1.0))
+	_meta["probe_scroll_render_frames_total"] = str(refresh.render_frames if refresh != null else -1)
 	_meta["probe_scroll_moved_frames"] = str(moved)
 	_meta["probe_scroll_zero_frames"] = str(zero)
 	_meta["probe_scroll_max_step"] = "%.3f" % biggest

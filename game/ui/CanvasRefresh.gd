@@ -39,6 +39,10 @@ static func of(node: Node) -> CanvasRefresh:
 var _viewport: SubViewport
 var _dirty := false
 var _live: Dictionary = {}
+# Diagnostic counter: frames on which the viewport was set to draw. This is the only honest "did it
+# render" signal for a SubViewport (the measured render time keeps its last value when idle), and
+# the scroll probe uses it to prove a held scroll never goes dark.
+var render_frames := 0
 # Owners whose `tree_exiting` is already connected. Checking `is_connected()` with a bound
 # Callable is not reliable, so the connection is tracked by instance id instead.
 var _watching: Dictionary = {}
@@ -79,6 +83,8 @@ func _on_owner_exiting(owner: Object) -> void:
 	end_live(owner)
 
 func _process(_delta: float) -> void:
+	if _viewport != null and _viewport.render_target_update_mode != SubViewport.UPDATE_DISABLED:
+		render_frames += 1
 	var now := Time.get_ticks_msec() * 0.001
 	if not _live.is_empty() and now - _last_keepalive > WATCHDOG_S:
 		# An owner vanished without end_live. Stop rendering rather than pinning the viewport.
