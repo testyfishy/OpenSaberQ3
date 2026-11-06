@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-06
 
-**Status**: In progress - G4 approved, publishing
+**Status**: Done - v0.6.0 published on GitHub
 
 **Input**: Player: "Lets push this v6 to github and update the whole thing. The readme is a big
 too big. I just want enough detail to showcase the work and improvements from prior work and
@@ -98,6 +98,27 @@ public face of the project is out of date and does not show the progress that ha
 - **SC-007**: Every relative link in the README and the new docs resolves to a tracked file; the
   rendered README is checked on GitHub after the push; each new screenshot is under 500 KB.
 
+## Publication evidence (2026-11-06)
+
+- Branch: `godot-4-port` pushed `7fff5d3..d1df410` (the code/docs commits; no force). Tags
+  `v0.4.0-q3`, `v0.5.0-q3`, `v0.5.1-q3`, `v0.6.0-q3` pushed; `git ls-remote` confirms all four and
+  the branch SHA.
+- Release: <https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.6.0-q3>, latest, not draft.
+  Assets `OpenSaberQ3-0.6.0.apk` (83,624,298 bytes) and `OpenSaberQ3-0.6.0.apk.sha256`; a fresh
+  download hashes to `ACCAA169C8DF85067600C33BF199C37C91C18AD4B1407E45F4D479C04074FB5A`.
+- The first upload kept the local file name (`OpenSaber-v060.apk`) although the label was the
+  release name; the asset was replaced so the download file is `OpenSaberQ3-0.6.0.apk`.
+- Repository description, homepage (latest release) and topics (`beatsaver`, `beatleader`) updated;
+  the earlier topics are kept. Old releases and assets untouched.
+- Rendered README fetched through the GitHub API matches HEAD; the cover, library, leaderboard and
+  frame-time images return HTTP 200 from `raw.githubusercontent.com` on `godot-4-port`.
+- Hygiene: the serial, Windows user path and LAN address were redacted in `4b5d2af` before the
+  push; no key material, tokens or APKs were in the unpushed tree. `bin/debug.keystore` is
+  upstream's public debug key from the initial import (already on origin); the release keystore is
+  outside the repo and backed up at `F:\Dev\BeepSaberBin\keystore-backup\debug.keystore`
+  (SHA-256 `E80806A0ED2CF556E9D9E77E97EE2941CFF1A62BF2775F06F3E0B5F33EE6150`). The pre-existing
+  `export_presets.cfg` path/password was already public and was left to keep exports working.
+
 ## Out of scope
 
 - v0.6.1 fixes, the BeastSaber import, and any gameplay change.
@@ -113,5 +134,7 @@ release, which matches the existing v0.2 release and the "download the APK" link
 
 | Gate | Asked | Verdict | Action taken |
 |---|---|---|---|
-| G4 | 021 GitHub v0.6 publish (49a38e1 / e4afae3) | APPROVE: push branch + 4 tags and publish v0.6.0-q3; serial/LAN in history already public on origin, HEAD clean; qualify every perf claim with its conditions, add the non-affiliation line and the signing/upgrade line | Release notes drafted with conditions + disclaimers; pushing next |
+| G5 | 021 spec drift after publishing | SC-001..SC-007 met: README 85 lines, links 0 broken, docs + screenshots live, branch/tags/release verified, asset SHA matched, description/topics updated | Spec marked Done; follow-ups (0.6.1 BeastSaber, home-test fixes) remain |
+| G4 | 021 GitHub v0.6 publish (49a38e1 / e4afae3) | APPROVE: push branch + 4 tags and publish v0.6.0-q3; serial/LAN in history already public on origin, HEAD clean; qualify every perf claim with its conditions, add the non-affiliation line and the signing/upgrade line | Release notes drafted with conditions + disclaimers; pushing next |
+
 | G0 | README structure, subpage split, publish scope and release notes | GO WITH CHANGES: lead with a since-the-fork progress table (before -> now -> evidence link), then v0.6 bullets; cut Build/Limitations; push all four -q3 tags but only the v0.6.0 release; confirm no keystore/credentials in history and back up the keystore; add a pre-push hygiene scan and the public-reader release-note items; link check + rendered README after push | Spec updated (FR-012/FR-013, SC-007); implementation starts with the hygiene scan |
