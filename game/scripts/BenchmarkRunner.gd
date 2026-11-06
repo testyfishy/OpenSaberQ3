@@ -419,6 +419,10 @@ func _begin() -> void:
 func _apply_overrides(cfg: ConfigFile) -> void:
 	_bench_cfg = cfg
 	var applied := PackedStringArray()
+	var ducking = cfg.get_value("bench", "audio_ducking", null)
+	if ducking != null:
+		Settings.audio_ducking = bool(ducking)
+		applied.append("audio_ducking=%s" % str(bool(ducking)))
 	# Stress-test switch: force every visual setting on so the frame budget can be measured
 	# with the full feature set, which is what the shipped defaults must eventually hold.
 	if bool(cfg.get_value("bench", "visuals_all", false)):
@@ -1073,6 +1077,8 @@ func _write_hit_probe(hits: Array) -> void:
 		f.store_line("%d,%.4f" % [int(hit.get("usec", 0)), float(hit.get("x", 0.0))])
 	_meta["audio_hits_csv"] = path
 	_meta["audio_hits"] = str(hits.size())
+	_meta["audio_duck_min_db"] = "%.2f" % GlobalReferences.hit_audio.duck_min_db
+	_meta["audio_duck_frames"] = str(GlobalReferences.hit_audio.duck_frames)
 
 func _write_csv() -> void:
 	var path := _out_dir.path_join(CSV_NAME)

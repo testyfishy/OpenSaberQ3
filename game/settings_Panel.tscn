@@ -344,6 +344,13 @@ layout_mode = 2
 tooltip_text = "Classic is the shipped impact. Thump re-derives it with a low-shelf boost and a 2.5 kHz cut, for a heavier hit. Headphones recommended: the extra low end is mostly below what the headset speakers reproduce."
 theme = SubResource("3")
 
+[node name="audio_ducking" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Lowers the music by 3 dB for a moment on every hit, so the impact is not buried in the song. Off by default until the device measurement passes."
+theme = SubResource("3")
+text = "Duck Music on Hits:"
+
 [node name="recenter" type="Button" parent="ScrollContainer/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -910,5 +917,6 @@ scroll_node_path = NodePath("../ScrollContainer")
 [connection signal="item_selected" from="ScrollContainer/VBox/MSAARow/msaa" to="." method="_on_msaa_item_selected"]
 [connection signal="item_selected" from="ScrollContainer/VBox/FoveationRow/foveation" to="." method="_on_foveation_item_selected"]
 [connection signal="button_up" from="defaults" to="." method="_restore_defaults"]
+[connection signal="toggled" from="ScrollContainer/VBox/audio_ducking" to="." method="_on_audio_ducking_toggled"]
 [connection signal="pressed" from="apply" to="." method="_on_apply_pressed"]
 [connection signal="pressed" from="back" to="." method="_on_back_pressed"]

@@ -20,6 +20,7 @@ signal apply()
 @onready var environment_mode_control := %environment_mode as OptionButton
 @onready var glow_mode_control := %glow_mode as OptionButton
 @onready var hit_sound_control := %hit_sound as OptionButton
+@onready var audio_ducking_control := %audio_ducking as CheckButton
 @onready var sky_style_control := %sky_style as OptionButton
 var perf_control: OptionButton
 @onready var saber_thickness := %saber_thickness as HSlider
@@ -177,6 +178,7 @@ func set_controls_from_settings() -> void:
 		hit_sound_control.add_item("Hit sound: Classic")
 		hit_sound_control.add_item("Hit sound: Thump")
 	hit_sound_control.select(clampi(Settings.hit_sound, 0, _schema_max(&"hit_sound")))
+	audio_ducking_control.button_pressed = Settings.audio_ducking
 	_populate_sky_style()
 	_populate_perf_preset()
 	d_background.button_pressed = Settings.events
@@ -314,6 +316,9 @@ func _on_glow_mode_selected(index: int) -> void:
 
 func _on_hit_sound_selected(index: int) -> void:
 	Settings.hit_sound = index
+
+func _on_audio_ducking_toggled(button_pressed: bool) -> void:
+	Settings.audio_ducking = button_pressed
 
 func _populate_sky_style() -> void:
 	if sky_style_control.item_count == 0:
@@ -507,7 +512,7 @@ func _on_perf_preset_selected(index: int) -> void:
 # control state survive a tab switch; the stick scroller keeps pointing at the same container.
 const TAB_NAMES := ["Audio", "Sabers", "Visuals", "Performance", "Debug"]
 const TAB_ROWS := {
-	0: ["audio", "hit_sound", "UI_VolumeRow"],
+	0: ["audio", "hit_sound", "audio_ducking", "UI_VolumeRow"],
 	1: ["recenter", "cut_blocks", "bombs_enabled", "SaberThicknessRow", "SaberTypeRow",
 		"SaberColorsRow", "left_saber_offset", "right_saber_offset", "player_height_offset"],
 	2: ["d_background", "floor_light", "saber_halo", "mirror_reflections", "saber_tail",

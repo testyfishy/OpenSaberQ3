@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-05
 
-**Status**: In progress - UI parts (1-4) complete and released as v0.4.0; part 8 slice 1 done; 5, 6, rest of 8 and 9 open
+**Status**: In progress - UI released as v0.4.0; map slices 1-3 done; audio probe done; positioned hit pool + ducking next; 5, 9 and MapData open
 
 **Input**: "Do you wanna fix the scroll things? Also wanna plan out a specification for eloquent
 coding and cleaning up the software part by part. For now let's start with the UI."
@@ -69,6 +69,41 @@ write the part-by-part cleanup specification the player asked for, beginning wit
 - Closed by G0: the hitch is a redraw-scheduling problem, not an input-pass or budget problem.
   Fix = live redraw window while the stick moves, one update on stop.
 
+## Part 6 work unit - positioned hit voices and music ducking
+
+The 2026-11-06 probe (Master + SFX taps, ODDS, 19 right notes) showed the hit SFX peak at
+-4.1 dBFS and the music transient-band median 35 dB below at hit windows. Level is not the
+complaint; position and timbre are.
+
+- **FR-031**: Hit sounds MUST come from one fixed pool of 16 `AudioStreamPlayer3D` voices on the
+  SFX bus, oldest voice stolen first and logged, with no allocation per hit.
+- **FR-032**: Each voice MUST be placed at the cube's **global** position. The probe's L/R energy
+  ratio MUST follow the cube's x position on a run with left- and right-lane notes.
+- **FR-033**: At a matched distance, a hit's peak MUST stay within ±1 dB of v0.4.0. Distance
+  attenuation must not quietly make hits quieter (use the old model or disable attenuation, keep
+  panning, doppler off).
+- **FR-034**: Voices that start within 30 ms of each other MUST be attenuated by 1/sqrt(n)
+  (`gain_db -= 10*log10(n)`), including the voices already playing in that window, so the first
+  hit is not left louder than the rest. Every voice that actually starts counts (good, bad, and a
+  miss only if it plays a sound).
+- **FR-035**: Music ducking MUST use a manual envelope on the Music bus (hold 80 ms after the
+  last hit, release 120 ms, 2-4 dB) because Godot has no sidechain input. It MUST have its own
+  setting and ship **default off** until SC-007 is measured on the device, then flip. Known gap:
+  a per-frame envelope cannot do a 3 ms attack; at 72-120 Hz the effective attack is 8-14 ms.
+- **FR-036**: The pool and ducker MUST reset across scene changes: no leaked players, no
+  double-registered voices, and a stopped/restarted game must not keep a duck applied.
+
+### Success criteria
+
+- **SC-006**: `test_hit_audio` passes: 16-voice pool, oldest voice stolen, every voice placed at
+  the hit's global position, 1/sqrt(n) applied to concurrent hits. Device probe: L/R energy ratio
+  follows the cube's x position.
+- **SC-007**: Device A/B with ducking on: 2-4 dB reduction in the music body band at hit windows,
+  no constant duck in dense passages beyond the measured hold; SFX peak within 2 dB of -4.1 dBFS;
+  App median with the probe off stays in the ~5.0 ms baseline band.
+- **SC-008**: Settings schema has 50 keys; `VERIFYSCHEMA`, `VERIFYPANEL`, `SETTINGSTEST` pass; the
+  ducking row is visible on the Audio tab.
+
 ## Consultation Log
 
 | Gate | Asked | Verdict | Action taken |
@@ -81,3 +116,4 @@ write the part-by-part cleanup specification the player asked for, beginning wit
 | G1 | UI-4 split: Query → DetailView → ResultsView → shell | GO WITH CHANGES: baseline shots + probe before touching code; pager stays in the shell; Covers stays a separate node; Query's timer injected (kept in the panel); keep `_query`/`_rows` compatible or update the smoke in the same commit; inject fixture bytes at the HTTP-completion handlers with stubbed covers; re-measure the line map | Step 0 shots/probe, then Query, DetailView, ResultsView and the shell tidy, each committed; all eight states byte-identical, device probe 0.996, panel 1048 → 928 lines |
 | G4 | UI-4 split (`63a3c4f`..`6e6b0f7`) and UI-1..UI-4 as a whole | APPROVE: LOW items only - `CanvasRefresh.of()` on a Window must defer `add_child`, `render_frames` is SubViewport-only, check `_find_canvas` (still used, kept). Debt accepted: `_query` getter alias, code-built views | Deferred add_child + meta-first singleton + a Window case in `VERIFYCANVAS`; counter documented as SubViewport-only; `VERIFYCANVAS bad=0`, `VERIFYPANELBS bad=0` |
 | G5 | UI-1..UI-4 vs this spec/plan | Matches spec: 8 byte-identical states after every step; hold probe 0.996 vs 0.997; no view references `BeatSaverApi`/`HTTPRequest`/`_input_update`; buildable commits throughout | Recorded in plan.md; parts 5-9 remain open |
+| G0 | Part 6 work unit: positioned hit pool + ducking | GO WITH CHANGES: add FR-033 loudness bound and FR-035 default-off until measured; attack gap (8-14 ms, not 3 ms) must be stated; ducking ships off then flips; two commits (pool, then ducking); attenuate voices already in the 30 ms window; check own_world_3d/listener; note_pos global | Spec updated; G1 for the revised plan next |

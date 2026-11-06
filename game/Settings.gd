@@ -97,7 +97,6 @@ var audio_music: float:
 	set(value):
 		value = clamp_to_schema(&"audio_music", value)
 		audio_music = value
-		AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"Music"), linear_to_db(value))
 		set_and_emit(&"audio_music", value)
 var audio_sfx: float:
 	set(value):
@@ -106,6 +105,12 @@ var audio_sfx: float:
 		AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"SFX"), linear_to_db(value))
 		AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"UI"), linear_to_db(value))
 		set_and_emit(&"audio_sfx", value)
+# Music is written by HitAudio's ducker, which owns the Music bus; this key only carries the
+# player's level so the ducker has one base to add its envelope to.
+var audio_ducking: bool:
+	set(value):
+		audio_ducking = value
+		set_and_emit(&"audio_ducking", value)
 var spectator_view: bool:
 	set(value):
 		spectator_view = value
@@ -339,6 +344,7 @@ const SCHEMA := {
 	"audio_master": {"default": 0.8, "min": 0.0, "max": 1.0, "step": 0.01},
 	"audio_music": {"default": 0.8, "min": 0.0, "max": 1.0, "step": 0.01},
 	"audio_sfx": {"default": 0.8, "min": 0.0, "max": 1.0, "step": 0.01},
+	"audio_ducking": {"default": true},
 	"spectator_view": {"default": false},
 	"spectator_hud": {"default": true},
 	"display_refresh_rate": {"default": 120.0},
