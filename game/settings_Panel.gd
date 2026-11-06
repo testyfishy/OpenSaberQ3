@@ -4,35 +4,35 @@ class_name SettingsPanel
 signal apply()
 @export var beepsaber_game : BeepSaber_Game
 
-@onready var saber_control := $ScrollContainer/VBox/SaberTypeRow/saber as OptionButton
+@onready var saber_control := %saber as OptionButton
 # Visual additions (FR-045..FR-048).
-@onready var floor_light_control := $ScrollContainer/VBox/floor_light as CheckButton
-@onready var saber_halo_control := $ScrollContainer/VBox/saber_halo as CheckButton
-@onready var mirror_reflections_control := $ScrollContainer/VBox/mirror_reflections as CheckButton
-@onready var saber_tail_control := $ScrollContainer/VBox/saber_tail as CheckButton
+@onready var floor_light_control := %floor_light as CheckButton
+@onready var saber_halo_control := %saber_halo as CheckButton
+@onready var mirror_reflections_control := %mirror_reflections as CheckButton
+@onready var saber_tail_control := %saber_tail as CheckButton
 # Round 2 visual additions (specs/007-visual-options). Each one is its own switch, like the
 # rows above; the tooltip states the cost.
-@onready var hit_flash_control := $ScrollContainer/VBox/hit_flash as CheckButton
-@onready var floor_grid_control := $ScrollContainer/VBox/floor_grid as CheckButton
-@onready var event_tint_control := $ScrollContainer/VBox/event_tint as CheckButton
-@onready var debris_cap_control := $ScrollContainer/VBox/debris_cap as CheckButton
-@onready var debris_shards_control := $ScrollContainer/VBox/debris_shards as CheckButton
-@onready var environment_mode_control := $ScrollContainer/VBox/environment_mode as OptionButton
-@onready var glow_mode_control := $ScrollContainer/VBox/glow_mode as OptionButton
-@onready var hit_sound_control := $ScrollContainer/VBox/hit_sound as OptionButton
-@onready var sky_style_control := $ScrollContainer/VBox/sky_style as OptionButton
+@onready var hit_flash_control := %hit_flash as CheckButton
+@onready var floor_grid_control := %floor_grid as CheckButton
+@onready var event_tint_control := %event_tint as CheckButton
+@onready var debris_cap_control := %debris_cap as CheckButton
+@onready var debris_shards_control := %debris_shards as CheckButton
+@onready var environment_mode_control := %environment_mode as OptionButton
+@onready var glow_mode_control := %glow_mode as OptionButton
+@onready var hit_sound_control := %hit_sound as OptionButton
+@onready var sky_style_control := %sky_style as OptionButton
 var perf_control: OptionButton
-@onready var saber_thickness := $ScrollContainer/VBox/SaberThicknessRow/saber_thickness as HSlider
-@onready var cut_blocks := $ScrollContainer/VBox/cut_blocks as CheckButton
-@onready var d_background := $ScrollContainer/VBox/d_background as CheckButton
-@onready var left_saber_col := $ScrollContainer/VBox/SaberColorsRow/left_saber_col as ColorPickerButton
-@onready var right_saber_col := $ScrollContainer/VBox/SaberColorsRow/right_saber_col as ColorPickerButton
-@onready var show_debug_control := $ScrollContainer/VBox/show_debug as CheckButton
-@onready var show_collisions := $ScrollContainer/VBox/show_collisions as CheckButton
-@onready var bombs_enabled_control := $ScrollContainer/VBox/bombs_enabled as CheckButton
-@onready var ui_volume_slider := $ScrollContainer/VBox/UI_VolumeRow/ui_volume_slider as HSlider
-@onready var disable_map_color_control := $ScrollContainer/VBox/disable_map_color as CheckButton
-@onready var upload_server_control := $ScrollContainer/VBox/upload_server as CheckButton
+@onready var saber_thickness := %saber_thickness as HSlider
+@onready var cut_blocks := %cut_blocks as CheckButton
+@onready var d_background := %d_background as CheckButton
+@onready var left_saber_col := %left_saber_col as ColorPickerButton
+@onready var right_saber_col := %right_saber_col as ColorPickerButton
+@onready var show_debug_control := %show_debug as CheckButton
+@onready var show_collisions := %show_collisions as CheckButton
+@onready var bombs_enabled_control := %bombs_enabled as CheckButton
+@onready var ui_volume_slider := %ui_volume_slider as HSlider
+@onready var disable_map_color_control := %disable_map_color as CheckButton
+@onready var upload_server_control := %upload_server as CheckButton
 @onready var left_saber_posx_control := %left_posx as SpinBox
 @onready var left_saber_posy_control := %left_posy as SpinBox
 @onready var left_saber_posz_control := %left_posz as SpinBox
@@ -45,12 +45,12 @@ var perf_control: OptionButton
 @onready var right_saber_rotx_control := %right_rotx as SpinBox
 @onready var right_saber_roty_control := %right_roty as SpinBox
 @onready var right_saber_rotz_control := %right_rotz as SpinBox
-@onready var player_height_offset_control := $ScrollContainer/VBox/player_height_offset/pos as SpinBox
+@onready var player_height_offset_control := %pos as SpinBox
 @onready var audio_master_control := %master_slider as HSlider
 @onready var audio_music_control := %music_slider as HSlider
 @onready var audio_sfx_control := %sfx_slider as HSlider
-@onready var spectator_view_control := $ScrollContainer/VBox/spectator_view as CheckButton
-@onready var spectator_hud_control := $ScrollContainer/VBox/spectator_hud as CheckButton
+@onready var spectator_view_control := %spectator_view as CheckButton
+@onready var spectator_hud_control := %spectator_hud as CheckButton
 
 # Performance rows (FR-040). Each one is hidden when the running XR interface cannot apply it.
 @onready var refresh_rate_row := %RefreshRateRow as HBoxContainer
@@ -86,7 +86,7 @@ func _ready() -> void:
 # at the right edge. Horizontal scrolling is disabled and labels wrap instead, so the list only ever
 # moves vertically.
 func _fit_scroll_area() -> void:
-	var scroll := $ScrollContainer as ScrollContainer
+	var scroll := %ScrollContainer as ScrollContainer
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_allow_wrapping(scroll.get_node("VBox"))
 
@@ -428,7 +428,7 @@ func _on_foveation_item_selected(index: int) -> void:
 
 
 func _on_recenter_button_up() -> void:
-	var recenter_button : Button = $ScrollContainer/VBox/recenter
+	var recenter_button : Button = %recenter
 	recenter_button.disabled = true
 	recenter_button.text = "3.."
 	await get_tree().create_timer(1).timeout
@@ -446,7 +446,7 @@ func _populate_perf_preset() -> void:
 	# Refreshing the controls (which "Default" triggers) must reuse the row that already exists.
 	# Creating it unconditionally appended another identical row on every press, and nothing ever
 	# removed them - the player ended up with a stack of "Performance:" rows.
-	var vbox := $ScrollContainer/VBox
+	var vbox := %ScrollContainer/VBox
 	if perf_control != null and is_instance_valid(perf_control):
 		perf_control.select(clampi(Settings.perf_preset, 0, 2))
 		return
@@ -512,7 +512,7 @@ func _build_tabs() -> void:
 		_tab_buttons.append(b)
 	add_child(bar)
 	# Make room for the bar without touching the list's authored width.
-	var sc := $ScrollContainer as Control
+	var sc := %ScrollContainer as Control
 	sc.offset_top += 84
 	_set_tab(_tab)
 
@@ -523,7 +523,7 @@ func _set_tab(index: int) -> void:
 	_tab = clampi(index, 0, TAB_NAMES.size() - 1)
 	for i in _tab_buttons.size():
 		_tab_buttons[i].button_pressed = i == _tab
-	var vbox := $ScrollContainer/VBox
+	var vbox := %ScrollContainer/VBox
 	for tab: int in TAB_ROWS:
 		for row_name: String in TAB_ROWS[tab]:
 			var row := vbox.get_node_or_null(NodePath(row_name))
@@ -531,7 +531,7 @@ func _set_tab(index: int) -> void:
 				(row as CanvasItem).visible = tab == _tab
 			elif row != null and "visible" in row:
 				row.visible = tab == _tab
-	($ScrollContainer as ScrollContainer).scroll_vertical = 0
+	(%ScrollContainer as ScrollContainer).scroll_vertical = 0
 
 # --- Back (v4 FR-004) ----------------------------------------------------------------------
 # Settings apply live (resolution, foveation and colours change as you touch them), so Back has

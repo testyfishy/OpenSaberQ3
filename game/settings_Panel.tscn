@@ -262,6 +262,7 @@ text = "    (*) Has performance impact (hover options for info)    "
 horizontal_alignment = 2
 
 [node name="ScrollContainer" type="ScrollContainer" parent="."]
+unique_name_in_owner = true
 layout_mode = 0
 offset_left = 27.0
 offset_top = 54.0
@@ -338,11 +339,13 @@ tick_count = 2
 ticks_on_borders = true
 
 [node name="hit_sound" type="OptionButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "Classic is the shipped impact. Thump re-derives it with a low-shelf boost and a 2.5 kHz cut, for a heavier hit. Headphones recommended: the extra low end is mostly below what the headset speakers reproduce."
 theme = SubResource("3")
 
 [node name="recenter" type="Button" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Recenter"
 
@@ -440,100 +443,117 @@ text = "Performance settings above apply immediately; anti-aliasing may hitch fo
 autowrap_mode = 3
 
 [node name="d_background" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "Low Performance impact*"
 theme = SubResource("3")
 text = "*Dynamic Background: "
 
 [node name="cut_blocks" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "High Performance impact*"
 theme = SubResource("3")
 text = "*Cut Blocks: "
 
 [node name="floor_light" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "Light pool under each blade, drawn analytically by the floor shader from the saber positions. No extra render pass, no second viewport."
 theme = SubResource("3")
 text = "Saber Floor Light: "
 
 [node name="saber_halo" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "Additive emissive halo around each blade. One extra draw call per saber, no depth write."
 theme = SubResource("3")
 text = "Saber Halo: "
 
 [node name="mirror_reflections" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "High Performance impact*\nMirrors sabers and notes under a slightly translucent floor. Doubles the draw calls for those objects. Visual only: no collision, no Area3D, so the hit test cannot see it."
 theme = SubResource("3")
 text = "*Mirrored Reflections: "
 
 [node name="saber_tail" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "High Performance impact*"
 theme = SubResource("3")
 text = "*Saber Tail: "
 
 [node name="hit_flash" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "A short burst of light on the floor where your blade cut the note (about 80 ms, fading out). Drawn inside the floor shader that is already running: one uniform write per cut, no extra draw call."
 theme = SubResource("3")
 text = "Cut Flash: "
 
 [node name="floor_grid" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "Low Performance impact\nA faint grid on the floor so the room reads as a floor. Anti-aliased in the fragment shader: about one fwidth per floor pixel, inside the pass the floor already runs."
 theme = SubResource("3")
 text = "Floor Grid: "
 
 [node name="event_tint" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "Low Performance impact\nLight events in the map tint the light your blades throw on the floor. Applied once where the light colour is published, so the floor and the blade glow share it; blade light never goes fully dark."
 theme = SubResource("3")
 text = "Map Light Tint: "
 
 [node name="debris_shards" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "Very low performance impact\nEvery cut throws ten little note-coloured shards. They fly along the cut plane, tumble, fall and shrink away. Drawn as one batch of 128 boxes - one draw call - and moved entirely on the GPU, so a cut allocates nothing."
 theme = SubResource("3")
 text = "Break Debris: "
 
 [node name="debris_cap" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "Saves a little performance\nHalves each burst from ten shards to six, so the same 128-shard pool covers more cuts. Unlike the old slice particles, no burst is ever skipped."
 theme = SubResource("3")
 text = "Limit Debris: "
 
 [node name="environment_mode" type="OptionButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(150, 0)
 tooltip_text = "Very low performance impact\nAuto uses the colours and mood of the environment the map was made for (the room itself is ours, not Beat Saber's art). Classic is the old look: your colours, the fixed red walls."
 theme = SubResource("3")
 
 [node name="glow_mode" type="OptionButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(150, 0)
 tooltip_text = "Measured on Quest 3 at about 1% of the GPU budget. Subtle keeps one blur level; Full is Godot's authored chain. Turn it off for the flattest possible image."
 theme = SubResource("3")
 
 [node name="sky_style" type="OptionButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(150, 0)
 tooltip_text = "What is behind the play space. Black void is the default and the cheapest to draw; ambient light is set explicitly so the scene does not go dull without a sky. Gradient is a texture-free horizon. Panorama is the original background art."
 theme = SubResource("3")
 
 [node name="show_debug" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("3")
 text = "Show Debug Info:"
 
 [node name="show_collisions" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("3")
 text = "Show Collision Shapes:"
 
 [node name="bombs_enabled" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("3")
 text = "Bombs Enabled:"
@@ -547,6 +567,7 @@ theme = SubResource("3")
 text = "Saber Thickness: "
 
 [node name="saber_thickness" type="HSlider" parent="ScrollContainer/VBox/SaberThicknessRow"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 1
@@ -564,6 +585,7 @@ theme = SubResource("3")
 text = "Saber Type:"
 
 [node name="saber" type="OptionButton" parent="ScrollContainer/VBox/SaberTypeRow"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(200, 0)
 theme = SubResource("5")
@@ -579,6 +601,7 @@ theme = SubResource("3")
 text = "Saber Colors: "
 
 [node name="left_saber_col" type="ColorPickerButton" parent="ScrollContainer/VBox/SaberColorsRow"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Left saber"
@@ -587,6 +610,7 @@ color = Color(1, 0.101961, 0.101961, 1)
 edit_alpha = false
 
 [node name="right_saber_col" type="ColorPickerButton" parent="ScrollContainer/VBox/SaberColorsRow"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Right saber"
@@ -603,6 +627,7 @@ theme = SubResource("3")
 text = "UI Volume:"
 
 [node name="ui_volume_slider" type="HSlider" parent="ScrollContainer/VBox/UI_VolumeRow"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -763,6 +788,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="pos" type="SpinBox" parent="ScrollContainer/VBox/player_height_offset"]
+unique_name_in_owner = true
 layout_mode = 2
 min_value = -0.25
 max_value = 0.25
@@ -770,23 +796,27 @@ step = 0.05
 value = -0.25
 
 [node name="disable_map_color" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("3")
 text = "Ignore Map's Colors: "
 
 [node name="upload_server" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "Serves a small upload page at http://<this headset's IP>:45800 so a map zip can be dropped in from a PC browser. Off closes the port completely - nothing is listening. On by default; turn it off on a network you do not trust."
 theme = SubResource("3")
 text = "Local Map Upload Page: "
 
 [node name="spectator_view" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "High Performance impact*"
 theme = SubResource("3")
 text = "*Spectator View:"
 
 [node name="spectator_hud" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 tooltip_text = "High Performance impact*"
 theme = SubResource("3")
