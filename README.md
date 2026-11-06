@@ -1,240 +1,112 @@
 # OpenSaberQ3
 
-An MIT-licensed fork of [BeepSaber](https://github.com/leandrodreamer/BeepSaber), optimised
-specifically for the **Meta Quest 3** — frame stability, clarity, hit registration, and the
-things a rhythm game needs to feel good to play.
+A Quest 3 focused fork of [BeepSaber](https://github.com/leandrodreamer/BeepSaber): the map
+formats, the library and the feedback a rhythm game needs, measured on the headset instead of
+guessed at.
 
-## Upstream credit
+[![Release](https://img.shields.io/github/v/release/testyfishy/OpenSaberQ3?label=release)](https://github.com/testyfishy/OpenSaberQ3/releases)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Godot](https://img.shields.io/badge/Godot-4.6.3-478cbf)](UPSTREAM.md)
+[![Quest 3](https://img.shields.io/badge/Meta-Quest%203-1c1e21)](https://www.meta.com/quest/quest-3/)
 
-**This is a fork. The original project is not ours and remains the work of its authors.**
+![OpenSaberQ3](docs/images/cover.png)
+
+**v0.6.0 is out** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest).
+This is a fork: the original project and its lineage remain the work of its authors
+([credits](ATTRIBUTION.md), [pinned upstream](UPSTREAM.md)).
+
+## Since the fork
+
+The work since the fork point, in the order a player notices it. Every "now" links to the evidence.
+
+| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.6.0 |
+|---|---|---|
+| **Engine** | Godot 4.3; 72 Hz, 60 Hz physics | **Godot 4.6.3**, 120 Hz with physics matched to the display, Performance / Balanced / Quality presets ([perf](docs/performance.md)) |
+| **Maps** | v2 | **v2, v3 and v4**, including the hybrid BeatSaver serves and v4's split beatmap/lightshow ([43-map audit](docs/map-data-audit.md)) |
+| **Library** | local folders | **In-VR BeatSaver browser** (search, sort, filter, download), source tag on every map, **filter by source**, automatic backfill ([spec 020](specs/020-libs-leaderboards/spec.md)) |
+| **Leaderboards** | none | **BeatLeader** top 10 for the selected map and difficulty, in the menu ([v0.6 report](docs/v0.6-report.md)) |
+| **Hit feedback** | one buzz, placeholder audio | Layered hit samples, **L/R audio verified on device**, music ducking, per-event haptics, in-game analyser ([spec 011](specs/011-v03-polish/spec.md)) |
+| **Hit registration** | sub-threshold swings dropped | Analytic swept-blade test; a swing that crosses the note is a hit ([spec 006](specs/006-swing-hit-sweep/spec.md)) |
+| **Chains** | detached plates, spawn pop-in | Continuous links that span each segment; cut order and score covered by a test ([spec 019](specs/019-chains-dense/spec.md)) |
+| **UI and settings** | overlapping HUD, notchy browser | HUD/end-card layout, smooth BeatSaver scrolling, **52 persisted settings** ([spec 016](specs/016-scroll-ui-cleanup/spec.md)) |
+| **Measurement** | none | Bot and **human-play** captures, p99/max/spike metrics, release/rollback artifacts ([PERF.md](PERF.md)) |
+
+## What's new in v0.6.0
+
+- **Every map says where it came from.** BeatSaver, BeastSaber, uploaded, local or unknown, in a
+  sidecar that survives upgrades; the main menu filters the library by it.
+- **Old maps are identified automatically.** The Beat Saber level hash is recomputed from the
+  files, looked up on BeatSaver, and the tag is written back without touching the map.
+- **BeatLeader is in the game.** Top 10 scores for the selected map and difficulty, read-only, no
+  account. A map without a hash says so instead of failing.
+- **Chains and dense maps were checked first.** v0.5.1 fixed the chain line (it was the spawn
+  animation shrinking every link) and measured a 2,913-note, 9.64 NPS map at 120 fps.
+
+![Library filtered to BeatSaver](docs/images/v06-library.png)
+
+**Next (0.6.1):** the BeastSaber `.bplist` import. The `beastsaber` source already exists in the
+tag schema; the import waits on how the playlist reaches the headset.
+
+## Performance at a glance
+
+Quest 3, 120 Hz, default Performance preset, bot playing through the real collision path unless a
+row says otherwise. Exact conditions for each run are in the [performance page](docs/performance.md).
 
 | | |
 |---|---|
-| Forked from | [`leandrodreamer/BeepSaber`](https://github.com/leandrodreamer/BeepSaber), branch [`godot-4-port`](https://github.com/leandrodreamer/BeepSaber/tree/godot-4-port), commit [`64200ad`](https://github.com/leandrodreamer/BeepSaber/commit/64200ad3572b634ae57159e234e87b5e3e5d96eb) (2025-03-05) |
-| Descends from | [`NeoSpark314/BeepSaber`](https://github.com/NeoSpark314/BeepSaber) and the [Godot Oculus Quest Toolkit](https://github.com/NeoSpark314/godot_oculus_quest_toolkit) |
-| This fork | [`testyfishy/OpenSaberQ3`](https://github.com/testyfishy/OpenSaberQ3) |
+| Dense reference map | **Somewhere Out There ExpertPlus**, 2,913 notes, 9.64 NPS |
+| Delivered | **120 fps** (median 120), App 5.0 ms, GPU 0.85 of budget |
+| Dropped frames | **0.14%** steady, p99 11.4 ms |
+| Reference map after the stutter fix | 0.01% dropped (2 frames in 21,348), 76.6% on time, p99 9.97 ms |
+| Stress case (pre-fix) | Gloom, 12,340 walls: 24% dropped; walls are pooled since v0.3 |
 
-The pinned upstream commit, full lineage and the toolchain used for every measurement are in
-[`UPSTREAM.md`](UPSTREAM.md); per-component credits are in [`ATTRIBUTION.md`](ATTRIBUTION.md).
+"Dropped" means a frame that missed a whole vsync slot (>= 1.5x the period); "on time" is the
+stricter 1.05x measure. Both are in every capture — [how to read the numbers](docs/performance.md).
 
-## Status
+## Download and install
 
-**v0.2 is released** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases).
-**v0.3 is in progress**, focused on frame stability across maps and on hit feedback.
+The latest signed APK is on the [releases page](https://github.com/testyfishy/OpenSaberQ3/releases).
+Enable **Developer mode** on the headset, then either sideload with SideQuest or:
 
-Everything claimed below has a measurement behind it, and the measurements that went badly are
-recorded too. [`PERF.md`](PERF.md) is the full log; [`docs/v0.3-report.md`](docs/v0.3-report.md)
-is the current release write-up.
+```sh
+adb install -r OpenSaberQ3-0.6.0.apk
+```
 
-### How to read the numbers
+Launch **Open Saber Q3** from *Unknown Sources*. The package id is deliberately different from
+upstream's, so it installs side by side and does not touch another copy's songs or scores.
+Upgrading over 0.5.x keeps maps, scores and settings. Builds are test-signed, not store builds.
 
-Two different things get called "performance", so this repository states both:
+## Documentation
 
-- **dropped** — a frame that missed a whole vsync slot (≥1.5× the frame period). This is the one a
-  player feels as a hitch.
-- **on time** — a frame delivered within ~1.05× the period. Stricter; it counts frames the
-  compositor still presented, so it is always the lower number.
-
-Quoting the first without the second is how a 120 Hz build gets described as "99.8% perfect" while
-one frame in five lands late. Both are in every capture.
-
-## What this fork changes
-
-**Engine and rendering**
-- **Godot 4.6.3** (upstream 4.3 cannot import this repo's own assets on a clean clone)
-- **120 Hz with physics matched to the display** (was 72 Hz / 60 Hz physics)
-- **Performance / Balanced / Quality preset**, one switch for the three GPU levers, plus the
-  individual settings underneath. Default is Performance.
-- **Bloom removed**: a full-screen pass that forced the 4× MSAA image out of tile memory. The
-  saber halos carry the glow instead.
-- **Ten visual options**, each with its own persisted setting and applied without a restart.
-
-**Content**
-- **Every map format**: v2, v3 and v4, including the hybrid BeatSaver actually serves (v2
-  `Info.dat` pointing at v3 difficulty files) and v4's split beatmap/lightshow with index-shared
-  geometry.
-- **In-VR BeatSaver browser**: search, sort, filter, download straight to the headset.
-- **Local upload page**: serve a small page on the LAN and drop a map zip in from a PC browser.
-  Switchable, and off means the port is closed, not just ignored.
-
-**Gameplay and feedback**
-- **Working hit registration**: sub-threshold sweep movement is no longer discarded, collision
-  flags are not rewritten every tick, notes no longer share one mutated hitbox.
-- **The Meta recenter button works** (was ignored, leaving the menu rotated)
-- **Layered hit audio**: sub + body + crack + air in one sample, crest-compressed rather than
-  peak-normalised (+8–9 dB RMS over the old assets)
-- **Per-event haptics**: a cut is 28 ms with speed/accuracy-driven amplitude; a wrong-colour cut
-  or bomb is a short dull pulse. It used to be one 100 ms buzz for everything.
-- **A reproducible benchmark harness** in `tools/perf/`, including human-play capture.
-
-## Settings
-
-Main menu → Settings. The preset sets the three GPU levers together, because their individual
-names mean nothing on their own:
-
-| Preset | Render target | MSAA | Foveation | Measured GPU |
-|---|---|---|---|---|
-| Quality | 2107×2208 (native supersample) | 4× | off | 0.86 of budget |
-| Balanced | 1848×1936 | 4× | low | 0.75 |
-| **Performance (default)** | **1680×1760** (runtime-recommended) | **2×** | **medium** | **0.68–0.70** |
-
-Everything else is also adjustable: refresh rate, the individual render/MSAA/foveation values,
-layered hit audio, and the ten visual toggles.
-
-## Measured performance
-
-![Frame time through a song](docs/images/frametime.png)
-
-Frame time across the whole song: x is seconds from the start, y is the interval between
-consecutive frames in milliseconds, same harness and map in every panel. The shaded band is the
-min-to-max range within each second, the line through it is the median, the thin line is the slowest
-frame in that second, and the **red dots are frames that actually missed a vsync slot**, drawn at the
-moment they happened.
-
-What the trace shows that an average cannot:
-
-- **v0.1 is clean for about 28 seconds, then drops slots continuously to the end of the song** — 119
-  of them.
-- **v0.2 has nine in three minutes.** Its *median is identical to v0.1's* (8.37 vs 8.43 ms); the
-  entire difference is in the tail. That is exactly why the medians misled, and why this trace
-  replaced the percentile chart.
-- The triangles at the top are song-start pipeline compiles (41–51 ms), pinned above the axis instead
-  of being allowed to set its scale — otherwise a whole song squashes into a 5 ms strip.
-
-Regenerate with `python tools/perf/plot_frametime.py`; add a capture to its `SERIES` list and each
-new release appears on the same picture.
-
-Quest 3, 120 Hz, bot playing `ODDS&ENDS feat. Hatsune Miku` ExpertPlus through the real collision
-path, 180 s unless stated. Method, validity rules and caveats: [`PERF.md`](PERF.md).
-
-### v0.2 shipped default
-
-| | value |
+| | |
 |---|---|
-| Frames | 21,348 |
-| Delivered | 120 fps |
-| **Dropped** | **0.01%** — 2 frames in three minutes |
-| On time | 76.6% |
-| p95 / p99 frame interval | 9.30 / 9.97 ms (8.33 ms budget) |
-| Mean frame, thirds | 8.33 / 8.33 / 8.33 ms |
-| GPU / CPU | 0.68–0.70 / 0.22 of budget |
-
-**Every visual setting on**, 334 s sustained: **0.02% dropped**, on-time 75.4%, flat across the
-run. The whole visual layer costs about 1 point of on-time.
-
-### The stutter that was real
-
-An earlier "the stutter was the benchmark" conclusion was only half right. The harness *was*
-inflating early numbers, but a real defect was also present: `Cuttable._physics_process` read
-`global_transform` twice per tick per live note. Frame time climbed 8.40 → 8.95 ms across three
-minutes — worse the longer you played — and on-time collapsed from 78.5% to 51.7%. Replacing those
-reads with one local read took it to **78.3% on time, 0.21% dropped, flat thirds**.
-
-### Per-map matrix (why some maps feel worse)
-
-| map | walls | fps | on time | dropped |
-|---|---|---|---|---|
-| Empires | 0 | 120.0 | 80.5% | 0.00% |
-| HEARTATTACK (575 bombs, 153 arcs) | 567 | 120.0 | 71.8% | 0.00% |
-| Gloom | **12,340** | 92.9 | 27.5% | 24.07% |
-| Somewhere Out There | **3,530** | 65.1 | 6.2% | 66.29% |
-
-Bombs and arcs are free. Walls were not pooled — every wall was instantiated and freed, ~74 times
-a second on a wall map. That is fixed in v0.3 (pooled, shared unit mesh, sized pool) and awaiting
-verification.
+| [v0.6.0 release report](docs/v0.6-report.md) | Library sources, BeatLeader, device evidence, upgrade test |
+| [Performance](docs/performance.md) | Frame-time trace, the real stutter, per-map walls, dense-note results |
+| [Changelog](docs/changelog.md) | Every release from v0.1.0 to v0.6.0 |
+| [v0.3 report](docs/v0.3-report.md) | The feedback, sky, audio and layout work as it shipped |
+| [Upstream and toolchain](UPSTREAM.md) | Pinned commit, build steps, reproducibility gaps |
+| [Attribution](ATTRIBUTION.md) | Authors and asset provenance |
+| [Benchmarking](tools/perf/benchmark.md) | How the captures are produced and what they prove |
 
 ## Build from source
 
-Pinned toolchain, so any two measurements are comparable:
-
-| Component | Version |
-|---|---|
-| Godot | 4.6.3-stable (editor + matching export templates) |
-| JDK | 17 |
-| Android SDK platforms | 34 and 36 |
-| Build-tools | 34.0.0 and 36.1.0 |
-| NDK | 23.2.8568313 and 29 |
-| Output ABI | arm64-v8a only |
-
-- Export preset: **`Oculus Quest (RELEASE)`**. It uses the Gradle build (`use_gradle_build=true`)
-  because the OpenXR loader is supplied on that path; a prebuilt-template build starts in flat
-  mode with `libopenxr_loader.so` missing.
-- `android/.build_version` must match the engine (`4.6.3.stable`) or Godot refuses to export.
-- The release preset expects a keystore on your machine. None is committed and none should be.
-- Exact commands and known reproducibility gaps: [`UPSTREAM.md`](UPSTREAM.md). Benchmark tooling:
-  [`tools/perf/benchmark.md`](tools/perf/benchmark.md).
-
-Measurements must use release builds — a debug export carries runtime checks and invents a
-performance problem that is not there.
-
-## Install on a Quest 3
-
-1. Enable **Developer mode** for the headset in the Meta Horizon phone app and connect USB.
-2. `adb devices` should list the headset; accept the debugging prompt if asked.
-3. `adb install -r <path-to-apk>`
-4. Launch **Open Saber Q3** from *Unknown Sources*.
-
-Package id `io.github.testyfishy.opensaberq3` is deliberately different from upstream's, so it
-installs **side by side** and does not touch an existing copy's songs or scores.
+Godot **4.6.3** + JDK 17 + Android SDK 34/36, export preset **`Oculus Quest (RELEASE)`**. The
+release preset expects a keystore on your machine; none is committed. Exact versions, commands and
+known gaps are in [UPSTREAM.md](UPSTREAM.md).
 
 ## Known limitations
 
-- **No HRTF.** Godot has none and Quest does not provide one to us, so left/right is stereo
-  panning only; above/below cannot be reproduced faithfully.
-- **Quest 3 speakers roll off below ~150–200 Hz.** Hit sounds are built with their weight at
-  200–800 Hz for that reason, not sub-bass.
-- **360°/90° lane rotation** is parsed but not applied.
-- **v4 event-box groups and VFX boxes** are ignored; basic lighting events are supported.
-- A **red dot** has been reported at screen centre during play and has never been reproduced in
-  testing. It is tracked, not forgotten.
+- **No HRTF.** Left/right is stereo panning; above/below cannot be reproduced faithfully with the
+  APIs available on Quest.
+- **Quest 3 speakers roll off below ~150–200 Hz**, so hit weight sits at 200–800 Hz.
+- **360°/90° lane rotation** is parsed but not applied; v4 event-box groups and VFX boxes are
+  ignored. Basic lighting events are supported.
+- An intermittent **red dot** during play is still unexplained and tracked; the white highlights
+  at chain joints are cosmetic.
 
-## Ongoing work — v0.3
+## License
 
-Current focus, in the order it is being tackled. Each item ships only when a before/after
-measurement exists.
-
-**1. Walls on wall-heavy maps** *(code done, verification pending)*
-Pooled instead of instantiated per spawn, one shared unit mesh with node scaling instead of a
-per-wall mesh rebuild, and a 160-instance pool sized from the measured live count. A real
-regression was caught offline before release: pooled walls lacked `clear_from_track()`, so a map
-transition freed them while the pool still referenced them. Fixed and verified clean.
-
-**2. Map coverage**
-The six-map matrix above is being extended. Once walls are fixed, the test is whether all maps
-sit within a few points of each other — and if Somewhere Out There still lags, that map is
-revealing a second cost (it is the only one with both heavy walls and 50 notes/second bursts).
-
-**3. Feedback / physicality**
-The player's summary was "minimal physicality" and "the vibration is better feedback than the
-audio". Layered samples and per-event haptics are in. Still open:
-- a continuous per-hand hum whose pitch follows swing speed — the only mechanism that gives the
-  ear a sense of *which hand* without HRTF
-- miss feedback (currently nothing: no sound, no haptic) and wall-contact feedback
-- applying the interaction-feedback research in [`docs/`](docs/) rather than inventing it
-
-**4. UI**
-HUD text overlaps at the bottom right; the end-of-map card does not lay out cleanly. The HUD fix
-is placement, the end card wants a `SubViewport` with real containers.
-
-**5. Sky**
-Implemented: black void (default), gradient, panorama. Ambient light is set explicitly for void so
-the scene does not go dull — the sky used to supply it.
-
-**6. Instruments**
-Added so the above can be judged rather than guessed:
-`[bench] player_capture` (records *your* play, not the bot's), `ui_scroll_probe`, subsystem
-kill-switches (`no_notes`, `hud_off`, `floor_off`, `no_audio`, `physics_hz`), wall-pool peak
-telemetry, screenshot capture, and `tools/audio/analyse_hitsounds.py`.
-
-**Not planned:** ray tracing (no Godot RT API, no Quest support), physics ragdolls, HRTF
-spatialisation, per-hit music ducking (pumps at note rate), and camera shake.
-
-## License and attribution
-
-MIT — see [`LICENSE`](LICENSE) (retained unmodified, © 2020 Holger Dammertz) and
-[`ATTRIBUTION.md`](ATTRIBUTION.md) for the full chain of authors and asset provenance.
-
-- Contains **no Beat Saber assets**: no audio, font, shader, level, model or UI element from Beat
-  Saber or any other commercial title.
-- Claims **no affiliation with Beat Games or Meta**, and does not use the Beat Saber name, logo or
-  branding.
+MIT — [LICENSE](LICENSE) retains the original copyright (© 2020 Holger Dammertz). Contains no
+Beat Saber assets, claims no affiliation with Beat Games or Meta, and does not use the Beat Saber
+name, logo or branding. Not affiliated with or endorsed by Beat Games, Meta, BeatSaver or
+BeatLeader.
