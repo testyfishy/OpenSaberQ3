@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-05
 
-**Status**: In progress - release candidate installed for the play test; tag/merge pending
+**Status**: Done - tagged `v0.4.0-q3`, `godot-4-port` fast-forwarded, not pushed
 
 **Input**: Player: "bump", "proper. the debug version is only for us", "not yet" (no upload),
 "whatever makes more sense and safer" (branch/tag), "it's a backup" (rollback APK stays).
@@ -67,8 +67,18 @@ a debug build labelled 0.3.0. Parts 5-9 of the cleanup start after this release.
 - **Installed test build**: `OpenSaber-v04.apk`, versionCode 7 / versionName 0.4.0, release export,
   test-signed with the debug keystore, installed over the debug build (settings and songs kept),
   launched and confirmed as the top activity.
-- **Still open**: rebuild with `5f58b7b`, one release stutter capture (or record it unsupported
-  under FR-006), then tag `v0.4.0-q3` and fast-forward `godot-4-port`.
+- **Release capture works (FR-006)**: the external flag path (`/sdcard/Android/data/.../files`)
+  works on the non-debuggable release build, so `run-vrapi.ps1` needs no `run-as`. One 30 s ODDS
+  run: **120 fps median, App 5.01 ms, GPU 0.78 %** - better than the debug baseline (111 fps,
+  5.39 ms, 0.81 %). Perf runs may stay on DEBUG for convenience; they are not blocked on release.
+- **Play test (player)**: scroll good, BeatSaver panel good, settings good. Particle sword not
+  checked by hand; the fixed build launches with it selected and logs no node/material error.
+- **Final build**: `OpenSaber-v04.apk`, 83,525,217 bytes, SHA-256 prefix `223C753B468FAD0A`,
+  versionCode 7 / 0.4.0, release export, test-signed, installed over the debug build (data kept),
+  launched and confirmed as the top activity with a live process and no script errors.
+- **Tag/merge**: annotated `v0.4.0-q3` at `bd6340d`; `godot-4-port` fast-forwarded from
+  `7fff5d3` to `bd6340d`; no push. Rollback APK hash unchanged
+  (`288100C3E294DBBE5C899990C5462C69A1154D0223AE068E215DE98F02BD0D68`).
 
 ## Out of scope
 
@@ -85,4 +95,4 @@ no upload yet, use the safest branch route, keep the rollback as a backup.
 
 | Gate | Asked | Verdict | Action taken |
 |---|---|---|---|
-| G0 | Release mechanics: version/code bump, release export with the existing debug keystore, tag + fast-forward policy, verification steps | GO WITH CHANGES: `v0.4` is taken by upstream, use `v0.4.0-q3`; versionCode 7 correct; tag + FF safe with the old SHA recorded; release loses `run-as`, so perf stays on DEBUG; debug keystore is test-only; add badging/cert/data-preservation/logcat/release-capture checks | Applied to FR-001..FR-006 and SC-001..SC-005; benchmark.md note follows |
+| G0 | Release mechanics: version/code bump, release export with the existing debug keystore, tag + fast-forward policy, verification steps | GO WITH CHANGES: `v0.4` is taken by upstream, use `v0.4.0-q3`; versionCode 7 correct; tag + FF safe with the old SHA recorded; release loses `run-as`, so perf stays on DEBUG; debug keystore is test-only; add badging/cert/data-preservation/logcat/release-capture checks | Applied; tag `v0.4.0-q3`, FF `7fff5d3` -> `bd6340d`, release capture works via the external path |
