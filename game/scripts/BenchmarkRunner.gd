@@ -93,6 +93,7 @@ const Cost := preload("res://game/scripts/CostProbe.gd")
 # Preloaded by path so benchmark mode does not depend on the editor's global
 # class cache being up to date on a clean clone (same reason as BenchmarkRunner).
 const BotDriverScript := preload("res://game/scripts/BotDriver.gd")
+const VRSliderScript := preload("res://game/vr_slider.gd")
 const HitResolver := preload("res://game/scripts/HitResolver.gd")
 
 var _bench_cfg: ConfigFile = null
@@ -1070,6 +1071,7 @@ func _write_meta() -> void:
 			_meta["refresh_rate_final"] = str(xr_end.get_display_refresh_rate())
 	_meta["physics_ticks_final"] = str(Engine.physics_ticks_per_second)
 	# Audio verification counters (see _apply_overrides).
+	_meta["panel_cost"] = VRSliderScript.last_measurement
 	_meta["audio_probe_enabled"] = "true" if DefaultSaber.probe_enabled else "false"
 	_meta["audio_play_calls"] = str(DefaultSaber.probe_calls)
 	_meta["audio_invalid_ids"] = str(DefaultSaber.probe_invalid)
@@ -1111,7 +1113,6 @@ func _peak_of(values: PackedInt32Array) -> int:
 const VRSlider := preload("res://game/vr_slider.gd")
 
 func _run_ui_scroll_probe() -> void:
-	const VRSliderScript := preload("res://game/vr_slider.gd")
 	VRSliderScript.debug_noredraw = _bench_cfg != null and bool(_bench_cfg.get_value("bench", "ui_panel_noredraw", false))
 	var panel: Node = _game.find_child("BeatSaverPanel", true, false)
 	if panel == null:

@@ -18,6 +18,8 @@ var _live := false
 # A/B is `debug_noredraw`, which keeps the viewport DISABLED while the stick moves, so the redraw
 # cost is the difference between the two probe runs.
 static var debug_noredraw := false
+# Last measurement, also written into the bench meta so a run is self-describing.
+static var last_measurement := ""
 var _meas_frames := 0
 var _meas_cpu := PackedFloat32Array()
 var _meas_gpu := PackedFloat32Array()
@@ -79,6 +81,10 @@ func _process(delta: float) -> void:
 			_meas_frames += 1
 			_meas_cpu.append(RenderingServer.viewport_get_measured_render_time_cpu(vp.get_viewport_rid()))
 			_meas_gpu.append(RenderingServer.viewport_get_measured_render_time_gpu(vp.get_viewport_rid()))
+			# Report periodically as well as on stop: a probe can end while the stick is still
+			# engaged, and an end-of-scroll-only report then never happens.
+			if _meas_frames % 60 == 0:
+				_report_measurement()
 	var newpos := -vr.rightController.rotation_degrees.x - (vr.rightController.transform.origin.y * 20.0)
 	# Scrolling is stick-only. Drag-scrolling was removed because pressing the trigger while
 	# pointing at a list (to select a card or a setting) also pushed the list, which read as
@@ -193,6 +199,6 @@ func _report_measurement() -> void:
 		return total / maxf(float(a.size()), 1.0)
 	var p95 := func(a: PackedFloat32Array) -> float:
 		return a[mini(a.size() - 1, int(a.size() * 0.95))]
-	vr.log_info("PANELCOST frames=%d noredraw=%s cpu_mean=%.3fms cpu_p95=%.3fms gpu_mean=%.3fms gpu_p95=%.3fms" % [
-		_meas_frames, str(debug_noredraw),
-		mean.call(cpu), p95.call(cpu), mean.call(gpu), p95.call(gpu)])
+	last_measurement = "frames=%d noredraw=%s cpu_mean=%.3fms cpu_p95=%.3fms gpu_mean=%.3fms gpu_p95=%.3fms" % [
+		_meas_frames, str(debug_noredraw), mean.call(cpu), p95.call(cpu), mean.call(gpu), p95.call(gpu)]
+	vr.log_info("PANELCOST " + last_measurement)
