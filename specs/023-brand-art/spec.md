@@ -87,6 +87,19 @@ go/no-go.
   SVG sources contain no filters or text elements; `docs/itch-push.md` carries the trademark and
   song-licence gate.
 
+## Publication evidence (2026-11-06)
+
+- Commit `6454c44` pushed to `origin/godot-4-port`; `git ls-remote` matches local HEAD.
+- The rendered README uses `docs/images/banner.png`; the banner and the brand contact sheet return
+  HTTP 200 from `raw.githubusercontent.com` on `godot-4-port`. Link check: 0 broken relative links
+  across README, performance, changelog, the v0.6 report, brand and both itch pages.
+- `icon.png` (512), `icon_192.png`, the adaptive pair (432), `game/data/beepsaber_logo.png`, the
+  banner, itch cover and 512 logo are replaced; `godot --headless --import` and a desktop menu
+  render pass, showing the new mark in the menu's default cover and boot splash.
+- No APK, tag or GitHub release changed. 0.6.1 carries the new icon/menu logo.
+- The itch plan blocks the upload on the unlicensed TheFatRat demo track in the current build and
+  on real headset screenshots; no itch project was created or published.
+
 ## Out of scope
 
 - Using an external image-generation service (no model/tool is available), and any claim that one
