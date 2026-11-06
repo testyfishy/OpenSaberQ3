@@ -120,8 +120,10 @@ var is_extended := false
 # height is driven by the same Show/Hide animations as the blade, so a retracting saber
 # shortens its glow. The colour comes from the light globals, not from this node, because a
 # map light event tints the light once at the source (007 rule 6).
-@onready var _halo := $LightSaber_Mesh/Halo as MeshInstance3D
-@onready var _halo_mat := _halo.material_override as ShaderMaterial
+# The particle sword extends this script but has no halo node; a missing halo must be a no-op,
+# not a failed @onready initializer (which left a typed material null and crashed the release build).
+@onready var _halo := get_node_or_null("LightSaber_Mesh/Halo") as MeshInstance3D
+@onready var _halo_mat: ShaderMaterial = (_halo.material_override as ShaderMaterial) if _halo != null else null
 
 # Mirrored copy, as a `next_pass` on the blade material (FR-047). The pass reads the colour
 # from an instance uniform, so one shared material serves both blades.
@@ -186,7 +188,8 @@ func set_color(color: Color) -> void:
 # 0 = left blade, 1 = right: which light global the glow strip reads, so the strip follows
 # the light that is applied once at the source rather than carrying its own tint.
 func set_side(side: int) -> void:
-	_halo_mat.set_shader_parameter(&"side", side)
+	if _halo_mat != null:
+		_halo_mat.set_shader_parameter(&"side", side)
 
 func set_mirror_enabled(value: bool) -> void:
 	_set_mirror_pass(value)
@@ -212,7 +215,8 @@ func set_thickness(value: float) -> void:
 
 # FR-046 / FR-049: the halo is a setting, so it must be switchable at runtime.
 func set_halo_enabled(value: bool) -> void:
-	_halo.visible = value
+	if _halo != null:
+		_halo.visible = value
 
 func set_trail(enabled: bool = true) -> void:
 	tail.visible = enabled
