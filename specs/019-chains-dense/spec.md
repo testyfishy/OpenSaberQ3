@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-06
 
-**Status**: In progress (G0 approved with changes)
+**Status**: Implementation done; G4 pending
 
 **Input**: Player: "the gameplay mechanic about having a translucent line that connects between
 boxes - they are not connected well and it's still an issue from yesterday's gameplay. Also test
@@ -74,6 +74,37 @@ ecosystem/leaderboard question is research only.
 - **SC-005**: A normal-density map (ODDS) shows no median/p99 regression (within run noise).
 - **SC-006**: Chain cut order/score is covered by the non-overlap test, and the device/desktop
   screenshot shows a connected chain; the screenshot is recorded in the sheet.
+
+## Results (2026-11-06)
+
+### Chain
+- Root cause: the authored Spawn animation scales the link mesh to 10% and pulls it 2 m back for
+  0.8 s, so every new link was a detached dash; the old 2.12x overstretch only hid part of it.
+- Fix: no Spawn animation for links (transform reset), exact segment midpoint/orientation, mesh
+  extended by half its width at joints, hitbox exactly the segment, old forgiveness extension
+  removed, cut halves hidden on spawn.
+- `CHAINGEOMETRY PASS` on straight/curved/squished/2-link chains; `visual_chain_after.png` shows a
+  continuous band (white joint highlights remain from the GLB/material, noted for the eye check).
+
+### Dense map (Somewhere Out There, ExpertPlus Lawless, 2913 notes, 9.64 NPS)
+| run | fps | App | GPU% | p99 | dropped | cubes peak |
+|---|---|---|---|---|---|---|
+| dense, hot (after a 180 s run) | 120 | 6.01 | 0.97 | 12.79 | 1.09% | 7 |
+| dense, steady (default2) | 120 | 5.02 | 0.85 | 11.37 | 0.14% | 7 |
+| light ODDS, steady | 120 | 4.97 | 0.85 | 10.24 | 0.11% | 9 |
+| visuals_none | 120 | 5.53 | 0.91 | 10.93 | 0.15% | 7 |
+| debris off / note_glow off / flash off | 120 | 5.18-5.22 | 0.87 | 10.90-11.60 | 0.10-0.27% | 7 |
+
+- The dense path holds 120 fps with 0.14% dropped frames in a steady thermal state; the only hot
+  run was 1.09% with GPU 0.97. No single visual feature explains it: the feature-off arms and the
+  cool default all land at 5.0-5.2 ms / 0.85-0.87 GPU / p99 10.9-11.6. The earlier "hot" delta was
+  device state, not the note stream.
+- Spike attribution: tracked costs are tiny on spikes (spawn <=0.9 ms, swing <=3 ms, cuttable
+  <=0.1 ms, shape re-enable ~0); the spike column is `process_usec`, not any note feature. No
+  dense-note code change is justified by this evidence. The chain fix (removing the inflated
+  overdraw) is the only measured visual optimisation.
+- Conclusion: keep the note path as is; recommend the Performance preset for hot sessions. If the
+  player's own map still drops at home, capture that map with the bench and revisit.
 
 ## Out of scope
 
