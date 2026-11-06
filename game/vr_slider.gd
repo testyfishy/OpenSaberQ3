@@ -1,14 +1,8 @@
 extends Node
 
 @export var scroll_node_path: NodePath
-# The 2D canvas this list lives on. OQ's canvas only re-renders when something asks it to
-# (`update_only_on_input`), so a scroll that changes `value` alone moves the list in the
-# ScrollContainer while the displayed texture stays put - which reads as "a couple of ticks,
-# then it stops". Asking the canvas for an update while scrolling is what makes it smooth.
-@export var canvas_path: NodePath
 
 var scroll_node: Control
-var canvas: Node
 var v_scroll: VScrollBar
 var is_mouse_in := false
 var relpos := 0.0
@@ -53,17 +47,7 @@ var _speed := 0.0
 
 func _ready() -> void:
 	scroll_node = get_node(scroll_node_path) as Control
-	if not canvas_path.is_empty():
-		canvas = get_node_or_null(canvas_path)
-	if canvas == null:
-		# Walk up to the OQ_UI2DCanvas that owns this sub-viewport.
-		var n := get_parent()
-		while n != null:
-			if n.has_method(&"_input_update"):
-				canvas = n
-				break
-			n = n.get_parent()
-	
+
 	if scroll_node is ItemList:
 		v_scroll = (scroll_node as ItemList).get_v_scroll_bar()
 	elif scroll_node is ScrollContainer:
@@ -137,8 +121,8 @@ func _stick_scroll(delta: float) -> void:
 			# one or more frames behind the scroll value.
 			_set_live(true)
 
-# The canvas redraws only when asked. One call per changed frame is the same thing every other
-# panel state change does (BeatSaverPanel._canvas_input_update).
+# The canvas redraws only when asked. One request per changed frame, through the canvas's single
+# refresh authority (BeatSaverPanel._canvas_input_update does the same).
 func _request_refresh() -> void:
 	# One authority decides when the canvas renders; see game/ui/CanvasRefresh.gd.
 	var refresh := CanvasRefresh.of(self)
@@ -166,27 +150,30 @@ func _mouse_exited() -> void:
 # Switching the owning SubViewport between ALWAYS and DISABLED is the whole redraw policy. On stop
 # we request exactly one update, so the last frame is drawn and no coroutine is left pending.
 func _set_live(value: bool) -> void:
-	if value == _live:
-		return
-	_live = value
-	var vp := get_viewport()
-	if vp == null:
-		return
 	if value:
-		if not debug_noredraw:
-			var refresh := CanvasRefresh.of(self)
-			if refresh != null:
-				refresh.begin_live(self)
-		RenderingServer.viewport_set_measure_render_time(vp.get_viewport_rid(), true)
+		var live_refresh := CanvasRefresh.of(self)
+		if not debug_noredraw and live_refresh != null:
+			# begin_live doubles as the heartbeat, so it runs on every moved frame: the watchdog
+			# treats 0.5 s without it as a lost owner and stops rendering mid-scroll.
+			live_refresh.begin_live(self)
+		if _live:
+			return
+		_live = true
+		var vp := get_viewport()
+		if vp != null:
+			RenderingServer.viewport_set_measure_render_time(vp.get_viewport_rid(), true)
 		_meas_frames = 0
 		_meas_cpu = PackedFloat32Array()
 		_meas_gpu = PackedFloat32Array()
-	else:
-		var refresh := CanvasRefresh.of(self)
-		if refresh != null:
-			refresh.end_live(self)
-		_report_measurement()
-		_request_refresh()
+		return
+	if not _live:
+		return
+	_live = false
+	var refresh := CanvasRefresh.of(self)
+	if refresh != null:
+		refresh.end_live(self)
+	_report_measurement()
+	_request_refresh()
 
 func _report_measurement() -> void:
 	if _meas_frames < 10:

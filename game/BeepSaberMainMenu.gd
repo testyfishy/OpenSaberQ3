@@ -116,7 +116,11 @@ func _load_playlists() -> void:
 	
 	var canvas := get_parent().get_parent()
 	if canvas is OQ_UI2DCanvas:
-		(canvas as OQ_UI2DCanvas)._input_update()
+		# The canvas's refresh authority coalesces this into one frame; calling the canvas's
+		# `_input_update` directly would start a competing update path.
+		var refresh := CanvasRefresh.of(self)
+		if refresh != null:
+			refresh.request()
 
 func _discover_all_songs(seek_path: String) -> void:
 	_all_songs.clear()

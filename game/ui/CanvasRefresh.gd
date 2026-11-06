@@ -39,6 +39,9 @@ static func of(node: Node) -> CanvasRefresh:
 var _viewport: SubViewport
 var _dirty := false
 var _live: Dictionary = {}
+# Owners whose `tree_exiting` is already connected. Checking `is_connected()` with a bound
+# Callable is not reliable, so the connection is tracked by instance id instead.
+var _watching: Dictionary = {}
 var _last_keepalive := 0.0
 
 func request() -> void:
@@ -48,9 +51,11 @@ func request() -> void:
 func begin_live(owner: Object) -> void:
 	if owner == null:
 		return
-	_live[owner.get_instance_id()] = true
+	var id := owner.get_instance_id()
+	_live[id] = true
 	keep_alive()
-	if owner is Node and not (owner as Node).tree_exiting.is_connected(_on_owner_exiting.bind(owner)):
+	if owner is Node and not _watching.has(id):
+		_watching[id] = true
 		(owner as Node).tree_exiting.connect(_on_owner_exiting.bind(owner), CONNECT_ONE_SHOT)
 	if _viewport != null:
 		_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -69,6 +74,8 @@ func keep_alive() -> void:
 	_last_keepalive = Time.get_ticks_msec() * 0.001
 
 func _on_owner_exiting(owner: Object) -> void:
+	if owner != null:
+		_watching.erase(owner.get_instance_id())
 	end_live(owner)
 
 func _process(_delta: float) -> void:

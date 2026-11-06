@@ -96,6 +96,14 @@ func _editor_update_preview() -> void:
 	viewport.add_child(preview_node)
 
 func _input_update() -> void:
+	# Once a canvas has a CanvasRefresh authority, it owns the update mode: route through it so a
+	# pointer move cannot start the old `update_once` coroutine alongside it (that coroutine forces
+	# UPDATE_DISABLED three frames later, which used to cut a scroll short).
+	if viewport != null:
+		var refresh: Variant = viewport.get_meta(&"canvas_refresh", null)
+		if refresh != null and refresh.has_method(&"request"):
+			refresh.call(&"request")
+			return
 	if update_only_on_input:
 		($update_once as UpdateViewport).update_once(viewport)
 	else:
