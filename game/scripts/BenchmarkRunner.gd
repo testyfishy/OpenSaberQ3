@@ -93,6 +93,7 @@ const Cost := preload("res://game/scripts/CostProbe.gd")
 # Preloaded by path so benchmark mode does not depend on the editor's global
 # class cache being up to date on a clean clone (same reason as BenchmarkRunner).
 const BotDriverScript := preload("res://game/scripts/BotDriver.gd")
+const AudioProbeScript := preload("res://game/scripts/AudioProbe.gd")
 const VRSliderScript := preload("res://game/vr_slider.gd")
 const HitResolver := preload("res://game/scripts/HitResolver.gd")
 
@@ -101,6 +102,7 @@ var _game: Node3D
 var _song_player: AudioStreamPlayer
 var _track: Node3D
 var _bot: Node = null
+var _audio_probe: Node = null
 
 var _out_dir := "user://"
 var _meta: Dictionary = {}
@@ -733,6 +735,18 @@ func _start_recording() -> void:
 			_meta["physics_ticks_settled"] = str(Engine.physics_ticks_per_second)
 			vr.log_info("BENCH: physics pinned to requested %.1f Hz (read-back at start was %.1f)" % [target_hz, settled])
 	_recording = true
+	var probe_s := float(_bench_cfg.get_value("bench", "audio_probe", 0.0)) if _bench_cfg != null else 0.0
+	if probe_s > 0.0:
+		_audio_probe = AudioProbeScript.new()
+		_audio_probe.name = "AudioProbe"
+		add_child(_audio_probe)
+		var probe_path := _out_dir.path_join("audio_probe.wav")
+		if not _audio_probe.start(probe_path, probe_s):
+			_meta["audio_probe_error"] = "probe did not start"
+			_audio_probe.queue_free()
+			_audio_probe = null
+		else:
+			_meta["audio_probe_s"] = str(probe_s)
 	_start_usec = Time.get_ticks_usec()
 	_prev_usec = _start_usec
 	Cost.reset()
@@ -997,6 +1011,12 @@ func _finish(reason: String, quit_after: bool = true) -> void:
 		return
 	_recording = false
 	set_process(false)
+	if _audio_probe != null:
+		var probe_path: String = _audio_probe.call("stop")
+		if not probe_path.is_empty():
+			_meta["audio_probe"] = probe_path
+		_audio_probe.queue_free()
+		_audio_probe = null
 	Cost.enabled = false
 	var elapsed_usec := Time.get_ticks_usec() - _start_usec
 	_meta["samples"] = _ticks.size()

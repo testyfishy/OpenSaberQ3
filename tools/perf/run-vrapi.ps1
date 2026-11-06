@@ -4,7 +4,8 @@ param(
     [int]$Duration = 40,
     [string]$Map = "ODDS",
     [int]$Diff = 5,
-    [int]$Hz = 120
+    [int]$Hz = 120,
+    [int]$MissPercent = 0
 )
 
 $adb = "$env:LOCALAPPDATA\Android\platform-tools\adb.exe"
@@ -28,7 +29,7 @@ $Extra
 
 [bot]
 enabled=true
-miss_percent=0
+miss_percent=$MissPercent
 sway=true
 "@ | Set-Content -Path "$env:TEMP\toolchain\$Name.flag" -Encoding utf8
 & $adb -s $d push "$env:TEMP\toolchain\$Name.flag" "$ext/bench.flag" | Out-Null
