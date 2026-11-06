@@ -19,7 +19,7 @@ const EXPECTED_ORDER: Array[String] = [
 	"show_debug_info", "bombs_enabled", "events", "saber_visual", "ui_volume",
 	"left_saber_offset_pos", "left_saber_offset_rot", "right_saber_offset_pos",
 	"right_saber_offset_rot", "disable_map_color", "upload_server", "player_height_offset",
-	"audio_master", "audio_music", "audio_sfx", "audio_ducking", "spectator_view", "spectator_hud",
+	"audio_master", "audio_music", "audio_sfx", "audio_ducking", "audio_analyser", "spectator_view", "spectator_hud",
 	"display_refresh_rate", "render_scale", "msaa_3d", "foveation_level", "floor_light",
 	"saber_halo", "mirror_reflections", "note_edge_glow", "hit_flash", "note_map_colors",
 	"event_tint", "floor_grid", "perf_preset", "sky_style", "debris_cap", "debris_shards",

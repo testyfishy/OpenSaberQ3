@@ -111,6 +111,10 @@ var audio_ducking: bool:
 	set(value):
 		audio_ducking = value
 		set_and_emit(&"audio_ducking", value)
+var audio_analyser: bool:
+	set(value):
+		audio_analyser = value
+		set_and_emit(&"audio_analyser", value)
 var spectator_view: bool:
 	set(value):
 		spectator_view = value
@@ -345,6 +349,7 @@ const SCHEMA := {
 	"audio_music": {"default": 0.8, "min": 0.0, "max": 1.0, "step": 0.01},
 	"audio_sfx": {"default": 0.8, "min": 0.0, "max": 1.0, "step": 0.01},
 	"audio_ducking": {"default": true},
+	"audio_analyser": {"default": false},
 	"spectator_view": {"default": false},
 	"spectator_hud": {"default": true},
 	"display_refresh_rate": {"default": 120.0},

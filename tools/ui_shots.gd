@@ -36,7 +36,7 @@ func _ready() -> void:
 
 	# The schema-driven sliders live on the Audio and Performance tabs, so capture those too: the
 	# range check proves the numbers, this proves they did not change the layout.
-	for tab: int in [0, 3]:
+	for tab: int in [0, 3, 4]:
 		panel.call("_set_tab", tab)
 		scroll.scroll_vertical = 0
 		for i in 4:

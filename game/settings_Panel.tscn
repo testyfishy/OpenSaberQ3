@@ -553,6 +553,13 @@ layout_mode = 2
 theme = SubResource("3")
 text = "Show Debug Info:"
 
+[node name="audio_analyser" type="CheckButton" parent="ScrollContainer/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Shows the last hit's level and pan, and the SFX bus spectrum, on a small overlay in front of you. Off by default."
+theme = SubResource("3")
+text = "Audio Analyser:"
+
 [node name="show_collisions" type="CheckButton" parent="ScrollContainer/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -918,5 +925,6 @@ scroll_node_path = NodePath("../ScrollContainer")
 [connection signal="item_selected" from="ScrollContainer/VBox/FoveationRow/foveation" to="." method="_on_foveation_item_selected"]
 [connection signal="button_up" from="defaults" to="." method="_restore_defaults"]
 [connection signal="toggled" from="ScrollContainer/VBox/audio_ducking" to="." method="_on_audio_ducking_toggled"]
+[connection signal="toggled" from="ScrollContainer/VBox/audio_analyser" to="." method="_on_audio_analyser_toggled"]
 [connection signal="pressed" from="apply" to="." method="_on_apply_pressed"]
 [connection signal="pressed" from="back" to="." method="_on_back_pressed"]

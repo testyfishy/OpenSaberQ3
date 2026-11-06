@@ -123,6 +123,18 @@ per-type loaders, the v2/v3 parsers and the v4 expansion (~400 lines). Move them
 - **SC-009**: The 21-map canonical dump is byte-identical after each commit; `BPMTEST`,
   `SUPPORTTEST`, `HITRESOLVER`/browser tests pass; the device bench shows no frame regression.
 
+## Audio analyser (user request, 2026-11-06)
+
+The player asked for an in-game debug analyser, off by default, to inspect per-hit level, pan and
+the spectrum while playing (the original sound spec's FR-007).
+
+- **FR-040**: A setting `audio_analyser` (default off, its own Debug-tab row) MUST show a small
+  camera-anchored overlay with the last hit's gain, its pan side, and a three-band spectrum
+  (150-800 / 800-2000 / 2000-6000 Hz) from an `AudioEffectSpectrumAnalyzer` on the SFX bus.
+- **FR-041**: While off, the analyser MUST add no effect, no node and no per-hit work.
+- **SC-010**: A headless test enables it, asserts the label and bus effect exist, disables it and
+  asserts both are gone; the schema grows to 51 keys and the panel/schema gates pass.
+
 ## Consultation Log
 
 | Gate | Asked | Verdict | Action taken |

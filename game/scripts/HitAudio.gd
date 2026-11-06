@@ -31,6 +31,9 @@ var _active := PackedByteArray()
 var _probe_enabled := false
 var _probe_origin := 0
 var _probe_hits: Array = []
+var last_gain_db := 0.0
+var last_pan_x := 0.0
+var analyser_enabled := false
 var _ducking := false
 var _duck_until := 0
 var _duck_current := 0.0
@@ -82,6 +85,10 @@ func play(sample: AudioStream, pos: Vector3, gain_db: float, ratio: float, offse
 	_base_db[index] = gain_db
 	_started_usec[index] = Time.get_ticks_usec()
 	_active[index] = 1
+	last_gain_db = gain_db
+	if analyser_enabled:
+		var camera := get_viewport().get_camera_3d() as Camera3D
+		last_pan_x = (camera.global_transform.affine_inverse() * pos).x if camera != null else pos.x
 	_apply_window_gain()
 	if _ducking:
 		_duck_until = Time.get_ticks_usec() + DUCK_HOLD_USEC
