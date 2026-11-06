@@ -26,7 +26,9 @@ static func of(node: Node) -> CanvasRefresh:
 	var vp := node.get_viewport()
 	if vp == null:
 		return null
-	var existing: Variant = vp.get_meta(&"canvas_refresh", null)
+	# `get_meta(name, null)` still logs "does not have any meta" on a viewport with no meta;
+	# has_meta keeps the release log clean on the first call.
+	var existing: Variant = vp.get_meta(&"canvas_refresh") if vp.has_meta(&"canvas_refresh") else null
 	if existing is CanvasRefresh:
 		return existing as CanvasRefresh
 	var created := CanvasRefresh.new()
