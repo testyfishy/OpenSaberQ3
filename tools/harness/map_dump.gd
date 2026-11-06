@@ -65,42 +65,64 @@ func _ready() -> void:
 				continue
 			# Reversed stacks are the game's spawn order; dump the natural beat order so two
 			# builds that reverse identically produce identical text.
-			var notes := Map.note_stack.duplicate()
-			notes.reverse()
-			for note in notes:
+			# The stacks are filled by two threads, so append order is not deterministic. Sort
+			# the formatted lines inside each category: the dump is a diff target, not a reading
+			# order, and an unstable order made every comparison useless.
+			var notes := PackedStringArray()
+			for note in Map.note_stack:
 				if note == null:
 					continue
-				dump_line(f, "    NOTE b=%.6f x=%d y=%d c=%d d=%d col=%s pos=%s" % [
+				notes.append("    NOTE b=%.6f x=%d y=%d c=%d d=%d col=%s pos=%s" % [
 					note.beat, note.line_index, note.line_layer, note.color, note.cut_direction,
 					note.custom_color.to_html(), str(note.custom_position) if note.has_custom_position else "-"])
-			var walls := Map.obstacle_stack.duplicate()
-			walls.reverse()
-			for wall in walls:
+			notes.sort()
+			for line in notes:
+				dump_line(f, line)
+			var walls := PackedStringArray()
+			for wall in Map.obstacle_stack:
 				if wall == null:
 					continue
-				dump_line(f, "    WALL b=%.6f d=%.6f x=%d y=%d w=%d h=%d fake=%s col=%s" % [
+				walls.append("    WALL b=%.6f d=%.6f x=%d y=%d w=%d h=%d fake=%s col=%s" % [
 					wall.beat, wall.duration, wall.line_index, wall.line_layer, wall.width, wall.height,
 					str(wall.fake), wall.custom_color.to_html()])
+			walls.sort()
+			for line in walls:
+				dump_line(f, line)
+			var arcs := PackedStringArray()
 			for arc in Map.arc_stack:
 				if arc == null:
 					continue
-				dump_line(f, "    ARC head=%.6f tail=%.6f c=%d" % [arc.head_beat, arc.tail_beat, arc.color])
+				arcs.append("    ARC head=%.6f tail=%.6f c=%d" % [arc.head_beat, arc.tail_beat, arc.color])
+			arcs.sort()
+			for line in arcs:
+				dump_line(f, line)
+			var chains := PackedStringArray()
 			for chain in Map.chain_stack:
 				if chain == null:
 					continue
-				dump_line(f, "    CHAIN head=%.6f tail=%.6f c=%d slices=%d squish=%.4f" % [
+				chains.append("    CHAIN head=%.6f tail=%.6f c=%d slices=%d squish=%.4f" % [
 					chain.head_beat, chain.tail_beat, chain.color, chain.slice_count, chain.squish_factor])
+			chains.sort()
+			for line in chains:
+				dump_line(f, line)
+			var events := PackedStringArray()
 			for event in Map.event_stack:
 				if event == null:
 					continue
-				dump_line(f, "    EVENT b=%.6f t=%d v=%d f=%.4f col=%s" % [
+				events.append("    EVENT b=%.6f t=%d v=%d f=%.4f col=%s" % [
 					event.beat, event.type, event.value, event.float_value, event.color.to_html()])
+			events.sort()
+			for line in events:
+				dump_line(f, line)
 			dump_line(f, "    BPM segments=%d" % Map.bpm_segments)
 			dump_line(f, "    PALETTE notes=%s/%s room=%s/%s wall=%s mode=%d" % [
 				Map.color_left.to_html(), Map.color_right.to_html(),
 				Map.env_left.to_html(), Map.env_right.to_html(),
 				Map.wall_color.to_html(), Settings.environment_mode])
 
+	# Sentinel for the batch script: a crash mid-map also leaves a non-empty file, so
+	# "non-empty" is not "complete".
+	dump_line(f, "END")
 	f.close()
 	print("MAPDUMP wrote %s" % ProjectSettings.globalize_path(out_path))
 	get_tree().quit()

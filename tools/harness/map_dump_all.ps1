@@ -10,13 +10,17 @@ $ok = 0; $failed = @()
 foreach ($d in Get-ChildItem $Root -Directory | Sort-Object Name) {
     Remove-Item $one -Force -ErrorAction SilentlyContinue
     & $Godot --headless --path . res://tools/harness/map_dump.tscn -- $d.FullName $one *> $null
-    if (-not ((Test-Path $one) -and ((Get-Item $one).Length -gt 0))) {
-        # A Godot process occasionally dies on exit after writing nothing; retry once before
-        # declaring the map a failure. A real loader regression fails both times.
-        Remove-Item $one -Force -ErrorAction SilentlyContinue
-        & $Godot --headless --path . res://tools/harness/map_dump.tscn -- $d.FullName $one *> $null
+    # A crash mid-map leaves a non-empty but truncated file, so require the END sentinel.
+    # The process dies intermittently on some maps (thread teardown), so allow three attempts.
+    $complete = $false
+    for ($attempt = 0; $attempt -lt 3 -and -not $complete; $attempt++) {
+        if ($attempt -gt 0) {
+            Remove-Item $one -Force -ErrorAction SilentlyContinue
+            & $Godot --headless --path . res://tools/harness/map_dump.tscn -- $d.FullName $one *> $null
+        }
+        $complete = (Test-Path $one) -and ((Get-Content $one -Tail 1 -ErrorAction SilentlyContinue) -eq "END")
     }
-    if ((Test-Path $one) -and ((Get-Item $one).Length -gt 0)) {
+    if ($complete) {
         Get-Content $one | Add-Content $Out
         $ok++
     } else {
