@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-06
 
-**Status**: In progress (G0 approved with changes)
+**Status**: Release candidate installed; tag/FF pending G4
 
 **Input**: Player: "Finish the mapdata and audio L/R sample first. Then prepare a finalized shipped
 build as v5. Then I can test it at home."
@@ -55,6 +55,21 @@ closes the two gaps and makes the finished tree the artifact the player tests at
   godot-4-port..v4/cleanup` is 0; no push.
 - **SC-005**: The device reports versionName 0.5.0 / versionCode 8 and not debuggable; the menu or
   package dump shows 0.5.0; the release launch with a bench flag writes nothing.
+
+## Verification results (final tree, debug build 0.5.0/code 8)
+
+- **v2** ODDS (2.1.0): load 319 ms, first note beat 36 at 10.07 s, 120 fps, cubes spawned.
+- **v3** UploadedSong-527932676 (3.3.0): load 67 ms, first note beat 4 at 84 ms, 117 fps.
+- **v4** UploadedSong-2494795461 (4.0.0): load 93 ms, first note beat 4 at 80 ms, 116 fps.
+- **L/R**: 15 lateral hits, 14 after dropping overlapping tails, 13 non-silent, **13/13 on the
+  cube's side (100%)**.
+- Note: after a long idle the headset's audio session was suspended (song position frozen at
+  0.003 s in both debug and release builds). A device reboot restored it; all numbers above are
+  post-reboot. The app was otherwise rendering at 120 fps.
+- **Release**: `OpenSaber-v05.apk`, 0.5.0 / code 8, same signing cert, no `application-debuggable`,
+  installed over 0.4.0 -> 0.5.0 debug -> 0.5.0 release without uninstalling; config kept
+  (`render_scale=1.1`), new keys at defaults; boots and is the top activity.
+- **Bench-ignore**: a valid flag on the release wrote no meta/CSV and logged no BENCH line.
 
 ## Out of scope
 
