@@ -91,12 +91,27 @@ Gate: UI screenshots and the settings round-trip test.
 
 ## UI-3 - Settings schema
 
-Move the per-setting boilerplate (setter, clamp, default, emit) into a data table plus generated
-accessors, and have the panel build rows from it. This starts the settings/schema part of the
-cleanup.
+Done. `Settings.gd` has one `const SCHEMA`: key -> default plus optional min/max/step, in the
+historical insertion order. Everything else reads from it:
 
-Gate: settings round-trip test including a legacy config, UI screenshots, no change in emitted
-signal order (logged before/after).
+- `default_values` is derived in `_derive_defaults()` (order preserved; only the platform patch
+  writes into it, never into `SCHEMA`);
+- `cast_or_default()` clamps every loaded value through `clamp_to_schema()`, so a hand-edited
+  `config.ini` cannot store a value the panel could never produce;
+- the setters that had hand-written `clampi` calls (`perf_preset`, `sky_style`, `hit_sound`,
+  `glow_mode`, `environment_mode`) plus the other ranged numerics call the same clamp;
+- the panel takes its six slider ranges (`thickness`, `ui_volume`, `render_scale`, master, sfx,
+  music) and the option-button maxima (sky, glow, environment, hit sound, foveation, preset)
+  from `Settings.SCHEMA`.
+
+Typed properties and their setters stay: the audio setters push bus volumes as a side effect and
+~40 call sites read `Settings.x` directly, so replacing them with a generic accessor would be
+churn without a player-visible win. The type is `typeof(default)` - no separate column to drift.
+
+Gate results: `SETTINGSTEST PASS` (defaults round-trip + legacy config with unknown/missing
+keys), `VERIFYSCHEMA keys=49 bad=0` (order frozen against the historical list, property
+coverage both ways, type match, range sanity, clamp behaviour, `changed` contract),
+`VERIFYPANEL nulls=0 range_bad=0 ranges=6`, UI screenshots with the same scroll extent (507).
 
 ## UI-4 - Split the BeatSaver panel
 

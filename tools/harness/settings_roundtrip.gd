@@ -44,6 +44,36 @@ func _ready() -> void:
 		else:
 			print("ROUNDTRIP legacy config ok")
 
+	# 3. A hand-edited or corrupt file: a value outside the schema range loads clamped, not as written.
+	var wild := ConfigFile.new()
+	var ranged: Array[String] = []
+	for key: String in Settings.SCHEMA:
+		var spec: Dictionary = Settings.SCHEMA[key]
+		if spec.has("max") and typeof(spec["default"]) == TYPE_INT:
+			wild.set_value("OpenSaber", key, int(spec["max"]) + 50)
+			ranged.append(key)
+	wild.set_value("OpenSaber", "thickness", -5.0)
+	err = wild.save(Settings.CONFIG_PATH)
+	if err != OK:
+		ok = false
+		print("ROUNDTRIP FAIL: could not write the out-of-range config")
+	else:
+		Settings.reload()
+		var clamp_bad := 0
+		for key: String in ranged:
+			var want := int(Settings.SCHEMA[key]["max"])
+			if Settings.get(key) != want:
+				clamp_bad += 1
+				print("  %s: %s, expected %d" % [key, str(Settings.get(key)), want])
+		if not is_equal_approx(Settings.thickness, float(Settings.SCHEMA["thickness"]["min"])):
+			clamp_bad += 1
+			print("  thickness: %s, expected %.2f" % [str(Settings.thickness), Settings.SCHEMA["thickness"]["min"]])
+		if clamp_bad == 0:
+			print("ROUNDTRIP out-of-range config ok (%d keys clamped)" % (ranged.size() + 1))
+		else:
+			ok = false
+			print("ROUNDTRIP FAIL: %d out-of-range values were not clamped" % clamp_bad)
+
 	# Leave the machine on clean defaults, not on the synthetic legacy file.
 	Settings.restore_defaults()
 	print("SETTINGSTEST ", "PASS" if ok else "FAIL")

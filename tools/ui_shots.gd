@@ -34,4 +34,15 @@ func _ready() -> void:
 	print("UISHOT bottom ", ProjectSettings.globalize_path("user://ui_settings_bottom.png"),
 		"  scroll_max=", scroll.get_v_scroll_bar().max_value)
 
+	# The schema-driven sliders live on the Audio and Performance tabs, so capture those too: the
+	# range check proves the numbers, this proves they did not change the layout.
+	for tab: int in [0, 3]:
+		panel.call("_set_tab", tab)
+		scroll.scroll_vertical = 0
+		for i in 4:
+			await get_tree().process_frame
+		var path := "user://ui_settings_tab%d.png" % tab
+		viewport.get_texture().get_image().save_png(path)
+		print("UISHOT tab%d " % tab, ProjectSettings.globalize_path(path))
+
 	get_tree().quit()

@@ -14,6 +14,7 @@ signal changed(name: StringName)
 
 var thickness: float:
 	set(value):
+		value = clamp_to_schema(&"thickness", value)
 		thickness = value
 		set_and_emit(&"thickness", value)
 var color_left: Color:
@@ -30,6 +31,7 @@ var saber_visual: int:
 		set_and_emit(&"saber_visual", value)
 var ui_volume: float:
 	set(value):
+		value = clamp_to_schema(&"ui_volume", value)
 		ui_volume = value
 		set_and_emit(&"ui_volume", value)
 var left_saber_offset_pos: Vector3:
@@ -82,20 +84,24 @@ var upload_server: bool:
 		set_and_emit(&"upload_server", value)
 var player_height_offset: float:
 	set(value):
+		value = clamp_to_schema(&"player_height_offset", value)
 		player_height_offset = value
 		set_and_emit(&"player_height_offset", value)
 var audio_master: float:
 	set(value):
+		value = clamp_to_schema(&"audio_master", value)
 		audio_master = value
 		AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"Master"), linear_to_db(value))
 		set_and_emit(&"audio_master", value)
 var audio_music: float:
 	set(value):
+		value = clamp_to_schema(&"audio_music", value)
 		audio_music = value
 		AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"Music"), linear_to_db(value))
 		set_and_emit(&"audio_music", value)
 var audio_sfx: float:
 	set(value):
+		value = clamp_to_schema(&"audio_sfx", value)
 		audio_sfx = value
 		AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"SFX"), linear_to_db(value))
 		AudioServer.set_bus_volume_db(AudioServer.get_bus_index(&"UI"), linear_to_db(value))
@@ -118,14 +124,17 @@ var display_refresh_rate: float:
 		set_and_emit(&"display_refresh_rate", value)
 var render_scale: float:
 	set(value):
+		value = clamp_to_schema(&"render_scale", value)
 		render_scale = value
 		set_and_emit(&"render_scale", value)
 var msaa_3d: int:
 	set(value):
+		value = clamp_to_schema(&"msaa_3d", value)
 		msaa_3d = value
 		set_and_emit(&"msaa_3d", value)
 var foveation_level: int:
 	set(value):
+		value = clamp_to_schema(&"foveation_level", value)
 		foveation_level = value
 		set_and_emit(&"foveation_level", value)
 
@@ -184,11 +193,12 @@ var floor_grid: bool:
 var perf_preset: int:
 	set(value):
 		# Stores the choice only. Applying it here would clobber the individual render_scale /
-		# msaa / foveation values on every load, because reload() sets every key in
-		# default_values in arbitrary order. The panel applies it when the player picks one,
+		# msaa / foveation values on every load, because reload() sets every key in one pass.
+		# (schema order). The panel applies it when the player picks one,
 		# and restore_defaults() applies it once on a fresh install.
-		perf_preset = clampi(value, 0, 2)
-		set_and_emit(&"perf_preset", perf_preset)
+		value = clamp_to_schema(&"perf_preset", value)
+		perf_preset = value
+		set_and_emit(&"perf_preset", value)
 
 func _apply_perf_preset(preset: int) -> void:
 	match preset:
@@ -209,8 +219,9 @@ func _apply_perf_preset(preset: int) -> void:
 # cheaper to draw than a full-screen textured sky.
 var sky_style: int:
 	set(value):
-		sky_style = clampi(value, 0, 2)
-		set_and_emit(&"sky_style", sky_style)
+		value = clamp_to_schema(&"sky_style", value)
+		sky_style = value
+		set_and_emit(&"sky_style", value)
 var debris_cap: bool:
 	set(value):
 		debris_cap = value
@@ -229,16 +240,19 @@ var debris_shards: bool:
 # 0 = Classic (shipped v0.3 impacts), 1 = Thump (low-heavy re-derivation). Both sets ship.
 var hit_sound: int:
 	set(value):
-		hit_sound = clampi(value, 0, 1)
-		set_and_emit(&"hit_sound", hit_sound)
+		value = clamp_to_schema(&"hit_sound", value)
+		hit_sound = value
+		set_and_emit(&"hit_sound", value)
 var glow_mode: int:
 	set(value):
-		glow_mode = clampi(value, 0, 2)
-		set_and_emit(&"glow_mode", glow_mode)
+		value = clamp_to_schema(&"glow_mode", value)
+		glow_mode = value
+		set_and_emit(&"glow_mode", value)
 var environment_mode: int:
 	set(value):
-		environment_mode = clampi(value, 0, 1)
-		set_and_emit(&"environment_mode", environment_mode)
+		value = clamp_to_schema(&"environment_mode", value)
+		environment_mode = value
+		set_and_emit(&"environment_mode", value)
 
 # --- BeatSaver browser state (specs/005-beatsaver-browser, FR-011). Only the sort and the filter
 # set are remembered; the search text and the current page are deliberately not.
@@ -278,6 +292,7 @@ var beatsaver_difficulties: String:
 
 
 func _ready() -> void:
+	default_values = _derive_defaults()
 	if OS.get_name() in platform_default_values.keys():
 		for key in platform_default_values[OS.get_name()].keys():
 			default_values[key] = platform_default_values[OS.get_name()][key]
@@ -298,71 +313,99 @@ const platform_default_values = {
 	},
 }
 
-var default_values = {
-	thickness = 1.0,
-	cube_cuts_falloff = true,
-	color_left = Color("ff1a1a"),
-	color_right = Color("1a1aff"),
-	saber_tail = true,
-	show_debug_info = false,
-	bombs_enabled = true,
-	events = true,
-	saber_visual = 0,
-	ui_volume = 10.0,
-	left_saber_offset_pos = Vector3.ZERO,
-	left_saber_offset_rot = Vector3.ZERO,
-	right_saber_offset_pos = Vector3.ZERO,
-	right_saber_offset_rot = Vector3.ZERO,
-	disable_map_color = false,
-	upload_server = true,
-	player_height_offset = 0.0,
-	audio_master = 0.8,
-	audio_music = 0.8,
-	audio_sfx = 0.8,
-	spectator_view = false,
-	spectator_hud = true,
-	# Performance (FR-040). render_scale 1.2546 is the Quest 3 tuning (per-eye >= native);
-	# other headsets can lower it from the settings panel.
-	display_refresh_rate = 120.0,
-	render_scale = 1.2546,
-	msaa_3d = 2,
-	foveation_level = 0,
-	# Visual (FR-045..FR-047). 1 and 2 on, 3 and 4 off: the user judges those two visually.
-	floor_light = true,
-	saber_halo = true,
-	mirror_reflections = false,
-	# Round 2 (specs/007-visual-options), revised in v0.3 (specs/009): the background is an
-	# explicit choice now - Black void (0, default), Gradient (1), Panorama (2). The plain
-	# gradient shipped off in 007 because it replaced the art; the player has since asked for
-	# a black void instead of the art, so void became the default and the art became option 2.
-	note_edge_glow = true,
-	hit_flash = true,
-	note_map_colors = true,
-	event_tint = true,
-	floor_grid = true,
-	perf_preset = 2,
-	sky_style = 0,
-	debris_cap = false,
-	debris_shards = true,
-	environment_mode = 0,
-	glow_mode = 1,
-	hit_sound = 0,
-	beatsaver_order = "Latest",
-	beatsaver_curated = false,
-	beatsaver_verified = false,
-	beatsaver_ranked = false,
-	beatsaver_playable_only = false,
-	beatsaver_duration = 0,
-	beatsaver_nps = 0,
-	beatsaver_difficulties = ""
+# --- Schema -------------------------------------------------------------------------------
+# The single source of truth for every persisted setting: the key, its default and, where the
+# value has a domain, the range the panel exposes and a hand-edited config.ini is clamped into.
+# Insertion order is behaviour: reload() walks `default_values` (derived from this, same order)
+# and emits `changed` per key, so the panel and the live systems react in that order.
+# A key without min/max is free-form: a string, a colour, or a rate the runtime chooses.
+const SCHEMA := {
+	"thickness": {"default": 1.0, "min": 0.1, "max": 1.0, "step": 0.01},
+	"cube_cuts_falloff": {"default": true},
+	"color_left": {"default": Color("ff1a1a")},
+	"color_right": {"default": Color("1a1aff")},
+	"saber_tail": {"default": true},
+	"show_debug_info": {"default": false},
+	"bombs_enabled": {"default": true},
+	"events": {"default": true},
+	"saber_visual": {"default": 0},
+	"ui_volume": {"default": 10.0, "min": 0.0, "max": 10.0, "step": 1.0},
+	"left_saber_offset_pos": {"default": Vector3.ZERO},
+	"left_saber_offset_rot": {"default": Vector3.ZERO},
+	"right_saber_offset_pos": {"default": Vector3.ZERO},
+	"right_saber_offset_rot": {"default": Vector3.ZERO},
+	"disable_map_color": {"default": false},
+	"upload_server": {"default": true},
+	"player_height_offset": {"default": 0.0, "min": -0.25, "max": 0.25, "step": 0.05},
+	"audio_master": {"default": 0.8, "min": 0.0, "max": 1.0, "step": 0.01},
+	"audio_music": {"default": 0.8, "min": 0.0, "max": 1.0, "step": 0.01},
+	"audio_sfx": {"default": 0.8, "min": 0.0, "max": 1.0, "step": 0.01},
+	"spectator_view": {"default": false},
+	"spectator_hud": {"default": true},
+	"display_refresh_rate": {"default": 120.0},
+	"render_scale": {"default": 1.2546, "min": 0.7, "max": 1.5, "step": 0.0001},
+	"msaa_3d": {"default": 2, "min": 0, "max": 2, "step": 1},
+	"foveation_level": {"default": 0, "min": 0, "max": 2, "step": 1},
+	"floor_light": {"default": true},
+	"saber_halo": {"default": true},
+	"mirror_reflections": {"default": false},
+	"note_edge_glow": {"default": true},
+	"hit_flash": {"default": true},
+	"note_map_colors": {"default": true},
+	"event_tint": {"default": true},
+	"floor_grid": {"default": true},
+	"perf_preset": {"default": 2, "min": 0, "max": 2, "step": 1},
+	"sky_style": {"default": 0, "min": 0, "max": 2, "step": 1},
+	"debris_cap": {"default": false},
+	"debris_shards": {"default": true},
+	"environment_mode": {"default": 0, "min": 0, "max": 1, "step": 1},
+	"glow_mode": {"default": 1, "min": 0, "max": 2, "step": 1},
+	"hit_sound": {"default": 0, "min": 0, "max": 1, "step": 1},
+	"beatsaver_order": {"default": "Latest"},
+	"beatsaver_curated": {"default": false},
+	"beatsaver_verified": {"default": false},
+	"beatsaver_ranked": {"default": false},
+	"beatsaver_playable_only": {"default": false},
+	"beatsaver_duration": {"default": 0},
+	"beatsaver_nps": {"default": 0},
+	"beatsaver_difficulties": {"default": ""},
 }
 
+# Derived view for the loader, the panel and the tests. The platform patch in _ready() writes
+# into this dictionary, never into SCHEMA.
+var default_values: Dictionary = {}
+
+static func _derive_defaults() -> Dictionary:
+	var out := {}
+	for key: String in SCHEMA:
+		out[key] = SCHEMA[key]["default"]
+	return out
+
+# Clamp into the schema's domain. Called on load, so a hand-edited ini cannot store a value
+# the panel could never produce, and by every ranged setter, so the table and the setters
+# cannot drift apart.
+static func clamp_to_schema(key: StringName, value: Variant) -> Variant:
+	var spec: Dictionary = SCHEMA.get(String(key), {})
+	if spec.is_empty() or not (value is float or value is int):
+		return value
+	var lo: Variant = spec.get("min")
+	var hi: Variant = spec.get("max")
+	if lo != null and float(value) < float(lo):
+		value = lo
+	if hi != null and float(value) > float(hi):
+		value = hi
+	return value
+
 func cast_or_default(key: String, to_type: int = -1) -> Variant:
-	var default = default_values[key] if key in default_values else null
-	return convert(config.get_value(SECTION, key, default), typeof(default) if to_type < 0 else to_type)
+	var default: Variant = SCHEMA[key]["default"] if key in SCHEMA else null
+	var raw: Variant = convert(config.get_value(SECTION, key, default), typeof(default) if to_type < 0 else to_type)
+	return clamp_to_schema(StringName(key), raw)
 
 func set_and_emit(key: StringName, value: Variant) -> void:
-	config.set_value(SECTION, String(key), value if default_values[key] != value else null)
+	# Defaults are stored as null, not written, so a later build that changes a default is not
+	# pinned by an old config file.
+	var default: Variant = SCHEMA[String(key)]["default"] if String(key) in SCHEMA else null
+	config.set_value(SECTION, String(key), value if default != value else null)
 	changed.emit(key)
 
 # load() is the name of a built-in function,

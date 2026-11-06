@@ -114,7 +114,34 @@ func _add_scroll_slider() -> void:
 	slider.scroll_node_path = NodePath("../ScrollContainer")
 	add_child(slider)
 
+# Ranges live in Settings.SCHEMA, so a slider cannot offer a value its setter would clamp away and
+# a config.ini cannot hold a value the panel could never produce. The authored range in the scene
+# is only a fallback for a control whose key has no schema range.
+func _apply_schema_ranges() -> void:
+	var sliders := [
+		[saber_thickness, &"thickness"],
+		[ui_volume_slider, &"ui_volume"],
+		[render_scale_control, &"render_scale"],
+		[audio_master_control, &"audio_master"],
+		[audio_sfx_control, &"audio_sfx"],
+		[audio_music_control, &"audio_music"],
+	]
+	for pair: Array in sliders:
+		var control: Range = pair[0]
+		var spec: Dictionary = Settings.SCHEMA.get(String(pair[1]), {})
+		if not spec.has("min"):
+			continue
+		control.min_value = spec["min"]
+		control.max_value = spec["max"]
+		control.step = spec.get("step", control.step)
+
+# An option button offers exactly the range the setter accepts: the last index is the schema max.
+func _schema_max(key: StringName) -> int:
+	var spec: Dictionary = Settings.SCHEMA.get(String(key), {})
+	return int(spec.get("max", 0))
+
 func set_controls_from_settings() -> void:
+	_apply_schema_ranges()
 	saber_control.clear()
 	for s in Settings.SABER_VISUALS:
 		saber_control.add_item(s[0])
@@ -140,16 +167,16 @@ func set_controls_from_settings() -> void:
 	if environment_mode_control.item_count == 0:
 		environment_mode_control.add_item("Environment: Auto (map)")
 		environment_mode_control.add_item("Environment: Classic")
-	environment_mode_control.select(clampi(Settings.environment_mode, 0, 1))
+	environment_mode_control.select(clampi(Settings.environment_mode, 0, _schema_max(&"environment_mode")))
 	if glow_mode_control.item_count == 0:
 		glow_mode_control.add_item("Glow: Off")
 		glow_mode_control.add_item("Glow: Subtle")
 		glow_mode_control.add_item("Glow: Full")
-	glow_mode_control.select(clampi(Settings.glow_mode, 0, 2))
+	glow_mode_control.select(clampi(Settings.glow_mode, 0, _schema_max(&"glow_mode")))
 	if hit_sound_control.item_count == 0:
 		hit_sound_control.add_item("Hit sound: Classic")
 		hit_sound_control.add_item("Hit sound: Thump")
-	hit_sound_control.select(clampi(Settings.hit_sound, 0, 1))
+	hit_sound_control.select(clampi(Settings.hit_sound, 0, _schema_max(&"hit_sound")))
 	_populate_sky_style()
 	_populate_perf_preset()
 	d_background.button_pressed = Settings.events
@@ -226,7 +253,7 @@ func _set_up_performance_controls() -> void:
 	foveation_control.clear()
 	for label in FOVEATION_LABELS:
 		foveation_control.add_item(label)
-	foveation_control.select(clampi(Settings.foveation_level, 0, FOVEATION_LABELS.size() - 1))
+	foveation_control.select(clampi(Settings.foveation_level, 0, _schema_max(&"foveation_level")))
 	foveation_row.visible = foveation_supported
 	vr.log_info("perf panel: refresh rates offered=%s, selected=%.0f Hz, render scale=%.4f (setting %.4f), msaa=%d (index %d), foveation supported=%s level=%d" % [
 		str(_refresh_rates), Settings.display_refresh_rate, render_scale_control.value, Settings.render_scale,
@@ -295,7 +322,7 @@ func _populate_sky_style() -> void:
 		sky_style_control.add_item("Sky: Black void")
 		sky_style_control.add_item("Sky: Gradient")
 		sky_style_control.add_item("Sky: Panorama")
-	sky_style_control.select(clampi(Settings.sky_style, 0, 2))
+	sky_style_control.select(clampi(Settings.sky_style, 0, _schema_max(&"sky_style")))
 
 func _on_sky_style_selected(index: int) -> void:
 	Settings.sky_style = index
@@ -448,7 +475,7 @@ func _populate_perf_preset() -> void:
 	# removed them - the player ended up with a stack of "Performance:" rows.
 	var vbox := %ScrollContainer/VBox
 	if perf_control != null and is_instance_valid(perf_control):
-		perf_control.select(clampi(Settings.perf_preset, 0, 2))
+		perf_control.select(clampi(Settings.perf_preset, 0, _schema_max(&"perf_preset")))
 		return
 	var existing := vbox.get_node_or_null("PerfPresetRow")
 	if existing != null:
@@ -461,7 +488,7 @@ func _populate_perf_preset() -> void:
 	perf_control.add_item("Quality (sharpest)")
 	perf_control.add_item("Balanced")
 	perf_control.add_item("Performance (smoothest)")
-	perf_control.select(clampi(Settings.perf_preset, 0, 2))
+	perf_control.select(clampi(Settings.perf_preset, 0, _schema_max(&"perf_preset")))
 	perf_control.item_selected.connect(_on_perf_preset_selected)
 	row.add_child(label)
 	row.add_child(perf_control)
