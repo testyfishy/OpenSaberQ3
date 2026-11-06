@@ -58,6 +58,21 @@ Next, in order of expected return:
    after any OQ update).
 3. Only then consider lowering the panel texture resolution, which costs text sharpness.
 
+### Opaque canvas - after
+
+| | before | after |
+|---|---|---|
+| App median | 6.13 ms | 5.85 ms |
+| GPU% median | 0.89 | 0.88 |
+| redraw CPU mean / p95 | 0.298 / 0.875 ms | 0.201 / 0.329 ms |
+| redraw GPU mean / p95 | 0.380 / 1.204 ms | 0.494 / 1.517 ms |
+
+The CPU-side redraw cost halved and App time came down ~0.28 ms; GPU% did not move. That settles
+it: the panel's cost is its fill (an 896x856 opaque quad in VR), not its redraws. **Retire this as
+the cost of a full-screen VR menu** - it is not on the gameplay path - and spend the effort on the
+cleanup instead. The opaque change stays: it is a small, measured CPU win and verified visually
+(the panel paints its own background).
+
 ## UI-1 - One canvas refresh helper
 
 Replace the three separate refresh paths (`vr_slider._request_refresh`, `BeatSaverPanel._canvas_input_update`,
