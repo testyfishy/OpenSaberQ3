@@ -62,11 +62,6 @@ static var event_thread_1 := Thread.new()
 # Notes, the room's lights and the walls each take a colour from the track, in order:
 # map environment colours -> map note colours -> the environment's default scheme -> the
 # player's settings. "Classic" skips the environment scheme and reproduces the old look.
-# FR-030: map features this build cannot fully render. Surfaced in the pause menu and logged,
-# instead of a map silently playing half its design.
-static var unsupported_features := PackedStringArray()
-# Diagnostics: how many decorative entries were filtered and how many tempo segments exist.
-static var fakes_filtered := 0
 static var bpm_segments := 1
 
 # --- Palette (FR-025/FR-028) --------------------------------------------------------------
@@ -75,44 +70,6 @@ static var bpm_segments := 1
 static func set_colors_from_custom_data() -> void:
 	MapPalette.set_colors_from_custom_data(current_info, current_difficulty)
 
-
-static func _is_fake_v3(entry: Dictionary) -> bool:
-	var cd := Utils.get_dict(entry, "customData", {})
-	return Utils.get_bool(cd, "fake", false)
-
-static func _is_fake_v2(entry: Dictionary) -> bool:
-	var cd := Utils.get_dict(entry, "_customData", {})
-	return Utils.get_bool(cd, "_fake", false)
-
-static func _detect_unsupported(map_data: Dictionary) -> void:
-	var found := PackedStringArray()
-	if not Utils.get_array(map_data, "lightColorEventBoxGroups", []).is_empty() \
-			or not Utils.get_array(map_data, "lightRotationEventBoxGroups", []).is_empty() \
-			or not Utils.get_array(map_data, "lightTranslationEventBoxGroups", []).is_empty():
-		found.append("box-group lighting")
-	if not Utils.get_array(map_data, "rotationEvents", []).is_empty():
-		found.append("360 rotation")
-	for e: Variant in Utils.get_array(map_data, "_events", []):
-		if e is Dictionary:
-			var t := int(Utils.get_float(e as Dictionary, "_type", -1))
-			if t == 14 or t == 15:
-				found.append("lane rotation")
-				break
-	var cd := Utils.get_dict(map_data, "customData", Utils.get_dict(map_data, "_customData", {}))
-	for key: String in ["customEvents", "_customEvents", "environment", "_environment", "materials"]:
-		if cd.has(key):
-			found.append("Chroma/Noodle animation")
-			break
-	# Noodle keeps decorative notes in their own arrays; we never load them, which is the
-	# right outcome but has to show up in the diagnostic or the filter looks inert.
-	var cd_all := Utils.get_dict(map_data, "customData", {})
-	for key: String in ["fakeColorNotes", "fakeBombNotes", "fakeObstacles"]:
-		fakes_filtered += Utils.get_array(cd_all, key, []).size()
-	if current_info != null and current_info.custom_data.has("_assetBundle"):
-		found.append("custom Unity assets")
-	unsupported_features = found
-	if not found.is_empty():
-		vr.log_warning("MAP unsupported features: %s" % ", ".join(found))
 
 static func load_map_info(load_path: String) -> MapInfo:
 	var info_dict := {}
@@ -148,10 +105,10 @@ static func load_note_stack_v2(note_data: Array) -> void:
 			@warning_ignore("unsafe_cast")
 			var note_dict := note_data[i] as Dictionary
 			var note_type := int(Utils.get_float(note_dict, "_type", -1.0))
-			if _is_fake_v2(note_dict):
+			if MapSupport.is_fake_v2(note_dict):
 				# FR-026: decorative note from Noodle/Chroma. Hidden and unscored, not a ghost:
 				# its real position depends on animation we do not implement.
-				fakes_filtered += 1
+				MapSupport.fakes_filtered += 1
 				i += 1
 				continue
 			if note_type == 3 and Settings.bombs_enabled:
@@ -496,7 +453,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 	# v4 splits the beatmap and the lightshow into two files and references shared geometry
 	# through index arrays. Expand it into the flat v3 shape once, up front, so every object
 	# type keeps a single parser (the v3 loaders below) instead of gaining a second one.
-	fakes_filtered = 0
+	MapSupport.reset()
 	if Utils.get_str(map_data, "version", "").begins_with("4."):
 		_v4_to_v3(map_data, lightshow_data)
 		map_data["version"] = "3.0.0"
@@ -508,8 +465,8 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 			map_data["version"] = info.version
 	MapTimer.load_bpm_events(map_data, info.beats_per_minute, audio_data)
 	bpm_segments = MapTimer.segment_count()
-	_detect_unsupported(map_data)
-	vr.log_info("MAP data: bpm_segments=%d fakes_filtered=%d unsupported=%s" % [bpm_segments, fakes_filtered, str(unsupported_features)])
+	MapSupport.detect_unsupported(map_data, info)
+	vr.log_info("MAP data: bpm_segments=%d fakes_filtered=%d unsupported=%s" % [bpm_segments, MapSupport.fakes_filtered, str(MapSupport.unsupported_features)])
 	
 	if map_data.has("_version"):
 		#note_thread_0.start(load_note_stack_v2.bind(Utils.get_array(map_data, "_notes", [])))

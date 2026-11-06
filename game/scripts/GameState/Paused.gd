@@ -29,7 +29,7 @@ func _ready(game: BeepSaber_Game) -> void:
 		Map.current_info.level_author_name
 	]
 	# FR-030: say plainly which parts of this map we cannot render faithfully.
-	if not Map.unsupported_features.is_empty():
-		pause_text += "\nNot fully supported: " + ", ".join(Map.unsupported_features)
+	if not MapSupport.unsupported_features.is_empty():
+		pause_text += "\nNot fully supported: " + ", ".join(MapSupport.unsupported_features)
 	(game.pause_menu.ui_control as PausePanel).set_pause_text(pause_text, Map.current_difficulty.custom_name)
 	game.hide_profile_panel()
