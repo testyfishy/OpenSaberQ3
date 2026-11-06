@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-06
 
-**Status**: In progress (G0 approved with changes)
+**Status**: Done - copy revision pushed
 
 **Input**: Player: "Can you revise the git readme language. 'The work since the fork point, in the
 order a player notices it. Every \"now\" links to the evidence.' This style of writing where you
@@ -64,6 +64,18 @@ voice. The page is public, so this is also the project's first impression.
 - **SC-006**: A search of the README, the new docs pages, `docs/sharing.md` and the GitHub release
   body finds no unresolved red-dot claim; the changelog and the v0.6 report name the miss X.
 
+## Publication evidence (2026-11-06)
+
+- Commit `f0e530b` pushed to `origin/godot-4-port`; `git ls-remote` matches local HEAD.
+- Rendered README fetched through the GitHub API starts with the new pitch ("Open-source rhythm
+  game for Meta Quest 3..."); the cover, library, leaderboard and frame-time images still return
+  HTTP 200.
+- The v0.6.0 GitHub release body was edited: the "red dot is still unexplained" bullet is gone,
+  everything else is unchanged. It remains the latest release with the same tag and assets.
+- Red-dot record: the miss indicator is the red `x` in `points_label.gd`, 6 pt until `d449f71`
+  raised it to 28 pt in v0.4.0. It is recorded in the v0.4 changelog and as a resolved note in the
+  v0.3 report; it is not presented as open anywhere current.
+
 ## Out of scope
 
 - New features, v0.6.1 work, BeastSaber, performance measurements.
@@ -79,4 +91,5 @@ None. The user's objection is specific; the marketing review supplies the concre
 
 | Gate | Asked | Verdict | Action taken |
 |---|---|---|---|
+| G4 | 022 README voice (uncommitted copy revision) | APPROVE after LOW edits: docs-table voice, name the reference map, show the post-fix Gloom number, © check; red dot out of the v0.6 report (changelog v0.4 only) | Docs table rewritten, ODDS&ENDS named, Gloom 2.14% after pooling (24% before), report red-dot sentence removed; pushed f0e530b; release body corrected |
 | G0 | Marketing/copy review of the current README and docs; voice rules; scope | GO WITH CHANGES: defect is pages that talk about themselves; 8 voice rules (game as subject, no signposting, no rigour claims, no imagined critics, result-first, specifics over narrative headings, only actionable explanation, conditions in one clause); rewrite the top, keep the table with no intro, cut Performance prose to a caption, fix the docs list; don't list BeastSaber as working; keep upstream credit generous | README rewritten; docs cuts applied; red-dot resolution (FR-008) added from the owner's correction |
