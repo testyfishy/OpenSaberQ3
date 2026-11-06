@@ -614,21 +614,24 @@ size_flags_horizontal = 3
 layout_mode = 2
 text = "Position:"
 
-[node name="posx" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
+[node name="left_posx" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(58, 0)
 min_value = -1.0
 max_value = 1.0
 step = 0.001
 
-[node name="posy" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
+[node name="left_posy" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(58, 0)
 min_value = -1.0
 max_value = 1.0
 step = 0.001
 
-[node name="posz" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
+[node name="left_posz" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(58, 0)
 min_value = -1.0
@@ -643,21 +646,24 @@ size_flags_horizontal = 3
 layout_mode = 2
 text = "Rotation:"
 
-[node name="rotx" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
+[node name="left_rotx" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(58, 0)
 min_value = -180.0
 max_value = 180.0
 step = 0.5
 
-[node name="roty" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
+[node name="left_roty" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(58, 0)
 min_value = -180.0
 max_value = 180.0
 step = 0.5
 
-[node name="rotz" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
+[node name="left_rotz" type="SpinBox" parent="ScrollContainer/VBox/left_saber_offset"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(58, 0)
 min_value = -180.0
@@ -679,21 +685,24 @@ size_flags_horizontal = 3
 layout_mode = 2
 text = "Position:"
 
-[node name="posx" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
+[node name="right_posx" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(58, 0)
 min_value = -1.0
 max_value = 1.0
 step = 0.001
 
-[node name="posy" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
+[node name="right_posy" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(58, 0)
 min_value = -1.0
 max_value = 1.0
 step = 0.001
 
-[node name="posz" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
+[node name="right_posz" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(58, 0)
 min_value = -1.0
@@ -708,21 +717,24 @@ size_flags_horizontal = 3
 layout_mode = 2
 text = "Rotation:"
 
-[node name="rotx" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
+[node name="right_rotx" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(58, 0)
 min_value = -180.0
 max_value = 180.0
 step = 0.5
 
-[node name="roty" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
+[node name="right_roty" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(58, 0)
 min_value = -180.0
 max_value = 180.0
 step = 0.5
 
-[node name="rotz" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
+[node name="right_rotz" type="SpinBox" parent="ScrollContainer/VBox/right_saber_offset"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(58, 0)
 min_value = -180.0
@@ -836,18 +848,18 @@ scroll_node_path = NodePath("../ScrollContainer")
 [connection signal="color_changed" from="ScrollContainer/VBox/SaberColorsRow/left_saber_col" to="." method="_on_left_saber_color_changed"]
 [connection signal="color_changed" from="ScrollContainer/VBox/SaberColorsRow/right_saber_col" to="." method="_on_right_saber_color_changed"]
 [connection signal="value_changed" from="ScrollContainer/VBox/UI_VolumeRow/ui_volume_slider" to="." method="_on_ui_volume_slider_value_changed"]
-[connection signal="value_changed" from="ScrollContainer/VBox/left_saber_offset/posx" to="." method="_on_left_saber_pos_x_changed"]
-[connection signal="value_changed" from="ScrollContainer/VBox/left_saber_offset/posy" to="." method="_on_left_saber_pos_y_changed"]
-[connection signal="value_changed" from="ScrollContainer/VBox/left_saber_offset/posz" to="." method="_on_left_saber_pos_z_changed"]
-[connection signal="value_changed" from="ScrollContainer/VBox/left_saber_offset/rotx" to="." method="_on_left_saber_rot_x_changed"]
-[connection signal="value_changed" from="ScrollContainer/VBox/left_saber_offset/roty" to="." method="_on_left_saber_rot_y_changed"]
-[connection signal="value_changed" from="ScrollContainer/VBox/left_saber_offset/rotz" to="." method="_on_left_saber_rot_z_changed"]
-[connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/posx" to="." method="_on_right_saber_pos_x_changed"]
-[connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/posy" to="." method="_on_right_saber_pos_y_changed"]
-[connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/posz" to="." method="_on_right_saber_pos_z_changed"]
-[connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/rotx" to="." method="_on_right_saber_rot_x_changed"]
-[connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/roty" to="." method="_on_right_saber_rot_y_changed"]
-[connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/rotz" to="." method="_on_right_saber_rot_z_changed"]
+[connection signal="value_changed" from="ScrollContainer/VBox/left_saber_offset/left_posx" to="." method="_on_left_saber_pos_x_changed"]
+[connection signal="value_changed" from="ScrollContainer/VBox/left_saber_offset/left_posy" to="." method="_on_left_saber_pos_y_changed"]
+[connection signal="value_changed" from="ScrollContainer/VBox/left_saber_offset/left_posz" to="." method="_on_left_saber_pos_z_changed"]
+[connection signal="value_changed" from="ScrollContainer/VBox/left_saber_offset/left_rotx" to="." method="_on_left_saber_rot_x_changed"]
+[connection signal="value_changed" from="ScrollContainer/VBox/left_saber_offset/left_roty" to="." method="_on_left_saber_rot_y_changed"]
+[connection signal="value_changed" from="ScrollContainer/VBox/left_saber_offset/left_rotz" to="." method="_on_left_saber_rot_z_changed"]
+[connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/right_posx" to="." method="_on_right_saber_pos_x_changed"]
+[connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/right_posy" to="." method="_on_right_saber_pos_y_changed"]
+[connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/right_posz" to="." method="_on_right_saber_pos_z_changed"]
+[connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/right_rotx" to="." method="_on_right_saber_rot_x_changed"]
+[connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/right_roty" to="." method="_on_right_saber_rot_y_changed"]
+[connection signal="value_changed" from="ScrollContainer/VBox/right_saber_offset/right_rotz" to="." method="_on_right_saber_rot_z_changed"]
 [connection signal="value_changed" from="ScrollContainer/VBox/player_height_offset/pos" to="." method="_on_player_height_offset_changed"]
 [connection signal="toggled" from="ScrollContainer/VBox/disable_map_color" to="." method="_on_disable_map_color_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/upload_server" to="." method="_on_upload_server_toggled"]
