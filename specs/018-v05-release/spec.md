@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-06
 
-**Status**: Release candidate installed; tag/FF pending G4
+**Status**: Done - tagged v0.5.0-q3, godot-4-port fast-forwarded, not pushed
 
 **Input**: Player: "Finish the mapdata and audio L/R sample first. Then prepare a finalized shipped
 build as v5. Then I can test it at home."
@@ -84,4 +84,6 @@ None.
 
 | Gate | Asked | Verdict | Action taken |
 |---|---|---|---|
+| G4 | v0.5.0 release (6e48d2f, docs 7012d6e) | APPROVE; tree clean, bench gate restored, same cert, upgrade keeps config, release ignores bench | Tagged v0.5.0-q3, FF godot-4-port, no push |
+| G5 | 018 spec drift | FR-001..009, SC-001..005 match; notes: numbers from the post-reboot debug build of the same commit, stale-audio-session follow-up, full SHA-256 recorded | Done pending player home test |
 | G0 | Verification scope and release mechanics for v0.5.0 | GO WITH CHANGES: add FR-007 (release ignores bench), FR-008 (upgrade keeps data/config), SC-005 (version visible); benches run on the DEBUG build of the same commit; log first-note scheduled beat and a spawn-lag bound; L/R must drop overlapping-hit windows | Added as FR-007..FR-009 and SC-005; plan unchanged otherwise |
