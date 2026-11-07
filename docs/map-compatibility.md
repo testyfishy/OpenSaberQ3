@@ -60,6 +60,9 @@ Visuals-limited counts beside it. Only the harness result counts; hand-picked ex
 
 ## Roadmap for 0.7 (goals, not release promises)
 
+**Shipped in 0.7.0:** the Cards library and the depth-based wall grow. The map-compatibility
+features below follow in 0.7.1.
+
 1. Corpus harness and classifier; publish the measured rate.
 2. Fix silent corruption: Mapping Extensions precision, enforce `_requirements` badges, apply
    per-object note speed/offset.

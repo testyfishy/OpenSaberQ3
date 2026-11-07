@@ -4,6 +4,20 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.0 - 2026-11-07
+
+**Library cards and sorting; depth-based wall grow.** The main menu gains a Cards view: All,
+BeatSaver, each BeastSaber playlist, BeastSaber (other), Uploaded and Local, with count and size;
+sort by Name, Artist, Mapper, Date added, Size or Play Count, persisted. BeastSaber playlist
+membership lives in `Songs/.playlists.json` (many-to-many); sidecar v2 caches `added_unix` and
+`bytes`. Wall height is now a function of depth (10% at 16 m to full at 8 m), so wall art stays
+continuous while it still rises into view.
+
+Map compatibility (Mapping Extensions, 90/360, Noodle, Chroma, box groups) follows in 0.7.1.
+
+[Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.7.0-q3) -
+[Spec](../specs/029-v07-library/spec.md)
+
 ## v0.6.5 - 2026-11-07
 
 **Walls, long arcs, BeatLeader in the high-score panel.** Walls spawn at full height with no rim, so

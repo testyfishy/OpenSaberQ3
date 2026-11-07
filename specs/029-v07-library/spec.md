@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: Draft (G0 pending)
+**Status**: In progress - implemented; 0.7.0 build/install pending
 
 **Input**: Owner: "BeastSaber saves the files as playlists, but our local directory has no playlist
 sorting. For the local system in front of us, add an option to view as folders or cards: BeatSaver
@@ -125,6 +125,16 @@ download paths.
 - A map belongs to one downloaded playlist; re-download updates the tag.
 - `open` sidecars are written atomically and can gain fields without a migration step.
 - The existing `ItemList` remains the List view; Cards is a new grid in the same menu panel.
+
+## Verification evidence (2026-11-07)
+
+- `tools/harness/library_probe.tscn`: sidecar v2 round-trip (`added=1234`, `bytes=5678`); manifest
+  many-to-many (`p1_for_h1=2`), removing h1 drops the now-empty p2 and keeps p1/h2; cards order
+  `all, source:beatsaver, playlist:p1, beastsaber_other, source:local`; filters 1/1/1; artist sort
+  puts the empty artist last and size-desc puts the largest first.
+- `VERIFYSCHEMA keys=56 bad=0` (card/sort keys added); `SETTINGSTEST PASS`.
+- Pending: the cards grid with the laser pointer, and a BeastSaber playlist download writing the
+  manifest on the headset.
 
 ## Consultation Log
 
