@@ -326,26 +326,20 @@ func _on_Delete_Button_button_up() -> void:
 		_delete_map(_currently_selected_songlist_ref[current_selected])
 	
 func _delete_map(map: MapInfo) -> void:
+	# specs/026 FR-012/FR-013: one recursive delete, shared with the Storage panel, and only for
+	# a direct child of Songs/. A bad MapInfo must never turn this into a library wipe.
+	if map.filepath.is_empty() or not StorageTools.is_safe_map_path(map.filepath):
+		vr.log_info("Refusing to delete outside Songs/: " + map.filepath)
+		return
+	Utils.remove_tree(map.filepath)
+	if DirAccess.dir_exists_absolute(map.filepath):
+		vr.log_info("Error removing song " + map.filepath)
+		return
 	Highscores.remove_map(map)
 	PlayCount.remove_map(map)
-	
-	if not map.filepath.is_empty():
-		var dir := DirAccess.open(map.filepath)
-		if dir:
-			@warning_ignore("return_value_discarded")
-			dir.list_dir_begin()
-			var current_file := dir.get_next()
-			while current_file != "":
-				@warning_ignore("return_value_discarded")
-				DirAccess.remove_absolute(map.filepath+current_file)
-				current_file = dir.get_next()
-			@warning_ignore("return_value_discarded")
-			DirAccess.remove_absolute(map.filepath)
-			vr.log_info(map.filepath+" Removed")
-			delete_button.disabled = true
-		else:
-			vr.log_info("Error removing song " + map.filepath)
-		_on_LoadPlaylists_Button_pressed()
+	vr.log_info(map.filepath+" Removed")
+	delete_button.disabled = true
+	_on_LoadPlaylists_Button_pressed()
 
 func _ready() -> void:
 	UI_AudioEngine.attach_children(self)

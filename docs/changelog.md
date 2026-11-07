@@ -4,6 +4,21 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.6.4 - 2026-11-07
+
+**Storage manager and bulk delete.** A Storage button in the main menu opens a panel with every
+map's size on disk and its source tag. Tick several maps and delete them, or choose a source and
+delete every map from it; both ask for the count and size first. Deleting removes the folder
+recursively (subfolders included), plus the map's high scores and play counts, then refreshes the
+library. The same recursive delete now backs the single map Delete button, and any path that is not
+a direct child of `Songs/` is refused.
+
+Repository housekeeping: the owner's gameplay captures were removed from the working tree and all
+history, and the absolute Windows keystore path was replaced with the tracked `bin/debug.keystore`.
+
+[Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.6.4-q3) -
+[Spec](../specs/026-storage-manager/spec.md)
+
 ## v0.6.3 - 2026-11-07
 
 **Arcs, BeatLeader on the left, BeastSaber playlists.** Slider ribbons are now one cubic curve from

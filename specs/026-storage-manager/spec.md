@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: Draft (G0 pending)
+**Status**: In progress - implemented, 0.6.4 build/install and G4 pending
 
 **Input**: User description: "Could we build a storage management system to bulk delete songs and stuff" — clarified as: multi-select maps plus "delete all from a source", opened from a Storage button in the main menu, with a count-and-size confirmation.
 
@@ -98,6 +98,16 @@ folders are gone.
   that state (play, pause, settings, leaderboard).
 - **FR-011**: A verification probe MUST compute sizes and group by source on a synthetic tree, and
   exercise the recursive delete, without the headset.
+- **FR-012**: A delete MUST be refused unless the map path is a direct child of
+  `user://OpenSaber/Songs/` (no `..`, not the root, not outside); a refused path is reported and
+  left untouched.
+- **FR-013**: Storage and the menu's single Delete MUST share one recursive delete helper
+  (`Utils.remove_tree`), so a map with subfolders is always removed completely.
+- **FR-014**: Arming a confirmation MUST snapshot the batch; any selection/source change or the 5 s
+  timeout MUST clear it, and the second press MUST delete exactly the snapshot the first press
+  counted.
+- **FR-015**: The map list MUST be built deferred after the panel is shown, and a scan over tens of
+  maps MUST stay under the UI-blocking threshold (target well under 1 s).
 
 ### Key Entities
 
@@ -114,6 +124,8 @@ folders are gone.
 - **SC-004**: High scores and play counts for the deleted maps are gone; other maps keep theirs.
 - **SC-005**: The probe reports correct sizes, source grouping, and recursive deletion on a
   synthetic tree (nested folder included).
+- **SC-006**: The probe confirms that deleting `Songs/` itself, a `..` traversal and a path outside
+  `Songs/` are refused and both trees survive.
 
 ## Out of Scope
 
@@ -140,4 +152,5 @@ folders are gone.
 
 | Gate | Question | Verdict | Follow-up |
 |------|----------|---------|-----------|
-| G0 | Is the storage panel scope and the delete/confirm design right? | pending | send with the plan |
+| G0 | Is the storage panel scope and the delete/confirm design right? | **GO WITH CHANGES** | Adopted: FR-012 direct-child path check, FR-013 one shared `Utils.remove_tree`, FR-014 confirm reset on any change, SC-006 refusal probe, source action re-reads the sidecar, deferred scan. |
+| G4 | Final 0.6.4 diff and spec drift | pending | send with the probe output and the installed build |
