@@ -1,7 +1,8 @@
 # itch.io page copy
 
-**Target build:** 0.6.2, the first APK with the new icon and menu logo. The 0.6.0 APK still uses
-the previous icon, so do not upload it while the store art shows the new mark. Publish gate and
+**Target build:** 0.6.3. Arcs connect and match the note colours; BeatLeader sits on the left
+of the menu and BeastSaber (curated) on the right. The 0.6.0 APK still uses the previous icon and
+contains the demo, so do not upload it. Publish gate and
 upload steps: [itch-push.md](itch-push.md).
 
 ## Project fields
@@ -62,7 +63,7 @@ upload steps: [itch-push.md](itch-push.md).
 >
 > 1. Enable **Developer Mode** for the headset in the Meta Horizon app.
 > 2. Download the APK below.
-> 3. `adb install -r OpenSaberQ3-0.6.1.apk`, or use SideQuest.
+> 3. `adb install -r OpenSaberQ3-0.6.3.apk`, or use SideQuest.
 > 4. Launch **Open Saber Q3** from *Unknown Sources*.
 >
 > itch is a download host: it does not install Android apps for you. Sideloading is required.
@@ -76,7 +77,6 @@ upload steps: [itch-push.md](itch-push.md).
 > - No HRTF: left/right is stereo panning, above/below is not reproduced.
 > - 360°/90° lane rotation is parsed but not applied; v4 event-box groups and VFX boxes are
 >   ignored.
-> - The BeastSaber `.bplist` import is not in this build.
 >
 > Quest 3 is the tested target. Other headsets may work but are untested.
 >
@@ -103,9 +103,10 @@ Use these under the real captures, in this order:
 | Cover | 630×500 | `docs/images/itch-cover.png` — ready |
 | Banner | 1280×640 | `docs/images/banner.png` — ready |
 | Icon | 512×512 | `docs/images/logo.png` — ready |
-| Screenshots | 3–5, 16:9, 1280×720 or larger | **needs real headset captures** |
-| Gameplay clip | 15–30 s, optional but recommended | **needs real headset capture** |
-| Upload | Android APK, 0.6.1 | built with the new icon |
+| Screenshots | 3–5, 16:9, 1280×720 or larger | `docs/media/gameplay-1.png` .. `gameplay-4.png` — ready |
+| Gameplay clip | 15–30 s, optional but recommended | `docs/media/gameplay-0.6.3.mp4` — 24 s 1080p60 with audio |
+| Upload | Android APK, 0.6.3 | built with the new icon |
 
-The menu and leaderboard renders in `docs/images/` are desktop captures with the simulator overlay;
-they are not store screenshots. Take the real ones in the headset.
+The gameplay clip and stills in `docs/media/` are cut from the owner's headset recording (1920x1080,
+60 fps, game audio). The menu and leaderboard renders in `docs/images/` are desktop captures with the simulator overlay;
+they are not store screenshots. The gameplay clip and stills are real headset captures.

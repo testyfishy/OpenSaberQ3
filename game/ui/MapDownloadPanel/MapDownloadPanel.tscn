@@ -5,6 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://dycn47j2d352k" path="res://game/ui/BeatSaverPanel/beatsaver_icon.png" id="3"]
 [ext_resource type="Script" path="res://game/ui/MapDownloadPanel/MapDownloadPanel.gd" id="4"]
 [ext_resource type="Texture2D" uid="uid://bmetc7xglkymg" path="res://game/ui/BeatSageUI/beat_sage_icon.png" id="5"]
+[ext_resource type="Texture2D" path="res://game/ui/BeastSaberPanel/beastsaber_icon.png" id="6"]
 
 [node name="MapDownloadPanel" type="Panel"]
 offset_right = 1536.0
@@ -47,5 +48,14 @@ layout_mode = 2
 texture = ExtResource("5")
 description = "Beat Sage is an AI that creates free custom levels for Beat Saber. Given a song on YouTube, the system will output a Beat Saber level that is matched with that song!"
 
+[node name="BeastSaberButton" parent="Margin/VBox/Grid" instance=ExtResource("2")]
+layout_mode = 2
+texture = ExtResource("6")
+image_margin = 50
+description = "BeastSaber curates the best community maps into themed playlists. Pick a playlist and download every map in it from BeatSaver, ready to play."
+
 [connection signal="pressed" from="Margin/VBox/Grid/BeatSaverButton" to="." method="_on_BeatSaverButton_pressed"]
 [connection signal="pressed" from="Margin/VBox/Grid/BeatSageButton" to="." method="_on_BeatSageButton_pressed"]
+[connection signal="pressed" from="Margin/VBox/Grid/BeastSaberButton" to="." method="_on_BeastSaberButton_pressed"]
+
+

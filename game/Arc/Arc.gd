@@ -35,11 +35,13 @@ static var right_material_magnet := right_material.duplicate() as ShaderMaterial
 
 @onready var visual: CSGPolygon3D = $Path3D/Visual
 
-@export var arc_angle_force := 2.0
-@export var mid_points := 3
-
 var arc_info: ArcInfo
 var activator_cube: BeepCube
+
+# Handle length as a fraction of the head-to-tail chord, and the loop guard as a fraction of
+# the same chord. Tuning start: the arc's in-VR swing is still to be compared against the notes.
+const ARC_HANDLE_FRACTION := 0.35
+const ARC_HANDLE_CAP := 0.6
 
 var speed: float
 var despawn_z: float
@@ -73,55 +75,55 @@ func spawn(info: ArcInfo, current_beat: float, _activator_cube: BeepCube = null)
 		-(info.tail_beat - current_beat) * Constants.BEAT_DISTANCE
 	)
 	despawn_z = Constants.MISS_Z - tail_pos.z
-	
-	var head_rotation: Vector2
-	var tail_rotation: Vector2
-	if info.head_cut_direction == 8:
-		head_rotation = Vector2.ZERO
-	else:
-		head_rotation = Constants.ROTATION_UNIT_VECTORS[info.head_cut_direction] * info.head_control_point_length_multiplier
-	if info.tail_cut_direction == 8:
-		tail_rotation = Vector2.ZERO
-	else:
-		tail_rotation = -Constants.ROTATION_UNIT_VECTORS[info.tail_cut_direction] * info.tail_control_point_length_multiplier
-	
+
+	# One cubic Bezier from the head note centre to the tail note centre. The old version
+	# planted three extra points by rotating the head cut vector by PI/TAU and then smoothed
+	# them; on any arc with a mid-anchor mode that produced a self-crossing loop, and on a
+	# short hop the fixed 2 m handles threw the ribbon metres off the notes.
 	var curve := ($Path3D as Path3D).curve
 	curve.clear_points()
-	
+
 	# sets the origin of the tail at the tail point to use in the shader for a fade out effect
 	$Path3D.position = tail_pos
-	
-	curve.add_point(head_pos - tail_pos, Vector3.ZERO, Vector3(head_rotation.x, head_rotation.y, 0.0) * arc_angle_force)
-	
-	if info.mid_anchor_mode > 0:
-		for midpoint_id in range(mid_points):
-			var range : float = (float(midpoint_id+1) / (mid_points+1))
-			var head_rot := Constants.CUBE_ROTATIONS[info.head_cut_direction]
-			
-			var point_pos :=  head_pos.lerp(tail_pos, range)
-			point_pos += Vector3(head_rotation.x, head_rotation.y, 0.0).rotated(Vector3(0,0,1), 
-					(
-						(PI if info.head_cut_direction == info.tail_cut_direction else TAU)
-						*(-range if info.mid_anchor_mode == 1 else range)
-					)
-				) * arc_angle_force
-			
-			curve.add_point(point_pos - tail_pos, Vector3.ZERO, Vector3.ZERO)
-		# calculate smooth in out directions after all points have been set
-		for smoothpoint_id in range(mid_points):
-			var prev_point_pos := curve.get_point_position(smoothpoint_id)
-			var current_point_pos := curve.get_point_position(smoothpoint_id + 1)
-			var next_point_pos := curve.get_point_position(smoothpoint_id + 2)
-			# Calculate vectors to previous and next points and the average direction
-			var to_prev := (prev_point_pos - current_point_pos).normalized()
-			var to_next := (next_point_pos - current_point_pos).normalized()
-			var smooth_dir := (to_next - to_prev).normalized()
-			var distance := (prev_point_pos.distance_to(current_point_pos) + 
-							current_point_pos.distance_to(next_point_pos)) * 0.25
-			curve.set_point_in(smoothpoint_id + 1, smooth_dir * -distance)
-			curve.set_point_out(smoothpoint_id + 1, smooth_dir * distance)
-	
-	curve.add_point(tail_pos - tail_pos, Vector3(tail_rotation.x, tail_rotation.y, 0.0) * arc_angle_force, Vector3.ZERO)
+
+	var chord := tail_pos - head_pos
+	var chord_length := chord.length()
+	var head_dir := _cut_direction(info.head_cut_direction)
+	# the tail handle points back toward the head, as in the map's tail cut direction
+	var tail_dir := -_cut_direction(info.tail_cut_direction)
+
+	# midAnchorMode can only add information when the cut directions cannot describe the bow:
+	# a dot head/tail, or directions about 180 degrees apart. Then the ribbon bows sideways
+	# (a C, not an S) in the mode's direction.
+	var opposed := head_dir != Vector3.ZERO and tail_dir != Vector3.ZERO and head_dir.dot(-tail_dir) < -0.94
+	if info.mid_anchor_mode != 0 and (head_dir == Vector3.ZERO or tail_dir == Vector3.ZERO or opposed):
+		var side := -1.0 if info.mid_anchor_mode == 1 else 1.0
+		var perp := Vector3(-chord.y, chord.x, 0.0)
+		if perp.length_squared() < 0.000001:
+			perp = Vector3(1.0, 0.0, 0.0)
+		head_dir = perp.normalized() * side
+		tail_dir = head_dir
+	elif head_dir == Vector3.ZERO:
+		head_dir = chord.normalized()
+	elif tail_dir == Vector3.ZERO:
+		tail_dir = -chord.normalized()
+
+	# Handle length follows the map's mu/tmu and the distance between the notes, so a 1 m hop
+	# and an 8 m slide get the same shape. The cap leaves no room for a loop.
+	var handle := chord_length * ARC_HANDLE_FRACTION
+	var head_handle := minf(handle * info.head_control_point_length_multiplier, chord_length * ARC_HANDLE_CAP)
+	var tail_handle := minf(handle * info.tail_control_point_length_multiplier, chord_length * ARC_HANDLE_CAP)
+
+	curve.add_point(head_pos - tail_pos, Vector3.ZERO, head_dir * head_handle)
+	curve.add_point(Vector3.ZERO, tail_dir * tail_handle, Vector3.ZERO)
+
+# Note cut direction (0..7) as a unit vector in the play plane; a dot (8) has no direction.
+func _cut_direction(cut_direction: int) -> Vector3:
+	if cut_direction < 0 or cut_direction > 7:
+		return Vector3.ZERO
+	var unit := Constants.ROTATION_UNIT_VECTORS[cut_direction]
+	return Vector3(unit.x, unit.y, 0.0)
+
 
 func _on_activator_cube_cutted(correct_saber: bool) -> void:
 	if activator_cube and activator_cube.cutted.is_connected(_on_activator_cube_cutted):
@@ -140,3 +142,4 @@ func _process(delta: float) -> void:
 	if transform.origin.z >= despawn_z:
 		if Cost.enabled: Cost.objs_freed += 1
 		_release_to_pool()
+

@@ -2,9 +2,11 @@ extends Panel
 
 @export var beat_saver_panel: BeatSaverPanel
 @export var beat_sage_panel: BeatSagePanel
+@export var beast_saber_panel: BeastSaberPanel
 
 @onready var beat_saver_button := $Margin/VBox/Grid/BeatSaverButton as Button
 @onready var beat_sage_button := $Margin/VBox/Grid/BeatSageButton as Button
+@onready var beast_saber_button := $Margin/VBox/Grid/BeastSaberButton as Button
 
 func _ready() -> void:
 	UI_AudioEngine.attach_children(self)
@@ -25,6 +27,15 @@ func _ready() -> void:
 	else:
 		vr.log_warning('_beat_sage_panel is null')
 		beat_sage_button.disabled = true
+
+	# BeastSaber curated playlists (specs/025 FR-008).
+	if is_instance_valid(beast_saber_panel):
+		@warning_ignore("return_value_discarded")
+		beast_saber_panel.visibility_changed.connect(
+			_on_MapSourceUI_closed.bind(beast_saber_panel))
+	else:
+		vr.log_warning('_beast_saber_panel is null')
+		beast_saber_button.disabled = true
 
 # override hide() method to handle case where UI is inside a OQ_UI2DCanvas
 func _hide() -> void:
@@ -58,6 +69,12 @@ func _on_BeatSageButton_pressed() -> void:
 	beat_sage_panel._show()
 	self._hide()
 
+func _on_BeastSaberButton_pressed() -> void:
+	beast_saber_panel._show()
+	self._hide()
+
 func _on_MapSourceUI_closed(ui_panel: Panel) -> void:
 	if not ui_panel.visible:
 		self._show()
+
+

@@ -422,6 +422,11 @@ func _on_Play_Button_pressed() -> void:
 	_load_map_and_start(_currently_selected_songlist_ref[current_selected])
 
 
+# Used by the left-side BeatLeader sign (specs/025 FR-007): same map/difficulty as the
+# in-panel Leaderboard button, so both entry points cannot disagree.
+func open_leaderboard_for_selection() -> void:
+	_on_Leaderboard_Button_pressed()
+
 func _on_Leaderboard_Button_pressed() -> void:
 	if _currently_selected_songlist_ref.is_empty():
 		return

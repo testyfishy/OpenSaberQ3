@@ -63,6 +63,7 @@ var _trigger_latched := false
 @onready var percent_indicator := $Percent_Indicator as PercentIndicator
 
 @onready var map_source_dialogs := $MapSourceDialogs as Node3D
+@onready var beatleader_launcher := $BeatLeaderLauncher as OQ_UI2DCanvas
 @onready var online_search_keyboard := $Keyboard_online_search as OQ_UI2DKeyboard
 
 @onready var cube_template := preload("res://game/BeepCube/BeepCube.tscn").instantiate() as BeepCube
@@ -155,6 +156,12 @@ func _transition_game_state(next_state: GameState) -> void:
 
 func show_MapSourceDialogs(showing: bool = true) -> void:
 	map_source_dialogs.visible = showing
+	if beatleader_launcher != null:
+		beatleader_launcher.visible = showing
+		if showing:
+			beatleader_launcher._show()
+		else:
+			beatleader_launcher._hide()
 	for c in map_source_dialogs.get_children():
 		if c is OQ_UI2DCanvas:
 			(c as OQ_UI2DCanvas)._hide()
@@ -435,8 +442,10 @@ func on_settings_changed(key: StringName) -> void:
 	match key:
 		&"color_left":
 			update_left_color(Settings.color_left)
+			update_arc_colors()
 		&"color_right":
 			update_right_color(Settings.color_right)
+			update_arc_colors()
 		&"events":
 			disable_events(not Settings.events)
 		&"show_debug_info":
@@ -559,6 +568,7 @@ func _apply_glow() -> void:
 func _apply_map_colours() -> void:
 	update_left_color(MapPalette.env_left)
 	update_right_color(MapPalette.env_right)
+	update_arc_colors()
 	# FR-001: the blades are the same colour as the cubes they cut. The map wins unless the
 	# player has explicitly overridden colours.
 	if not Settings.disable_map_color:
@@ -608,13 +618,12 @@ func _apply_sky() -> void:
 func set_colors_from_settings() -> void:
 	update_left_color(Settings.color_left)
 	update_right_color(Settings.color_right)
+	update_arc_colors()
 
 func update_left_color(color: Color) -> void:
 	if !left_saber:
 		await get_tree().process_frame
 	left_saber.set_color(color)
-	Arc.left_material.set_shader_parameter(&"color", color)
-	Arc.left_material_magnet.set_shader_parameter(&"color", color)
 	goggles_shader.set_shader_parameter(&"left_color", color)
 	event_driver.update_left_color(color)
 	standing_ground.update_left_color(color)
@@ -624,12 +633,24 @@ func update_right_color(color: Color) -> void:
 	if !left_saber:
 		await get_tree().process_frame
 	right_saber.set_color(color)
-	Arc.right_material.set_shader_parameter(&"color", color)
-	Arc.right_material_magnet.set_shader_parameter(&"color", color)
 	goggles_shader.set_shader_parameter(&"right_color", color)
 	event_driver.update_right_color(color)
 	standing_ground.update_right_color(color)
 	_apply_light_tint()
+
+# Arcs belong to the two notes they join, not to the room: paint them with the map's note
+# palette. `update_left_color`/`update_right_color` receive the environment colours for the
+# blades/lights, so writing the arcs from there was why every arc came out in the room colour.
+func update_arc_colors() -> void:
+	var left := Settings.color_left
+	var right := Settings.color_right
+	if not Settings.disable_map_color and MapPalette.color_left.a > 0.0:
+		left = MapPalette.color_left
+		right = MapPalette.color_right
+	Arc.left_material.set_shader_parameter(&"color", left)
+	Arc.left_material_magnet.set_shader_parameter(&"color", left)
+	Arc.right_material.set_shader_parameter(&"color", right)
+	Arc.right_material_magnet.set_shader_parameter(&"color", right)
 
 func disable_events(disabled: bool) -> void:
 	event_driver.disabled = disabled
@@ -771,6 +792,12 @@ func _on_leaderboard_closed() -> void:
 	leaderboard_canvas._hide()
 	if gamestate == gamestate_mapselection:
 		main_menu._show()
+
+# Left-side BeatLeader sign (specs/025 FR-007): open the board for the menu's current
+# selection through the same path the in-panel Leaderboard button uses.
+func _on_beatleader_launcher_pressed() -> void:
+	if menu != null:
+		menu.open_leaderboard_for_selection()
 
 func _on_endscore_switch_requested() -> void:
 	_open_profile_panel(true)

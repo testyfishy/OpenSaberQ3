@@ -1,0 +1,41 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Theme" uid="uid://cbutfawaljce6" path="res://game/BlackWhiteThem.tres" id="1"]
+[ext_resource type="Script" path="res://game/ui/BeatLeaderPanel/BeatLeaderLauncher.gd" id="2"]
+
+[node name="BeatLeaderLauncher" type="Panel"]
+offset_right = 720.0
+offset_bottom = 470.0
+theme = ExtResource("1")
+script = ExtResource("2")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_bottom = 32
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+text = "BeatLeader"
+
+[node name="Subtitle" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 30
+text = "Leaderboards for the map and difficulty selected in the song list."
+autowrap_mode = 2
+
+[node name="OpenButton" type="Button" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+theme_override_font_sizes/font_size = 34
+text = "Open Leaderboards"

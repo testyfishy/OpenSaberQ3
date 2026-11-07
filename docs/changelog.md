@@ -4,6 +4,23 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.6.3 - 2026-11-07
+
+**Arcs, BeatLeader on the left, BeastSaber playlists.** Slider ribbons are now one cubic curve from
+the head note centre to the tail note centre, so they connect and never loop; they take the map's
+note palette instead of the room's environment colour. A BeatLeader sign on the left of the menu
+opens the existing top-10 panel, and the right-hand online panel gains a **BeastSaber (curated)**
+tab that downloads a whole curated playlist from BeatSaver, tagged `beastsaber`.
+
+The build also stops shipping old benchmark capture files and the bundled demo (already gone since
+0.6.1). A 24 s 1080p60 gameplay clip and four stills land in `docs/media/` for the itch page.
+
+**Known:** the in-VR arc look and the two new menu entries still need a pass on the headset.
+
+[Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.6.3-q3) -
+[Spec](../specs/025-arcs-menu-beast/spec.md)
+
+
 ## v0.6.2 — 2026-11-06
 
 **Screenshot shortcut fix.** Quest 3 controllers have no usable squeeze input, so the 0.6.1 grip
