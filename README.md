@@ -105,7 +105,7 @@ per-note colours, basic light events, and Noodle `_coordinates` note placement (
 Mapping Extensions precision, 90°/360° rotation, Noodle rotation/scale/animation, Chroma light
 events, v4 box-group lighting, and Unity asset-bundle effects.
 
-**v0.7 target:** close the gameplay gaps — Mapping Extensions precision, 90°/360° lane rotation,
+**v0.7 goals:** close the gameplay gaps — Mapping Extensions precision, 90°/360° lane rotation,
 Noodle static transforms and animation, per-object note speed/offset, Chroma events, v4 box-group
 lighting — and add the measured corpus report. Unity asset bundles are pursued only where an
 open-source parser is practical; otherwise the map still loads with a Visuals-limited badge.
@@ -182,3 +182,4 @@ palette and provenance are in [docs/brand.md](docs/brand.md).
 MIT — [LICENSE](LICENSE) retains the original copyright (© 2020 Holger Dammertz). Contains no Beat
 Saber assets and does not use the Beat Saber name, logo or branding. Not affiliated with or
 endorsed by Beat Games, Meta, BeatSaver or BeatLeader.
+

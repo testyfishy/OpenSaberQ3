@@ -32,18 +32,19 @@ merely suggests one is Supported with a warning.
 
 | Feature | State |
 |---|---|
-| v2, v3, v4 beatmaps; v4 lightshow | Supported |
+| v2, v3, v4 beatmaps; basic light events | Supported |
 | Notes, bombs, walls, arcs, chains, BPM changes | Supported |
 | Fake notes / fake walls | Filtered as decorative, not scored |
 | Chroma per-note colour | Supported |
-| Basic light events | Supported |
 | Noodle `_coordinates` note position | Partial |
 | Mapping Extensions precision (encoded positions, float walls) | **Not yet** — parsed as ints, positions snap to the grid |
 | 90° / 360° rotation events | **Not yet** — parsed, not applied |
 | Noodle rotation, scale, animation tracks, per-object speed/offset | **Not yet** |
-| Chroma light/environment events | **Not yet** |
+| Chroma light/environment events, Chroma JSON environments | **Not yet** |
 | v4 box-group lighting / VFX event boxes | **Not yet** |
-| Vivify, Cinema, Heck, custom environments (Unity asset bundles) | **Not yet**; maps load as Visuals limited |
+| Vivify (Unity asset bundles) | **Not yet**; maps load as Visuals limited |
+| Cinema (background video) | **Not yet** |
+| Heck scripts | **Not yet** (needs a mod host) |
 
 ## Measurement
 
@@ -57,7 +58,7 @@ the tier and the missing features per map. The sample covers:
 The published number is the share of the sample that reaches **Supported**, with Partial and
 Visuals-limited counts beside it. Only the harness result counts; hand-picked examples do not.
 
-## Roadmap for 0.7
+## Roadmap for 0.7 (goals, not release promises)
 
 1. Corpus harness and classifier; publish the measured rate.
 2. Fix silent corruption: Mapping Extensions precision, enforce `_requirements` badges, apply
@@ -73,6 +74,5 @@ mapper's; the engine only reads the formats.
 ## Notes
 
 - Quest Beat Saber can play Noodle/Chroma/Mapping Extensions through community mods (BMBF,
-  QuestPatcher), and Vivify has Android bundle variants. "Beat Saber cannot either" is not a valid
-  excuse and is not used here.
+  QuestPatcher), and Vivify has Android bundle variants. This project does not claim otherwise.
 - A map that loads but requires an unimplemented feature is reported, never silently half-played.

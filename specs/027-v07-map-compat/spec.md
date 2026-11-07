@@ -1,0 +1,202 @@
+# Feature Specification: 0.7.0 map compatibility — measured corpus and mod-layer fidelity
+
+**Feature Branch**: `027-v07-map-compat`
+
+**Created**: 2026-11-07
+
+**Status**: Draft (G0 pending)
+
+**Input**: Owner, after the BeatSaver feature review: "Fix 360/90 and lightshow/box groups on v7.
+Resolve Mapping Extensions precision, Noodle position/rotation/scale/animation/speed, Chroma events
+and the bundle-based effects for v7 as long as it does not need closed-source content. Update the
+public compatibility position now."
+
+## Context and evidence
+
+- Public policy already published: `README.md` → "Map compatibility", `docs/map-compatibility.md`.
+- Current loader gaps (`game/scripts/MapSupport.gd`, `ColorNoteInfo`, `ObstacleInfo`):
+  int truncation of Mapping Extensions positions; 90/360 rotation parsed and ignored; Noodle
+  rotation/scale/animation and per-object speed/offset ignored; Chroma light events and v4 box-group
+  lighting ignored; Unity asset bundles unsupported.
+- BeatSaver sample (20 top-rated maps, strict scan): Noodle animation keys 50%, asset bundle 25%,
+  Noodle/ME wall placement 30%, Chroma per-note colour 20%, Noodle note position 15%; characteristics
+  Standard 51, Lawless 8, OneSaber 3, Lightshow 2.
+- Advisor position (strategy consult, 2026-11-07): tiered compatibility with measured corpus first;
+  fix silent corruption before features; asset bundles out unless an open-source path exists.
+
+## User Scenarios & Testing *(mandatory)*
+
+### User Story 1 - A map says what it needs and whether it plays (Priority: P1)
+
+As a player, every map shows Supported / Partial / Visuals limited, computed from the mapper's
+declared requirements, and the pause menu names what is missing.
+
+**Acceptance**:
+1. A vanilla v3 map is Supported with no warning.
+2. A map with `_requirements: [Noodle Extensions]` is Partial while Noodle transforms are missing.
+3. A Chroma-lighting-only map is Supported; the pause menu notes that lighting effects are skipped.
+4. The badge survives the library, source filter and a relaunch.
+
+### User Story 2 - Measured rate (Priority: P1)
+
+As the maintainer, I can regenerate a compatibility report over a BeatSaver sample and publish it.
+
+**Acceptance**:
+1. One command runs the headless loader over ~300 maps and writes per-map tier + missing features.
+2. The report prints Supported / Partial / Visuals-limited shares and the top missing features.
+3. The README number is generated from that report, not typed by hand.
+
+### User Story 3 - Mapping Extensions precision (Priority: P1)
+
+Notes and walls placed with precision coordinates appear where the mapper put them.
+
+**Acceptance**:
+1. A v2 map with an encoded position (≥1000) places the note at the decoded lane, not the truncated
+   one.
+2. Float wall position/size is honoured.
+3. The harness tiers a precision map Supported and its note positions match the reference within
+   1 cm.
+
+### User Story 4 - 90°/360° rotation (Priority: P1)
+
+Maps that rotate the lane ring play as designed, with notes and walls coming from the sides.
+
+**Acceptance**:
+1. `rotationEvents` (v3/v4) and v2 type 14/15 rotate subsequent notes, walls, arcs and chains.
+2. The 360 corpus tiers as Supported in the harness.
+3. No regression for Standard maps (rotation of 0 is identity).
+
+### User Story 5 - Noodle static transforms and animation (Priority: P2)
+
+Noodle notes appear at their custom position, rotation and scale; animated notes move along their
+tracks; per-object speed/offset changes apply.
+
+**Acceptance**:
+1. `_position`/`_rotation`/`_scale` (and v3 equivalents) place and orient a note as declared.
+2. `animateTrack`/note animation moves the object over the declared beats.
+3. Per-object `_noteJumpMovementSpeed`/`_noteJumpStartBeatOffset` change approach timing.
+4. A Noodle map that used to be Partial becomes Supported; a movement map still plays to the end.
+
+### User Story 6 - Chroma events and v4 lightshow (Priority: P2)
+
+Chroma light/environment events and v4 box-group lighting drive the scene.
+
+**Acceptance**:
+1. A Chroma light event changes the light colour at its beat.
+2. Environment colour/fog/ring events apply.
+3. v4 lightColor/rotation/translation event boxes apply over their beat ranges.
+4. Lighting-only maps remain Supported; the visual result matches the event values within tolerance.
+
+### User Story 7 - Bundle effects, open source only (Priority: P3)
+
+Vivify/Cinema/custom-environment maps show their effects where an open-source parser can read the
+bundle; otherwise they load with a Visuals-limited badge.
+
+**Acceptance**:
+1. The decision and licence of any bundle parser are recorded; no closed-source SDK is used.
+2. If integrated, a known Vivify map renders its effect; if not, the badge and log say so.
+3. The map's notes remain playable either way.
+
+## Requirements *(mandatory)*
+
+- **FR-001**: A headless corpus harness MUST load a configurable BeatSaver sample (top-rated, latest,
+  90/360, OneSaber, Lightshow) through the real loader and write per-map tier + detected/missing
+  features.
+- **FR-002**: The harness MUST print the Supported / Partial / Visuals-limited shares and the most
+  common missing features; the README/docs number MUST be generated from its output.
+- **FR-003**: `Info.dat` `_requirements`/`_suggestions` MUST be parsed and combined with detected
+  features to produce the badge; `MediaFire`-style requirements unknown to the build MUST not crash.
+- **FR-004**: The badge MUST be visible in the library row and the pause menu, with the missing
+  feature names.
+- **FR-005**: Mapping Extensions positions MUST be decoded to floats for notes, bombs and walls:
+  v2 lane/layer values ≥1000 or ≤-1000, the precision cut angle (1000–1360), and the wall `_type`
+  height/start-height and width encodings; v3 `x`/`y`/`d` follow the same rules. Lanes outside the
+  4×3 grid MUST be allowed, never clamped; no placement field may be int-truncated.
+- **FR-006**: 90°/360° rotation MUST apply to notes, bombs, walls, arcs and chains from the event
+  beat onward: v2 types 14/15 values 0–7 map to ±15/30/45/60° (or use `_rotation`), v3 `e`
+  (early/late) decides same-beat objects, and v4 uses the per-object `r` field. The environment and
+  the track MUST follow the same rotation.
+- **FR-007**: Noodle static transforms (`_position`, `_rotation` in degrees, `_scale`) MUST apply to
+  notes and obstacles for v2/v3 customData.
+- **FR-008**: Per-object `_noteJumpMovementSpeed` and `_noteJumpStartBeatOffset` MUST apply to that
+  object's approach, independent of the map default.
+- **FR-009**: Noodle animation MUST honour `_pointDefinitions`, Heck easings, splines,
+  `assignPathAnimation`, `assignTrackParent` and `_definitePosition`, plus `_dissolve`, `_interactable`,
+  `_fake`, `_disableNoteGravity` and `_disableNoteLook`, with v3 key names (`coordinates`,
+  `worldRotation`, `localRotation`, `size`, `njs`, `spawnOffset`). Tracks MUST be sampled at the
+  note's song time and resolved once at load; vanilla maps keep a zero-cost path.
+- **FR-010**: Chroma `customEvents` MUST apply light colour, environment colour, fog and ring
+  rotation; Chroma `environment`/`_environment` JSON (lookup, active, transform, geometry) MUST
+  apply; v4 box-group lighting MUST apply colour/rotation/translation boxes over their ranges.
+- **FR-010b**: `assignPlayerToTrack` MUST be treated as gameplay: a map that uses it and is not
+  supported is Partial, because it moves the player, not just the scenery.
+- **FR-011**: No feature may make a vanilla map slower or change its placement/timing; the 120 fps
+  budget and existing probes MUST hold.
+- **FR-012**: Every map MUST still load if a feature is missing; the badge and log MUST say what was
+  skipped, never a silent half-play.
+- **FR-013**: Any bundle/video/script support MUST use open-source components only; licence and
+  provenance MUST be recorded in `ATTRIBUTION.md`. No closed-source SDK, asset or service. Bundle
+  work is a timeboxed spike that defaults to **Visuals limited** (UnityPy is MIT but Python-only;
+  AssetRipper is GPL-3; Vivify shaders and Cinema video are not portable to Godot as-is).
+- **FR-014**: Regression maps for each feature MUST live in the harness corpus and run headless.
+- **FR-015**: The corpus MUST be a pinned list of BeatSaver map hashes plus a date, downloaded into a
+  git-ignored cache. BeatSaver maps MUST NOT be committed; fixtures are synthetic or explicitly
+  licensed. SC-001 pins the same list.
+- **FR-016**: One per-object transform (float position, worldRotation, localRotation, scale, jump
+  speed, jump offset) MUST be shared by Mapping Extensions, 360 rotation and Noodle, so the three
+  features cannot disagree.
+
+### Key Entities
+
+- **MapRequirement**: declared/suggested mod names from `Info.dat`.
+- **CompatReport**: map id, tier, detected features, missing features, loader errors.
+- **Placement**: float lane/layer (note, bomb, wall), decoded from the format.
+- **RotationState**: current lane-ring rotation at a beat.
+- **NoodleTransform**: position, rotation, scale, jump speed/offset, animation tracks.
+
+## Success Criteria *(mandatory)*
+
+- **SC-001**: The harness runs ~300 maps headless and produces a report; the published rate in
+  README matches the report exactly.
+- **SC-002**: A Mapping Extensions map places decoded notes within 1 cm of the reference; no
+  placement field is int-truncated.
+- **SC-003**: The 360 corpus tiers as Supported and plays with lanes rotating; Standard maps are
+  unchanged.
+- **SC-004**: A Noodle transform map's note position/rotation/scale matches its customData within
+  1 cm / 1 degree; an animation map moves as declared.
+- **SC-005**: A Chroma light map and a v4 box-group map produce the declared colours within
+  tolerance at three sampled beats.
+- **SC-006**: Badges match `_requirements` for the regression set (Supported/Partial/Visuals limited
+  each covered).
+- **SC-007**: No vanilla-map regression: existing probes pass and the 120 fps capture stays within
+  the 0.6.4 numbers.
+
+## Out of Scope
+
+- Closed-source SDKs, assets or services; proprietary formats that cannot be read with open-source
+  code.
+- Arbitrary Heck C# gameplay scripts (a managed mod host is a separate project); such maps badge as
+  Partial.
+- Online services, account features, or map uploads.
+- Rewriting the renderer for bundled shaders beyond what an open-source parser can express.
+
+## Open Questions
+
+- [NEEDS CLARIFICATION: which open-source Unity bundle parser (if any) is acceptable, given its
+  licence and maintenance?] — evaluate before FR-013 work; default is Visuals limited.
+- [NEEDS CLARIFICATION: should Noodle player/camera movement be treated as gameplay (Partial if
+  missing) or as a visual effect?] — assume Partial only when it moves notes into reach, otherwise
+  Visuals limited.
+
+## Assumptions
+
+- `_requirements` is the mapper's authoritative statement; detection is a fallback.
+- The harness can download a bounded sample and cache it; no BeatSaver API key is needed.
+- Asset bundles are Unity-format containers; an open-source reader is feasible for simple cases but
+  not for arbitrary shaders/scripts.
+
+## Consultation Log
+
+| Gate | Question | Verdict | Follow-up |
+|------|----------|---------|-----------|
+| G0 | Is the 0.7 scope (all listed features, open-source only) and the tier/harness order right? | **GO WITH CHANGES** | Adopted: FR-005 precision details (cut angle, wall encodings, no clamping), FR-006 rotation specifics (v2 types 14/15, v3 `e`, v4 `r`, environment/track), FR-009b animation keys and one-shot track resolution, FR-010 Chroma environment JSON, FR-010b player-track as gameplay, FR-015 pinned corpus (no maps committed), FR-016 one shared per-object transform; bundle work is a spike defaulting to Visuals limited; fixed the tier wording and the public matrix rows. |
