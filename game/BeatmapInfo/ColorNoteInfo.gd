@@ -89,15 +89,18 @@ static func _read_custom_position(note: ColorNoteInfo, note_dict: Dictionary) ->
 			float(coords.get("x", 0.0)),
 			float(coords.get("y", 0.0))
 		)
-	var pos = cd.get("_position", cd.get("position", null))
+	var pos = cd.get("coordinates", cd.get("_position", cd.get("position", null)))
 	if pos is Array and pos.size() >= 2:
 		note.has_custom_position = true
 		note.custom_position = Vector2(float(pos[0]), float(pos[1]))
-	var rot = cd.get("_rotation", cd.get("rotation", null))
+	elif pos is Dictionary:
+		note.has_custom_position = true
+		note.custom_position = Vector2(float(pos.get("x", 0.0)), float(pos.get("y", 0.0)))
+	var rot = cd.get("localRotation", cd.get("_localRotation", cd.get("_rotation", cd.get("rotation", null))))
 	if rot is Array and rot.size() >= 3:
 		note.has_custom_rotation = true
 		note.custom_euler = Vector3(float(rot[0]), float(rot[1]), float(rot[2]))
-	var scl = cd.get("_scale", cd.get("scale", null))
+	var scl = cd.get("size", cd.get("_scale", cd.get("scale", null)))
 	if scl is Array and scl.size() >= 3:
 		note.has_custom_scale = true
 		note.custom_scale = Vector3(float(scl[0]), float(scl[1]), float(scl[2]))
@@ -119,3 +122,5 @@ static func _read_custom_color(note_dict: Dictionary) -> Color:
 			float(c.get("b", 1.0)),
 			1.0)
 	return Color(0.0, 0.0, 0.0, 0.0)
+
+

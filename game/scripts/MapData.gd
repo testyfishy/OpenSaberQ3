@@ -468,7 +468,28 @@ static func expand_box_group_colors(map_data: Dictionary, lightshow_data: Dictio
 			for ev in Utils.get_array(box as Dictionary, "e", []):
 				if not (ev is Dictionary):
 					continue
+				var beat := group_beat + Utils.get_float(ev as Dictionary, "b", 0.0)
+				var brightness := Utils.get_float(ev as Dictionary, "s", 1.0)
 				var color: Variant = (ev as Dictionary).get("c", null)
+				# v3/v4 use a colour index: 0 = left/red, 1 = right/blue, 2 = white. Brightness 0
+				# is "off". Brightness > 0 is treated as on (no strobe modelling yet).
+				if color is float or color is int:
+					var value := 1
+					if brightness <= 0.0:
+						value = 0
+					else:
+						match int(color):
+							0: value = 5
+							1: value = 1
+							_: value = 9
+					events.append({
+						"b": beat,
+						"et": g,
+						"i": value,
+						"f": brightness,
+					})
+					continue
+				# Older/custom payloads may carry a literal RGB colour.
 				var color_dict := {}
 				if color is Array and (color as Array).size() >= 3:
 					color_dict = {"r": float((color as Array)[0]), "g": float((color as Array)[1]),
@@ -478,10 +499,10 @@ static func expand_box_group_colors(map_data: Dictionary, lightshow_data: Dictio
 				if color_dict.is_empty():
 					continue
 				events.append({
-					"b": group_beat + Utils.get_float(ev as Dictionary, "b", 0.0),
+					"b": beat,
 					"et": g,
-					"i": 1,
-					"f": 1.0,
+					"i": 0 if brightness <= 0.0 else 1,
+					"f": brightness,
 					"customData": {"color": color_dict},
 				})
 	map_data["basicBeatmapEvents"] = events

@@ -79,18 +79,23 @@ static func new_v3(obstacle_dict: Dictionary) -> ObstacleInfo:
 
 ## Noodle static transform keys, shared by v2/v3 (underscored and modern names).
 static func _read_custom_transform(obstacle: ObstacleInfo, cd: Dictionary) -> void:
-	var pos = cd.get("_position", cd.get("position", null))
+	var pos = cd.get("coordinates", cd.get("_position", cd.get("position", null)))
 	if pos is Array and pos.size() >= 2:
 		obstacle.has_custom_position = true
 		obstacle.custom_position = Vector2(float(pos[0]), float(pos[1]))
-	var rot = cd.get("_rotation", cd.get("rotation", null))
+	elif pos is Dictionary:
+		obstacle.has_custom_position = true
+		obstacle.custom_position = Vector2(float(pos.get("x", 0.0)), float(pos.get("y", 0.0)))
+	var rot = cd.get("localRotation", cd.get("_localRotation", cd.get("_rotation", cd.get("rotation", null))))
 	if rot is Array and rot.size() >= 3:
 		obstacle.has_custom_rotation = true
 		obstacle.custom_euler = Vector3(float(rot[0]), float(rot[1]), float(rot[2]))
-	var scl = cd.get("_scale", cd.get("scale", null))
+	var scl = cd.get("size", cd.get("_scale", cd.get("scale", null)))
 	if scl is Array and scl.size() >= 3:
 		obstacle.has_custom_scale = true
 		obstacle.custom_scale = Vector3(float(scl[0]), float(scl[1]), float(scl[2]))
 	elif scl is float or scl is int:
 		obstacle.has_custom_scale = true
 		obstacle.custom_scale = Vector3.ONE * float(scl)
+
+

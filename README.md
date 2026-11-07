@@ -37,7 +37,8 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
   `_rotation` and `_scale`, so placed and scaled objects land where the mapper put them. Animation
   tracks (`_animation`, `AnimateTrack`) and player/camera tracks remain.
 - **v4/v3 box-group colours.** `lightColorEventBoxGroups` are converted to the room's basic light
-  events (group colour at the event beat; filters and distributions are not applied).
+  events: group colour (`c`) and brightness (`s`) at the event beat. Transitions, strobe, filters,
+  distributions and groups above id 4 are not modelled.
 - **Audio survives idle.** On resume the game re-seats the music stream and pokes the mixer, so a
   suspended app does not come back silent.
 - **Above/below hit cue.** Hits are routed through an EQ bus (bright highs above, warm lows below)
@@ -231,8 +232,11 @@ Versions, commands and known gaps: [UPSTREAM.md](UPSTREAM.md).
 
 - **Above/below uses a spectral elevation cue** (EQ bus + small pitch), not convolution HRTF.
 - **Quest 3 speakers roll off below ~150-200 Hz**, so hit weight sits at 200-800 Hz.
-- **v4 per-object rotation** and VFX event boxes are not read; v2/v3 360/90 lanes and basic
-  box-group colours are supported.
+- **Noodle transforms are static** (position, rotation, scale); animation and player tracks are not
+  played.
+- **v4 per-object rotation** and VFX event boxes are not read. v2/v3 360/90 lanes and box-group
+  colour/brightness are supported; box groups ignore transitions, filters, distributions and
+  groups above id 4.
 - The white highlights at chain joints are cosmetic.
 
 ## Credits and license

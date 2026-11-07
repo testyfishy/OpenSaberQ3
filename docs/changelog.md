@@ -7,8 +7,10 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
 ## v0.7.3 - 2026-11-07
 
 **Noodle static transforms, box-group colours, audio recovery.** Notes and walls honour Noodle
-`_position`/`_rotation`/`_scale`; v3/v4 light colour box groups are converted to the room's basic
-lights (group colour at the beat, filters/distributions ignored). On app resume the music stream is
+`_position`/`_rotation`/`_scale` and the v3 `coordinates`/`localRotation`/`size` spellings; pooled
+objects reset their transform, so a Noodle note cannot leak into a vanilla one. v3/v4 light colour
+box groups are converted to the room's basic lights (colour and brightness at the beat; transitions,
+filters, distributions and groups above id 4 are not modelled). On app resume the music stream is
 re-seated and the mixer poked, so a suspended headset does not return silent. Hit sounds get an
 above/below spectral cue (EQ bus + small pitch), not convolution HRTF. Noodle animation tracks and
 custom Chroma environment objects remain.

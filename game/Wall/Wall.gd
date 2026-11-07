@@ -114,7 +114,9 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 		transform.origin.x += wall_info.custom_position.x
 		transform.origin.y += wall_info.custom_position.y
 	if wall_info.has_custom_rotation:
-		rotation_degrees += wall_info.custom_euler
+		rotation_degrees = wall_info.custom_euler
+	else:
+		rotation_degrees = Vector3.ZERO
 	
 	speed = NoteMotion.speed_at(wall_info.beat)
 	# specs/029: the depth-based grow sets the initial height from the spawn z.
@@ -166,7 +168,3 @@ func _update_inside_fade() -> void:
 		var mesh := _wall_mesh()
 		if mesh != null:
 			mesh.set_instance_shader_parameter(&"fade", _fade)
-
-
-
-

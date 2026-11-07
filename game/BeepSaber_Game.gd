@@ -716,14 +716,19 @@ func _on_PlayerHead_area_exited(area: Area3D) -> void:
 # the high score
 # Headset idle can suspend the app and leave the audio session dead. On resume, re-seat the music
 # stream and poke the mixer; if the headset's system audio is still dead, a reboot is the only fix.
+var _audio_recovering := false
+
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_RESUMED or what == NOTIFICATION_APPLICATION_FOCUS_IN \
-			or what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
+	if what == NOTIFICATION_APPLICATION_RESUMED:
 		_recover_audio_after_idle()
 
 func _recover_audio_after_idle() -> void:
+	if _audio_recovering:
+		return
+	_audio_recovering = true
 	await get_tree().process_frame
-	if song_player == null:
+	if song_player == null or get_tree().paused or song_player.stream_paused:
+		_audio_recovering = false
 		return
 	var was_playing := song_player.playing
 	var resume_at := song_player.get_playback_position()
@@ -740,6 +745,7 @@ func _recover_audio_after_idle() -> void:
 		await get_tree().create_timer(0.08).timeout
 		AudioServer.set_bus_mute(master, false)
 	vr.log_info("AUDIO recovered after resume (was_playing=%s)" % str(was_playing))
+	_audio_recovering = false
 
 func _on_song_ended() -> void:
 	song_player.stop()

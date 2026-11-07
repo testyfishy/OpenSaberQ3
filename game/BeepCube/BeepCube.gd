@@ -63,6 +63,9 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	# can behave weirdly (ex. AnimationPlayer won't always play correctly)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	blade_min_dist = INF
+	# Pooled notes keep the last Noodle rotation/scale unless every spawn starts clean.
+	rotation = Vector3.ZERO
+	scale = Vector3.ONE
 	
 	var color := MapPalette.color_left if note_info.color == 0 else MapPalette.color_right
 	# FR-004: a colour the map puts on this one note wins over the scheme, which in turn
@@ -265,6 +268,7 @@ func _start_cut_pieces(cutplane: Plane, _cut_speed: Vector3) -> void:
 	# written as instance records and the vertex shader does the flight (no node, no physics).
 	if DebrisField.instance != null:
 		DebrisField.instance.emit_burst(global_transform.origin, cutplane.normal, _cut_speed, _cut_color)
+
 
 
 

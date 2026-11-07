@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: 0.7.3 ships Noodle static transforms, box-group colours and the audio fixes; Noodle animation and custom Chroma environments remain
+**Status**: 0.7.3 ships Noodle static transforms, box-group colours and the audio fixes; Noodle animation and custom Chroma environments remain. In-VR checks (Noodle placement, box colours, resume-from-idle, above/below cue) are pending.
 
 **Input**: Owner, after the BeatSaver feature review: "Fix 360/90 and lightshow/box groups on v7.
 Resolve Mapping Extensions precision, Noodle position/rotation/scale/animation/speed, Chroma events
@@ -203,10 +203,25 @@ bundle; otherwise they load with a Visuals-limited badge.
 - Zero-size ME walls clamp to 1 cm in the mesh and collision box.
 - Regression: SETTINGSTEST, VERIFYSCHEMA 56, library/arc/ME probes pass.
 
+## Verification evidence (0.7.3)
+
+- `noodle_box_probe`: v2 `_position`/`_rotation`/`_scale` → pos 1.50/2.50, Euler (0, 90, 0),
+  scale 1.5; wall pos 0.50/1.00, scale (2, 1, 1). v3 `coordinates`/`localRotation`/`size`
+  (including `{x, y}` position and scalar size) → pos -0.50/3.25, rot z 45, scale 2.0; wall
+  pos 1.00/0.00, scale (1, 2, 1).
+- Box groups: index `c` 0/1 with `s=1` → basic `i` 5/1 at the group beat; `s=0` → `i` 0, `f` 0;
+  literal RGB payload → `customData.color` with `f` from `s`; group 3 → `et` 3.
+- Pool reuse: notes reset rotation/scale at spawn; walls assign rotation (or zero), so a Noodle
+  object cannot leak its transform into a later vanilla object.
+- Parse clean; LANEPROBE, MEPROBE, SETTINGSTEST, VERIFYSCHEMA 56 pass.
+- Pending on headset: Noodle placement/rotation, box-group colours, resume-from-idle audio,
+  above/below audibility.
+
 ## Consultation Log
 
 | Gate | Question | Verdict | Follow-up |
 |------|----------|---------|-----------|
+| G4 (0.7.3) | Noodle static, box groups, audio resume/elevation review | **CHANGES** then **PASS** | First pass found pooled-note/wall rotation leakage, box-group `c` read as RGB instead of an index and no brightness, and an unguarded resume handler; fixed all three, added v3 key aliases (`coordinates`/`localRotation`/`size`), probe now covers both key spellings plus index colours and `s=0`. Re-review PASS with in-VR checks pending; LOW follow-ups for 0.7.4: box-group transition `i=1`/extend `i=2`, cut angle against Noodle x/y rotation, group id→light type mapping. |
 | G4 (0.7.2) | 360/90 rotation review | **CHANGES** | Replaced the track-wide yaw with per-beat lane nodes (in-flight objects keep their rotation); probe now checks the shipped lane path; v3 basic events 14/15 added; v4 per-object rotation recorded as unsupported. |
 | G4 (0.7.1) | ME precision release review | **CHANGES** | Fixed the 4001+ wall height (same 5-layer scale, start 4x/50 per layer); clamped zero-size ME walls to 1 cm; cut sign confirmed. 360/Noodle/Chroma recorded as 0.7.2. |
 | G0 | Is the 0.7 scope (all listed features, open-source only) and the tier/harness order right? | **GO WITH CHANGES** | Adopted: FR-005 precision details (cut angle, wall encodings, no clamping), FR-006 rotation specifics (v2 types 14/15, v3 `e`, v4 `r`, environment/track), FR-009b animation keys and one-shot track resolution, FR-010 Chroma environment JSON, FR-010b player-track as gameplay, FR-015 pinned corpus (no maps committed), FR-016 one shared per-object transform; bundle work is a spike defaulting to Visuals limited; fixed the tier wording and the public matrix rows. |

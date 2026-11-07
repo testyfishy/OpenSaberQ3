@@ -36,12 +36,12 @@ merely suggests one is Supported with a warning.
 | Notes, bombs, walls, arcs, chains, BPM changes | Supported |
 | Fake notes / fake walls | Filtered as decorative, not scored |
 | Chroma per-note colour | Supported |
-| Noodle position/rotation/scale (static) | **Supported** (0.7.3); animation not yet |
+| Noodle position/rotation/scale (static) | **Partial** (0.7.3): static transforms only; no animation, tracks or world rotation |
 | Mapping Extensions precision (positions, cut angles, wall widths/heights) | **Supported** (0.7.1) |
 | 90° / 360° rotation events | **Supported** (0.7.2, per-beat lanes; v4 per-object `r` not yet) |
 | Noodle animation tracks, per-object speed/offset | **Not yet** |
 | Chroma per-event colours | **Supported**; Chroma environment objects not yet |
-| v4/v3 box-group colours | **Basic** (group colour at the beat) |
+| v4/v3 box-group lighting | **Partial**: colour and brightness only; no transitions, strobe, filters, distributions, rotation/translation boxes or VFX. Groups are mapped to basic light types by id, so ids above 4 are dropped. |
 | Vivify (Unity asset bundles) | **Not yet**; maps load as Visuals limited |
 | Cinema (background video) | **Not yet** |
 | Heck scripts | **Not yet** (needs a mod host) |
