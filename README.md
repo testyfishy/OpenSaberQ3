@@ -86,6 +86,33 @@ The in-VR library filtered to BeatSaver, with source tags and the map details pa
 **Next, 0.6.5:** BeastSaber single-map search and playlist covers. The `beastsaber` tag is already in the
 schema.
 
+## Map compatibility
+
+OpenSaber aims to play every BeatSaver map's gameplay faithfully: notes, bombs, walls, arcs,
+chains, timing, and the Mapping Extensions, Noodle placement and 360° layouts that change where you
+play. Each map shows a compatibility badge (Supported, Partial or Visuals limited), generated from
+the map's own declared requirements, and we publish a measured compatibility rate across BeatSaver.
+Effects packaged as Unity asset bundles (Vivify, custom environments) are not supported; those maps
+still load and play their notes.
+
+- **Supported**: loads, and every scorable note and wall is at the right time and place.
+- **Partial**: loads and plays, but a gameplay feature is missing (for example 360° rotation or
+  Noodle note movement). The pause menu names what is missing.
+- **Visuals limited**: gameplay is correct; lighting, environment or bundled effects are skipped.
+
+**Where 0.6.4 stands:** v2/v3/v4 maps, notes, bombs, walls, arcs, chains, BPM changes, Chroma
+per-note colours, basic light events, and Noodle `_coordinates` note placement (partial). Not yet:
+Mapping Extensions precision, 90°/360° rotation, Noodle rotation/scale/animation, Chroma light
+events, v4 box-group lighting, and Unity asset-bundle effects.
+
+**v0.7 target:** close the gameplay gaps — Mapping Extensions precision, 90°/360° lane rotation,
+Noodle static transforms and animation, per-object note speed/offset, Chroma events, v4 box-group
+lighting — and add the measured corpus report. Unity asset bundles are pursued only where an
+open-source parser is practical; otherwise the map still loads with a Visuals-limited badge.
+Nothing closed-source is required.
+
+[Map compatibility policy and measurement](docs/map-compatibility.md)
+
 ## Performance
 
 | | |
