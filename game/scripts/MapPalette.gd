@@ -54,7 +54,9 @@ static func set_colors_from_custom_data(info: MapInfo, difficulty: DifficultyInf
 	env_right = Settings.color_right if classic else profile.env_right
 	env_left_boost = Settings.color_left if classic else profile.boost_left
 	env_right_boost = Settings.color_right if classic else profile.boost_right
-	wall_color = EnvironmentProfiles.DEFAULT.wall if classic else profile.wall
+	# Walls stay the classic red unless the map authors an obstacle colour: the per-environment
+	# tints (green, purple) read as black over a dark room and the owner asked for the red look.
+	wall_color = EnvironmentProfiles.DEFAULT.wall
 	if Settings.disable_map_color:
 		return
 

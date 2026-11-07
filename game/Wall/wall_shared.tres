@@ -49,7 +49,7 @@ void fragment() {
 
 	// Vertical gradient: brighter at the top, so the panel reads as a lit surface.
 	float up = clamp(p.y / max(half_size.y, 0.001) * 0.5 + 0.5, 0.0, 1.0);
-	float body = mix(0.72, 0.95, up);
+	float body = mix(0.80, 1.00, up);
 
 	// The bottom edge is a little brighter, which gives a contact cue where the wall meets the
 	// floor without a separate decal.
@@ -60,7 +60,7 @@ void fragment() {
 	// No near fade: it punched transparent patches into a wall beside the player, which is what
 	// made the fill look half-painted as the head moved. The inside-wall dim uses `fade`.
 	ALBEDO = col * fade;
-	ALPHA = clamp(fade * (0.75 + 0.25 * rim_mask), 0.0, 1.0);
+	ALPHA = clamp(fade * (0.55 + 0.45 * rim_mask), 0.0, 1.0);
 }
 "
 

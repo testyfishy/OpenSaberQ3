@@ -83,7 +83,7 @@ const COUNTER_STRIDE := 4
 const SPIKE_USEC := 12000
 const MAX_SPIKE_WINDOWS := 200
 
-const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,cubes_in_use,links_in_use,debris_live,slice_bursts,process_usec,physics_usec,phys_ticks,swing_usec,cuttable_usec,floor_ray_usec,spawn_usec,shape_reenable,notes_live,cuts_this_frame,labels_spawned,objs_spawned,objs_freed,arcs_spawned,text_mesh_writes,track_children,static_mem,pipeline_compiles_total"
+const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,cubes_in_use,links_in_use,debris_live,slice_bursts,process_usec,physics_usec,phys_ticks,swing_usec,cuttable_usec,floor_ray_usec,spawn_usec,shape_reenable,notes_live,cuts_this_frame,labels_spawned,objs_spawned,objs_freed,arcs_spawned,text_mesh_writes,track_children,static_mem,pipeline_compiles_total,draw_calls,objects_in_frame,render_cpu_usec,render_gpu_usec"
 
 # Per-path self-time instrumentation (FR-033). A total physics time is not an
 # attribution: `physics_usec` is the whole tick, so the columns below split it
@@ -145,6 +145,12 @@ var _col_tm := PackedInt32Array()
 var _col_track := PackedInt32Array()
 var _col_mem := PackedInt64Array()
 var _col_pipe := PackedInt64Array()
+# 0.7.6 A/B columns: draw calls and the renderer's own CPU/GPU time, so a note-batching
+# experiment can be judged against the real bottleneck instead of guessed at.
+var _col_drawcalls := PackedInt32Array()
+var _col_objects := PackedInt32Array()
+var _col_rcpu := PackedInt64Array()
+var _col_rgpu := PackedInt64Array()
 
 # Rows whose process time is over SPIKE_USEC, waiting for their following frame so
 # spike-1/spike/spike+1 can all be printed. Empty on a normal run: the per-frame
@@ -814,6 +820,8 @@ func _start_recording() -> void:
 			_meta["physics_ticks_settled"] = str(Engine.physics_ticks_per_second)
 			vr.log_info("BENCH: physics pinned to requested %.1f Hz (read-back at start was %.1f)" % [target_hz, settled])
 	_recording = true
+	# Renderer timings: CPU/GPU split for the batching A/B. Cheap once enabled on the viewport.
+	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 	if GlobalReferences.hit_audio != null:
 		GlobalReferences.hit_audio.call("begin_probe")
 	var probe_s := float(_bench_cfg.get_value("bench", "audio_probe", 0.0)) if _bench_cfg != null else 0.0
@@ -905,6 +913,11 @@ func _process(delta: float) -> void:
 	if _ticks.size() % COUNTER_STRIDE == 1:
 		_sample_counters()
 	_col_cubes.append(_last_cubes)
+	_col_drawcalls.append(int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
+	_col_objects.append(int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)))
+	var vp_rid := get_viewport().get_viewport_rid()
+	_col_rcpu.append(int(RenderingServer.viewport_get_measured_render_time_cpu(vp_rid) * 1000000.0))
+	_col_rgpu.append(int(RenderingServer.viewport_get_measured_render_time_gpu(vp_rid) * 1000000.0))
 	if GlobalReferences.wall_pool != null:
 		var in_use: int = GlobalReferences.wall_pool.total_count() - GlobalReferences.wall_pool.free_count()
 		_wall_pool_peak = maxi(_wall_pool_peak, in_use)
@@ -1105,6 +1118,9 @@ func _finish(reason: String, quit_after: bool = true) -> void:
 	_meta["debris_peak"] = str(_peak_of(_col_debris))
 	_meta["slice_bursts_total"] = str(_bursts_total)
 	_meta["cubes_peak"] = str(_peak_of(_col_cubes))
+	_meta["draw_calls_p95"] = str(_p95_of(_col_drawcalls))
+	_meta["render_cpu_p95_usec"] = str(_p95_of(_col_rcpu))
+	_meta["render_gpu_p95_usec"] = str(_p95_of(_col_rgpu))
 	_meta["wall_pool_peak"] = str(_wall_pool_peak)
 	_meta["wall_pool_total"] = str(GlobalReferences.wall_pool.total_count()) if GlobalReferences.wall_pool != null else "0"
 	if _song_player != null:
@@ -1176,7 +1192,7 @@ func _write_csv() -> void:
 	rows.resize(_ticks.size() + 1)
 	rows[0] = CSV_HEADER
 	for i in _ticks.size():
-		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
+		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
 			i, _ticks[i], _deltas[i], _proc_deltas[i],
 			_song_pos[i], _drawn[i], _focus_col[i],
 			_col_cubes[i], _col_links[i], _col_debris[i], _col_bursts[i],
@@ -1184,7 +1200,8 @@ func _write_csv() -> void:
 			_phys_ticks[i], _swing_usec[i], _cuttable_usec[i], _floor_usec[i],
 			_spawn_usec[i], _reenable[i], _notes_live[i],
 			_col_cuts[i], _col_labels[i], _col_objs[i], _col_objs_freed[i],
-			_col_arcs[i], _col_tm[i], _col_track[i], _col_mem[i], _col_pipe[i]]
+			_col_arcs[i], _col_tm[i], _col_track[i], _col_mem[i], _col_pipe[i],
+			_col_drawcalls[i], _col_objects[i], _col_rcpu[i], _col_rgpu[i]]
 	f.store_string("\n".join(rows) + "\n")
 	f.close()
 	vr.log_info("BENCH: csv=%s" % path)
@@ -1238,6 +1255,13 @@ func _peak_of(values: PackedInt32Array) -> int:
 		if v > peak:
 			peak = v
 	return peak
+
+func _p95_of(values: PackedInt64Array) -> int:
+	if values.is_empty():
+		return 0
+	var copy := values.duplicate()
+	copy.sort()
+	return copy[clampi(int(copy.size() * 0.95), 0, copy.size() - 1)]
 
 const VRSlider := preload("res://game/vr_slider.gd")
 
