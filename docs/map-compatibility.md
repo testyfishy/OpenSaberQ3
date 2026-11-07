@@ -28,7 +28,7 @@ The badge is computed from:
 A map that requires an unimplemented feature is Partial even if it happens to load; a map that
 merely suggests one is Supported with a warning.
 
-## Support matrix (0.7.5)
+## Support matrix (0.7.6)
 
 | Feature | State |
 |---|---|
@@ -62,7 +62,7 @@ Visuals-limited counts beside it. Only the harness result counts; hand-picked ex
 
 **Shipped:** Cards/depth-grow 0.7.0, ME precision 0.7.1, 360/90 lanes 0.7.2, Noodle static
 transforms and box-group colours 0.7.3, box-group fades/extends and group-id folding 0.7.4, wall
-grow/rim and lightshow performance 0.7.5. Noodle animation and custom Chroma environment objects
+grow/rim and lightshow performance 0.7.5, filled walls 0.7.6. Noodle animation and custom Chroma environment objects
 remain.
 
 1. Corpus harness and classifier; publish the measured rate.

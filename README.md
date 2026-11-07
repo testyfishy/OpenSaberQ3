@@ -11,13 +11,13 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ![OpenSaberQ3](docs/images/banner.png)
 
-**v0.7.5** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
+**v0.7.6** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
 [install](#download-and-install). Built on BeepSaber and its lineage
 ([credits](ATTRIBUTION.md), [pinned upstream](UPSTREAM.md)).
 
 ## Since the fork
 
-| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.7.5 |
+| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.7.6 |
 |---|---|---|
 | **Engine** | Godot 4.3; 72 Hz, 60 Hz physics | **Godot 4.6.3**, 120 Hz with physics matched to the display, Performance / Balanced / Quality presets ([perf](docs/performance.md)) |
 | **Maps** | v2 | **v2, v3 and v4**, including the hybrid BeatSaver serves and v4's split beatmap/lightshow ([43-map audit](docs/map-data-audit.md)) |
@@ -30,6 +30,13 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 | **Measurement** | none | Bot and **human-play** captures, p99/max/spike metrics, release/rollback artifacts ([PERF.md](PERF.md)) |
 
 ## What's new
+
+### v0.7.6
+
+- **Solid walls.** The wall panel is now filled and 85% opaque instead of a faint additive tint,
+  so the room no longer shows through it and the fill stops flickering as the background moves.
+  The near-camera transparent patch is gone, and both faces draw so a wall stays visible while the
+  camera crosses it.
 
 ### v0.7.5
 
@@ -219,12 +226,12 @@ The latest signed APK is on the [releases page](https://github.com/testyfishy/Op
 Enable **Developer mode** on the headset, then sideload with SideQuest or run:
 
 ```sh
-adb install -r OpenSaberQ3-0.7.5.apk
+adb install -r OpenSaberQ3-0.7.6.apk
 ```
 
 Launch **Open Saber Q3** from *Unknown Sources*. Installs alongside upstream BeepSaber; songs and
 scores stay separate. Upgrading over 0.5.x keeps maps, scores and settings. Builds are test-signed,
-not store builds. The 0.7.5 APK carries the new icon and menu logo. Screenshots are in
+not store builds. The 0.7.6 APK carries the new icon and menu logo. Screenshots are in
 `/sdcard/Android/data/io.github.testyfishy.opensaberq3/files/screenshots/`:
 
 ```sh

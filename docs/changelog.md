@@ -4,6 +4,16 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.6 - 2026-11-07
+
+**Filled walls.** The wall shader is alpha-blended at 85% with a solid body instead of a faint
+additive tint; the room no longer shows through the panel and the fill stops flickering as the
+background moves. The near-camera transparent patch is removed and both faces are drawn, so a wall
+does not disappear while the camera crosses it. The v0.6 rim is unchanged.
+
+[Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.7.6-q3) -
+[Spec](../specs/027-v07-map-compat/spec.md)
+
 ## v0.7.5 - 2026-11-07
 
 **Wall growth and rim, cheaper lightshows, arc head position.** Walls now keep their bottom edge on
