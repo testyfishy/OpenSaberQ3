@@ -75,4 +75,6 @@ mapper's; the engine only reads the formats.
 
 - Quest Beat Saber can play Noodle/Chroma/Mapping Extensions through community mods (BMBF,
   QuestPatcher), and Vivify has Android bundle variants. This project does not claim otherwise.
+- The DITR8 BeastSaber set (21 maps, 2026-11) was scanned: 18 are vanilla; `Starlight` uses 360 rotation + Noodle animation; `Three Steps Ahead` uses Noodle position + v4 box groups. No Mapping Extensions, asset bundles or Chroma events. The 0.7 work already covers those three features.
 - A map that loads but requires an unimplemented feature is reported, never silently half-played.
+

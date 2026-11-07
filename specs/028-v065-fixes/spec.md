@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: Draft (G0 pending)
+**Status**: In progress - walls and arcs fixed in code; BeatLeader tab and close-cut diagnostics next; no build installed
 
 **Input**: Owner, after playing 0.6.4: "The BeatLeader on the left overlaps the high-score UI; integrate
 it into the high-score design. BeastSaber saves playlists but the local library has no playlist/folder
