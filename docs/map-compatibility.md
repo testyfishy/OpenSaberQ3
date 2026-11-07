@@ -28,7 +28,7 @@ The badge is computed from:
 A map that requires an unimplemented feature is Partial even if it happens to load; a map that
 merely suggests one is Supported with a warning.
 
-## Support matrix (0.7.4)
+## Support matrix (0.7.5)
 
 | Feature | State |
 |---|---|
@@ -41,7 +41,7 @@ merely suggests one is Supported with a warning.
 | 90° / 360° rotation events | **Supported** (0.7.2, per-beat lanes; v4 per-object `r` not yet) |
 | Noodle animation tracks, per-object speed/offset | **Not yet** |
 | Chroma per-event colours | **Supported**; Chroma environment objects not yet |
-| v4/v3 box-group lighting | **Partial**: colour, brightness and transition (fade) at the event beat; extend events hold the previous one. No strobe, filters, distributions, rotation/translation boxes, fade-to-black or VFX. Group ids are environment-defined and folded modulo 5 onto the room's lights. |
+| v4/v3 box-group lighting | **Partial**: colour, brightness and transition (fade) at the event beat; extend events hold the previous one. No strobe, filters, distributions, rotation/translation boxes, fade-to-black or VFX. Group ids are environment-defined and folded modulo 5 onto the room's lights; when two folded groups land on the same beat and type, the on event wins. |
 | Vivify (Unity asset bundles) | **Not yet**; maps load as Visuals limited |
 | Cinema (background video) | **Not yet** |
 | Heck scripts | **Not yet** (needs a mod host) |
@@ -61,8 +61,9 @@ Visuals-limited counts beside it. Only the harness result counts; hand-picked ex
 ## Roadmap for 0.7 (goals, not release promises)
 
 **Shipped:** Cards/depth-grow 0.7.0, ME precision 0.7.1, 360/90 lanes 0.7.2, Noodle static
-transforms and box-group colours 0.7.3, box-group fades/extends and group-id folding 0.7.4. Noodle
-animation and custom Chroma environment objects remain.
+transforms and box-group colours 0.7.3, box-group fades/extends and group-id folding 0.7.4, wall
+grow/rim and lightshow performance 0.7.5. Noodle animation and custom Chroma environment objects
+remain.
 
 1. Corpus harness and classifier; publish the measured rate.
 2. Fix silent corruption: Mapping Extensions precision, enforce `_requirements` badges, apply

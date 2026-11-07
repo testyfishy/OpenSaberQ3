@@ -34,6 +34,7 @@ static var right_material_magnet := right_material.duplicate() as ShaderMaterial
 # Move the far fade well beyond the spawn distance and switch the tip fade off; the magnet fade is
 # independent and stays.
 static var _fades_configured := false
+static var _arc_probe_logged := 0
 
 static func _configure_fades() -> void:
 	if _fades_configured:
@@ -87,6 +88,20 @@ func spawn(info: ArcInfo, current_beat: float, _activator_cube: BeepCube = null)
 		Constants.LANE_DISTANCE * float(info.head_line_layer) + Constants.LAYER_ZERO_Y,
 		-(info.head_beat - current_beat) * Constants.BEAT_DISTANCE
 	)
+	# specs/027 FR-021 (0.7.5): use the spawned head note's own position when it exists. The lane
+	# formula and the note must place the head at the same point; Noodle position, precision lanes
+	# or a different motion reference would otherwise leave the ribbon floating off the cube.
+	if activator_cube != null and activator_cube.is_inside_tree():
+		var lane := activator_cube.get_parent()
+		if lane == null or not String(lane.name).begins_with("Lane"):
+			lane = null
+		var cube_pos := activator_cube.position
+		if lane != null and cube_pos.distance_to(head_pos) > 0.01:
+			if _arc_probe_logged < 10:
+				_arc_probe_logged += 1
+				vr.log_info("ARC head off by %.3f m (note %s, lane %s)" % [
+					cube_pos.distance_to(head_pos), str(cube_pos), str(head_pos)])
+			head_pos = cube_pos
 	var tail_pos := Vector3(
 		Constants.LANE_DISTANCE * float(info.tail_line_index) + Constants.LANE_ZERO_X,
 		Constants.LANE_DISTANCE * float(info.tail_line_layer) + Constants.LAYER_ZERO_Y,

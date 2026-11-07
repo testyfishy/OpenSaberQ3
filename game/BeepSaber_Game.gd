@@ -329,11 +329,11 @@ func _ready() -> void:
 	bomb_warm.queue_free()
 	wall_warm.queue_free()
 
-	# Deterministic benchmark mode. The runner (and the bot) are excluded from release builds, so
-	# the script is loaded at runtime and only off a release build. See FR-004 in specs/013.
-	if not OS.has_feature("release"):
-		var runner: Script = load("res://game/scripts/BenchmarkRunner.gd")
-		if runner != null:
+	# Deterministic benchmark mode. The runner is normally debug-only; a sideloaded flag opts a
+	# release build in, so a device run can be measured without shipping a debug APK (0.7.5).
+	var runner: Script = load("res://game/scripts/BenchmarkRunner.gd")
+	if runner != null:
+		if not OS.has_feature("release") or bool(runner.call("has_bench_flag")):
 			var instance: Node = runner.call("new", self)
 			if instance != null and bool(instance.call("is_flagged")):
 				add_child(instance)

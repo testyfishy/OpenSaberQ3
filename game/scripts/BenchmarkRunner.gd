@@ -11,7 +11,8 @@
 #        (Godot "debug") APK. This is the primary location.
 #   2. <external data dir>/bench.flag, on Android
 #        /sdcard/Android/data/<package>/files/bench.flag
-#        works on every APK, no storage permission required.
+#        works on every APK, no storage permission required. Since 0.7.5 a release build also
+#        honours this flag, so a sideloaded benchmark run does not need a debug APK.
 #
 #   [bench]
 #   map = "ODDS"              ; required. case-insensitive substring of song_name or filepath

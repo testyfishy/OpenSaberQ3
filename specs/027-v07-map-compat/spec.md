@@ -267,11 +267,65 @@ angle, and the old Euler-z result differs.
   rotation are supported, so they no longer warn).
 - Parse clean; LANEPROBE, MEPROBE, SETTINGSTEST, VERIFYSCHEMA 56 pass.
 
+## Scoped change: 0.7.5 wall growth, lightshow cost and arc head
+
+**Symptom** (owner, after playing Hand in Hand on 0.7.4)
+1. Walls read as flat, broken barriers and grow out of their middle; the V5/V6-early look is gone.
+2. Arcs are colour-matched but often look detached from the note at one end.
+3. Frame-time drops in parts of the lightshow.
+
+**Root cause**
+1. `Wall._apply_grow` scales `WallMeshOrientation` about the wall centre (bottom lifts, top drops),
+   and 0.6.5 removed the v0.6 rim from the shader.
+2. `Arc.spawn` builds the head from the map's lane fields; the spawned head cube is only used for
+   the magnet. The two are normally equal, but Noodle position or a differing motion reference
+   separates them, and the mismatch was never measured.
+3. Hand in Hand carries 4,593 light-colour box groups / 27,669 events per difficulty for 12 group
+   ids; 0.7.4 converted every one to a basic event and `EventDriver` allocated a Tween per `i=1`
+   transition.
+
+**Blast radius**
+`game/Wall/Wall.gd`, `game/Wall/wall_shared.tres`, `game/scripts/MapData.gd`,
+`game/event_driver.gd`, `game/Arc/Arc.gd`, `game/BeepSaber_Game.gd`,
+`game/scripts/BenchmarkRunner.gd`, the probe, version/docs. No map, sidecar or score data is
+written.
+
+- **FR-020**: A wall MUST grow with its bottom edge pinned to the floor and its collision box full
+  size at the wall centre. Ordinary walls (integral grid fields, no Noodle/ME transform) MUST show
+  the v0.6 rim; Noodle/ME/off-grid walls MUST keep the flat panel so wall art does not stripe.
+- **FR-021**: Box-group events MUST be merged per 1/32 beat and light type (last wins) and a
+  repeated value for a type MUST be dropped, before they enter the event stack.
+- **FR-022**: Light fades MUST NOT allocate a Tween per event. Each light type keeps one
+  interpolation state stepped once per frame.
+- **FR-023**: An arc MUST take its head position from the spawned head cube when one exists, and
+  log the first ten mismatches against the lane calculation.
+
+**SC-009**: The wall probe pins the bottom at `-size.y/2` at full and partial growth, keeps the
+collision scale at 1 and shows rim 1 for a vanilla wall / 0 for a Noodle wall.
+**SC-010**: Hand in Hand ExpertPlus drops from 27,669 authored box events to 8,022 merged events
+(after repeats), and a synthetic same-beat case merges to one event.
+**SC-011**: Parse, NOODLEPROBE, WALLPROBE, SUPPORTTEST, LANEPROBE, MEPROBE, SETTINGSTEST and
+VERIFYSCHEMA still pass.
+
+## Verification evidence (0.7.5)
+
+- `WALLPROBE`: full wall scale (0.6, 3.0, 4.0), `pos_y` 0, bottom -1.5, collision scale 1, rim 1;
+  at `z=-14` scale (0.6, 1.65, 4.0), `pos_y` -0.68, bottom still -1.5; a Noodle-scaled wall has
+  rim 0.
+- `NOODLEPROBE`: two events on beat 5 plus one on 5.01 merge to the 5.01 white event; a repeated
+  red on 6.0 survives, the same red on 7.0 is dropped; box/cut probes unchanged.
+- Hand in Hand (all five difficulties): 27,669 authored box events -> 19,228 unique keys ->
+  8,022 emitted events after the repeat rule (71% fewer). At 312 s that is ~26 events/s.
+- Parse clean; the desktop renderer compiles the new wall shader (only shutdown leak messages).
+- Pending on the headset: wall rim/grow, arc attachment, lightshow smoothness.
+
 ## Consultation Log
 
 | Gate | Question | Verdict | Follow-up |
 |------|----------|---------|-----------|
 | G1 (0.7.4) | Plan for box `i` transition/extend, group-id fold and local cut angle | **PASS WITH CHANGES** | Keep `g % 5` fold but drop malformed ids and log folds; `i=1` → 4/8/12 with the one-gap lag and `s=0` instant-off noted; cut angle from the global basis via `orthonormalized().transposed()` with degenerate/near-z fallback; probe adds non-uniform/degenerate scale, tilt-diff, extend and group-7 cases; `active-spec` moved to 027. |
+| G4 (0.7.5) | Wall growth/rim, lightshow cost, arc head, release benchmark | **PASS (conditional)** | Fade tint is written once per fade and published as the start colour; dedup resets after a literal RGB; same-slot conflicts keep the on event; arc head uses the cube only inside a lane node and logs mismatches; flash-on/fade-from-current are linear again. Tag only if the device benchmark on Hand in Hand holds the target frame rate with no regression; in-VR checks pending. |
+| G1 (0.7.5) | Wall growth/rim, arc head, lightshow cost | **PASS WITH CHANGES** | Pin the wall bottom and drop the area counter-scale; rim on vanilla walls only (all edges) via a per-wall uniform; do not skip/extend arcs, use the head cube position; replace per-event Tweens with one interpolation state per type, merge at 1/32 beat; allow `bench.flag` in release builds. |
 | G4 (0.7.4) | Box-group i/s semantics, g%5 fold, basis-local cut angle, stale unsupported test | **PASS** | Tag after the APK SHA is recorded; in-VR checks of the cut split on tilted notes and box-group fades pending. Later: ChainLink measures cut distance from the local origin while BeepCube uses global. |
 | G4 (0.7.3) | Noodle static, box groups, audio resume/elevation review | **CHANGES** then **PASS** | First pass found pooled-note/wall rotation leakage, box-group `c` read as RGB instead of an index and no brightness, and an unguarded resume handler; fixed all three, added v3 key aliases (`coordinates`/`localRotation`/`size`), probe now covers both key spellings plus index colours and `s=0`. Re-review PASS with in-VR checks pending; LOW follow-ups for 0.7.4: box-group transition `i=1`/extend `i=2`, cut angle against Noodle x/y rotation, group id→light type mapping. |
 | G4 (0.7.2) | 360/90 rotation review | **CHANGES** | Replaced the track-wide yaw with per-beat lane nodes (in-flight objects keep their rotation); probe now checks the shipped lane path; v3 basic events 14/15 added; v4 per-object rotation recorded as unsupported. |

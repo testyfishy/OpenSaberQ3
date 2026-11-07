@@ -448,6 +448,13 @@ static func _v4_expand_events(list: Array, data: Array) -> Array:
 ## driver already understands. Filters, distributions and strobe are ignored (the group colour and
 ## brightness are applied at the event beat). `i` is the transition type: 0 instant, 1 transition
 ## (fade to the colour) and 2 extend, where the previous event keeps running.
+## On a same-slot collision keep the event that turns a light on, so an off from a later
+## group cannot blank an earlier on at the same beat.
+static func _keep_light_event(merged: Dictionary, key: int, event: Dictionary) -> void:
+	var previous: Dictionary = merged.get(key, {})
+	if previous.is_empty() or int(previous.get("i", 0)) == 0 or int(event.get("i", 0)) != 0:
+		merged[key] = event
+
 static func expand_box_group_colors(map_data: Dictionary, lightshow_data: Dictionary) -> void:
 	var groups: Array = []
 	groups.append_array(Utils.get_array(map_data, "lightColorEventBoxGroups", []))
@@ -460,6 +467,11 @@ static func expand_box_group_colors(map_data: Dictionary, lightshow_data: Dictio
 	# the room does not have. Fold them onto the five room types instead of leaving the map dark;
 	# the mapping is an approximation (FR-018).
 	var folded_ids := {}
+	# specs/027 FR-020 (0.7.5): a group show can carry tens of thousands of events (Hand in Hand:
+	# 27,669 per difficulty for 12 group ids). They collapse onto five room types, so several
+	# events often land on the same beat. Merge them within 1/32 beat, last wins: the event
+	# driver then runs per unique light change instead of per authored box.
+	var merged := {}
 	for group in groups:
 		if not (group is Dictionary):
 			continue
@@ -484,6 +496,7 @@ static func expand_box_group_colors(map_data: Dictionary, lightshow_data: Dictio
 				var beat := group_beat + Utils.get_float(ev as Dictionary, "b", 0.0)
 				var brightness := Utils.get_float(ev as Dictionary, "s", 1.0)
 				var color: Variant = (ev as Dictionary).get("c", null)
+				var key := int(roundf(beat * 32.0)) * 8 + light_type  # light_type is always 0..4
 				# v3/v4 use a colour index: 0 = left/red, 1 = right/blue, 2 = white. Brightness 0
 				# is "off"; there is no basic fade-to-black, so the off is instant.
 				if color is float or color is int:
@@ -496,7 +509,7 @@ static func expand_box_group_colors(map_data: Dictionary, lightshow_data: Dictio
 							0: value = 8 if transition == 1 else 5
 							1: value = 4 if transition == 1 else 1
 							_: value = 12 if transition == 1 else 9
-					events.append({
+					_keep_light_event(merged, key, {
 						"b": beat,
 						"et": light_type,
 						"i": value,
@@ -512,13 +525,31 @@ static func expand_box_group_colors(map_data: Dictionary, lightshow_data: Dictio
 					color_dict = color
 				if color_dict.is_empty():
 					continue
-				events.append({
+				_keep_light_event(merged, key, {
 					"b": beat,
 					"et": light_type,
 					"i": 0 if brightness <= 0.0 else (4 if transition == 1 else 1),
 					"f": brightness,
 					"customData": {"color": color_dict},
 				})
+	# Skip a change that repeats the last value issued for that light type (common when many
+	# groups fold onto one type). Fades to a different colour keep their own value.
+	var order := merged.keys()
+	order.sort()
+	var last_value := {}
+	for key: int in order:
+		var event: Dictionary = merged[key]
+		var light_type := int(event["et"])
+		if not event.has("customData"):
+			var value := int(event["i"])
+			if int(last_value.get(light_type, -1)) == value:
+				continue
+			last_value[light_type] = value
+		else:
+			# A literal RGB event changes the implied colour, so the next indexed event is not a
+			# repeat even when its value matches the one before the RGB.
+			last_value.erase(light_type)
+		events.append(event)
 	if not folded_ids.is_empty():
 		vr.log_info("box groups folded onto room lights: %s" % str(folded_ids))
 	map_data["basicBeatmapEvents"] = events

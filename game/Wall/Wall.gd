@@ -33,18 +33,31 @@ const GROW_END_Z := -8.0
 const GROW_MIN := 0.1
 
 # The wall's transform is its centre, so a long wall's front edge reaches the player while its
-# centre is still far away. Grow from the front edge, and counter-scale the WallArea so the
-# collision box stays full height while the visual rises (G4 0.7.0).
+# centre is still far away. Grow from the front edge. The mesh is moved down as it shrinks so its
+# bottom edge stays on the floor (0.7.5): scaling about the centre used to lift the wall off the
+# ground and drop its top, which read as a broken barrier.
 var _half_depth := 0.0
+# True once the grow has written its full-height state, so a settled wall stops touching its
+# mesh every physics tick.
+var _grow_settled := false
 
 func _apply_grow() -> void:
 	var front_z := transform.origin.z + _half_depth
 	var t := clampf((front_z - GROW_START_Z) / (GROW_END_Z - GROW_START_Z), 0.0, 1.0)
 	var h := lerpf(GROW_MIN, 1.0, smoothstep(0.0, 1.0, t))
-	$WallMeshOrientation.scale = Vector3(1.0, h, 1.0)
-	var area := $WallMeshOrientation/WallArea as Node3D
-	if area != null:
-		area.scale = Vector3(1.0, 1.0 / maxf(h, 0.001), 1.0)
+	if h >= 0.9999:
+		if _grow_settled:
+			return
+		_grow_settled = true
+	else:
+		_grow_settled = false
+	var mesh := _wall_mesh()
+	if mesh == null:
+		return
+	var visible := Vector3(_size.x, _size.y * h, _size.z)
+	mesh.scale = visible
+	mesh.position.y = (h - 1.0) * _size.y * 0.5
+	mesh.set_instance_shader_parameter(&"size", visible)
 
 func _physics_process(delta: float) -> void:
 	if Scoreboard.paused: return
@@ -80,7 +93,6 @@ func clear_from_track() -> void:
 func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = true
-	var mesh := $WallMeshOrientation/WallMesh as MeshInstance3D
 	var shape := ($WallMeshOrientation/WallArea/CollisionShape3D as CollisionShape3D).shape as BoxShape3D
 	
 	var x_size := maxf(wall_info.width * Constants.LANE_DISTANCE, 0.01)
@@ -100,12 +112,26 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	# The wall shader reads VERTEX, so with a unit mesh it now multiplies by the `size` uniform
 	# itself (wall_shared.tres). That is what makes node scaling render the same as the old
 	# per-wall mesh did; without it the border and noise maths ran in a 1 m cube and the walls
-	# turned into stretched red smears.
-	mesh.scale = Vector3(x_size, y_size, z_size)
+	# turned into stretched red smears. `_apply_grow` below writes the visible size each time the
+	# wall's height changes.
 	shape.size = Vector3(x_size, y_size, z_size)
+	_grow_settled = false
 
 	despawn_z = Constants.MISS_Z + depth
-	_apply_material(Vector3(x_size, y_size, z_size), wall_info.custom_color)
+	# A rim makes a wall read as a barrier. It is suppressed for Noodle/ME walls and for walls
+	# outside the 4x3 grid, because adjacent wall art would otherwise turn into stripes (0.6.5).
+	var rim_enabled := (
+		not wall_info.has_custom_position
+		and not wall_info.has_custom_rotation
+		and not wall_info.has_custom_scale
+		and is_equal_approx(wall_info.line_index, roundf(wall_info.line_index))
+		and is_equal_approx(wall_info.line_layer, roundf(wall_info.line_layer))
+		and is_equal_approx(wall_info.width, roundf(wall_info.width))
+		and is_equal_approx(wall_info.height, roundf(wall_info.height))
+		and wall_info.line_index >= 0.0 and wall_info.line_index < 4.0
+		and wall_info.line_layer >= 0.0 and wall_info.line_layer < 3.0
+	)
+	_apply_material(Vector3(x_size, y_size, z_size), wall_info.custom_color, rim_enabled)
 	
 	transform.origin.x = (0.5 * wall_info.width + wall_info.line_index - 2) * Constants.LANE_DISTANCE
 	transform.origin.y = (0.5 * wall_info.height + wall_info.line_layer) * Constants.LANE_DISTANCE
@@ -127,7 +153,7 @@ func _wall_mesh() -> MeshInstance3D:
 		_mesh_cache = get_node_or_null(^"WallMeshOrientation/WallMesh") as MeshInstance3D
 	return _mesh_cache
 
-func _apply_material(size_in: Vector3, shard_color := Color(0.0, 0.0, 0.0, 0.0)) -> void:
+func _apply_material(size_in: Vector3, shard_color := Color(0.0, 0.0, 0.0, 0.0), rim_enabled := true) -> void:
 	_size = size_in
 	var mesh := _wall_mesh()
 	if mesh == null:
@@ -140,6 +166,9 @@ func _apply_material(size_in: Vector3, shard_color := Color(0.0, 0.0, 0.0, 0.0))
 	# One shared material, per-wall values as instance uniforms: no material switch per wall.
 	if mesh != null:
 		mesh.set_instance_shader_parameter(&"size", size_in)
+		# 0.7.5: the v0.6 rim is back for ordinary walls; wall art and Noodle/ME walls keep the
+		# flat panel so adjacent one-lane walls do not turn into vertical stripes.
+		mesh.set_instance_shader_parameter(&"rim", 1.0 if rim_enabled else 0.0)
 		var tint := MapPalette.wall_color
 		if shard_color.a > 0.0:
 			tint = shard_color

@@ -62,6 +62,51 @@ func _ready() -> void:
 	for ev in events:
 		print("NOODLEPROBE box %s" % str(ev))
 
+	# 0.7.5 merge: same beat+type keeps the last event, events within 1/32 beat merge, and a
+	# repeated value for a type is dropped.
+	var merged_data := {
+		"lightColorEventBoxGroups": [
+			{"b": 5.0, "g": 0.0, "e": [{"e": [
+				{"b": 0.0, "c": 0.0, "s": 1.0, "i": 0.0},
+				{"b": 0.0, "c": 1.0, "s": 1.0, "i": 0.0},
+			]}]},
+			{"b": 5.01, "g": 0.0, "e": [{"e": [{"b": 0.0, "c": 2.0, "s": 1.0, "i": 0.0}]}]},
+			{"b": 5.0, "g": 0.0, "e": [{"e": [{"b": 0.0, "c": 0.0, "s": 0.0, "i": 0.0}]}]},
+			{"b": 6.0, "g": 0.0, "e": [{"e": [{"b": 0.0, "c": 0.0, "s": 1.0, "i": 0.0}]}]},
+			{"b": 7.0, "g": 0.0, "e": [{"e": [{"b": 0.0, "c": 0.0, "s": 1.0, "i": 0.0}]}]},
+		],
+	}
+	MapData.expand_box_group_colors(merged_data, {})
+	var merged_events: Array = merged_data.get("basicBeatmapEvents", [])
+	print("NOODLEPROBE merged_events=%d" % merged_events.size())
+	for ev in merged_events:
+		print("NOODLEPROBE merged %s" % str(ev))
+
+	# 0.7.5 walls: the grow pins the bottom edge on the floor and keeps the collision full-size.
+	var wall_scene := load("res://game/Wall/Wall.tscn").instantiate() as Wall
+	add_child(wall_scene)
+	var wall_info := ObstacleInfo.new(1.0, 1.0, 0.0, 0.0, 1.0, 5.0)
+	wall_scene.spawn(wall_info, 0.0)
+	var wall_mesh := wall_scene.get_node("WallMeshOrientation/WallMesh") as MeshInstance3D
+	var wall_area := wall_scene.get_node("WallMeshOrientation/WallArea") as Node3D
+	var size_uniform: Vector3 = wall_mesh.get_instance_shader_parameter(&"size")
+	var bottom := wall_mesh.position.y - size_uniform.y * 0.5
+	print("WALLPROBE full scale=%s pos_y=%.2f size=%s bottom=%.2f area_scale=%s rim=%s" % [
+		str(wall_mesh.scale), wall_mesh.position.y, str(size_uniform), bottom,
+		str(wall_area.scale), str(wall_mesh.get_instance_shader_parameter(&"rim"))])
+	wall_scene.transform.origin.z = -14.0
+	wall_scene._apply_grow()
+	size_uniform = wall_mesh.get_instance_shader_parameter(&"size")
+	bottom = wall_mesh.position.y - size_uniform.y * 0.5
+	print("WALLPROBE grow scale=%s pos_y=%.2f size=%s bottom=%.2f" % [
+		str(wall_mesh.scale), wall_mesh.position.y, str(size_uniform), bottom])
+	var noodle_wall := ObstacleInfo.new(1.0, 1.0, 0.0, 0.0, 1.0, 5.0)
+	noodle_wall.has_custom_scale = true
+	noodle_wall.custom_scale = Vector3(2.0, 1.0, 1.0)
+	wall_scene.spawn(noodle_wall, 0.0)
+	print("WALLPROBE noodle_rim=%s" % str(wall_mesh.get_instance_shader_parameter(&"rim")))
+
+
 	# specs/027 FR-019: the cut plane must round-trip through a Noodle-tilted basis, with and
 	# without a non-uniform scale, and fall back when the basis is degenerate or the plane lies
 	# along the object's z.

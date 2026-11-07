@@ -4,31 +4,57 @@
 code = "shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never, cull_back;
 
-// Walls (v0.4, flat in 0.6.5): a translucent additive panel. Additive needs no sorting and keeps
-// the notes readable through the wall; cull_back keeps the overdraw of a two-faced box down to
-// one layer. specs/028 FR-002: the per-wall bright rim was removed because it turned wall art
-// (hundreds of adjacent one-lane walls) into vertical stripes. Per-wall values are instance
-// uniforms, so every wall shares this material and the renderer does not switch materials per wall.
+// Walls (v0.4, rim restored for ordinary walls in 0.7.5): a translucent additive panel. Additive
+// needs no sorting and keeps the notes readable through the wall; cull_back keeps the overdraw of
+// a two-faced box down to one layer. The per-wall bright rim turned wall art (hundreds of
+// adjacent one-lane walls) into vertical stripes, so it is suppressed through the `rim` instance
+// uniform for Noodle/ME and off-grid walls (see Wall.gd). Per-wall values are instance uniforms,
+// so every wall shares this material and the renderer does not switch materials per wall.
 
 instance uniform vec4 wall_color : source_color = vec4(1.0, 0.08, 0.08, 1.0);
 instance uniform vec3 size = vec3(1.0);
 instance uniform float fade = 1.0;
+instance uniform float rim = 1.0;
+
+const float RIM_M = 0.015;
 
 varying vec3 local_pos;
+varying vec3 local_n;
 
 void vertex() {
 	local_pos = VERTEX * size;
+	// NORMAL is view-space in the fragment stage, so the face chosen for the rim would change
+	// with head orientation. This is the model-space normal, valid for an unrotated box.
+	local_n = NORMAL;
 }
 
 void fragment() {
 	vec3 half_size = size * 0.5;
 	vec3 p = local_pos;
 
+	// Distance to the nearest edge of the face we are shading, in metres. Using the two in-face
+	// axes means a thin wall and a wide wall get the same rim thickness.
+	float d;
+	if (abs(local_n.x) > 0.5) {
+		d = min(half_size.y - abs(p.y), half_size.z - abs(p.z));
+	} else if (abs(local_n.y) > 0.5) {
+		d = min(half_size.x - abs(p.x), half_size.z - abs(p.z));
+	} else {
+		d = min(half_size.x - abs(p.x), half_size.y - abs(p.y));
+	}
+
+	float rim_mask = 1.0 - smoothstep(RIM_M - fwidth(d), RIM_M + fwidth(d), d);
+
 	// Vertical gradient: brighter at the top, so the panel reads as a lit surface.
 	float up = clamp(p.y / max(half_size.y, 0.001) * 0.5 + 0.5, 0.0, 1.0);
 	float body = mix(0.10, 0.20, up);
 
-	vec3 col = wall_color.rgb * body;
+	// The bottom edge is a little brighter, which gives a contact cue where the wall meets the
+	// floor without a separate decal.
+	float bottom = smoothstep(-half_size.y, -half_size.y + RIM_M * 2.0, p.y);
+	float rim_gain = rim_mask * mix(1.35, 1.05, bottom) * rim;
+
+	vec3 col = wall_color.rgb * (body + rim_gain);
 	// Near-camera fade: a wall against the player's face must not flood the screen.
 	// Fragment-stage VERTEX is view space: the true per-pixel distance to the camera.
 	float near = smoothstep(0.25, 1.0, abs(VERTEX.z));
@@ -41,4 +67,3 @@ render_priority = 0
 shader = SubResource("1")
 shader_parameter/wall_color = Color(1, 0.08, 0.08, 1)
 shader_parameter/size = Vector3(1, 1, 1)
-

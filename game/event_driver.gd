@@ -60,7 +60,11 @@ func _ready() -> void:
 				(sphere_material.get_shader_parameter(shader_param) as float) * 2.2
 			)
 
+	_build_light_tables()
+
 func _process(delta: float) -> void:
+	if not Scoreboard.paused:
+		_step_fades(delta)
 	# update the level animations
 	#procces ring rotations
 	if ring_rot_speed > 0:
@@ -165,16 +169,97 @@ func process_event(data: EventInfo) -> void:
 				right_laser_anim_player.speed_scale = val
 				right_laser_anim_player.seek(randf_range(0.0, right_laser_anim_player.current_animation_length), true)
 
-var prev_tweeners: Array[Tween] = [null,null,null,null,null]
+# specs/027 FR-020 (0.7.5): a light fade used to allocate a Tween and three tweeners per event.
+# A group show can issue dozens of transitions a second, so the cost scaled with the map. Each
+# light type now keeps one interpolation state, stepped in _process: five states per frame, no
+# matter how many events the map carries.
+var _fade_from: Array[Color] = [Color.BLACK, Color.BLACK, Color.BLACK, Color.BLACK, Color.BLACK]
+var _fade_to: Array[Color] = [Color.BLACK, Color.BLACK, Color.BLACK, Color.BLACK, Color.BLACK]
+var _fade_tint: Array[Color] = [Color.BLACK, Color.BLACK, Color.BLACK, Color.BLACK, Color.BLACK]
+var _fade_t: Array[float] = [0.0, 0.0, 0.0, 0.0, 0.0]
+var _fade_dur: Array[float] = [1.0, 1.0, 1.0, 1.0, 1.0]
+var _fade_active: Array[bool] = [false, false, false, false, false]
+var _fade_off: Array[bool] = [false, false, false, false, false]
+var _fade_ease_in: Array[bool] = [false, false, false, false, false]
+var _fade_linear: Array[bool] = [false, false, false, false, false]
+var _type_materials: Array = []
+var _type_groups: Array[Node3D] = []
 
-func stop_prev_tween(type: int) -> void:
-	if prev_tweeners[type] != null:
-		prev_tweeners[type].kill()
-		prev_tweeners[type] = null
+func _build_light_tables() -> void:
+	_type_materials = [
+		[diagonal_lasers_material],
+		[square_lasers_material],
+		[left_waving_lasers_material],
+		[right_waving_lasers_material],
+		[track_lights_material, floor_material],
+	]
+	_type_groups = [diagonal_lasers_holder, square_lasers_holder, left_waving_lasers_holder,
+		right_waving_lasers_holder, track_lights_holder]
+
+func _step_fades(delta: float) -> void:
+	for type in 5:
+		if not _fade_active[type]:
+			continue
+		_fade_t[type] = minf(_fade_t[type] + delta / _fade_dur[type], 1.0)
+		var t := _fade_t[type]
+		var eased := t
+		if not _fade_linear[type]:
+			eased = t * t if _fade_ease_in[type] else 1.0 - (1.0 - t) * (1.0 - t)
+		_apply_light_step(type, _fade_from[type].lerp(_fade_to[type], eased))
+		if t < 1.0:
+			continue
+		_fade_active[type] = false
+		if _fade_off[type]:
+			_finish_light_off(type)
+		elif type == EventInfo.TYPE_CENTRE_LIGHTS:
+			_publish_light_color(_fade_to[type])
+
+# The tint is the colour the light is, independent of the fade curve. A flash starts at three
+# times the brightness but must keep the target tint, or the sphere (tint * intensity) peaks at
+# 9x and the flash-to-off dims quadratically (G4 0.7.5).
+func _set_tint(type: int, color: Color) -> void:
+	sphere_material.set_shader_parameter(TINT_PARAMS[type], color)
+
+func _apply_light_step(type: int, color: Color) -> void:
+	if type < 0 or type >= 5:
+		return
+	sphere_material.set_shader_parameter(INTENSITY_PARAMS[type], color.v)
+	for material: StandardMaterial3D in _type_materials[type]:
+		material.albedo_color = color
+
+func _cancel_fade(type: int) -> void:
+	if type >= 0 and type < 5:
+		_fade_active[type] = false
+
+func _start_fade(type: int, from: Color, to: Color, off_after: bool, ease_in: bool,
+		tint: Color, linear := false, duration := 1.0) -> void:
+	if type < 0 or type >= 5:
+		return
+	_cancel_fade(type)
+	_fade_from[type] = from
+	_fade_to[type] = to
+	_fade_tint[type] = tint
+	_fade_t[type] = 0.0
+	_fade_dur[type] = maxf(duration, 0.001)
+	_fade_off[type] = off_after
+	_fade_ease_in[type] = ease_in
+	_fade_linear[type] = linear
+	_fade_active[type] = true
+	_type_groups[type].visible = true
+	_set_tint(type, tint)
+	_apply_light_step(type, from)
+	if type == EventInfo.TYPE_CENTRE_LIGHTS:
+		_publish_light_color(tint)
+
+func _finish_light_off(type: int) -> void:
+	_type_groups[type].visible = false
+	_apply_light_step(type, Color.BLACK)
+	if type == EventInfo.TYPE_CENTRE_LIGHTS:
+		_publish_light_color(Color.BLACK)
 
 func turn_light_off(type: int) -> void:
-	stop_prev_tween(type)
-	_on_Tween_tween_step(Color.BLACK, type)
+	_cancel_fade(type)
+	_apply_light_step(type, Color.BLACK)
 	if type == EventInfo.TYPE_CENTRE_LIGHTS:
 		_publish_light_color(Color.BLACK)
 	match type:
@@ -196,9 +281,9 @@ func turn_light_off(type: int) -> void:
 			floor_material.albedo_color = Color.BLACK
 
 func turn_light_on(type: int, color: Color) -> void:
-	sphere_material.set_shader_parameter(TINT_PARAMS[type], color)
-	stop_prev_tween(type)
-	_on_Tween_tween_step(color, type)
+	_cancel_fade(type)
+	_set_tint(type, color)
+	_apply_light_step(type, color)
 	if type == EventInfo.TYPE_CENTRE_LIGHTS:
 		_publish_light_color(color)
 	match type:
@@ -220,84 +305,16 @@ func turn_light_on(type: int, color: Color) -> void:
 			floor_material.albedo_color = color
 
 func flash_light_on(type: int, color: Color) -> void:
-	sphere_material.set_shader_parameter(TINT_PARAMS[type], color)
-	if type == EventInfo.TYPE_CENTRE_LIGHTS:
-		_publish_light_color(color)
-	fade_light(type, color * 3.0, color, false, Tween.TRANS_LINEAR, Tween.EASE_OUT)
+	# A linear ramp, as the old TRANS_LINEAR tween was.
+	_start_fade(type, color * 3.0, color, false, false, color, true)
 
 func flash_light_then_fade_off(type: int, color: Color) -> void:
-	sphere_material.set_shader_parameter(TINT_PARAMS[type], color)
-	if type == EventInfo.TYPE_CENTRE_LIGHTS:
-		_publish_light_color(color)
-	fade_light(type, color * 3.0, Color.BLACK, true, Tween.TRANS_QUAD, Tween.EASE_IN)
+	# TRANS_QUAD / EASE_IN in the old tween.
+	_start_fade(type, color * 3.0, Color.BLACK, true, true, color)
 
 func fade_light_from_current(type: int, to_color: Color) -> void:
-	var current_color: Color
-	match type:
-		EventInfo.TYPE_DIAGONAL_LASERS:
-			current_color = diagonal_lasers_material.albedo_color
-		EventInfo.TYPE_SQUARE_LASERS:
-			current_color = square_lasers_material.albedo_color
-		EventInfo.TYPE_LEFT_WAVING_LASERS:
-			current_color = left_waving_lasers_material.albedo_color
-		EventInfo.TYPE_RIGHT_WAVING_LASERS:
-			current_color = right_waving_lasers_material.albedo_color
-		EventInfo.TYPE_CENTRE_LIGHTS:
-			current_color = floor_material.albedo_color
-	fade_light(type, current_color, to_color, false, Tween.TRANS_LINEAR, Tween.EASE_IN)
-
-func fade_light(type: int, from: Color, to: Color, turn_off_after_fade: bool, trans_type: Tween.TransitionType, ease_type: Tween.EaseType) -> void:
-	stop_prev_tween(type)
-	
-	var group: Node3D
-	# Reused buffer: this function runs once per light event.
-	_fade_materials.clear()
-	match type:
-		EventInfo.TYPE_DIAGONAL_LASERS:
-			group = diagonal_lasers_holder
-			_fade_materials.append(diagonal_lasers_material)
-		EventInfo.TYPE_SQUARE_LASERS:
-			group = square_lasers_holder
-			_fade_materials.append(square_lasers_material)
-		EventInfo.TYPE_LEFT_WAVING_LASERS:
-			group = left_waving_lasers_holder
-			_fade_materials.append(left_waving_lasers_material)
-		EventInfo.TYPE_RIGHT_WAVING_LASERS:
-			group = right_waving_lasers_holder
-			_fade_materials.append(right_waving_lasers_material)
-		EventInfo.TYPE_CENTRE_LIGHTS:
-			group = track_lights_holder
-			_fade_materials.append(track_lights_material)
-			_fade_materials.append(floor_material)
-	
-	group.visible = true
-	
-	var tween := group.create_tween()
-	@warning_ignore("return_value_discarded")
-	tween.set_parallel().set_trans(trans_type).set_ease(ease_type)
-	for m in _fade_materials:
-		@warning_ignore("return_value_discarded")
-		tween.tween_property(m, ^"albedo_color", to, 1).from(from)
-	@warning_ignore("return_value_discarded")
-	tween.tween_method(_on_Tween_tween_step.bind(type), from, to, 1)
-	# The end-of-fade work used to be an `await tween.finished`, which allocates a
-	# coroutine and a signal connection per light event. A sequenced callback fires
-	# on the same frame the await would have resumed, and a killed tween (see
-	# stop_prev_tween) still skips it exactly as before.
-	@warning_ignore("return_value_discarded")
-	tween.set_parallel(false)
-	tween.tween_callback(_finish_fade.bind(group, turn_off_after_fade, type, to))
-	tween.play()
-	prev_tweeners[type] = tween
-
-func _finish_fade(group: Node3D, turn_off_after_fade: bool, type: int, to: Color) -> void:
-	if turn_off_after_fade:
-		group.visible = false
-		_on_Tween_tween_step(Color.BLACK, type)
-	# The tint follows the fade only when it is over: a map that fades the room to black must
-	# not leave the last flash colour on the floor until the next event (FR-005).
-	if type == EventInfo.TYPE_CENTRE_LIGHTS:
-		_publish_light_color(Color.BLACK if turn_off_after_fade else to)
-
-func _on_Tween_tween_step(value: Color, id: int) -> void:
-	sphere_material.set_shader_parameter(INTENSITY_PARAMS[id], value.v)
+	var current := Color.BLACK
+	if type >= 0 and type < 5:
+		current = _type_materials[type][0].albedo_color
+	# Linear fade, as the old TRANS_LINEAR tween was.
+	_start_fade(type, current, to_color, false, false, to_color, true)

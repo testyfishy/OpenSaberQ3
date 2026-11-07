@@ -11,13 +11,13 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ![OpenSaberQ3](docs/images/banner.png)
 
-**v0.7.4** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
+**v0.7.5** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
 [install](#download-and-install). Built on BeepSaber and its lineage
 ([credits](ATTRIBUTION.md), [pinned upstream](UPSTREAM.md)).
 
 ## Since the fork
 
-| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.7.4 |
+| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.7.5 |
 |---|---|---|
 | **Engine** | Godot 4.3; 72 Hz, 60 Hz physics | **Godot 4.6.3**, 120 Hz with physics matched to the display, Performance / Balanced / Quality presets ([perf](docs/performance.md)) |
 | **Maps** | v2 | **v2, v3 and v4**, including the hybrid BeatSaver serves and v4's split beatmap/lightshow ([43-map audit](docs/map-data-audit.md)) |
@@ -30,6 +30,19 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 | **Measurement** | none | Bot and **human-play** captures, p99/max/spike metrics, release/rollback artifacts ([PERF.md](PERF.md)) |
 
 ## What's new
+
+### v0.7.5
+
+- **Walls grow from the floor again.** The bottom edge stays on the ground while a wall rises,
+  and ordinary walls get their bright rim back (the V5/V6 look). Noodle, Mapping Extensions and
+  off-grid walls keep the flat panel so wall art does not turn into stripes.
+- **Cheaper lightshows.** Group events are merged per beat and light type, and fades run five
+  interpolation states instead of allocating a tween per event. Hand in Hand drops from 27,669
+  box events to 8,022 before play.
+- **Arcs start from the head note.** The ribbon uses the spawned cube's own position instead of a
+  separate lane calculation, and the first ten mismatches are logged for diagnosis.
+- **Device benchmarks.** A `bench.flag` now also runs in release builds, so frame time can be
+  measured on the headset without a debug APK.
 
 ### v0.7.4
 
@@ -206,12 +219,12 @@ The latest signed APK is on the [releases page](https://github.com/testyfishy/Op
 Enable **Developer mode** on the headset, then sideload with SideQuest or run:
 
 ```sh
-adb install -r OpenSaberQ3-0.7.4.apk
+adb install -r OpenSaberQ3-0.7.5.apk
 ```
 
 Launch **Open Saber Q3** from *Unknown Sources*. Installs alongside upstream BeepSaber; songs and
 scores stay separate. Upgrading over 0.5.x keeps maps, scores and settings. Builds are test-signed,
-not store builds. The 0.7.4 APK carries the new icon and menu logo. Screenshots are in
+not store builds. The 0.7.5 APK carries the new icon and menu logo. Screenshots are in
 `/sdcard/Android/data/io.github.testyfishy.opensaberq3/files/screenshots/`:
 
 ```sh

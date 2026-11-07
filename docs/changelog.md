@@ -4,6 +4,19 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.5 - 2026-11-07
+
+**Wall growth and rim, cheaper lightshows, arc head position.** Walls now keep their bottom edge on
+the floor while they rise, and ordinary walls have the v0.6 bright rim back; Noodle, Mapping
+Extensions and off-grid walls keep the flat panel so wall art does not stripe. Group lighting is
+merged per beat and light type (Hand in Hand: 27,669 -> 8,022 events) and the event driver runs one
+interpolation state per light type instead of allocating a tween per event. Arcs take their head
+position from the spawned head cube, logging the first ten mismatches. `bench.flag` now runs in
+release builds too, so device frame time can be measured without a debug APK.
+
+[Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.7.5-q3) -
+[Spec](../specs/027-v07-map-compat/spec.md)
+
 ## v0.7.4 - 2026-11-07
 
 **Box-group fades/extends, group-id folding, Noodle cut angle.** A v3/v4 group event with `i:1`
