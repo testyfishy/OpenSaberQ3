@@ -263,3 +263,5 @@ func _start_cut_pieces(cutplane: Plane, _cut_speed: Vector3) -> void:
 		DebrisField.instance.emit_burst(global_transform.origin, cutplane.normal, _cut_speed, _cut_color)
 
 
+
+

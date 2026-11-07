@@ -25,6 +25,66 @@ static func seconds_to_beat(seconds: float) -> float:
 	return MapTimer.seconds_to_beat(seconds)
 
 
+# --- 360/90 track rotation (specs/027 FR-006) ---------------------------------------------
+# Rotation events turn the lane ring around the player. Every object spawned after an event is
+# placed at its rotated position and yaw, so the map reads as designed. v2 types 14 (early) and
+# 15 (late) use the 0..7 value table; v3/v4 use {b, e, r} (r in degrees).
+const ROT_VALUES: Array[float] = [-60.0, -45.0, -30.0, -15.0, 15.0, 30.0, 45.0, 60.0]
+static var track_rotations: Array = []
+
+static func _build_track_rotations(map_data: Dictionary) -> void:
+	track_rotations.clear()
+	var events: Array = []
+	for entry in Utils.get_array(map_data, "rotationEvents", []):
+		if entry is Dictionary:
+			events.append({
+				"beat": float((entry as Dictionary).get("b", 0.0)),
+				"early": int(float((entry as Dictionary).get("e", 0))) == 0,
+				"angle": float((entry as Dictionary).get("r", 0.0)),
+			})
+	for entry in Utils.get_array(map_data, "_events", []):
+		if entry is Dictionary:
+			var kind := int(float((entry as Dictionary).get("_type", -1)))
+			if kind == 14 or kind == 15:
+				var value := int(float((entry as Dictionary).get("_value", 0)))
+				var angle := 0.0
+				if value >= 0 and value < ROT_VALUES.size():
+					angle = ROT_VALUES[value]
+				events.append({
+					"beat": float((entry as Dictionary).get("_time", 0.0)),
+					"early": kind == 14,
+					"angle": angle,
+				})
+	events.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if not is_equal_approx(float(a["beat"]), float(b["beat"])):
+			return float(a["beat"]) < float(b["beat"])
+		return bool(a["early"]) and not bool(b["early"]))
+	track_rotations = events
+
+## Cumulative rotation in degrees at `beat`; early events apply to objects on their beat, late
+## events only after it.
+static func track_rotation_at(beat: float) -> float:
+	if track_rotations.is_empty():
+		return 0.0
+	var total := 0.0
+	for entry: Dictionary in track_rotations:
+		var event_beat := float(entry["beat"])
+		if event_beat < beat - 0.0005:
+			total += float(entry["angle"])
+		elif is_equal_approx(event_beat, beat) and bool(entry["early"]):
+			total += float(entry["angle"])
+	return total
+
+## Rotates a spawned object around the player. Godot's positive Y rotation is counter-clockwise
+## from above; the map's positive r is clockwise, so the sign is negated.
+static func apply_track_rotation(node: Node3D, beat: float) -> void:
+	var angle := track_rotation_at(beat)
+	if absf(angle) < 0.001:
+		return
+	var rad := deg_to_rad(-angle)
+	node.transform.origin = node.transform.origin.rotated(Vector3.UP, rad)
+	node.rotation.y += rad
+
 # --- Map colours (FR-027/FR-028) ---------------------------------------------------------
 # Notes, the room's lights and the walls each take a colour from the track, in order:
 # map environment colours -> map note colours -> the environment's default scheme -> the
@@ -93,6 +153,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 			map_data["version"] = info.version
 	MapTimer.load_bpm_events(map_data, info.beats_per_minute, audio_data)
 	bpm_segments = MapTimer.segment_count()
+	_build_track_rotations(map_data)
 	MapSupport.detect_unsupported(map_data, info)
 	vr.log_info("MAP data: bpm_segments=%d fakes_filtered=%d unsupported=%s" % [bpm_segments, MapSupport.fakes_filtered, str(MapSupport.unsupported_features)])
 	

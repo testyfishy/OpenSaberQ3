@@ -28,7 +28,7 @@ The badge is computed from:
 A map that requires an unimplemented feature is Partial even if it happens to load; a map that
 merely suggests one is Supported with a warning.
 
-## Support matrix (0.7.1)
+## Support matrix (0.7.2)
 
 | Feature | State |
 |---|---|
@@ -60,8 +60,8 @@ Visuals-limited counts beside it. Only the harness result counts; hand-picked ex
 
 ## Roadmap for 0.7 (goals, not release promises)
 
-**Shipped:** the Cards library and depth-grow in 0.7.0; Mapping Extensions precision in 0.7.1.
-The remaining map-compatibility features follow in 0.7.2.
+**Shipped:** Cards/depth-grow in 0.7.0, ME precision in 0.7.1, 360/90 track rotation in 0.7.2.
+Noodle transforms/animation, Chroma events and v4 box-group lighting follow in 0.7.3.
 
 1. Corpus harness and classifier; publish the measured rate.
 2. Fix silent corruption: Mapping Extensions precision, enforce `_requirements` badges, apply

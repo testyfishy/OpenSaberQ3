@@ -4,6 +4,16 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.2 - 2026-11-07
+
+**360/90 lane rotation.** Rotation events (v3/v4 `rotationEvents`, v2 types 14/15) now rotate the
+whole track around the player, so the lane ring and every object - notes, bombs, walls, arcs, chains
+- follow the mapper's layout. Early/late execution is respected, and the ME precision work from
+0.7.1 is included. The environment/room still does not rotate.
+
+[Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.7.2-q3) -
+[Spec](../specs/027-v07-map-compat/spec.md)
+
 ## v0.7.1 - 2026-11-07
 
 **Mapping Extensions precision.** Note, bomb, wall, arc and chain placements decode the ME

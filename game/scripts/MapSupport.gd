@@ -32,14 +32,6 @@ static func detect_unsupported(map_data: Dictionary, info: MapInfo) -> void:
 			or not Utils.get_array(map_data, "lightRotationEventBoxGroups", []).is_empty() \
 			or not Utils.get_array(map_data, "lightTranslationEventBoxGroups", []).is_empty():
 		found.append("box-group lighting")
-	if not Utils.get_array(map_data, "rotationEvents", []).is_empty():
-		found.append("360 rotation")
-	for e: Variant in Utils.get_array(map_data, "_events", []):
-		if e is Dictionary:
-			var t := int(Utils.get_float(e as Dictionary, "_type", -1))
-			if t == 14 or t == 15:
-				found.append("lane rotation")
-				break
 	var cd := Utils.get_dict(map_data, "customData", Utils.get_dict(map_data, "_customData", {}))
 	for key: String in ["customEvents", "_customEvents", "environment", "_environment", "materials"]:
 		if cd.has(key):
@@ -55,3 +47,4 @@ static func detect_unsupported(map_data: Dictionary, info: MapInfo) -> void:
 	unsupported_features = found
 	if not found.is_empty():
 		vr.log_warning("MAP unsupported features: %s" % ", ".join(found))
+

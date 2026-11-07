@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: 0.7.1 ships Mapping Extensions precision; FR-006 (360) and FR-007..FR-010 (Noodle/Chroma) move to 0.7.2
+**Status**: 0.7.2 ships ME precision and 360/90 track rotation; Noodle/Chroma/box groups move to 0.7.3
 
 **Input**: Owner, after the BeatSaver feature review: "Fix 360/90 and lightshow/box groups on v7.
 Resolve Mapping Extensions precision, Noodle position/rotation/scale/animation/speed, Chroma events

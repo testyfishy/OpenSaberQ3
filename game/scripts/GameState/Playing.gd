@@ -39,6 +39,9 @@ func _process_map(game: BeepSaber_Game) -> void:
 	Harness.tick()
 	var song_position := Harness.song_time() if Harness.replay else game.song_player.get_playback_position()
 	var current_beat := Map.seconds_to_beat(song_position)
+	# 360/90: rotate the whole track around the player. Objects (including the ones already in
+	# flight) are children of the track, so their positions and motion follow the ring.
+	game.track.rotation.y = deg_to_rad(-Map.track_rotation_at(current_beat))
 	var look_ahead := current_beat + BEATS_AHEAD
 	
 	# chains connect to a regular colornote and modify it, so we have to keep
@@ -124,5 +127,6 @@ func _process_map(game: BeepSaber_Game) -> void:
 	if probe:
 		Cost.spawn_usec += Time.get_ticks_usec() - t0
 	game.hide_profile_panel()
+
 
 

@@ -159,3 +159,5 @@ func _update_inside_fade() -> void:
 			mesh.set_instance_shader_parameter(&"fade", _fade)
 
 
+
+

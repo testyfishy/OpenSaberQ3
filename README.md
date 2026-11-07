@@ -11,13 +11,13 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ![OpenSaberQ3](docs/images/banner.png)
 
-**v0.7.1** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
+**v0.7.2** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
 [install](#download-and-install). Built on BeepSaber and its lineage
 ([credits](ATTRIBUTION.md), [pinned upstream](UPSTREAM.md)).
 
 ## Since the fork
 
-| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.7.1 |
+| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.7.2 |
 |---|---|---|
 | **Engine** | Godot 4.3; 72 Hz, 60 Hz physics | **Godot 4.6.3**, 120 Hz with physics matched to the display, Performance / Balanced / Quality presets ([perf](docs/performance.md)) |
 | **Maps** | v2 | **v2, v3 and v4**, including the hybrid BeatSaver serves and v4's split beatmap/lightshow ([43-map audit](docs/map-data-audit.md)) |
@@ -30,6 +30,14 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 | **Measurement** | none | Bot and **human-play** captures, p99/max/spike metrics, release/rollback artifacts ([PERF.md](PERF.md)) |
 
 ## What's new
+
+### v0.7.2
+
+- **360/90 lane rotation.** The map's rotation events (v3/v4 `rotationEvents`, v2 types 14/15) now
+  turn the whole track around the player, so the lane ring, notes, bombs, walls, arcs and chains
+  come from the sides as the mapper intended. Early/late events apply at the right beat.
+- Mapping Extensions precision from 0.7.1 is included.
+- Noodle transforms/animation, Chroma events and v4 box-group lighting remain the next slice.
 
 ### v0.7.1
 
@@ -139,11 +147,10 @@ still load and play their notes.
   Noodle note movement). The pause menu names what is missing.
 - **Visuals limited**: gameplay is correct; lighting, environment or bundled effects are skipped.
 
-**Where 0.7.1 stands:** v2/v3/v4 maps, notes, bombs, walls, arcs, chains, BPM changes, Chroma
-per-note colours, basic light events, Noodle `_coordinates` placement (partial), and Mapping
-Extensions precision (positions, cut angles, wall widths/heights). Not yet: 90°/360° rotation,
-Noodle rotation/scale/animation, Chroma light events, v4 box-group lighting, and Unity
-asset-bundle effects.
+**Where 0.7.2 stands:** v2/v3/v4 maps, notes, bombs, walls, arcs, chains, BPM changes, Chroma
+per-note colours, basic light events, Noodle `_coordinates` placement (partial), Mapping Extensions
+precision, and 90°/360° track rotation. Not yet: Noodle rotation/scale/animation, Chroma light
+events, v4 box-group lighting, and Unity asset-bundle effects.
 
 **v0.7 goals:** close the gameplay gaps — Mapping Extensions precision, 90°/360° lane rotation,
 Noodle static transforms and animation, per-object note speed/offset, Chroma events, v4 box-group
@@ -173,12 +180,12 @@ The latest signed APK is on the [releases page](https://github.com/testyfishy/Op
 Enable **Developer mode** on the headset, then sideload with SideQuest or run:
 
 ```sh
-adb install -r OpenSaberQ3-0.7.1.apk
+adb install -r OpenSaberQ3-0.7.2.apk
 ```
 
 Launch **Open Saber Q3** from *Unknown Sources*. Installs alongside upstream BeepSaber; songs and
 scores stay separate. Upgrading over 0.5.x keeps maps, scores and settings. Builds are test-signed,
-not store builds. The 0.7.1 APK carries the new icon and menu logo. Screenshots are in
+not store builds. The 0.7.2 APK carries the new icon and menu logo. Screenshots are in
 `/sdcard/Android/data/io.github.testyfishy.opensaberq3/files/screenshots/`:
 
 ```sh
