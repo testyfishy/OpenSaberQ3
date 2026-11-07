@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: Released as `v0.7.4-q3` (APK 78,114,361, SHA-256 `C13B9EF7…`). 0.7.3 shipped Noodle static transforms, box-group colours and the audio fixes; 0.7.4 adds box-group transitions/extends, group-id folding and the basis-local cut angle. Noodle animation and custom Chroma environments remain. In-VR checks (Noodle placement, box-group fades, cut split on tilted notes, resume-from-idle, above/below cue) are pending.
+**Status**: Released as `v0.7.5-q3` (APK 78,119,544, SHA-256 `D56F8938…`). 0.7.5 adds floor-pinned wall growth with the v0.6 rim, merged/tween-free lightshows, arc head attachment and release-build benchmarks. Noodle animation and custom Chroma environments remain. In-VR checks (wall rim/grow, arc attachment, lightshow smoothness, Noodle placement, audio resume, above/below cue) are pending.
 
 **Input**: Owner, after the BeatSaver feature review: "Fix 360/90 and lightshow/box groups on v7.
 Resolve Mapping Extensions precision, Noodle position/rotation/scale/animation/speed, Chroma events
@@ -317,6 +317,12 @@ VERIFYSCHEMA still pass.
 - Hand in Hand (all five difficulties): 27,669 authored box events -> 19,228 unique keys ->
   8,022 emitted events after the repeat rule (71% fewer). At 312 s that is ~26 events/s.
 - Parse clean; the desktop renderer compiles the new wall shader (only shutdown leak messages).
+- Device benchmark (`0.7.5`, Hand in Hand ExpertPlus, bot, 100 s, 120 Hz target): 9,235
+  samples, mean 10.83 ms, p50 10.84, p95 12.98, p99 14.48, max 42.4 (startup only); 0.14% of
+  frames over 16.7 ms, `spikes=0`, map load 899 ms, cubes peak 18, walls peak 4.
+- No 0.7.4 device baseline exists: the benchmark runner was debug-only before 0.7.5, so this is an
+  absolute profile, not a before/after diff. The light path is structurally cheaper (8,022 events,
+  five fade states, no per-event tween).
 - Pending on the headset: wall rim/grow, arc attachment, lightshow smoothness.
 
 ## Consultation Log
@@ -324,7 +330,7 @@ VERIFYSCHEMA still pass.
 | Gate | Question | Verdict | Follow-up |
 |------|----------|---------|-----------|
 | G1 (0.7.4) | Plan for box `i` transition/extend, group-id fold and local cut angle | **PASS WITH CHANGES** | Keep `g % 5` fold but drop malformed ids and log folds; `i=1` → 4/8/12 with the one-gap lag and `s=0` instant-off noted; cut angle from the global basis via `orthonormalized().transposed()` with degenerate/near-z fallback; probe adds non-uniform/degenerate scale, tilt-diff, extend and group-7 cases; `active-spec` moved to 027. |
-| G4 (0.7.5) | Wall growth/rim, lightshow cost, arc head, release benchmark | **PASS (conditional)** | Fade tint is written once per fade and published as the start colour; dedup resets after a literal RGB; same-slot conflicts keep the on event; arc head uses the cube only inside a lane node and logs mismatches; flash-on/fade-from-current are linear again. Tag only if the device benchmark on Hand in Hand holds the target frame rate with no regression; in-VR checks pending. |
+| G4 (0.7.5) | Wall growth/rim, lightshow cost, arc head, release benchmark | **PASS (conditional, met)** | Fade tint is written once per fade and published as the start colour; dedup resets after a literal RGB; same-slot conflicts keep the on event; arc head uses the cube only inside a lane node and logs mismatches; flash-on/fade-from-current are linear again. Tag only if the device benchmark on Hand in Hand holds the target frame rate with no regression; in-VR checks pending. |
 | G1 (0.7.5) | Wall growth/rim, arc head, lightshow cost | **PASS WITH CHANGES** | Pin the wall bottom and drop the area counter-scale; rim on vanilla walls only (all edges) via a per-wall uniform; do not skip/extend arcs, use the head cube position; replace per-event Tweens with one interpolation state per type, merge at 1/32 beat; allow `bench.flag` in release builds. |
 | G4 (0.7.4) | Box-group i/s semantics, g%5 fold, basis-local cut angle, stale unsupported test | **PASS** | Tag after the APK SHA is recorded; in-VR checks of the cut split on tilted notes and box-group fades pending. Later: ChainLink measures cut distance from the local origin while BeepCube uses global. |
 | G4 (0.7.3) | Noodle static, box groups, audio resume/elevation review | **CHANGES** then **PASS** | First pass found pooled-note/wall rotation leakage, box-group `c` read as RGB instead of an index and no brightness, and an unguarded resume handler; fixed all three, added v3 key aliases (`coordinates`/`localRotation`/`size`), probe now covers both key spellings plus index colours and `s=0`. Re-review PASS with in-VR checks pending; LOW follow-ups for 0.7.4: box-group transition `i=1`/extend `i=2`, cut angle against Noodle x/y rotation, group id→light type mapping. |
