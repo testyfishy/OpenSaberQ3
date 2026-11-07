@@ -30,7 +30,7 @@ var perf_control: OptionButton
 @onready var right_saber_col := %right_saber_col as ColorPickerButton
 @onready var show_debug_control := %show_debug as CheckButton
 @onready var audio_analyser_control := %audio_analyser as CheckButton
-@onready var screenshot_grip_control := %screenshot_grip as CheckButton
+@onready var screenshot_trigger_control := %screenshot_trigger as CheckButton
 @onready var show_collisions := %show_collisions as CheckButton
 @onready var bombs_enabled_control := %bombs_enabled as CheckButton
 @onready var ui_volume_slider := %ui_volume_slider as HSlider
@@ -187,7 +187,7 @@ func set_controls_from_settings() -> void:
 	saber_control.select(Settings.saber_visual)
 	show_debug_control.button_pressed = Settings.show_debug_info
 	audio_analyser_control.button_pressed = Settings.audio_analyser
-	screenshot_grip_control.button_pressed = Settings.screenshot_grip
+	screenshot_trigger_control.button_pressed = Settings.screenshot_trigger
 	bombs_enabled_control.button_pressed = Settings.bombs_enabled
 	ui_volume_slider.value = Settings.ui_volume
 	disable_map_color_control.button_pressed = Settings.disable_map_color
@@ -348,8 +348,8 @@ func _on_show_debug_toggled(button_pressed: bool) -> void:
 func _on_audio_analyser_toggled(button_pressed: bool) -> void:
 	Settings.audio_analyser = button_pressed
 
-func _on_screenshot_grip_toggled(button_pressed: bool) -> void:
-	Settings.screenshot_grip = button_pressed
+func _on_screenshot_trigger_toggled(button_pressed: bool) -> void:
+	Settings.screenshot_trigger = button_pressed
 
 func _on_bombs_enabled_toggled(button_pressed: bool) -> void:
 	Settings.bombs_enabled = button_pressed
@@ -530,7 +530,7 @@ const TAB_ROWS := {
 		"environment_mode", "glow_mode", "sky_style", "disable_map_color"],
 	3: ["PerfHeader", "RefreshRateRow", "RenderScaleRow", "MSAARow", "FoveationRow", "PerfNote",
 		"PerfPresetRow"],
-	4: ["show_debug", "audio_analyser", "screenshot_grip", "show_collisions", "spectator_view", "spectator_hud", "upload_server"],
+	4: ["show_debug", "audio_analyser", "screenshot_trigger", "show_collisions", "spectator_view", "spectator_hud", "upload_server"],
 }
 
 var _tab_buttons: Array[Button] = []

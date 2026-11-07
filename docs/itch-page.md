@@ -1,6 +1,6 @@
 # itch.io page copy
 
-**Target build:** 0.6.1, the first APK with the new icon and menu logo. The 0.6.0 APK still uses
+**Target build:** 0.6.2, the first APK with the new icon and menu logo. The 0.6.0 APK still uses
 the previous icon, so do not upload it while the store art shows the new mark. Publish gate and
 upload steps: [itch-push.md](itch-push.md).
 
@@ -41,7 +41,8 @@ upload steps: [itch-push.md](itch-push.md).
 > - **Source tags and a source filter** for the library, with automatic backfill for old maps.
 > - **BeatLeader top 10** for the selected map and difficulty, read-only, no account.
 > - Layered hit audio, per-event haptics and an optional in-game analyser.
-> - **In-game screenshots** with both grips or the pause menu, saved at 1920×1080 for `adb pull`.
+> - **In-game screenshots**: triggers in menus, Pause → Screenshot during a song; 1920×1080 for
+>   `adb pull`.
 >
 > Benchmark harness and raw captures: <https://github.com/testyfishy/OpenSaberQ3/blob/godot-4-port/PERF.md>.
 > The shipped default holds **120 fps with 0.01% dropped frames** over three minutes (2 frames in
@@ -65,8 +66,8 @@ upload steps: [itch-push.md](itch-push.md).
 > 4. Launch **Open Saber Q3** from *Unknown Sources*.
 >
 > itch is a download host: it does not install Android apps for you. Sideloading is required.
-> To take a screenshot, hold both grips for half a second or press **Screenshot** in the pause
-> menu; the PNGs are in the app's files folder for `adb pull`.
+> To take a screenshot in a menu, hold both triggers for half a second. During a song, press
+> **Screenshot** in the pause menu. The PNGs are in the app's files folder for `adb pull`.
 >
 > **Known issues**
 >

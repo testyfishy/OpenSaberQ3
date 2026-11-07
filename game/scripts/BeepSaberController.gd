@@ -9,8 +9,6 @@ var by := false
 var by_last_frame := false
 var trigger := false
 var trigger_last_frame := false
-var grip := false
-var grip_last_frame := false
 
 var movement_aabb := AABB()
 
@@ -41,21 +39,13 @@ func trigger_just_pressed() -> bool:
 func trigger_just_released() -> bool:
 	return trigger_last_frame and not trigger
 
-func grip_pressed() -> bool:
-	return grip
-
-func grip_just_pressed() -> bool:
-	return grip and not grip_last_frame
-
 func _update_buttons_and_sticks() -> void:
 	ax_last_frame = ax
 	by_last_frame = by
 	trigger_last_frame = trigger
-	grip_last_frame = grip
 	ax = is_button_pressed(&"ax_button")
 	by = is_button_pressed(&"by_button")
 	trigger = is_button_pressed(&"trigger")
-	grip = is_button_pressed(&"grip_click")
 
 func _update_movement_aabb() -> void:
 	movement_aabb = movement_aabb.expand(global_transform.origin)

@@ -4,6 +4,16 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.6.2 — 2026-11-06
+
+**Screenshot shortcut fix.** Quest 3 controllers have no usable squeeze input, so the 0.6.1 grip
+hold could never fire. In menus, **both index-finger triggers held for 0.5 s** now take the shot;
+during a song, use Pause → Screenshot (the triggers are clenched while swinging). The pause button
+and F12 are unchanged. The setting and help text say trigger; the old `screenshot_grip`
+key is ignored and `screenshot_trigger` defaults on.
+[Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.6.2-q3) ·
+[Spec](../specs/024-shot-demo-061/spec.md)
+
 ## v0.6.1 — 2026-11-06
 
 **Screenshots and a clean build.** In-game capture: hold both grips for 0.5 s or press
@@ -77,5 +87,5 @@ audio research, the benchmark harness, and the first measured Quest 3 numbers.
 
 ## Next
 
-- **0.6.2** — BeastSaber playlist (`.bplist`) import.
+- **0.6.3** — BeastSaber playlist (`.bplist`) import.
 - **0.6.x** — home-test findings and cosmetic chain joints.

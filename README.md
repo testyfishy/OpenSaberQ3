@@ -11,13 +11,13 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ![OpenSaberQ3](docs/images/banner.png)
 
-**v0.6.1** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
+**v0.6.2** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
 [install](#download-and-install). Built on BeepSaber and its lineage
 ([credits](ATTRIBUTION.md), [pinned upstream](UPSTREAM.md)).
 
 ## Since the fork
 
-| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.6.1 |
+| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.6.2 |
 |---|---|---|
 | **Engine** | Godot 4.3; 72 Hz, 60 Hz physics | **Godot 4.6.3**, 120 Hz with physics matched to the display, Performance / Balanced / Quality presets ([perf](docs/performance.md)) |
 | **Maps** | v2 | **v2, v3 and v4**, including the hybrid BeatSaver serves and v4's split beatmap/lightshow ([43-map audit](docs/map-data-audit.md)) |
@@ -31,10 +31,17 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ## What's new
 
+### v0.6.2
+
+- **The screenshot shortcut is both triggers, not grips.** Quest 3 has no usable squeeze input;
+  hold both index-finger triggers for half a second **in menus** (during a song, use Pause →
+  Screenshot).
+
 ### v0.6.1
 
-- **Screenshots from the headset.** Hold both grips for half a second, or press **Screenshot** in
-  the pause menu. 1920×1080 PNGs land in the app's files folder for `adb pull`.
+- **Screenshots from the headset.** In menus, hold both triggers for half a second; during a song,
+  press **Screenshot** in the pause menu. 1920×1080 PNGs land in the app's files folder for
+  `adb pull`.
 - **The bundled demo is gone.** TheFatRat “Time Lapse” is no longer distributed; a library that
   still has the exact bundled copy loses it once.
 - **New icon and menu logo**, the sliced-cube mark from `docs/brand/`.
@@ -54,7 +61,7 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ![Library filtered to BeatSaver](docs/images/v06-library.png)
 
-**Next, 0.6.2:** BeastSaber `.bplist` playlist import. The `beastsaber` tag is already in the
+**Next, 0.6.3:** BeastSaber `.bplist` playlist import. The `beastsaber` tag is already in the
 schema.
 
 ## Performance
@@ -77,12 +84,12 @@ The latest signed APK is on the [releases page](https://github.com/testyfishy/Op
 Enable **Developer mode** on the headset, then sideload with SideQuest or run:
 
 ```sh
-adb install -r OpenSaberQ3-0.6.0.apk
+adb install -r OpenSaberQ3-0.6.2.apk
 ```
 
 Launch **Open Saber Q3** from *Unknown Sources*. Installs alongside upstream BeepSaber; songs and
 scores stay separate. Upgrading over 0.5.x keeps maps, scores and settings. Builds are test-signed,
-not store builds. The 0.6.1 APK carries the new icon and menu logo. Screenshots are in
+not store builds. The 0.6.2 APK carries the new icon and menu logo. Screenshots are in
 `/sdcard/Android/data/io.github.testyfishy.opensaberq3/files/screenshots/`:
 
 ```sh

@@ -84,7 +84,7 @@ offset_top = 548.0
 offset_right = 624.0
 offset_bottom = 572.0
 theme_override_font_sizes/font_size = 14
-text = "Squeeze both grips to screenshot from any screen"
+text = "In menus: hold both triggers. During a song: use Screenshot above."
 horizontal_alignment = 1
 
 [node name="mainmenu" type="Button" parent="."]

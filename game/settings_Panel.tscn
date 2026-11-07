@@ -560,12 +560,12 @@ tooltip_text = "Shows the last hit's level and pan, and the SFX bus spectrum, on
 theme = SubResource("3")
 text = "Audio Analyser:"
 
-[node name="screenshot_grip" type="CheckButton" parent="ScrollContainer/VBox"]
+[node name="screenshot_trigger" type="CheckButton" parent="ScrollContainer/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-tooltip_text = "Hold both grip buttons for half a second to save a screenshot. The pause menu and F12 also work."
+tooltip_text = "Hold both triggers for half a second to save a screenshot. The pause menu and F12 also work."
 theme = SubResource("3")
-text = "Screenshot Grip: "
+text = "Screenshot Trigger: "
 
 [node name="show_collisions" type="CheckButton" parent="ScrollContainer/VBox"]
 unique_name_in_owner = true
@@ -933,6 +933,6 @@ scroll_node_path = NodePath("../ScrollContainer")
 [connection signal="button_up" from="defaults" to="." method="_restore_defaults"]
 [connection signal="toggled" from="ScrollContainer/VBox/audio_ducking" to="." method="_on_audio_ducking_toggled"]
 [connection signal="toggled" from="ScrollContainer/VBox/audio_analyser" to="." method="_on_audio_analyser_toggled"]
-[connection signal="toggled" from="ScrollContainer/VBox/screenshot_grip" to="." method="_on_screenshot_grip_toggled"]
+[connection signal="toggled" from="ScrollContainer/VBox/screenshot_trigger" to="." method="_on_screenshot_trigger_toggled"]
 [connection signal="pressed" from="apply" to="." method="_on_apply_pressed"]
 [connection signal="pressed" from="back" to="." method="_on_back_pressed"]

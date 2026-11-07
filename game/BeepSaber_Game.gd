@@ -30,8 +30,8 @@ var gamestate: GameState = gamestate_bootup
 const ScreenshotServiceScript := preload("res://game/scripts/ScreenshotService.gd")
 # In-game capture (specs/024). Created after vr.initialize so it has the XR camera.
 var screenshot: ScreenshotService
-var _grip_hold_start := -1
-var _grip_latched := false
+var _trigger_hold_start := -1
+var _trigger_latched := false
 @onready var goggles_shader := ($XROrigin3D/XRCamera3D/VRGoggles as MeshInstance3D).material_override as ShaderMaterial
 @onready var debug_info_label := $XROrigin3D/XRCamera3D/PlayerHead/DebugInfoLabel as MeshInstance3D
 
@@ -197,24 +197,30 @@ func _physics_process(_dt: float) -> void:
 	
 	_check_and_update_saber(left_controller, left_saber)
 	_check_and_update_saber(right_controller, right_saber)
-	_poll_screenshot_grip()
+	_poll_screenshot_trigger()
 
-func _poll_screenshot_grip() -> void:
-	if screenshot == null or not Settings.screenshot_grip:
+func _poll_screenshot_trigger() -> void:
+	if screenshot == null or not Settings.screenshot_trigger:
 		return
-	var both := left_controller.grip_pressed() and right_controller.grip_pressed()
+	# Players clench both triggers while swinging, and each capture can stall; the combo is for
+	# menus and the end screen only. Gameplay shots use Pause -> Screenshot.
+	if gamestate == gamestate_playing or gamestate == gamestate_paused:
+		_trigger_hold_start = -1
+		_trigger_latched = false
+		return
+	var both := left_controller.trigger_pressed() and right_controller.trigger_pressed()
 	if not both:
-		_grip_hold_start = -1
-		_grip_latched = false
+		_trigger_hold_start = -1
+		_trigger_latched = false
 		return
-	if _grip_latched:
+	if _trigger_latched:
 		return
 	var now := Time.get_ticks_msec()
-	if _grip_hold_start < 0:
-		_grip_hold_start = now
-	if now - _grip_hold_start >= 500:
-		_grip_latched = true
-		_grip_hold_start = -1
+	if _trigger_hold_start < 0:
+		_trigger_hold_start = now
+	if now - _trigger_hold_start >= 500:
+		_trigger_latched = true
+		_trigger_hold_start = -1
 		screenshot.capture()
 
 

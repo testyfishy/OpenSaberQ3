@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-06
 
-**Status**: Released - v0.6.1 on the headset; home tests pending
+**Status**: 0.6.2 released (trigger correction); home tests pending
 
 **Input**: "The bundled TheFatRat 'Time Lapse' demo has no documented licence" -> "Remove it
 completely in v0.61"; "Real headset screenshots are still needed" -> "Build the ability to take
@@ -72,7 +72,7 @@ without the system screenshot gesture.
   2 s cooldown, plus a **Screenshot** button in the pause menu. A `screenshot_grip` setting
   (default on) MUST disable the grip action. F12 MUST take one on desktop.
 - **FR-006**: The pause-menu button MUST hide the pause overlay for the shot and restore it after;
-  the grip action captures whatever is on screen. The toast MUST be shown after the grab so it is
+  the trigger action captures whatever is on screen in menus. The toast MUST be shown after the grab so it is
   not in the image; it names the saved file, and the full path MUST be logged.
 - **FR-007**: Screenshots MUST be saved to the app's external files directory on Android
   (`/sdcard/Android/data/<package>/files/screenshots/`) and to `user://screenshots/` on desktop,
@@ -139,9 +139,23 @@ without the system screenshot gesture.
   geometry/cut, mapsource, beatleader, desktop screenshot PASS. The headless screenshot test is
   expected to hang (no renderer); the windowed run passes.
 
+### 0.6.2 scoped change: trigger combo
+
+- **Symptom**: Quest 3 has no squeeze/grip button; the 0.6.1 grip hold cannot fire. The pause
+  button and the capture service work.
+- **Fix**: poll both `trigger` buttons (already used by the UI) for 0.5 s, latch/cooldown as
+  before; rename `screenshot_grip` to `screenshot_trigger`; update the pause hint, README, release
+  notes and the 0.6.1 release body. Version 0.6.2 / code 12.
+- **SC-013**: In a menu, holding both triggers produces one 1920×1080 capture; during a song the
+  same hold does nothing and the pause button captures; the setting disables the trigger combo.
+- **SC-014**: The old `screenshot_grip` key is ignored (no error) and `screenshot_trigger`
+  defaults to on; schema/panel gates pass with the renamed key.
+- **SC-015**: 0.6.2 is installed, tagged and released; the 0.6.1 notes point to the corrected
+  shortcut.
+
 ### Home tests (not proven in this session)
 
-- Both grips held 0.5 s produces exactly one capture; the 2 s cooldown blocks a second; the toast
+- In a menu, both triggers held 0.5 s produces exactly one capture; the 2 s cooldown blocks a second; the toast
   is visible and absent from the image.
 - The pause-menu button captures without the pause canvas/rays and restores them.
 - A 0.6.0 -> 0.6.1 upgrade (this install came over a 0.6.1 debug build) does not crash highscore or
@@ -169,6 +183,10 @@ failed FR-004 and the plan is revisited at G1/G4, not silently replaced with a s
 | G0 | Demo removal scope, screenshot capture design, interaction, storage, 0.6.1 release | GO WITH CHANGES: remove every reference (HighscorePanel cover, Playlists.json, placeholder text, bench default), empty-state message, copy-on-first-run removal; keep highscore/play-count rows; SubViewport camera works (copy cull_mask/env/attributes, fov 60, two frame_post_draw waits, toast after, worker-thread PNG); grip hold 0.5 s + 2 s cooldown + setting; external app dir; one 0.6.1 release | Spec updated; G1 next |
 | G2 | Owner decision on the old build/history | Skip the old builds/history; document the demo removal as a 0.6.1 change | FR-003/open question updated; no rewrite, no 0.6.0 asset change |
 
-| G1 | Capture implementation (SubViewport camera/world), grip combo, cleanup, build plan | GO WITH CHANGES: encode/save on the worker; service/toast PROCESS_MODE_ALWAYS; toast on a culled layer; hide UI rays; camera added/current before pose; own_world false/MSAA; first capture may stall; bench default ODDS; marker; remove empty playlist; 53 keys; publish 0.6.1; add APK-content/pause/cooldown/highscore SCs | Implemented; spec updated |
-| G4 | final review 0.6.1 @ea76a67 | APPROVE: add stall/adb/highscore lines to the release notes; tag and release | Release notes updated with the three lines; tagged/released |
-| G5 | drift FR-001..012 / SC-001..012 | Matches spec except home tests: grip hold+cooldown, toast, pause capture, highscore after a 0.6.0 upgrade | Status = Released, home tests pending |
+| G1 | Capture implementation (SubViewport camera/world), grip combo, cleanup, build plan | GO WITH CHANGES: encode/save on the worker; service/toast PROCESS_MODE_ALWAYS; toast on a culled layer; hide UI rays; camera added/current before pose; own_world false/MSAA; first capture may stall; bench default ODDS; marker; remove empty playlist; 53 keys; publish 0.6.1; add APK-content/pause/cooldown/highscore SCs | Implemented; spec updated |
+
+| G4 | final review 0.6.1 @ea76a67 | APPROVE: add stall/adb/highscore lines to the release notes; tag and release | Release notes updated with the three lines; tagged/released |
+
+| G2 | Quest 3 has no usable squeeze input; owner prefers triggers | Use both index-finger triggers; menus only (players clench them in play), pause button for gameplay; rename setting/docs; cut 0.6.2 | Implemented, installed; 0.6.2 tagged/released |
+
+| G5 | drift FR-001..012 / SC-001..012 | Matches spec except home tests: trigger hold+cooldown, toast, pause capture, highscore after a 0.6.0 upgrade | 0.6.1 released; trigger correction in 0.6.2 |
