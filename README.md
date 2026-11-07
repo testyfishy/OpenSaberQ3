@@ -255,6 +255,10 @@ for about a second while the renderer compiles; Pause → Screenshot is the reli
 ## Build from source
 
 Godot **4.6.3** + JDK 17 + Android SDK 34/36, export preset **`Oculus Quest (RELEASE)`**.
+
+Before exporting, delete `.godot/exported`. Exported scenes embed copies of external materials, and a
+stale cache silently keeps old shaders in the APK (this is what kept the old noise wall in 0.7.5).
+
 Versions, commands and known gaps: [UPSTREAM.md](UPSTREAM.md).
 
 ## Known limitations
