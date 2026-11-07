@@ -13,9 +13,11 @@ const MapSupport := preload("res://game/scripts/MapSupport.gd")
 func _ready() -> void:
 	var ok := true
 	ok = _case("empty", {}, null, [], 0) and ok
-	ok = _case("box lighting", {"lightColorEventBoxGroups": [{}]}, null, ["box-group lighting"], 0) and ok
-	ok = _case("360 rotation", {"rotationEvents": [{"b": 1.0}]}, null, ["360 rotation"], 0) and ok
-	ok = _case("lane rotation", {"_events": [{"_type": 14.0}]}, null, ["lane rotation"], 0) and ok
+	# 0.7.2/0.7.3: 360/90 lanes, box-group colours and static Noodle transforms are supported, so
+	# they must not be reported as unsupported features any more.
+	ok = _case("box lighting", {"lightColorEventBoxGroups": [{}]}, null, [], 0) and ok
+	ok = _case("360 rotation", {"rotationEvents": [{"b": 1.0}]}, null, [], 0) and ok
+	ok = _case("lane rotation", {"_events": [{"_type": 14.0}]}, null, [], 0) and ok
 	ok = _case("chroma", {"customData": {"customEvents": {}}}, null, ["Chroma/Noodle animation"], 0) and ok
 	ok = _case("fake notes", {"customData": {"fakeColorNotes": [{}, {}], "fakeObstacles": [{}]}}, null, [], 3) and ok
 

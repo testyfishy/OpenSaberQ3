@@ -217,10 +217,61 @@ bundle; otherwise they load with a Visuals-limited badge.
 - Pending on headset: Noodle placement/rotation, box-group colours, resume-from-idle audio,
   above/below audibility.
 
+## Scoped change: 0.7.4 box-group fidelity and Noodle cut angle
+
+**Symptom**
+1. A box-group event with `i:2` (extend) creates a new light event instead of holding the previous
+   one, and `i:1` (transition) is emitted as an instant on, so authored fades become cuts.
+2. Box groups whose environment group id is above 4 produce no light at all.
+3. The two halves of a cut note split along the wrong angle when the note carries a Noodle x/y
+   rotation: the visual slice uses `global_rotation.z`, which Euler decomposition changes.
+
+**Root cause**
+1. `MapData.expand_box_group_colors` ignores `i` and always emits an "on" value.
+2. It drops `g > 4`.
+3. `BeepCube._start_cut_pieces` and `ChainLink._start_cut_pieces` subtract `global_rotation.z`
+   instead of projecting the cut plane into the object's basis.
+
+**Blast radius**
+`game/scripts/MapData.gd`, `game/Cuttable.gd`, `game/BeepCube/BeepCube.gd`,
+`game/Chain/ChainLink.gd`, the probe, version/docs. Scoring is untouched: hit accuracy already uses
+`global_transform.basis.y` (`BeepCube.gd:200`). No map files, sidecars or library data are written.
+
+- **FR-017**: `i:0` MUST emit an instant on (1/5/9 by colour), `i:1` a transition to the colour
+  (4/8/12), and `i:2` MUST emit nothing, so the previous event keeps running. Two documented
+  approximations: a v3 transition fades *towards* its event beat while Godot starts the fade at
+  that beat (one gap late), and `s=0` with `i:1` is an instant off because the driver has no
+  fade-to-black value.
+- **FR-018**: Group ids above the room's five light types MUST be folded deterministically
+  (`g % 5`) onto a real light type instead of being dropped; the docs MUST say the fold is an
+  approximation because environments define their own groups.
+- **FR-019**: The visual cut angle MUST be derived from the object's `Basis` (global plane normal
+  projected into local space), so Noodle x/y rotation and 360 lane yaw split correctly. This
+  applies to notes and chain links. The normal's local z is dropped (the pieces split in the
+  object's XY plane), so a note tilted out of the screen plane is an in-plane approximation.
+
+**SC-006**: The probe shows `i:1` → 8/4/12, `i:2` → no event, and `g:6` → `et:1`.
+**SC-007**: A probe cut plane round-trips through an x-rotated basis back to the authored local
+angle, and the old Euler-z result differs.
+**SC-008**: Parse, LANEPROBE, MEPROBE, SETTINGSTEST and VERIFYSCHEMA still pass.
+
+## Verification evidence (0.7.4)
+
+- Box groups: `i=0` red/white → 5/9, `i=1` blue → 4, `i=2` → no event, `s=0` → 0; group 7 with
+  `i=1` blue → `et` 2 (`7 % 5`), value 4; groups -1 and 2.5 dropped. Folded ids are logged once per
+  map (`box groups folded onto room lights: {7: 2}`).
+- Cut angle: a 0.4 rad authored plane round-trips to 0.4000 through a (35°, 20°, 50°) basis, and to
+  0.4000 through `R·S(2, 0.5, 1)`; a zero-scale basis and a plane along the object's z take the
+  fallback; the old Euler-z result differs by 13.54°.
+- `SUPPORTTEST` PASS after its expectations were updated (box groups, 360 rotation and lane
+  rotation are supported, so they no longer warn).
+- Parse clean; LANEPROBE, MEPROBE, SETTINGSTEST, VERIFYSCHEMA 56 pass.
+
 ## Consultation Log
 
 | Gate | Question | Verdict | Follow-up |
 |------|----------|---------|-----------|
+| G1 (0.7.4) | Plan for box `i` transition/extend, group-id fold and local cut angle | **PASS WITH CHANGES** | Keep `g % 5` fold but drop malformed ids and log folds; `i=1` → 4/8/12 with the one-gap lag and `s=0` instant-off noted; cut angle from the global basis via `orthonormalized().transposed()` with degenerate/near-z fallback; probe adds non-uniform/degenerate scale, tilt-diff, extend and group-7 cases; `active-spec` moved to 027. |
 | G4 (0.7.3) | Noodle static, box groups, audio resume/elevation review | **CHANGES** then **PASS** | First pass found pooled-note/wall rotation leakage, box-group `c` read as RGB instead of an index and no brightness, and an unguarded resume handler; fixed all three, added v3 key aliases (`coordinates`/`localRotation`/`size`), probe now covers both key spellings plus index colours and `s=0`. Re-review PASS with in-VR checks pending; LOW follow-ups for 0.7.4: box-group transition `i=1`/extend `i=2`, cut angle against Noodle x/y rotation, group id→light type mapping. |
 | G4 (0.7.2) | 360/90 rotation review | **CHANGES** | Replaced the track-wide yaw with per-beat lane nodes (in-flight objects keep their rotation); probe now checks the shipped lane path; v3 basic events 14/15 added; v4 per-object rotation recorded as unsupported. |
 | G4 (0.7.1) | ME precision release review | **CHANGES** | Fixed the 4001+ wall height (same 5-layer scale, start 4x/50 per layer); clamped zero-size ME walls to 1 cm; cut sign confirmed. 360/Noodle/Chroma recorded as 0.7.2. |

@@ -4,6 +4,20 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.4 - 2026-11-07
+
+**Box-group fades/extends, group-id folding, Noodle cut angle.** A v3/v4 group event with `i:1`
+now emits the basic fade-to-colour value, and `i:2` extends the previous event instead of starting
+a new one. Group ids above 4 are folded onto the room's five light types (`id % 5`) rather than
+being dropped; the fold is logged per map. The cut pieces of a note or chain link derive their
+angle from the object's basis, so a Noodle x/y rotation splits along the visible plane. `s=0` is
+still an instant off (there is no basic fade-to-black), and a v3 transition ends at its event beat,
+which is one gap later than the authored fade. `SUPPORTTEST` now expects 360/90, box groups and
+static Noodle to be supported.
+
+[Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.7.4-q3) -
+[Spec](../specs/027-v07-map-compat/spec.md)
+
 ## v0.7.3 - 2026-11-07
 
 **Noodle static transforms, box-group colours, audio recovery.** Notes and walls honour Noodle

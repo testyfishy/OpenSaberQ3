@@ -158,3 +158,19 @@ func _physics_process(delta: float) -> void:
 	
 	if probe:
 		Cost.cuttable_usec += Time.get_ticks_usec() - t0
+
+## specs/027 FR-019: the visual cut angle in the object's own frame. Noodle x/y rotation and 360
+## lane yaw change the Euler decomposition of z, so subtracting `global_rotation.z` splits the
+## pieces along the wrong plane. Project the world plane normal through the inverse rotation
+## instead. Scale is stripped (orthonormalized); `fallback` is the old Euler-z result and is used
+## when the basis is degenerate (a zero Noodle scale) or the cut normal lies along the object's z.
+static func local_cut_angle(xform: Basis, plane_normal: Vector3, fallback: float) -> float:
+	var rotation := xform.orthonormalized()
+	for axis: Vector3 in [rotation.x, rotation.y, rotation.z]:
+		if not axis.is_finite() or axis.length() < 0.0001:
+			return fallback
+	var local := rotation.transposed() * plane_normal
+	var planar := Vector2(local.x, local.y)
+	if planar.length() < 0.0001:
+		return fallback
+	return planar.angle()

@@ -11,13 +11,13 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ![OpenSaberQ3](docs/images/banner.png)
 
-**v0.7.3** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
+**v0.7.4** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
 [install](#download-and-install). Built on BeepSaber and its lineage
 ([credits](ATTRIBUTION.md), [pinned upstream](UPSTREAM.md)).
 
 ## Since the fork
 
-| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.7.3 |
+| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.7.4 |
 |---|---|---|
 | **Engine** | Godot 4.3; 72 Hz, 60 Hz physics | **Godot 4.6.3**, 120 Hz with physics matched to the display, Performance / Balanced / Quality presets ([perf](docs/performance.md)) |
 | **Maps** | v2 | **v2, v3 and v4**, including the hybrid BeatSaver serves and v4's split beatmap/lightshow ([43-map audit](docs/map-data-audit.md)) |
@@ -30,6 +30,16 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 | **Measurement** | none | Bot and **human-play** captures, p99/max/spike metrics, release/rollback artifacts ([PERF.md](PERF.md)) |
 
 ## What's new
+
+### v0.7.4
+
+- **Box-group fades and extends.** A box-group event with `i:1` fades to its colour instead of
+  snapping on, and `i:2` holds the previous event instead of starting a new one.
+- **Groups above id 4 light the room.** Custom environments define their own group ids; they are
+  folded onto the room's five lights (`id % 5`) instead of being dropped. The fold is an
+  approximation and is logged per map.
+- **Cut pieces follow Noodle rotation.** The two halves split along the visible plane when a note
+  carries an x/y rotation, instead of using the Euler z.
 
 ### v0.7.3
 
@@ -196,12 +206,12 @@ The latest signed APK is on the [releases page](https://github.com/testyfishy/Op
 Enable **Developer mode** on the headset, then sideload with SideQuest or run:
 
 ```sh
-adb install -r OpenSaberQ3-0.7.3.apk
+adb install -r OpenSaberQ3-0.7.4.apk
 ```
 
 Launch **Open Saber Q3** from *Unknown Sources*. Installs alongside upstream BeepSaber; songs and
 scores stay separate. Upgrading over 0.5.x keeps maps, scores and settings. Builds are test-signed,
-not store builds. The 0.7.3 APK carries the new icon and menu logo. Screenshots are in
+not store builds. The 0.7.4 APK carries the new icon and menu logo. Screenshots are in
 `/sdcard/Android/data/io.github.testyfishy.opensaberq3/files/screenshots/`:
 
 ```sh
@@ -235,8 +245,8 @@ Versions, commands and known gaps: [UPSTREAM.md](UPSTREAM.md).
 - **Noodle transforms are static** (position, rotation, scale); animation and player tracks are not
   played.
 - **v4 per-object rotation** and VFX event boxes are not read. v2/v3 360/90 lanes and box-group
-  colour/brightness are supported; box groups ignore transitions, filters, distributions and
-  groups above id 4.
+  colour, brightness and fades are supported; box groups ignore strobe, filters, distributions,
+  fade-to-black, and fold group ids above 4 onto the room's lights.
 - The white highlights at chain joints are cosmetic.
 
 ## Credits and license

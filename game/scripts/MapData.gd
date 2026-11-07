@@ -444,9 +444,10 @@ static func _v4_expand_events(list: Array, data: Array) -> Array:
 
 
 
-## specs/027 FR-010: turn v3/v4 light colour box groups into the basic events the driver already
-## understands. Filters and distributions are ignored (the colour is applied at the event beat to
-## the group), which is the practical subset for the room lights.
+## specs/027 FR-010/FR-017/FR-018: turn v3/v4 light colour box groups into the basic events the
+## driver already understands. Filters, distributions and strobe are ignored (the group colour and
+## brightness are applied at the event beat). `i` is the transition type: 0 instant, 1 transition
+## (fade to the colour) and 2 extend, where the previous event keeps running.
 static func expand_box_group_colors(map_data: Dictionary, lightshow_data: Dictionary) -> void:
 	var groups: Array = []
 	groups.append_array(Utils.get_array(map_data, "lightColorEventBoxGroups", []))
@@ -455,12 +456,20 @@ static func expand_box_group_colors(map_data: Dictionary, lightshow_data: Dictio
 		return
 	var events: Array = Utils.get_array(map_data, "basicBeatmapEvents", [])
 	events = events.duplicate()
+	# Group ids are defined by the environment, not the map, and a custom environment can use ids
+	# the room does not have. Fold them onto the five room types instead of leaving the map dark;
+	# the mapping is an approximation (FR-018).
+	var folded_ids := {}
 	for group in groups:
 		if not (group is Dictionary):
 			continue
-		var g := int(Utils.get_float(group as Dictionary, "g", 0.0))
-		if g < 0 or g > 4:
+		var raw_group := Utils.get_float(group as Dictionary, "g", 0.0)
+		if raw_group < 0.0 or absf(raw_group - roundf(raw_group)) > 0.001:
 			continue
+		var group_id := int(roundf(raw_group))
+		var light_type := group_id % 5
+		if group_id > 4:
+			folded_ids[group_id] = light_type
 		var group_beat := Utils.get_float(group as Dictionary, "b", 0.0)
 		for box in Utils.get_array(group as Dictionary, "e", []):
 			if not (box is Dictionary):
@@ -468,23 +477,28 @@ static func expand_box_group_colors(map_data: Dictionary, lightshow_data: Dictio
 			for ev in Utils.get_array(box as Dictionary, "e", []):
 				if not (ev is Dictionary):
 					continue
+				var transition := int(Utils.get_float(ev as Dictionary, "i", 0.0))
+				if transition == 2:
+					# Extend: hold whatever the previous group event started.
+					continue
 				var beat := group_beat + Utils.get_float(ev as Dictionary, "b", 0.0)
 				var brightness := Utils.get_float(ev as Dictionary, "s", 1.0)
 				var color: Variant = (ev as Dictionary).get("c", null)
 				# v3/v4 use a colour index: 0 = left/red, 1 = right/blue, 2 = white. Brightness 0
-				# is "off". Brightness > 0 is treated as on (no strobe modelling yet).
+				# is "off"; there is no basic fade-to-black, so the off is instant.
 				if color is float or color is int:
 					var value := 1
 					if brightness <= 0.0:
 						value = 0
 					else:
+						# i=1 uses the basic fade-to-colour values; i=0 the instant on values.
 						match int(color):
-							0: value = 5
-							1: value = 1
-							_: value = 9
+							0: value = 8 if transition == 1 else 5
+							1: value = 4 if transition == 1 else 1
+							_: value = 12 if transition == 1 else 9
 					events.append({
 						"b": beat,
-						"et": g,
+						"et": light_type,
 						"i": value,
 						"f": brightness,
 					})
@@ -500,9 +514,11 @@ static func expand_box_group_colors(map_data: Dictionary, lightshow_data: Dictio
 					continue
 				events.append({
 					"b": beat,
-					"et": g,
-					"i": 0 if brightness <= 0.0 else 1,
+					"et": light_type,
+					"i": 0 if brightness <= 0.0 else (4 if transition == 1 else 1),
 					"f": brightness,
 					"customData": {"color": color_dict},
 				})
+	if not folded_ids.is_empty():
+		vr.log_info("box groups folded onto room lights: %s" % str(folded_ids))
 	map_data["basicBeatmapEvents"] = events

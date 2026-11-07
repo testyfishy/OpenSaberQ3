@@ -253,7 +253,9 @@ func _start_cut_pieces(cutplane: Plane, _cut_speed: Vector3) -> void:
 	# calculate angle and position of the cut
 	var cut_angle_abs := Vector2(cutplane.normal.x, cutplane.normal.y).angle()
 	var cut_dist_from_center := cutplane.distance_to(global_transform.origin)
-	var cut_angle_rel := cut_angle_abs - global_rotation.z
+	# specs/027 FR-019: the object's own frame, so Noodle x/y rotation splits along the visible plane.
+	var cut_angle_rel := local_cut_angle(
+		global_transform.basis, cutplane.normal, cut_angle_abs - global_rotation.z)
 	
 	_piece_death_count = 0
 	piece_left.start_cut(-cut_dist_from_center, cut_angle_rel + PI)
