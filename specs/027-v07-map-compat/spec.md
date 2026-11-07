@@ -325,11 +325,34 @@ VERIFYSCHEMA still pass.
   five fade states, no per-event tween).
 - Pending on the headset: wall rim/grow, arc attachment, lightshow smoothness.
 
+## Scoped change: 0.7.6 filled walls
+
+**Symptom** (owner, after 0.7.5): the walls still look half-filled, like a texture that is half
+painted and half empty, and the fill flickers as the background moves. The grow and rim work did
+not address it.
+
+**Root cause** `wall_shared.tres` was additive with a body of only 0.10-0.20 of the wall colour, so
+the room behind dominated; the near-camera `smoothstep(0.25,1.0,abs(VERTEX.z))` also punched
+transparent patches into a wall beside the player. Both change with the background/head position,
+which is the flicker.
+
+**Blast radius** `game/Wall/wall_shared.tres` only. No collision, placement or colour data changed.
+
+- **FR-024**: Walls MUST render as a filled panel at 75-100% opacity (rim at full), not a faint
+  additive tint, and MUST NOT use a view-space near fade that makes parts of the panel transparent.
+- **SC-012**: In VR the wall reads solid with no background-dependent holes; a note behind a wall
+  is still visible; putting the head inside a wall dims it instead of filling the view.
+
+**Verification** shader compiles on the desktop renderer; headless parse clean; 0.7.6 / code 22
+installed. G4 required cull_back (per-object sort made the two-faced version flicker) and 75%
+alpha for note visibility. The in-VR look is the release gate.
+
 ## Consultation Log
 
 | Gate | Question | Verdict | Follow-up |
 |------|----------|---------|-----------|
 | G1 (0.7.4) | Plan for box `i` transition/extend, group-id fold and local cut angle | **PASS WITH CHANGES** | Keep `g % 5` fold but drop malformed ids and log folds; `i=1` → 4/8/12 with the one-gap lag and `s=0` instant-off noted; cut angle from the global basis via `orthonormalized().transposed()` with degenerate/near-z fallback; probe adds non-uniform/degenerate scale, tilt-diff, extend and group-7 cases; `active-spec` moved to 027. |
+| G4 (0.7.6) | Wall fill shader | **CHANGES** | Revert cull_disabled to cull_back (per-object transparent sorting would flicker and double overdraw); body alpha 75-100%; tag only after the owner's in-VR look at fill, notes behind a wall and head-in-wall dim. |
 | G4 (0.7.5) | Wall growth/rim, lightshow cost, arc head, release benchmark | **PASS (conditional, met)** | Fade tint is written once per fade and published as the start colour; dedup resets after a literal RGB; same-slot conflicts keep the on event; arc head uses the cube only inside a lane node and logs mismatches; flash-on/fade-from-current are linear again. Tag only if the device benchmark on Hand in Hand holds the target frame rate with no regression; in-VR checks pending. |
 | G1 (0.7.5) | Wall growth/rim, arc head, lightshow cost | **PASS WITH CHANGES** | Pin the wall bottom and drop the area counter-scale; rim on vanilla walls only (all edges) via a per-wall uniform; do not skip/extend arcs, use the head cube position; replace per-event Tweens with one interpolation state per type, merge at 1/32 beat; allow `bench.flag` in release builds. |
 | G4 (0.7.4) | Box-group i/s semantics, g%5 fold, basis-local cut angle, stale unsupported test | **PASS** | Tag after the APK SHA is recorded; in-VR checks of the cut split on tilted notes and box-group fades pending. Later: ChainLink measures cut distance from the local origin while BeepCube uses global. |

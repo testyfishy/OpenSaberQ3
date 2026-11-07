@@ -33,10 +33,9 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ### v0.7.6
 
-- **Solid walls.** The wall panel is now filled and 85% opaque instead of a faint additive tint,
-  so the room no longer shows through it and the fill stops flickering as the background moves.
-  The near-camera transparent patch is gone, and both faces draw so a wall stays visible while the
-  camera crosses it.
+- **Solid walls.** The wall panel is now filled and 75-100% opaque instead of a faint additive
+  tint, so the room no longer shows through it and the fill stops flickering as the background
+  moves. The near-camera transparent patch is gone; notes behind a wall stay faintly visible.
 
 ### v0.7.5
 
