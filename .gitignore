@@ -20,3 +20,7 @@ perf/captures/*.wav
 perf/captures/*.csv
 perf/captures/*.meta.txt
 perf_run_*
+
+# release signing key (kept locally; never commit)
+bin/release.keystore
+
