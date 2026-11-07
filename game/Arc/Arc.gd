@@ -13,11 +13,6 @@ static var spawn_enabled := true
 # rebuild itself still happens (the curve differs per arc), but node creation/free stops.
 static var _pool: Array = []
 
-static func acquire() -> Arc:
-	if _pool.is_empty():
-		return preload("res://game/Arc/Arc.tscn").instantiate() as Arc
-	return _pool.pop_back() as Arc
-
 func _release_to_pool() -> void:
 	if activator_cube and activator_cube.cutted.is_connected(_on_activator_cube_cutted):
 		activator_cube.cutted.disconnect(_on_activator_cube_cutted)
@@ -32,6 +27,29 @@ static var right_material := left_material.duplicate() as ShaderMaterial
 
 static var left_material_magnet := left_material.duplicate() as ShaderMaterial
 static var right_material_magnet := right_material.duplicate() as ShaderMaterial
+
+# specs/028 FR-003/FR-010: the material's distance fade is fragment `length(VERTEX)` (distance from
+# the camera) with 15 m..3 m, and the tip fade is 0.2..2 m from the tail. Notes spawn 4 beats
+# (16 m) ahead, so a 15 m fade made the far end pop in at spawn and hid the last 2 m before the tail.
+# Move the far fade well beyond the spawn distance and switch the tip fade off; the magnet fade is
+# independent and stays.
+static var _fades_configured := false
+
+static func _configure_fades() -> void:
+	if _fades_configured:
+		return
+	_fades_configured = true
+	for material: ShaderMaterial in [left_material, right_material, left_material_magnet, right_material_magnet]:
+		material.set_shader_parameter(&"distance_fade_min", 60.0)
+		material.set_shader_parameter(&"distance_fade_max", 40.0)
+		material.set_shader_parameter(&"distance_fade_tip_min", -10.0)
+		material.set_shader_parameter(&"distance_fade_tip_max", -5.0)
+
+static func acquire() -> Arc:
+	_configure_fades()
+	if _pool.is_empty():
+		return preload("res://game/Arc/Arc.tscn").instantiate() as Arc
+	return _pool.pop_back() as Arc
 
 @onready var visual: CSGPolygon3D = $Path3D/Visual
 

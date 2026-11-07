@@ -9,6 +9,11 @@ const OUT_DIR := "F:/Dev/BeepSaberBin/f025/"
 var cam: Camera3D
 
 func _ready() -> void:
+	var wall_mat := load("res://game/Wall/wall_shared.tres") as ShaderMaterial
+	print("WALLMAT ok=", wall_mat != null, " shader=", wall_mat.shader != null if wall_mat != null else false)
+	Arc._configure_fades()
+	for p in ["distance_fade_min", "distance_fade_max", "distance_fade_tip_min", "distance_fade_tip_max"]:
+		print("ARCPARAM ", p, "=", Arc.left_material.get_shader_parameter(p))
 	cam = Camera3D.new()
 	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 	cam.size = 12.0
@@ -167,5 +172,6 @@ func _line(parent: Node3D, a: Vector3, b: Vector3) -> void:
 	mi.material_override = mat
 	parent.add_child(mi)
 	mi.look_at_from_position((a + b) * 0.5, b, Vector3.UP)
+
 
 

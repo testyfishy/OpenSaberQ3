@@ -19,33 +19,14 @@ var _base_mat: Material
 var _size := Vector3.ONE
 
 
-var _spawn_age := SPAWN_ANIM_S
 # 1.0 normally; lowered when the camera is inside this wall so the player can see out of it.
 var _fade := 1.0
 var _camera: Camera3D
 var despawn_z: float
 var speed: float
 
-# Matches the AnimationPlayer this replaced: 1.0 s, height 0.1 -> 1.0, with the original curve's
-# slow start (transition 0.0884) and fast finish (1.0), evaluated as a cubic Hermite so the wall
-# grows the way it used to rather than snapping up in half the time.
-const SPAWN_ANIM_S := 1.0
-const SPAWN_START_H := 0.1
-const SPAWN_TANGENT_IN := 0.0884
-const SPAWN_TANGENT_OUT := 1.0
-
 func _physics_process(delta: float) -> void:
 	if Scoreboard.paused: return
-	if _spawn_age < SPAWN_ANIM_S:
-		_spawn_age += delta
-		var t := clampf(_spawn_age / SPAWN_ANIM_S, 0.0, 1.0)
-		var span := 1.0 - SPAWN_START_H
-		var h00 := 2.0 * t * t * t - 3.0 * t * t + 1.0
-		var h10 := t * t * t - 2.0 * t * t + t
-		var h01 := -2.0 * t * t * t + 3.0 * t * t
-		var h11 := t * t * t - t * t
-		var h := h00 * SPAWN_START_H + h10 * SPAWN_TANGENT_IN * span + h01 * 1.0 + h11 * SPAWN_TANGENT_OUT * span
-		$WallMeshOrientation.scale = Vector3(1.0, h, 1.0)
 	_update_inside_fade()
 	transform.origin.z += speed * delta
 	
@@ -104,12 +85,9 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	transform.origin.z = (current_beat - wall_info.beat) * Constants.BEAT_DISTANCE - depth
 	
 	speed = NoteMotion.speed_at(wall_info.beat)
-	# Scale-in on spawn, done in code. This used to be an AnimationPlayer per wall: on a wall map
-	# with ~570 walls live that is 570 AnimationMixers processing every frame, and removing them
-	# recovered 1.3 points of dropped frames. The visual is the same: 10% -> 100% height over a
-	# few tenths of a second as the wall approaches.
-	_spawn_age = 0.0
-	$WallMeshOrientation.scale = Vector3(1.0, 0.1, 1.0)
+	# specs/028 FR-001: walls appear at their full height immediately. The old 1 s grow made wall
+	# art (hundreds of one-lane walls) look torn, with every column at a different height.
+	$WallMeshOrientation.scale = Vector3.ONE
 
 func _wall_mesh() -> MeshInstance3D:
 	if _mesh_cache == null:
@@ -157,3 +135,4 @@ func _update_inside_fade() -> void:
 		var mesh := _wall_mesh()
 		if mesh != null:
 			mesh.set_instance_shader_parameter(&"fade", _fade)
+
