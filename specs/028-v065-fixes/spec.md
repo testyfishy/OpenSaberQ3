@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: In progress - walls and arcs fixed in code; BeatLeader tab and close-cut diagnostics next; no build installed
+**Status**: 0.6.5 built and installed; G4 fixes applied; tag pending the 5-minute in-VR wall/tab check
 
 **Input**: Owner, after playing 0.6.4: "The BeatLeader on the left overlaps the high-score UI; integrate
 it into the high-score design. BeastSaber saves playlists but the local library has no playlist/folder
@@ -70,9 +70,10 @@ fixed, but a long gap makes one disappear for a moment."
   the 0.7 compatibility notes; no new format is added to 0.6.5.
 - **FR-010**: An arc MUST NOT pop in at spawn. Any far fade is measured from the camera and starts
   beyond the spawn distance.
-- **FR-011**: Every missed hit MUST be classified (`no-contact`, `wrong-direction`, `too-slow`,
-  `passed-window`); closest distance and tip speed are logged only when the debug setting is on.
-  Release builds log nothing.
+- **FR-011**: A missed hit MUST be classified by the debug miss probe as `no-contact` or
+  `near-miss` (closest blade-to-box distance), logged only when `gameplay/debug/miss_probe` is on;
+  release builds log nothing. `wrong-direction` and `too-slow` are not reachable until those gates
+  exist (0.7), so they are not claimed.
 
 ## Success Criteria
 
@@ -83,13 +84,17 @@ fixed, but a long gap makes one disappear for a moment."
 - **SC-003**: The high-score panel shows Local and BeatLeader in one panel; no world canvas overlaps
   it in the menu; the menu button opens the BeatLeader tab.
 - **SC-004**: A close-cut diagnostic records the nearest blade-to-box distance for a missed close
-  note; the capsule test is evaluated against the recorded misses.
+  note; the capsule test is evaluated against the recorded misses. (Ships in 0.6.5; the capsule
+  experiment is deferred to 0.6.6.)
 - **SC-005**: Existing arc/hit/settings probes pass; 120 fps capture stays within 0.6.4.
 - **SC-006**: Frame time on the DITR8 wall map (20–40 s section) is no worse than 0.6.4; a paused
   frame shows no stripes.
 - **SC-007**: The BeatLeader tab ignores a response for a map that is no longer selected.
 
 ## Out of Scope
+
+- Depth-based wall grow (all walls at the same depth share one height) is deferred to 0.6.6 if the
+  owner wants the flourish back; 0.6.5 ships static walls.
 
 - Library cards/playlist folders and sorting (0.7, separate spec).
 - Mapping Extensions, 90/360, Noodle, Chroma, box groups (0.7 spec 027).
@@ -101,8 +106,24 @@ fixed, but a long gap makes one disappear for a moment."
 - [NEEDS CLARIFICATION: wall look — keep the bright rim for single walls but disable it for adjacent
   walls, or switch to flat translucent walls everywhere?] — assume flat translucent, matching Beat
   Saber, unless it hurts readability.
-- [NEEDS CLARIFICATION: should the centred BeatLeader canvas remain for the end screen?] — assume the
-  end screen keeps its own panel; only the menu overlap is fixed.
+- **Resolved:** the centred BeatLeader canvas stays in the scene for future end-screen use but has
+  no menu caller; the left high-score tab is the only menu entry point.
+
+## Verification evidence (2026-11-07)
+
+- **Walls**: `Wall.gd` no longer has the grow; the shader has no rim (`wall_shared.tres`); the
+  material loads cleanly in the arc probe.
+- **Arcs**: `Arc._configure_fades()` sets the far fade to 40–60 m and the tip fade off; the probe
+  prints `distance_fade_min=60`, `max=40`, `tip_min=-10`, `tip_max=-5`; all five arc geometry cases
+  still report 0.0000 m endpoint error, monotonic Z and 0 crossings.
+- **BeatLeader tab**: `tools/harness/beatleader_tab_probe.tscn` prints `Top 10 of 10 shown`, 10
+  rows, first row `1 TornadoEF6 887725 98.45%`; a cleared map prints "No map selected." The panel
+  preview at 940x520 shows the Local/BeatLeader tabs and the 10-row board.
+- **Close-cut probe**: `tools/harness/hit_probe.tscn` reports through=0.000, outside=0.750,
+  graze=0.050, and the switch flips from false to true. Enable with
+  `gameplay/debug/miss_probe=true`; release builds leave it unset, so nothing is logged.
+- **Regression**: SETTINGSTEST PASS; VERIFYSCHEMA 53 bad=0; storage probe passes.
+- Pending: the in-VR wall/arc look, the tab with a laser pointer, and the close-cut recording.
 
 ## Consultation Log
 

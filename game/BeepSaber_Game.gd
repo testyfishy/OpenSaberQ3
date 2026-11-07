@@ -63,7 +63,6 @@ var _trigger_latched := false
 @onready var percent_indicator := $Percent_Indicator as PercentIndicator
 
 @onready var map_source_dialogs := $MapSourceDialogs as Node3D
-@onready var beatleader_launcher := $BeatLeaderLauncher as OQ_UI2DCanvas
 @onready var storage_canvas := $Storage_Canvas as OQ_UI2DCanvas
 @onready var storage_panel = storage_canvas.ui_control
 @onready var online_search_keyboard := $Keyboard_online_search as OQ_UI2DKeyboard
@@ -158,12 +157,6 @@ func _transition_game_state(next_state: GameState) -> void:
 
 func show_MapSourceDialogs(showing: bool = true) -> void:
 	map_source_dialogs.visible = showing
-	if beatleader_launcher != null:
-		beatleader_launcher.visible = showing
-		if showing:
-			beatleader_launcher._show()
-		else:
-			beatleader_launcher._hide()
 	if storage_canvas != null and not showing:
 		storage_canvas._hide()
 	for c in map_source_dialogs.get_children():
@@ -781,22 +774,18 @@ func _users_button() -> void:
 	_open_profile_panel(false)
 
 
-# BeatLeader is read-only, menu-only (specs/020 FR-004/FR-005). The menu is hidden while the
-# board is up so the two world-space canvases never draw over each other.
+# BeatLeader is read-only, menu-only (specs/020, 028 FR-004..006). It now lives in the
+# high-score panel's BeatLeader tab, so there is no second canvas to hide the menu for.
 func _leaderboard_button(map_info: MapInfo, diff: DifficultyInfo) -> void:
-	if leaderboard_panel == null:
+	if highscore_panel == null:
 		return
-	leaderboard_panel.open(map_info, diff)
-	if gamestate == gamestate_mapselection:
-		main_menu._hide()
-		storage_canvas._hide()
-	leaderboard_canvas._show()
+	highscore_canvas._show()
+	highscore_panel.show_beatleader(map_info, diff)
 
-
+# The centred panel is no longer opened from the menu, but the scene still connects its Close
+# signal; keep the handler so the hidden canvas can be dismissed if it is ever shown.
 func _on_leaderboard_closed() -> void:
 	leaderboard_canvas._hide()
-	if gamestate == gamestate_mapselection:
-		main_menu._show()
 
 # Storage panel (specs/026): opened from the main menu's Storage button.
 func _storage_button() -> void:
@@ -811,12 +800,6 @@ func _on_storage_closed() -> void:
 	storage_canvas._hide()
 	if gamestate == gamestate_mapselection:
 		main_menu._show()
-
-# Left-side BeatLeader sign (specs/025 FR-007): open the board for the menu's current
-# selection through the same path the in-panel Leaderboard button uses.
-func _on_beatleader_launcher_pressed() -> void:
-	if menu != null:
-		menu.open_leaderboard_for_selection()
 
 func _on_endscore_switch_requested() -> void:
 	_open_profile_panel(true)
@@ -987,4 +970,5 @@ func recenter():
 	var xr_camera := $XROrigin3D/XRCamera3D as XRCamera3D
 	xr_origin.rotation.y -= xr_camera.global_rotation.y
 	xr_origin.position -= (xr_camera.global_position * Vector3(1,0,1)) - Vector3(0,0,1)
+
 

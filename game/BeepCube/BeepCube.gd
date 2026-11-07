@@ -60,6 +60,7 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	# re-enable our process_mode first otherwise it seems like Godot-internals
 	# can behave weirdly (ex. AnimationPlayer won't always play correctly)
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	blade_min_dist = INF
 	
 	var color := MapPalette.color_left if note_info.color == 0 else MapPalette.color_right
 	# FR-004: a colour the map puts on this one note wins over the scheme, which in turn
@@ -171,6 +172,9 @@ func make_chain_head() -> void:
 	piece_right.set_chain_head(true)
 
 func on_miss() -> void:
+	if HitResolver.miss_probe():
+		var kind := "no-contact" if blade_min_dist > 0.08 else "near-miss"
+		vr.log_info("MISS beat=%.3f closest=%.3f kind=%s" % [beat, blade_min_dist, kind])
 	Harness.log_miss(beat)
 	Scoreboard.reset_combo()
 	hide_cube()

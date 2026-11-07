@@ -25,6 +25,14 @@ const SETTING_ISOLATE_SHAPES := &"gameplay/notes/isolate_collision_shapes"
 var speed: float
 var beat: float
 
+# specs/028 FR-011: closest blade-to-box distance seen while the miss probe is on. INF means no
+# blade came near; BeepCube.on_miss logs it only when the debug setting enables the probe.
+var blade_min_dist := INF
+
+func track_blade_distance(d: float) -> void:
+	if d < blade_min_dist:
+		blade_min_dist = d
+
 # used to release the cube once both of it's cut pieces have died off
 # Note: serves no purpose for bombs
 var _piece_death_count := 0

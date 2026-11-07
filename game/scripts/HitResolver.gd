@@ -121,10 +121,20 @@ static func _remove_at(i: int) -> void:
 # is sampled at several poses and each pose is an exact segment-vs-box test.
 # Returns the cuttable to cut, or null. Ordering (earliest sample, then nearest
 # the hilt) keeps "which of two overlapping notes is cut first" deterministic.
+# -1 = not read, 0/1 = miss probe off/on. specs/028 FR-011: diagnostics only, never in a release
+# unless the key is set; the closest blade distance is tracked only while this is on.
+static var _miss_probe := -1
+
+static func miss_probe() -> bool:
+	if _miss_probe < 0:
+		_miss_probe = 1 if bool(ProjectSettings.get_setting("gameplay/debug/miss_probe", false)) else 0
+	return _miss_probe == 1
+
 static func find_hit(mask: int, base_prev: Vector3, tip_prev: Vector3,
 		base_cur: Vector3, tip_cur: Vector3) -> Node3D:
 	if _count == 0:
 		return null
+	var probe := miss_probe()
 	var steps := clampi(ceili(tip_prev.distance_to(tip_cur) / STEP_M), 1, MAX_STEPS)
 	var best: Node3D = null
 	var best_step := 1 << 30
@@ -139,12 +149,43 @@ static func find_hit(mask: int, base_prev: Vector3, tip_prev: Vector3,
 		if (_layer[i] & mask) == 0:
 			i += 1
 			continue
+		if probe:
+			_track_distance(i, cuttable, base_cur, tip_cur)
 		var hit := _test_entry(i, base_prev, tip_prev, base_cur, tip_cur, steps)
 		if hit.x >= 0.0 and (int(hit.x) < best_step or (int(hit.x) == best_step and hit.y < best_s)):
 			best = cuttable
 			best_step = int(hit.x)
 			best_s = hit.y
 		i += 1
+	return best
+
+
+## specs/028 FR-011: with the miss probe on, keep the closest blade-to-box distance per cuttable.
+## Sampled at the current pose only; this is a diagnostic, not a hit test, and costs nothing when
+## the project setting is off.
+static func _track_distance(i: int, cuttable: Node3D, base_cur: Vector3, tip_cur: Vector3) -> void:
+	var shape_node := _shape_node[i] as CollisionShape3D
+	if shape_node == null:
+		return
+	var shape := shape_node.shape
+	if not (shape is BoxShape3D):
+		return
+	var half := (shape as BoxShape3D).size * 0.5
+	var inv := shape_node.global_transform.affine_inverse()
+	var d := _segment_box_distance(inv * base_cur, inv * tip_cur, half)
+	var s := shape_node.global_transform.basis.get_scale()
+	# Local-space distance -> metres: the shape may be scaled (notes set their box per spawn).
+	(cuttable as Cuttable).track_blade_distance(d * maxf(s.x, maxf(s.y, s.z)))
+
+static func _segment_box_distance(a: Vector3, b: Vector3, half: Vector3) -> float:
+	var best := INF
+	for k in 9:
+		var p := a.lerp(b, float(k) / 8.0)
+		var q := Vector3(
+			clampf(p.x, -half.x, half.x),
+			clampf(p.y, -half.y, half.y),
+			clampf(p.z, -half.z, half.z))
+		best = minf(best, p.distance_to(q))
 	return best
 
 

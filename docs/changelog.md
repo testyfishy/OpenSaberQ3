@@ -4,6 +4,18 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.6.5 - 2026-11-07
+
+**Walls, long arcs, BeatLeader in the high-score panel.** Walls spawn at full height with no rim, so
+one-lane wall art reads as a surface instead of a torn/striped curtain. The arc far fade now starts
+beyond the 16 m spawn distance and the tip fade is off, so a long gap stays visible. The left
+high-score panel gains Local and BeatLeader tabs; the overlapping BeatLeader sign is removed and the
+menu's Leaderboard button opens the tab, which loads lazily and drops stale responses. A debug-only
+miss probe records the closest blade distance on a miss.
+
+[Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.6.5-q3) -
+[Spec](../specs/028-v065-fixes/spec.md)
+
 ## v0.6.4 - 2026-11-07
 
 **Storage manager and bulk delete.** A Storage button in the main menu opens a panel with every

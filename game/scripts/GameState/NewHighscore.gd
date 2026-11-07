@@ -2,7 +2,8 @@ extends GameState
 class_name GameStateNewHighScore
 
 func _ready(game) -> void:
-	# populate highscore panel with records
+	# populate highscore panel with records; the local tab is the one that belongs on this screen
+	game.highscore_panel.show_local()
 	game.highscore_panel.load_highscores(
 		Map.current_info, Map.current_difficulty.difficulty_rank)
 

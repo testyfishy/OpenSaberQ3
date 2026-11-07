@@ -38,7 +38,6 @@
 [ext_resource type="PackedScene" uid="uid://dvj8dorx2l7s0" path="res://game/BeepCube/BeepCube.tscn" id="33_nc705"]
 [ext_resource type="PackedScene" uid="uid://b62c3hkjmky75" path="res://game/Chain/ChainLink.tscn" id="34_tsovg"]
 [ext_resource type="PackedScene" path="res://game/ProfilePanel.tscn" id="36_profiles"]
-[ext_resource type="PackedScene" path="res://game/ui/BeatLeaderPanel/BeatLeaderLauncher.tscn" id="47_bleader_launcher"]
 [ext_resource type="PackedScene" path="res://game/ui/BeastSaberPanel/BeastSaberPanel.tscn" id="48_beastsaber"]
 [ext_resource type="PackedScene" path="res://game/ui/StoragePanel/StoragePanel.tscn" id="49_storage"]
 
@@ -262,11 +261,6 @@ visible = false
 [node name="YouTubeUI" parent="MapSourceDialogs/YouTube_Canvas" node_paths=PackedStringArray("keyboard") instance=ExtResource("26")]
 keyboard = NodePath("../../../Keyboard_online_search")
 
-[node name="BeatLeaderLauncher" parent="." instance=ExtResource("3")]
-transform = Transform3D(0.346575, 0, 0.938022, 0, 1, 0, -0.938022, 0, 0.346575, -2.43, 1.498, 0.468)
-
-[node name="LauncherPanel" parent="BeatLeaderLauncher" instance=ExtResource("47_bleader_launcher")]
-
 [node name="Keyboard_online_search" parent="." instance=ExtResource("21")]
 transform = Transform3D(0.838233, 0.349429, -2.22632, 0, 2.37535, 0.372819, 2.25358, -0.129972, 0.828095, 2.09772, 0.833935, 0.302276)
 visible = false
@@ -344,7 +338,6 @@ main_menu_ref = NodePath("../MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu")
 [connection signal="leaderboard_requested" from="MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu" to="." method="_leaderboard_button"]
 [connection signal="storage_requested" from="MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu" to="." method="_storage_button"]
 [connection signal="closed" from="Storage_Canvas/StoragePanel" to="." method="_on_storage_closed"]
-[connection signal="open_requested" from="BeatLeaderLauncher/LauncherPanel" to="." method="_on_beatleader_launcher_pressed"]
 [connection signal="closed" from="Leaderboard_Canvas/BeatLeaderPanel" to="." method="_on_leaderboard_closed"]
 [connection signal="switch_requested" from="EndScore" to="." method="_on_endscore_switch_requested"]
 [connection signal="user_chosen" from="Profile_canvas/ProfilePanel" to="." method="_on_profile_user_chosen"]
@@ -355,6 +348,7 @@ main_menu_ref = NodePath("../MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu")
 [connection signal="new_scene_instanced" from="WallPool" to="." method="_on_ScenePool_new_scene_instanced"]
 [connection signal="text_input_enter" from="Keyboard_highscore" to="." method="_on_keyboard_entered"]
 [connection signal="text_input_cancel" from="Keyboard_highscore" to="." method="_on_keyboard_cancel"]
+
 
 
 
