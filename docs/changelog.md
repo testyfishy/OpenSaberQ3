@@ -9,8 +9,8 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
 **Library cards and sorting; depth-based wall grow.** The main menu gains a Cards view: All,
 BeatSaver, each BeastSaber playlist, BeastSaber (other), Uploaded and Local, with count and size;
 sort by Name, Artist, Mapper, Date added, Size or Play Count, persisted. BeastSaber playlist
-membership lives in `Songs/.playlists.json` (many-to-many); sidecar v2 caches `added_unix` and
-`bytes`. Wall height is now a function of depth (10% at 16 m to full at 8 m), so wall art stays
+membership lives in `Songs/.playlists.json` (many-to-many) and starts with downloads made in 0.7 or
+later; sidecar v2 caches `added_unix` and `bytes` (the first launch scans the folders once). Wall height is now a function of depth (10% at 16 m to full at 8 m), so wall art stays
 continuous while it still rises into view.
 
 Map compatibility (Mapping Extensions, 90/360, Noodle, Chroma, box groups) follows in 0.7.1.

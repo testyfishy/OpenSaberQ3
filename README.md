@@ -38,9 +38,10 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
   Choose a card to filter the list, then sort by Name, Artist, Mapper, Date added, Size or Play
   count (ascending/descending). The card and sort choice persist across launches.
 - **BeastSaber playlists are remembered.** A playlist manifest (`Songs/.playlists.json`) records
-  which download belongs to which playlist, many-to-many. Sidecar v2 caches each map's added date
-  and size once, so the library does not rescan folders on every launch. Maps downloaded before
-  0.7 land under **BeastSaber (other)** and still play.
+  which download belongs to which playlist, many-to-many; this starts with downloads made in 0.7
+  or later. Sidecar v2 caches each map's added date and size once (the first 0.7 launch scans the
+  folders one time), so later launches do not rescan. Maps downloaded before 0.7 land under
+  **BeastSaber (other)** and still play.
 - **Depth-based wall grow.** Walls rise from 10% at 16 m to full at 8 m, with height depending on
   depth rather than spawn time, so a wall-art surface stays continuous.
 - Map compatibility (Mapping Extensions precision, 90/360, Noodle, Chroma, v4 box groups) is the

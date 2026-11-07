@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: In progress - implemented; 0.7.0 build/install pending
+**Status**: Implemented; 0.7.0 built/installed; G4 fixes applied; tag pending in-VR checks
 
 **Input**: Owner: "BeastSaber saves the files as playlists, but our local directory has no playlist
 sorting. For the local system in front of us, add an option to view as folders or cards: BeatSaver
@@ -64,28 +64,40 @@ download paths.
 
 ## Requirements *(mandatory)*
 
-- **FR-001**: `MapSource` schema 2 MUST add `playlist_id`, `playlist_title` and `added_unix` to the
-  sidecar; v1 sidecars MUST read with empty/0 values (no failure).
-- **FR-002**: The BeastSaber downloader MUST write the playlist id/title into every map it installs
-  and set `added_unix` for new installs.
-- **FR-003**: Existing libraries MUST backfill `added_unix` from the map folder's modification time;
-  missing playlist tags MUST group as "BeastSaber (other)", never be dropped.
+- **FR-001**: `MapSource` schema 2 MUST add `added_unix` and the cached `bytes` to the sidecar; v1
+  sidecars MUST read with 0 values (no failure). Playlist membership MUST NOT live in the sidecar
+  (many-to-many).
+- **FR-002**: The BeastSaber downloader MUST record the playlist id/title and its installed hashes
+  in `Songs/.playlists.json`, and set `added_unix`/`bytes` for new installs.
+- **FR-003**: Existing libraries MUST backfill `added_unix` from `Info.dat`'s modification time
+  (frozen into the sidecar on first sight); missing playlist membership MUST group as "BeastSaber
+  (other)", never be dropped.
 - **FR-004**: The library MUST offer a **Cards** view and the existing **List** view. Cards MUST be
-  one per source and one per BeastSaber playlist, showing a cover, the map count and the total size.
+  one per source and one per BeastSaber playlist, showing the map count and the total size. Covers
+  are deferred to 0.7.1; 0.7.0 cards are text tiles.
 - **FR-005**: Selecting a card MUST filter the songs to that source/playlist; "All" MUST clear it.
   The selection MUST survive a list rebuild when the map still exists.
 - **FR-006**: Sorting MUST support Name, Artist, Mapper, Date added, Size and Play count, ascending
   and descending, with the choice persisted in `config.ini`.
-- **FR-007**: A text filter MUST narrow within the selected card; it MUST debounce or apply on
-  submit, not per keystroke on the headset.
+- **FR-007 (deferred to 0.7.1)**: A text filter SHOULD narrow within the selected card, applied on
+  submit (not per keystroke). `LibraryView.filter` already accepts the text; the 0.7.0 UI has no
+  input yet.
 - **FR-008**: Play, Delete and Leaderboard MUST use the visible list and clamp the selection exactly
   as today; an empty card MUST disable them.
-- **FR-009**: The card covers MUST come from local data only (map cover, stored playlist image, or a
-  source icon); no network request in the library.
-- **FR-010**: Re-downloading an existing map MUST update its sidecar (playlist/added) without
-  creating a second row or folder.
-- **FR-011**: A headless probe MUST verify sidecar v2 round-trip, the card grouping (source +
-  playlist), and the sort comparators on a synthetic library.
+- **FR-009 (deferred to 0.7.1)**: Card covers MUST come from local data only (map cover, stored
+  playlist image, or a source icon); no network request in the library.
+- **FR-010**: Re-downloading an existing map MUST update its sidecar stats and its manifest
+  membership without creating a second row or folder.
+- **FR-011**: A headless probe MUST verify sidecar v2 round-trip, the manifest many-to-many, the
+  card grouping (source + playlist), and the sort comparators on a synthetic library.
+- **FR-012**: Playlist membership is many-to-many. Deleting a map MUST remove its hash from every
+  playlist; a playlist left empty MUST disappear from the cards.
+- **FR-013**: Map size and added date MUST be computed once and cached in the sidecar, so the card
+  view performs no extra scans after the first launch.
+- **FR-014**: The cards and the sort MUST drive one `LibraryQuery`; the old SourceFilter and
+  PlaylistSelector are hidden rather than a second source of truth.
+- **FR-015**: The depth-based wall grow (height = f(front-edge z), 10% at 16 m to full at 8 m) MUST
+  keep all walls at the same depth at one height and MUST NOT shrink the wall's collision box.
 
 ### Key Entities
 
@@ -140,4 +152,5 @@ download paths.
 
 | Gate | Question | Verdict | Follow-up |
 |------|----------|---------|-----------|
-| G0 | Are the card/playlist metadata model, sort set and list/card toggle the right 0.7 library slice? | pending | send with the sidecar and menu evidence |
+| G0 | Are the card/playlist metadata model, sort set and list/card toggle the right 0.7 library slice? | **GO WITH CHANGES** | Adopted: playlist manifest (many-to-many) instead of per-map fields, cached bytes, one LibraryQuery, stable comparators, Info.dat mtime frozen; 0.7.0 library+grow, 0.7.1 map compat. |
+| G4 | 0.7.0 release readiness + spec drift | **CHANGES** | Fixed the wall grow to use the front-edge z and counter-scale the WallArea; rewrote FR-001/002/010 for the manifest, marked covers/text filter 0.7.1, added FR-012..015, recorded G0/G4. |

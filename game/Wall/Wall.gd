@@ -32,10 +32,19 @@ const GROW_START_Z := -16.0
 const GROW_END_Z := -8.0
 const GROW_MIN := 0.1
 
+# The wall's transform is its centre, so a long wall's front edge reaches the player while its
+# centre is still far away. Grow from the front edge, and counter-scale the WallArea so the
+# collision box stays full height while the visual rises (G4 0.7.0).
+var _half_depth := 0.0
+
 func _apply_grow() -> void:
-	var t := clampf((transform.origin.z - GROW_START_Z) / (GROW_END_Z - GROW_START_Z), 0.0, 1.0)
+	var front_z := transform.origin.z + _half_depth
+	var t := clampf((front_z - GROW_START_Z) / (GROW_END_Z - GROW_START_Z), 0.0, 1.0)
 	var h := lerpf(GROW_MIN, 1.0, smoothstep(0.0, 1.0, t))
 	$WallMeshOrientation.scale = Vector3(1.0, h, 1.0)
+	var area := $WallMeshOrientation/WallArea as Node3D
+	if area != null:
+		area.scale = Vector3(1.0, 1.0 / maxf(h, 0.001), 1.0)
 
 func _physics_process(delta: float) -> void:
 	if Scoreboard.paused: return
@@ -78,6 +87,7 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	var y_size := wall_info.height * Constants.LANE_DISTANCE
 	var z_size := wall_info.duration * Constants.BEAT_DISTANCE
 	var depth := z_size * 0.5
+	_half_depth = depth
 	# Scale the mesh node, not the mesh. The BoxMesh is shared and unit-sized: mutating a
 	# per-wall mesh (`resource_local_to_scene`) rebuilt and re-uploaded its buffers on every
 	# spawn, which on a wall map is ~74 times a second. The collision shape still needs its own
