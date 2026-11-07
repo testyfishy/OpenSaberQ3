@@ -38,7 +38,7 @@ merely suggests one is Supported with a warning.
 | Chroma per-note colour | Supported |
 | Noodle `_coordinates` note position | Partial |
 | Mapping Extensions precision (positions, cut angles, wall widths/heights) | **Supported** (0.7.1) |
-| 90° / 360° rotation events | **Not yet** — parsed, not applied |
+| 90° / 360° rotation events | **Supported** (0.7.2, track rotation; the room does not turn) |
 | Noodle rotation, scale, animation tracks, per-object speed/offset | **Not yet** |
 | Chroma light/environment events, Chroma JSON environments | **Not yet** |
 | v4 box-group lighting / VFX event boxes | **Not yet** |
