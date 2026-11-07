@@ -19,7 +19,7 @@ static func cleanup(songs_dir: String) -> void:
 	if DirAccess.dir_exists_absolute(dir):
 		var song := dir.path_join(SONG)
 		if FileAccess.file_exists(song) and _sha256(song) == SONG_SHA256:
-			_remove_tree(dir)
+			Utils.remove_tree(dir)
 			print("BUNDLEDDEMO removed ", dir)
 	var file := FileAccess.open(marker, FileAccess.WRITE)
 	if file != null:
@@ -36,18 +36,3 @@ static func _sha256(path: String) -> String:
 	ctx.update(bytes)
 	return ctx.finish().hex_encode().to_upper()
 
-static func _remove_tree(path: String) -> void:
-	var dir := DirAccess.open(path)
-	if dir == null:
-		return
-	dir.list_dir_begin()
-	var name := dir.get_next()
-	while not name.is_empty():
-		var child := path.path_join(name)
-		if dir.current_is_dir():
-			_remove_tree(child)
-		else:
-			DirAccess.remove_absolute(child)
-		name = dir.get_next()
-	dir.list_dir_end()
-	DirAccess.remove_absolute(path)

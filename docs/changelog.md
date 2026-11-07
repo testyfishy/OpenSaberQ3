@@ -13,7 +13,7 @@ opens the existing top-10 panel, and the right-hand online panel gains a **Beast
 tab that downloads a whole curated playlist from BeatSaver, tagged `beastsaber`.
 
 The build also stops shipping old benchmark capture files and the bundled demo (already gone since
-0.6.1). A 24 s 1080p60 gameplay clip and four stills land in `docs/media/` for the itch page.
+0.6.1). A 24 s 1080p60 gameplay clip and four stills are kept locally for the itch page (not committed).
 
 **Known:** the in-VR arc look and the two new menu entries still need a pass on the headset.
 

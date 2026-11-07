@@ -40,7 +40,8 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
   right; it opens the same read-only top-10 board for the selected map and difficulty.
 - **BeastSaber (curated) tab.** The right-hand online panel lists BeastSaber's curated playlists and
   downloads every map in one press, tagged `beastsaber` in the library.
-- **Itch media.** A 24-second 1080p60 gameplay clip and four stills are in `docs/media/`.
+- **Itch media.** A 24-second 1080p60 gameplay clip and four stills are kept locally for the
+  store page (not in the repository).
 
 ### v0.6.2
 
@@ -70,9 +71,9 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 - **Dense maps hold 120 fps.** 2,913 notes at 9.64 NPS: 120 fps median, 0.14% dropped
   (Quest 3, Performance preset, bot play).
 
-![Library filtered to BeatSaver](docs/images/v06-library.png)
+The in-VR library filtered to BeatSaver, with source tags and the map details panel.
 
-**Next, 0.6.4:** BeastSaber single-map search and playlist covers. The `beastsaber` tag is already in the
+**Next, 0.6.5:** BeastSaber single-map search and playlist covers. The `beastsaber` tag is already in the
 schema.
 
 ## Performance

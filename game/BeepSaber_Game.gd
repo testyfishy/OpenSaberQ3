@@ -64,6 +64,8 @@ var _trigger_latched := false
 
 @onready var map_source_dialogs := $MapSourceDialogs as Node3D
 @onready var beatleader_launcher := $BeatLeaderLauncher as OQ_UI2DCanvas
+@onready var storage_canvas := $Storage_Canvas as OQ_UI2DCanvas
+@onready var storage_panel = storage_canvas.ui_control
 @onready var online_search_keyboard := $Keyboard_online_search as OQ_UI2DKeyboard
 
 @onready var cube_template := preload("res://game/BeepCube/BeepCube.tscn").instantiate() as BeepCube
@@ -162,6 +164,8 @@ func show_MapSourceDialogs(showing: bool = true) -> void:
 			beatleader_launcher._show()
 		else:
 			beatleader_launcher._hide()
+	if storage_canvas != null and not showing:
+		storage_canvas._hide()
 	for c in map_source_dialogs.get_children():
 		if c is OQ_UI2DCanvas:
 			(c as OQ_UI2DCanvas)._hide()
@@ -785,11 +789,26 @@ func _leaderboard_button(map_info: MapInfo, diff: DifficultyInfo) -> void:
 	leaderboard_panel.open(map_info, diff)
 	if gamestate == gamestate_mapselection:
 		main_menu._hide()
+		storage_canvas._hide()
 	leaderboard_canvas._show()
 
 
 func _on_leaderboard_closed() -> void:
 	leaderboard_canvas._hide()
+	if gamestate == gamestate_mapselection:
+		main_menu._show()
+
+# Storage panel (specs/026): opened from the main menu's Storage button.
+func _storage_button() -> void:
+	if storage_panel == null or gamestate != gamestate_mapselection:
+		return
+	storage_panel.open(menu)
+	main_menu._hide()
+	leaderboard_canvas._hide()
+	storage_canvas._show()
+
+func _on_storage_closed() -> void:
+	storage_canvas._hide()
 	if gamestate == gamestate_mapselection:
 		main_menu._show()
 

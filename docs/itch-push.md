@@ -1,7 +1,7 @@
 # itch.io push plan
 
 **Status:** plan only. 0.6.3 is the arc/menu build; upload only the 0.6.3 APK. The clip and
-stills are in `docs/media/`. Nothing has been uploaded or published. The page needs the owner's itch.io
+stills are kept locally (not in the repository). Nothing has been uploaded or published. The page needs the owner's itch.io
 account and an explicit go-ahead. Page copy is in [itch-page.md](itch-page.md).
 
 ## 1. Go / no-go
@@ -14,8 +14,8 @@ All of these must be true before the page goes live:
 - [x] **Bundled demo song removed in 0.6.1.** TheFatRat “Time Lapse” is no longer in the
       repository, the 0.6.3 APK or matching libraries. Upload 0.6.3 only; do not upload or
       promote 0.6.0, which still contains it.
-- [x] **Real headset media.** The 24 s 1080p60 clip with game audio and four stills are in
-      `docs/media/` (`gameplay-0.6.3.mp4`, `gameplay-1..4.png`). Add menu stills later if wanted.
+- [x] **Real headset media.** The 24 s 1080p60 clip with game audio and four stills are kept
+      locally in `itch-media/` (not committed). Add menu stills later if wanted.
 - [ ] Page copy pasted from `docs/itch-page.md`, including **AI-generated content: Graphics** and
       the non-affiliation line.
 - [ ] The **AI disclosure field** is set to Yes / Graphics.

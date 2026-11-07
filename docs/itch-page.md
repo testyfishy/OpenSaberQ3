@@ -103,10 +103,10 @@ Use these under the real captures, in this order:
 | Cover | 630×500 | `docs/images/itch-cover.png` — ready |
 | Banner | 1280×640 | `docs/images/banner.png` — ready |
 | Icon | 512×512 | `docs/images/logo.png` — ready |
-| Screenshots | 3–5, 16:9, 1280×720 or larger | `docs/media/gameplay-1.png` .. `gameplay-4.png` — ready |
-| Gameplay clip | 15–30 s, optional but recommended | `docs/media/gameplay-0.6.3.mp4` — 24 s 1080p60 with audio |
+| Screenshots | 3–5, 16:9, 1280×720 or larger | local `itch-media/gameplay-1.png` .. `gameplay-4.png` — ready |
+| Gameplay clip | 15–30 s, optional but recommended | local `itch-media/gameplay-0.6.3.mp4` — 24 s 1080p60 with audio |
 | Upload | Android APK, 0.6.3 | built with the new icon |
 
-The gameplay clip and stills in `docs/media/` are cut from the owner's headset recording (1920x1080,
-60 fps, game audio). The menu and leaderboard renders in `docs/images/` are desktop captures with the simulator overlay;
+The gameplay clip and stills are cut from the owner's headset recording (1920x1080, 60 fps, game
+audio) and kept outside the repository. The menu and leaderboard renders in `docs/images/` are desktop captures with the simulator overlay;
 they are not store screenshots. The gameplay clip and stills are real headset captures.

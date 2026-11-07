@@ -157,6 +157,17 @@ theme_override_styles/pressed = SubResource("3")
 theme_override_styles/normal = SubResource("4")
 text = "Settings"
 
+[node name="Storage_Button" type="Button" parent="."]
+layout_mode = 0
+offset_left = 1265.0
+offset_top = 408.0
+offset_right = 1390.0
+offset_bottom = 456.0
+theme_override_styles/hover = SubResource("2")
+theme_override_styles/pressed = SubResource("3")
+theme_override_styles/normal = SubResource("4")
+text = "Storage"
+
 [node name="Users_Button" type="Button" parent="."]
 layout_mode = 0
 offset_left = 1265.0
@@ -326,9 +337,11 @@ text = "0.4.1"
 [connection signal="pressed" from="Exit_Button" to="." method="_on_Exit_Button_pressed"]
 [connection signal="pressed" from="Settings_Button" to="." method="_on_Settings_Button_pressed"]
 [connection signal="pressed" from="Users_Button" to="." method="_on_Users_Button_pressed"]
+[connection signal="pressed" from="Storage_Button" to="." method="_on_Storage_Button_pressed"]
 [connection signal="button_up" from="Search_Button" to="." method="_on_Search_Button_button_up"]
 [connection signal="item_selected" from="SongsMenu" to="." method="_select_song"]
 [connection signal="item_selected" from="PlaylistSelector" to="." method="_on_PlaylistSelector_item_selected"]
 [connection signal="item_selected" from="DifficultyMenu" to="." method="_select_difficulty"]
 [connection signal="pressed" from="LoadPlaylists_Button" to="." method="_on_LoadPlaylists_Button_pressed"]
 [connection signal="timeout" from="song_prev/stop_prev" to="." method="_on_stop_prev_timeout"]
+

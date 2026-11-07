@@ -1,4 +1,4 @@
-[gd_scene load_steps=47 format=3 uid="uid://dqb3ybvpsfcbw"]
+[gd_scene load_steps=48 format=3 uid="uid://dqb3ybvpsfcbw"]
 
 [ext_resource type="PackedScene" uid="uid://cs8e62lsifik5" path="res://game/floor.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://game/BeepCube/DebrisField.tscn" id="45_debris"]
@@ -40,6 +40,7 @@
 [ext_resource type="PackedScene" path="res://game/ProfilePanel.tscn" id="36_profiles"]
 [ext_resource type="PackedScene" path="res://game/ui/BeatLeaderPanel/BeatLeaderLauncher.tscn" id="47_bleader_launcher"]
 [ext_resource type="PackedScene" path="res://game/ui/BeastSaberPanel/BeastSaberPanel.tscn" id="48_beastsaber"]
+[ext_resource type="PackedScene" path="res://game/ui/StoragePanel/StoragePanel.tscn" id="49_storage"]
 
 [sub_resource type="Environment" id="1"]
 background_mode = 2
@@ -280,6 +281,12 @@ offset_right = 752.0
 show_close_button = false
 show_song_info = false
 
+[node name="Storage_Canvas" parent="." instance=ExtResource("3")]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 1.5, -1)
+visible = false
+
+[node name="StoragePanel" parent="Storage_Canvas" instance=ExtResource("49_storage")]
+
 [node name="Leaderboard_Canvas" parent="." instance=ExtResource("3")]
 transform = Transform3D(2.3178, 0, 0, 0, 2.3178, 0, 0, 0, 2.3178, 0, 1.5, -1)
 visible = false
@@ -335,6 +342,8 @@ main_menu_ref = NodePath("../MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu")
 [connection signal="apply" from="Settings_canvas/settings_Panel" to="." method="_on_settings_Panel_apply"]
 [connection signal="users_requested" from="MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu" to="." method="_users_button"]
 [connection signal="leaderboard_requested" from="MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu" to="." method="_leaderboard_button"]
+[connection signal="storage_requested" from="MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu" to="." method="_storage_button"]
+[connection signal="closed" from="Storage_Canvas/StoragePanel" to="." method="_on_storage_closed"]
 [connection signal="open_requested" from="BeatLeaderLauncher/LauncherPanel" to="." method="_on_beatleader_launcher_pressed"]
 [connection signal="closed" from="Leaderboard_Canvas/BeatLeaderPanel" to="." method="_on_leaderboard_closed"]
 [connection signal="switch_requested" from="EndScore" to="." method="_on_endscore_switch_requested"]
@@ -346,5 +355,6 @@ main_menu_ref = NodePath("../MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu")
 [connection signal="new_scene_instanced" from="WallPool" to="." method="_on_ScenePool_new_scene_instanced"]
 [connection signal="text_input_enter" from="Keyboard_highscore" to="." method="_on_keyboard_entered"]
 [connection signal="text_input_cancel" from="Keyboard_highscore" to="." method="_on_keyboard_cancel"]
+
 
 

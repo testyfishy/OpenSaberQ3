@@ -338,7 +338,7 @@ func _install_zip(body: PackedByteArray) -> Install:
 	Utils.unzip(zippath, song_out_dir)
 	DirAccess.remove_absolute(zippath)
 	if not _has_info(song_out_dir):
-		_remove_tree(song_out_dir)
+		Utils.remove_tree(song_out_dir)
 		return Install.FAILED
 	MapSource.write(song_out_dir, MapSource.SOURCE_BEASTSABER, _current_id, _current_hash)
 	return Install.INSTALLED
@@ -357,22 +357,6 @@ func _zip_has_info(zip_path: String) -> bool:
 			break
 	reader.close()
 	return found
-
-func _remove_tree(dir_path: String) -> void:
-	var dir := DirAccess.open(dir_path)
-	if dir == null:
-		return
-	dir.list_dir_begin()
-	var entry := dir.get_next()
-	while entry != "":
-		if entry != "." and entry != "..":
-			var path := dir_path + entry
-			if dir.current_is_dir():
-				_remove_tree(path + "/")
-			else:
-				DirAccess.remove_absolute(path)
-		entry = dir.get_next()
-	dir.list_dir_end()
 
 func _finish_download() -> void:
 	_busy = Busy.NONE
@@ -425,4 +409,5 @@ func _safe_name(name: String) -> String:
 	if out.is_empty():
 		out = "beastsaber-map"
 	return out
+
 

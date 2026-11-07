@@ -14,6 +14,8 @@ signal users_requested()
 signal start_map(info: MapInfo, difficulty: DifficultyInfo)
 # emitted when the player wants the BeatLeader board for the selected map/difficulty
 signal leaderboard_requested(map_info: MapInfo, difficulty: DifficultyInfo)
+# emitted when the player opens the storage panel
+signal storage_requested()
 
 var _cover_texture_create_sw := StopwatchFactory.create("cover_texture_create",10,true)
 
@@ -446,6 +448,13 @@ func _on_Exit_Button_pressed() -> void:
 func _on_Users_Button_pressed() -> void:
 	users_requested.emit()
 
+func _on_Storage_Button_pressed() -> void:
+	storage_requested.emit()
+
+## The full library, independent of the current source filter (specs/026 FR-002).
+func get_library_maps() -> Array:
+	return _all_songs
+
 # The badge is the "who is playing" reminder the user asked for: it must track the
 # current profile, so it is refreshed on ProfileManager.changed rather than only once.
 func _refresh_user_badge() -> void:
@@ -593,3 +602,4 @@ func _on_canvas_visibility_changed() -> void:
 	var canvas := _parent_canvas()
 	if canvas != null and not canvas.visible and _backfill != null:
 		_backfill.stop()
+
