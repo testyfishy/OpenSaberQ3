@@ -48,6 +48,9 @@ var _current_url := ""
 var _current_name := ""
 var _current_hash := ""
 var _current_id := ""
+var _installed_hashes: Array = []
+var _playlist_id := ""
+var _playlist_title := ""
 var _downloaded := 0
 var _skipped := 0
 var _failed := 0
@@ -156,6 +159,8 @@ func _on_playlist_pressed(index: int) -> void:
 		return
 	_selected = index
 	var doc: Dictionary = _playlists[index]
+	_playlist_id = str(doc.get("playlistId", ""))
+	_playlist_title = str(doc.get("name", ""))
 	var owner: Dictionary = doc.get("owner", {})
 	var stats: Dictionary = doc.get("stats", {})
 	detail_title.text = str(doc.get("name", "?"))
@@ -198,12 +203,15 @@ func _on_download_pressed() -> void:
 	if _busy != Busy.NONE or _selected < 0 or _selected >= _playlists.size():
 		return
 	var doc: Dictionary = _playlists[_selected]
+	_playlist_id = str(doc.get("playlistId", ""))
+	_playlist_title = str(doc.get("name", ""))
 	var url := str(doc.get("downloadURL", ""))
 	if url.is_empty():
 		status_label.text = "This playlist has no download URL."
 		return
 	OS.request_permissions()
 	_queue.clear()
+	_installed_hashes.clear()
 	_downloaded = 0
 	_skipped = 0
 	_failed = 0
@@ -323,12 +331,18 @@ func _install_zip(body: PackedByteArray) -> Install:
 	if _has_info(song_out_dir):
 		var existing := MapSource.read(song_out_dir)
 		if str(existing.get("hash", "")) == _current_hash:
+			var now := int(Time.get_unix_time_from_system())
+			var added := int(existing.get("added_unix", 0))
+			MapSource.set_stats(song_out_dir, added if added > 0 else now,
+				StorageTools.folder_size(song_out_dir))
+			_installed_hashes.append(_current_hash)
 			DirAccess.remove_absolute(zippath)
 			return Install.SKIPPED
 		# Same map name, different map: keep both rather than overwrite the installed one.
 		folder_name = _safe_name("%s (%s)" % [_current_id, _current_name])
 		song_out_dir = Constants.APPDATA_PATH + ("Songs/%s/" % folder_name)
 		if _has_info(song_out_dir):
+			_installed_hashes.append(_current_hash)
 			DirAccess.remove_absolute(zippath)
 			return Install.SKIPPED
 
@@ -340,7 +354,10 @@ func _install_zip(body: PackedByteArray) -> Install:
 	if not _has_info(song_out_dir):
 		Utils.remove_tree(song_out_dir)
 		return Install.FAILED
-	MapSource.write(song_out_dir, MapSource.SOURCE_BEASTSABER, _current_id, _current_hash)
+	var added := int(Time.get_unix_time_from_system())
+	MapSource.write(song_out_dir, MapSource.SOURCE_BEASTSABER, _current_id, _current_hash,
+		added, StorageTools.folder_size(song_out_dir))
+	_installed_hashes.append(_current_hash)
 	return Install.INSTALLED
 
 func _has_info(dir_path: String) -> bool:
@@ -367,6 +384,11 @@ func _finish_download() -> void:
 		text += ", %d failed" % _failed
 	progress_label.text = text
 	status_label.text = text
+	# specs/029 FR-012: playlist membership, many-to-many, written even when some maps were
+	# already present so a re-download still lands under the right card.
+	if not _installed_hashes.is_empty() and not _playlist_id.is_empty():
+		PlaylistManifest.add_maps(Constants.APPDATA_PATH + "Songs", _playlist_id,
+			_playlist_title, _installed_hashes)
 	if _downloaded > 0 and main_menu_ref != null:
 		main_menu_ref._on_LoadPlaylists_Button_pressed()
 	_set_controls()

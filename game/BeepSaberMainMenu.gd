@@ -58,14 +58,27 @@ var _currently_selected_songlist_ref: Array[MapInfo] = _all_songs # reference to
 # change, backfill refresh) so the selection stays on the same song when it is still visible.
 var _selected_map: MapInfo = null
 
+# specs/029: card/sort state and the runtime Cards UI.
+var _manifest: Dictionary = {}
+var _cards: Array = []
+var _card_key := Settings.library_card
+var _sort_field := Settings.library_sort_field
+var _sort_desc := Settings.library_sort_desc
+var _view_cards := false
+var _view_button: Button
+var _sort_button: OptionButton
+var _dir_button: Button
+var _card_label: Label
+var _card_scroll: ScrollContainer
+var _card_grid: GridContainer
+
 # stop the preview player if the main song player is going
 func _physics_process(_delta: float) -> void:
 	if main_song_player_ref.playing:
 		song_preview.stop()
 
 func refresh_playlist() -> void:
-	var id := playlist_selector.get_selected_id()
-	_on_PlaylistSelector_item_selected(id)
+	_apply_library_view()
 
 class MapInfoWithSort:
 	var num: int
@@ -86,6 +99,13 @@ func _load_playlists() -> void:
 	DirAccess.make_dir_recursive_absolute(songs_dir)
 	BundledDemo.cleanup(songs_dir)
 	_discover_all_songs(songs_dir)
+	# specs/029: playlist membership from the manifest, cached size/date in the sidecar. The
+	# sidecar values are written once and then stay frozen, so the library scan does not repeat the
+	# folder walk on every launch.
+	_manifest = PlaylistManifest.read(songs_dir)
+	for song in _all_songs:
+		_ensure_stats(song)
+		song.playlists = PlaylistManifest.playlists_for(_manifest, song.level_hash)
 	var songs_with_modify_times: Array[MapInfoWithSort] = []
 	var songs_with_play_count: Array[MapInfoWithSort] = []
 	for song in _all_songs:
@@ -130,10 +150,154 @@ func _discover_all_songs(seek_path: String) -> void:
 					_all_songs.append(song)
 			file_name = dir.get_next()
 
+func _build_library_ui() -> void:
+	_view_button = Button.new()
+	_view_button.position = Vector2(140, 12)
+	_view_button.size = Vector2(160, 48)
+	_view_button.add_theme_font_size_override("font_size", 22)
+	_view_button.text = "Cards"
+	_view_button.pressed.connect(_toggle_view)
+	add_child(_view_button)
+
+	_card_label = Label.new()
+	_card_label.position = Vector2(305, 12)
+	_card_label.size = Vector2(120, 48)
+	_card_label.add_theme_font_size_override("font_size", 16)
+	_card_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_card_label.clip_text = true
+	add_child(_card_label)
+
+	_sort_button = OptionButton.new()
+	_sort_button.position = Vector2(432, 12)
+	_sort_button.size = Vector2(198, 48)
+	_sort_button.add_theme_font_size_override("font_size", 20)
+	for field in LibraryView.SORT_FIELDS:
+		@warning_ignore("return_value_discarded")
+		_sort_button.add_item(LibraryView.SORT_LABELS[field])
+	_sort_button.select(maxi(0, LibraryView.SORT_FIELDS.find(_sort_field)))
+	_sort_button.item_selected.connect(_on_sort_selected)
+	add_child(_sort_button)
+
+	_dir_button = Button.new()
+	_dir_button.position = Vector2(634, 12)
+	_dir_button.size = Vector2(90, 48)
+	_dir_button.add_theme_font_size_override("font_size", 20)
+	_dir_button.text = "Z-A" if _sort_desc else "A-Z"
+	_dir_button.pressed.connect(_toggle_direction)
+	add_child(_dir_button)
+
+	_card_scroll = ScrollContainer.new()
+	_card_scroll.position = Vector2(16, 64)
+	_card_scroll.size = Vector2(832, 496)
+	_card_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_card_scroll.visible = false
+	_card_grid = GridContainer.new()
+	_card_grid.columns = 2
+	_card_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_card_scroll.add_child(_card_grid)
+	add_child(_card_scroll)
+	_update_card_label()
+
+func _ensure_stats(song: MapInfo) -> void:
+	var changed := false
+	if song.bytes == 0:
+		song.bytes = StorageTools.folder_size(song.filepath)
+		changed = true
+	if song.added_unix == 0:
+		var info_path := song.filepath + "Info.dat"
+		if not FileAccess.file_exists(info_path):
+			info_path = song.filepath + "info.dat"
+		var stamp := FileAccess.get_modified_time(info_path)
+		if stamp <= 0:
+			stamp = FileAccess.get_modified_time(song.filepath)
+		song.added_unix = stamp
+		changed = true
+	if changed:
+		MapSource.set_stats(song.filepath, song.added_unix, song.bytes)
+
+func _apply_library_view() -> void:
+	_cards = LibraryView.cards(_all_songs, _manifest)
+	var known := _card_key == LibraryView.CARD_ALL
+	for card in _cards:
+		if str(card["key"]) == _card_key:
+			known = true
+			break
+	if not known:
+		_card_key = LibraryView.CARD_ALL
+	_build_card_buttons()
+	var filtered := LibraryView.filter(_all_songs, _card_key)
+	var sorted := LibraryView.sort(filtered, _sort_field, _sort_desc)
+	var typed: Array[MapInfo] = []
+	for map in sorted:
+		typed.append(map as MapInfo)
+	_set_cur_playlist(typed)
+	_update_card_label()
+
+func _build_card_buttons() -> void:
+	if _card_grid == null:
+		return
+	for child in _card_grid.get_children():
+		_card_grid.remove_child(child)
+		child.queue_free()
+	for card in _cards:
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(396, 112)
+		button.add_theme_font_size_override("font_size", 22)
+		var marker := "> " if str(card["key"]) == _card_key else ""
+		button.text = "%s%s\n%d maps - %s" % [marker, str(card["label"]), int(card["count"]),
+			StorageTools.format_bytes(int(card["bytes"]))]
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.pressed.connect(_on_card_pressed.bind(str(card["key"])))
+		_card_grid.add_child(button)
+
+func _on_card_pressed(key: String) -> void:
+	_card_key = key
+	Settings.library_card = key
+	Settings.save()
+	_view_cards = false
+	if _view_button != null:
+		_view_button.text = "Cards"
+	songs_menu.visible = true
+	_card_scroll.visible = false
+	_apply_library_view()
+
+func _toggle_view() -> void:
+	_view_cards = not _view_cards
+	_view_button.text = "List" if _view_cards else "Cards"
+	songs_menu.visible = not _view_cards
+	_card_scroll.visible = _view_cards
+	if _view_cards:
+		_cards = LibraryView.cards(_all_songs, _manifest)
+		_build_card_buttons()
+
+func _on_sort_selected(index: int) -> void:
+	if index < 0 or index >= LibraryView.SORT_FIELDS.size():
+		return
+	_sort_field = LibraryView.SORT_FIELDS[index]
+	Settings.library_sort_field = _sort_field
+	Settings.save()
+	_apply_library_view()
+
+func _toggle_direction() -> void:
+	_sort_desc = not _sort_desc
+	_dir_button.text = "Z-A" if _sort_desc else "A-Z"
+	Settings.library_sort_desc = _sort_desc
+	Settings.save()
+	_apply_library_view()
+
+func _update_card_label() -> void:
+	if _card_label == null:
+		return
+	var label := "All maps"
+	for card in _cards:
+		if str(card["key"]) == _card_key:
+			label = str(card["label"])
+			break
+	_card_label.text = label
+
 func _set_cur_playlist(songs: Array[MapInfo]) -> void:
-	# The source filter is a view over whichever list was picked (FR-002), never a copy that
-	# changes the playlist, so switching sources back to All restores the original list.
-	songs = MapSource.filter_by_source(songs, Settings.library_source_filter)
+	# specs/029 FR-014: the callers hand in the already-filtered and sorted view (LibraryView),
+	# so this function only builds the rows; there is no second source filter here.
 	_currently_selected_songlist_ref = songs
 	var current_id := songs_menu.get_selected_items()
 	
@@ -335,6 +499,7 @@ func _delete_map(map: MapInfo) -> void:
 	if DirAccess.dir_exists_absolute(map.filepath):
 		vr.log_info("Error removing song " + map.filepath)
 		return
+	PlaylistManifest.remove_map(Constants.APPDATA_PATH + "Songs", map.level_hash)
 	Highscores.remove_map(map)
 	PlayCount.remove_map(map)
 	vr.log_info(map.filepath+" Removed")
@@ -382,6 +547,7 @@ func _ready() -> void:
 		@warning_ignore("return_value_discarded")
 		canvas.visibility_changed.connect(_on_canvas_visibility_changed)
 	
+	_build_library_ui()
 	_load_playlists()
 	
 	await keyboard.ready
@@ -394,8 +560,9 @@ func _ready() -> void:
 	@warning_ignore("return_value_discarded")
 	keyboard._text_edit.focus_exited.connect(_text_input_enter)
 	
-	playlist_selector.select(1)
-	playlist_selector.item_selected.emit(1)
+	playlist_selector.visible = false
+	source_filter.visible = false
+	_apply_library_view()
 	
 	if song_uploader_ref and song_uploader_ref.active:
 		$upload_url.text = "Manually Upload Custom Songs: \n%s"%[
@@ -596,4 +763,5 @@ func _on_canvas_visibility_changed() -> void:
 	var canvas := _parent_canvas()
 	if canvas != null and not canvas.visible and _backfill != null:
 		_backfill.stop()
+
 

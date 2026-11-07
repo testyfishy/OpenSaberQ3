@@ -227,6 +227,7 @@ func _execute(batch: Array) -> void:
 		if not StorageTools.remove_map(map.filepath):
 			failed += 1
 			continue
+		PlaylistManifest.remove_map(Constants.APPDATA_PATH + "Songs", map.level_hash)
 		Highscores.remove_map(map)
 		PlayCount.remove_map(map)
 		removed += 1

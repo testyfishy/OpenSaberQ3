@@ -25,10 +25,23 @@ var _camera: Camera3D
 var despawn_z: float
 var speed: float
 
+# specs/029/027: depth-based grow. Height is a function of the wall's own z, so every wall at the
+# same depth has the same height and a wall surface stays continuous; the 0.6.5 age-based version
+# staggered the columns and made wall art look torn.
+const GROW_START_Z := -16.0
+const GROW_END_Z := -8.0
+const GROW_MIN := 0.1
+
+func _apply_grow() -> void:
+	var t := clampf((transform.origin.z - GROW_START_Z) / (GROW_END_Z - GROW_START_Z), 0.0, 1.0)
+	var h := lerpf(GROW_MIN, 1.0, smoothstep(0.0, 1.0, t))
+	$WallMeshOrientation.scale = Vector3(1.0, h, 1.0)
+
 func _physics_process(delta: float) -> void:
 	if Scoreboard.paused: return
 	_update_inside_fade()
 	transform.origin.z += speed * delta
+	_apply_grow()
 	
 	# remove children that go to far
 	if transform.origin.z > despawn_z:
@@ -85,9 +98,8 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	transform.origin.z = (current_beat - wall_info.beat) * Constants.BEAT_DISTANCE - depth
 	
 	speed = NoteMotion.speed_at(wall_info.beat)
-	# specs/028 FR-001: walls appear at their full height immediately. The old 1 s grow made wall
-	# art (hundreds of one-lane walls) look torn, with every column at a different height.
-	$WallMeshOrientation.scale = Vector3.ONE
+	# specs/029: the depth-based grow sets the initial height from the spawn z.
+	_apply_grow()
 
 func _wall_mesh() -> MeshInstance3D:
 	if _mesh_cache == null:

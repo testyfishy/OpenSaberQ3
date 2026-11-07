@@ -25,6 +25,10 @@ var difficulty_beatmaps: Array[DifficultyInfo]
 var source := MapSource.SOURCE_UNKNOWN
 var source_id := ""
 var level_hash := ""
+# specs/029: cached sidecar values and BeastSaber playlist membership (manifest entries).
+var added_unix := 0
+var bytes := 0
+var playlists: Array = []
 
 @warning_ignore("shadowed_variable")
 func _init(
@@ -62,6 +66,8 @@ func apply_source(sidecar: Dictionary) -> void:
 	source = MapSource.normalize_source(str(sidecar.get("source", MapSource.SOURCE_UNKNOWN)))
 	source_id = str(sidecar.get("map_id", "")).strip_edges()
 	level_hash = str(sidecar.get("hash", "")).strip_edges().to_lower()
+	added_unix = int(sidecar.get("added_unix", 0))
+	bytes = int(sidecar.get("bytes", 0))
 
 func source_label() -> String:
 	return MapSource.label(source)

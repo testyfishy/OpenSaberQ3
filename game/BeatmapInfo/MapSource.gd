@@ -13,7 +13,10 @@ class_name MapSource
 ## what `compute_level_hash` reproduces, which is why old maps can be re-identified.
 
 const FILENAME := "OpenSaber.meta"
-const SCHEMA_VERSION := 1
+## v2 (specs/029): adds `added_unix` and the cached `bytes`; v1 sidecars read as 0. Playlist
+## membership is not here: one map can be in several BeastSaber playlists, so it lives in
+## `Songs/.playlists.json` (PlaylistManifest).
+const SCHEMA_VERSION := 2
 
 const SOURCE_BEATSAVER := "beatsaver"
 const SOURCE_BEASTSABER := "beastsaber"
@@ -56,9 +59,10 @@ static func sidecar_path(dir_path: String) -> String:
 	return dir_path.path_join(FILENAME)
 
 
-## Reads the sidecar. Always returns a valid dictionary: {source, map_id, hash}.
+## Reads the sidecar. Always returns a valid dictionary:
+## {source, map_id, hash, added_unix, bytes}.
 static func read(dir_path: String) -> Dictionary:
-	var out := {"source": SOURCE_UNKNOWN, "map_id": "", "hash": ""}
+	var out := {"source": SOURCE_UNKNOWN, "map_id": "", "hash": "", "added_unix": 0, "bytes": 0}
 	var path := sidecar_path(dir_path)
 	if path.is_empty() or not FileAccess.file_exists(path):
 		return out
@@ -73,12 +77,15 @@ static func read(dir_path: String) -> Dictionary:
 		out.source = SOURCE_UNKNOWN
 	out.map_id = str(cfg.get_value("map", "map_id", "")).strip_edges()
 	out.hash = str(cfg.get_value("map", "hash", "")).strip_edges().to_lower()
+	out.added_unix = int(cfg.get_value("map", "added_unix", 0))
+	out.bytes = int(cfg.get_value("map", "bytes", 0))
 	return out
 
 
 ## Writes the sidecar atomically: temp file first, then a rename over the real one. A failed
 ## write leaves the old sidecar (or none) in place; the caller keeps the map either way.
-static func write(dir_path: String, source: String, map_id: String = "", hash: String = "") -> bool:
+static func write(dir_path: String, source: String, map_id: String = "", hash: String = "",
+		added_unix: int = 0, bytes: int = 0) -> bool:
 	if dir_path.is_empty():
 		return false
 	var cfg := ConfigFile.new()
@@ -86,6 +93,8 @@ static func write(dir_path: String, source: String, map_id: String = "", hash: S
 	cfg.set_value("map", "source", normalize_source(source))
 	cfg.set_value("map", "map_id", map_id.strip_edges())
 	cfg.set_value("map", "hash", hash.strip_edges().to_lower())
+	cfg.set_value("map", "added_unix", added_unix)
+	cfg.set_value("map", "bytes", bytes)
 	var path := sidecar_path(dir_path)
 	var tmp := path + ".tmp"
 	if cfg.save(tmp) != OK:
@@ -99,6 +108,12 @@ static func write(dir_path: String, source: String, map_id: String = "", hash: S
 		return true
 	DirAccess.remove_absolute(tmp)
 	return false
+
+
+## Updates the cached size/added date without touching source/id/hash (specs/029 FR-013).
+static func set_stats(dir_path: String, added_unix: int, bytes: int) -> bool:
+	var cur := read(dir_path)
+	return write(dir_path, str(cur.source), str(cur.map_id), str(cur.hash), added_unix, bytes)
 
 
 ## SHA-1 of `Info.dat` plus each difficulty file in declared order, lower-case hex. Returns ""

@@ -298,6 +298,19 @@ var library_source_filter: String:
 	set(value):
 		library_source_filter = value
 		set_and_emit(&"library_source_filter", value)
+# Cards view sort/selection (specs/029 FR-006): the card key and sort survive launches.
+var library_card: String:
+	set(value):
+		library_card = value
+		set_and_emit(&"library_card", value)
+var library_sort_field: String:
+	set(value):
+		library_sort_field = value
+		set_and_emit(&"library_sort_field", value)
+var library_sort_desc: bool:
+	set(value):
+		library_sort_desc = value
+		set_and_emit(&"library_sort_desc", value)
 # Both triggers held for 0.5 s takes a screenshot (specs/024 FR-005/FR-013). Off leaves the
 # pause button/F12.
 var screenshot_trigger: bool:
@@ -391,6 +404,9 @@ const SCHEMA := {
 	"beatsaver_nps": {"default": 0},
 	"beatsaver_difficulties": {"default": ""},
 	"library_source_filter": {"default": "all"},
+	"library_card": {"default": "all"},
+	"library_sort_field": {"default": "name"},
+	"library_sort_desc": {"default": false},
 	"screenshot_trigger": {"default": true},
 }
 
