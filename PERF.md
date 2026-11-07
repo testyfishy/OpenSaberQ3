@@ -58,6 +58,10 @@ Frame budget at 72 Hz is **13.9 ms** (SC-002/SC-003).
 | Field | Value |
 |---|---|
 | Map | `TheFatRat_Timelapse` (bundled with the project; identical on every install) |
+
+> The bundled Timelapse demo was removed in 0.6.1 because it was not licensed for
+> redistribution. The pre-0.6.1 baselines above remain measurements of that map; a current
+> bench needs an installed map and an explicit `map=`.
 | Start state | fresh app launch, song list, no prior play in the session |
 | Warm-up | one full song discarded before measurement |
 | Duration | 15 minutes sustained for SC-002/SC-003; 120 s for quick iteration |

@@ -27,7 +27,7 @@
 param(
     [string]$Label = 'run',
     [int]$DurationSec = 60,
-    [string]$Map = 'Timelapse',
+    [string]$Map = 'ODDS',
     [int]$Hz = 72,
     [string]$AppId = 'io.github.testyfishy.opensaberq3',
     [string]$LaunchActivity = 'com.godot.game.GodotAppLauncher',

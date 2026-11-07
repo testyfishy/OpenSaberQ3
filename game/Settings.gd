@@ -298,6 +298,11 @@ var library_source_filter: String:
 	set(value):
 		library_source_filter = value
 		set_and_emit(&"library_source_filter", value)
+# Both grips held for 0.5 s takes a screenshot (specs/024 FR-005). Off leaves the pause button/F12.
+var screenshot_grip: bool:
+	set(value):
+		screenshot_grip = value
+		set_and_emit(&"screenshot_grip", value)
 var beatsaver_difficulties: String:
 	set(value):
 		beatsaver_difficulties = value
@@ -385,6 +390,7 @@ const SCHEMA := {
 	"beatsaver_nps": {"default": 0},
 	"beatsaver_difficulties": {"default": ""},
 	"library_source_filter": {"default": "all"},
+	"screenshot_grip": {"default": true},
 }
 
 # Derived view for the loader, the panel and the tests. The platform patch in _ready() writes

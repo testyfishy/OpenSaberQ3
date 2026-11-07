@@ -316,6 +316,7 @@ main_menu_ref = NodePath("../MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu")
 [connection signal="continue_button" from="PauseMenu_canvas/Pause_Panel" to="." method="_unpause_button"]
 [connection signal="mainmenu_button" from="PauseMenu_canvas/Pause_Panel" to="." method="_main_menu_button"]
 [connection signal="restart_button" from="PauseMenu_canvas/Pause_Panel" to="." method="_restart_button"]
+[connection signal="screenshot_button" from="PauseMenu_canvas/Pause_Panel" to="." method="_on_screenshot_button"]
 [connection signal="apply" from="Settings_canvas/settings_Panel" to="." method="_on_settings_Panel_apply"]
 [connection signal="users_requested" from="MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu" to="." method="_users_button"]
 [connection signal="leaderboard_requested" from="MainMenu_OQ_UI2DCanvas/BeepSaberMainMenu" to="." method="_leaderboard_button"]

@@ -54,7 +54,7 @@ can be regenerated rather than re-drawn.
 - Do not add a Beat Saber logo, lettering or a directional arrow to the cube.
 - The icon tile may sit on any dark background; the banner and wordmark already carry their own
   panel.
-- The 0.6.0 APK still uses the previous icon. The new icon and menu logo ship in 0.6.1.
+- The new icon and menu logo ship in 0.6.1.
 
 ## Rebuilding
 

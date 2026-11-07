@@ -4,6 +4,7 @@ class_name PausePanel
 signal continue_button()
 signal restart_button()
 signal mainmenu_button()
+signal screenshot_button()
 
 func _ready():
 	UI_AudioEngine.attach_children(self)
@@ -19,3 +20,6 @@ func _on_restart_button_up():
 
 func _on_mainmenu_button_up():
 	emit_signal("mainmenu_button")
+
+func _on_screenshot_button_up():
+	emit_signal("screenshot_button")

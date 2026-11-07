@@ -2,7 +2,7 @@
 
 [ext_resource type="Theme" uid="uid://dvcjel72een6o" path="res://OQ_Toolkit/OQ_UI2D/theme/oq_ui2d_standard.theme" id="1"]
 [ext_resource type="Script" path="res://game/HighscorePanel.gd" id="2"]
-[ext_resource type="Texture2D" uid="uid://j1wa4gcqkltx" path="res://game/data/maps/Songs/TheFatRat_Timelapse/cover.jpg" id="4"]
+[ext_resource type="Texture2D" path="res://icon.png" id="4"]
 
 [sub_resource type="StyleBoxFlat" id="1"]
 bg_color = Color(0, 0, 0, 1)
@@ -279,9 +279,9 @@ stretch_mode = 5
 
 [node name="SongInfo_Label" type="Label" parent="Margin/VBox/LeftRight/VBox"]
 layout_mode = 2
-text = "Song Author: TheFatRat
-Song Title: Time Lapse
-Beatmap Author: Timeweaver"
+text = "Song Author: Artist
+Song Title: Song
+Beatmap Author: Mapper"
 clip_text = true
 
 [node name="Exit_Button" type="Button" parent="Margin/VBox"]

@@ -10,11 +10,9 @@ All of these must be true before the page goes live:
 - [ ] **0.6.1 APK** built from a tagged commit, with the new icon and menu logo, and the home-test
       fixes. 0.6.0 must not be uploaded: its icon is the old mark, so the store art and the app
       would disagree.
-- [ ] **Bundled demo song resolved for both channels.** The current APK ships
-      `game/data/maps/Songs/TheFatRat_Timelapse` and copies it on first run. Either get the licence
-      confirmed in writing or remove `game/data/maps/Songs` from the itch build **and the next
-      GitHub release**. Do not promote the 0.6.0 APK further until this is settled. This is the one
-      legal blocker.
+- [x] **Bundled demo song removed in 0.6.1.** TheFatRat “Time Lapse” is no longer in the
+      repository, the 0.6.1 APK or matching libraries. Upload 0.6.1 only; do not upload or
+      promote 0.6.0, which still contains it.
 - [ ] **Real headset screenshots** (3-5) and, ideally, a 15-30 s gameplay clip. The desktop
       simulator renders are not store screenshots.
 - [ ] Page copy pasted from `docs/itch-page.md`, including **AI-generated content: Graphics** and
@@ -80,9 +78,8 @@ Paste the copy from `docs/itch-page.md`:
 
 ## 6. Risks
 
-- **Demo song licence** — the blocker above. TheFatRat's "Time Lapse" is a commercial track; the
-  current attribution says "per upstream credits", which is not a licence grant. Remove it from
-  the itch build unless the owner can point to permission.
+- **Demo song licence** — resolved for 0.6.1 by removal. Do not upload 0.6.0, and do not
+  reintroduce the track without written permission.
 - **Trademark** — no Beat Saber name, logo or art in the page, tags, screenshots or APK. Use
   "BeatSaver maps" and "rhythm game".
 - **AI disclosure** — required. The cover, logo and icon are AI-generated vector art; the field and

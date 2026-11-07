@@ -14,7 +14,7 @@
 #        works on every APK, no storage permission required.
 #
 #   [bench]
-#   map = "Timelapse"         ; required. case-insensitive substring of song_name or filepath
+#   map = "ODDS"              ; required. case-insensitive substring of song_name or filepath
 #   difficulty_index = 0      ; optional. 0-based index into difficulty_beatmaps
 #   difficulty = "Easy"       ; optional. case-insensitive match on difficulty or custom_name
 #   difficulty_rank = 1       ; optional. exact DifficultyInfo.difficulty_rank
@@ -376,7 +376,7 @@ func _begin() -> void:
 		menu._load_playlists()
 		songs = menu._all_songs
 	if songs.is_empty():
-		vr.log_error("BENCH: no maps found under %sSongs/" % Constants.APPDATA_PATH)
+		vr.log_error("BENCH: no maps found under %sSongs/ - install a map (e.g. ODDS) or pass map=<name>" % Constants.APPDATA_PATH)
 		_abort("no_maps")
 		return
 	
@@ -854,10 +854,7 @@ func _process(delta: float) -> void:
 	var now := Time.get_ticks_usec()
 	if _screenshot_enabled and not _screenshot_done and now - _start_usec > _screenshot_at_usec:
 		_screenshot_done = true
-		var img := get_viewport().get_texture().get_image()
-		var path := _out_dir.path_join("screenshot.png")
-		img.save_png(path)
-		vr.log_info("BENCH: screenshot %s (%dx%d)" % [path, img.get_width(), img.get_height()])
+		_take_screenshot()
 	_ticks.append(now)
 	_deltas.append(now - _prev_usec)
 	_prev_usec = now
@@ -1359,6 +1356,21 @@ var _screenshot_enabled := false
 var _screenshot_at_usec := 4000000
 var _screenshot_done := false
 # Read by BeepSaber_Game._on_score_changed when hud_off is set.
+
+func _take_screenshot() -> void:
+	var service = _game.screenshot
+	if service == null:
+		_meta["screenshot_ok"] = "false"
+		_meta["screenshot_error"] = "no_service"
+		return
+	var result: Dictionary = await service.capture()
+	_meta["screenshot_ok"] = "true" if bool(result.get("ok", false)) else "false"
+	_meta["screenshot_path"] = str(result.get("path", ""))
+	_meta["screenshot_error"] = str(result.get("error", ""))
+	_meta["screenshot_width"] = str(result.get("width", 0))
+	_meta["screenshot_height"] = str(result.get("height", 0))
+	vr.log_info("BENCH: screenshot %s" % str(result.get("path", result.get("error", ""))))
+
 
 func _poll_player_capture() -> void:
 	if _song_player == null:

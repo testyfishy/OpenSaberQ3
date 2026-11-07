@@ -11,13 +11,13 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ![OpenSaberQ3](docs/images/banner.png)
 
-**v0.6.0** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
+**v0.6.1** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
 [install](#download-and-install). Built on BeepSaber and its lineage
 ([credits](ATTRIBUTION.md), [pinned upstream](UPSTREAM.md)).
 
 ## Since the fork
 
-| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.6.0 |
+| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.6.1 |
 |---|---|---|
 | **Engine** | Godot 4.3; 72 Hz, 60 Hz physics | **Godot 4.6.3**, 120 Hz with physics matched to the display, Performance / Balanced / Quality presets ([perf](docs/performance.md)) |
 | **Maps** | v2 | **v2, v3 and v4**, including the hybrid BeatSaver serves and v4's split beatmap/lightshow ([43-map audit](docs/map-data-audit.md)) |
@@ -29,7 +29,17 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 | **UI and settings** | HUD overlap, scroll stalls | HUD/end-card layout, smooth BeatSaver scrolling, **52 persisted settings** ([spec 016](specs/016-scroll-ui-cleanup/spec.md)) |
 | **Measurement** | none | Bot and **human-play** captures, p99/max/spike metrics, release/rollback artifacts ([PERF.md](PERF.md)) |
 
-## What's new in v0.6.0
+## What's new
+
+### v0.6.1
+
+- **Screenshots from the headset.** Hold both grips for half a second, or press **Screenshot** in
+  the pause menu. 1920×1080 PNGs land in the app's files folder for `adb pull`.
+- **The bundled demo is gone.** TheFatRat “Time Lapse” is no longer distributed; a library that
+  still has the exact bundled copy loses it once.
+- **New icon and menu logo**, the sliced-cube mark from `docs/brand/`.
+
+### v0.6.0
 
 - **Every map knows its source.** BeatSaver, uploaded, local or unknown, stored in a sidecar that
   survives upgrades. Filter the library by source from the main menu.
@@ -44,7 +54,7 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ![Library filtered to BeatSaver](docs/images/v06-library.png)
 
-**Next, 0.6.1:** BeastSaber `.bplist` playlist import. The `beastsaber` tag is already in the
+**Next, 0.6.2:** BeastSaber `.bplist` playlist import. The `beastsaber` tag is already in the
 schema.
 
 ## Performance
@@ -72,8 +82,12 @@ adb install -r OpenSaberQ3-0.6.0.apk
 
 Launch **Open Saber Q3** from *Unknown Sources*. Installs alongside upstream BeepSaber; songs and
 scores stay separate. Upgrading over 0.5.x keeps maps, scores and settings. Builds are test-signed,
-not store builds. The new icon and menu logo ship in 0.6.1; the 0.6.0 APK still uses the previous
-icon.
+not store builds. The 0.6.1 APK carries the new icon and menu logo. Screenshots are in
+`/sdcard/Android/data/io.github.testyfishy.opensaberq3/files/screenshots/`:
+
+```sh
+adb pull /sdcard/Android/data/io.github.testyfishy.opensaberq3/files/screenshots
+```
 
 ## Documentation
 

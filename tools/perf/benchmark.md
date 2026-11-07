@@ -14,7 +14,7 @@ start a comment line. The `[bench]` section is required.
 
 ```ini
 [bench]
-map = "Timelapse"          ; required - case-insensitive substring of song_name or filepath
+map = "ODDS"              ; required - case-insensitive substring of song_name or filepath
 difficulty_index = 0       ; optional - 0-based index into the map's difficulty_beatmaps
 difficulty = "Easy"        ; optional - case-insensitive match on difficulty or custom_name
 difficulty_rank = 1        ; optional - exact DifficultyInfo.difficulty_rank
@@ -97,7 +97,7 @@ discarded, not averaged.
 
 ```powershell
 $d = "$env:APPDATA\Godot\app_userdata\Open Saber"
-"[bench]`nmap = `"Timelapse`"`nduration = 3" | Set-Content "$d\bench.flag"
+"[bench]`nmap = `"ODDS`"`nduration = 3" | Set-Content "$d\bench.flag"
 & "$env:LOCALAPPDATA\Godot\4.6.3\Godot_v4.6.3-stable_win64_console.exe" --headless --path .
 ```
 

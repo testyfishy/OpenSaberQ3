@@ -77,33 +77,13 @@ func compare(a: MapInfoWithSort, b: MapInfoWithSort) -> bool:
 	return a.num > b.num
 
 func _load_playlists() -> void:
-	#copy sample songs to main playlist folder on first run
-	const config_path := "user://config.dat"
-	if not FileAccess.file_exists(config_path):
-		@warning_ignore("return_value_discarded")
-		DirAccess.make_dir_recursive_absolute(Constants.APPDATA_PATH+"Songs/")
-		const maps_path := "res://game/data/maps/"
-		var dir := DirAccess.open(maps_path + "Songs/")
-		@warning_ignore("return_value_discarded")
-		dir.list_dir_begin()
-		var file_name := dir.get_next()
-		while not file_name.is_empty():
-			if dir.current_is_dir():
-				var new_dir := maps_path+"Songs/"+file_name
-				@warning_ignore("return_value_discarded")
-				DirAccess.make_dir_recursive_absolute(Constants.APPDATA_PATH+"Songs/"+file_name)
-				var copy := DirAccess.open(new_dir)
-				@warning_ignore("return_value_discarded")
-				copy.list_dir_begin()
-				var copy_file_name := copy.get_next()
-				while not copy_file_name.is_empty():
-					var copy_new_dir := new_dir+"/"+copy_file_name
-					@warning_ignore("return_value_discarded")
-					dir.copy(copy_new_dir,Constants.APPDATA_PATH+"Songs/"+file_name+"/"+copy_file_name)
-					copy_file_name = copy.get_next()
-			file_name = dir.get_next()
-	
-	_discover_all_songs(Constants.APPDATA_PATH+"Songs/")
+	# No sample song is copied any more: the 0.6.1 build ships an empty library. Remove the old
+	# bundled demo once (hash-matched), then discover whatever the player has.
+	var songs_dir := Constants.APPDATA_PATH + "Songs/"
+	@warning_ignore("return_value_discarded")
+	DirAccess.make_dir_recursive_absolute(songs_dir)
+	BundledDemo.cleanup(songs_dir)
+	_discover_all_songs(songs_dir)
 	var songs_with_modify_times: Array[MapInfoWithSort] = []
 	var songs_with_play_count: Array[MapInfoWithSort] = []
 	for song in _all_songs:
@@ -175,7 +155,10 @@ func _set_cur_playlist(songs: Array[MapInfo]) -> void:
 	delete_button.disabled = song_count == 0
 	($Leaderboard_Button as Button).disabled = song_count == 0
 	if song_count == 0:
-		($SongInfo_Label as Label).text = "No maps match this source."
+		var message := "No maps match this source."
+		if _all_songs.is_empty():
+			message = "No songs yet. Use Online Map Source to download maps."
+		($SongInfo_Label as Label).text = message
 		cover.texture = null
 		diff_menu.clear()
 		song_preview.stop()

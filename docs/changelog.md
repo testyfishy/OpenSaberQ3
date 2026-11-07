@@ -4,6 +4,15 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.6.1 — 2026-11-06
+
+**Screenshots and a clean build.** In-game capture: hold both grips for 0.5 s or press
+**Screenshot** in the pause menu; 1920×1080 PNGs are saved for `adb pull` (F12 on desktop). The
+bundled TheFatRat “Time Lapse” demo is removed from the build, and a library that still holds the
+exact bundled copy loses it once. The sliced-cube icon and menu logo ship here.
+[Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.6.1-q3) ·
+[Spec](../specs/024-shot-demo-061/spec.md)
+
 ## v0.6.0 — 2026-11-06
 
 **Library sources and BeatLeader.** A source tag on every map (BeatSaver, BeastSaber, uploaded,
@@ -68,5 +77,5 @@ audio research, the benchmark harness, and the first measured Quest 3 numbers.
 
 ## Next
 
-- **0.6.1** — BeastSaber playlist (`.bplist`) import.
-- **0.6.x** — home-test findings from v0.6.0 and cosmetic chain joints.
+- **0.6.2** — BeastSaber playlist (`.bplist`) import.
+- **0.6.x** — home-test findings and cosmetic chain joints.

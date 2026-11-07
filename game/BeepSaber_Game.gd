@@ -26,6 +26,12 @@ var gamestate: GameState = gamestate_bootup
 @onready var right_saber := $XROrigin3D/RightController/RightLightSaber as LightSaber
 @onready var left_ui_raycast := $XROrigin3D/LeftController/LeftLightSaber/UIRaycast as UIRaycast
 @onready var right_ui_raycast := $XROrigin3D/RightController/RightLightSaber/UIRaycast as UIRaycast
+
+const ScreenshotServiceScript := preload("res://game/scripts/ScreenshotService.gd")
+# In-game capture (specs/024). Created after vr.initialize so it has the XR camera.
+var screenshot: ScreenshotService
+var _grip_hold_start := -1
+var _grip_latched := false
 @onready var goggles_shader := ($XROrigin3D/XRCamera3D/VRGoggles as MeshInstance3D).material_override as ShaderMaterial
 @onready var debug_info_label := $XROrigin3D/XRCamera3D/PlayerHead/DebugInfoLabel as MeshInstance3D
 
@@ -191,6 +197,31 @@ func _physics_process(_dt: float) -> void:
 	
 	_check_and_update_saber(left_controller, left_saber)
 	_check_and_update_saber(right_controller, right_saber)
+	_poll_screenshot_grip()
+
+func _poll_screenshot_grip() -> void:
+	if screenshot == null or not Settings.screenshot_grip:
+		return
+	var both := left_controller.grip_pressed() and right_controller.grip_pressed()
+	if not both:
+		_grip_hold_start = -1
+		_grip_latched = false
+		return
+	if _grip_latched:
+		return
+	var now := Time.get_ticks_msec()
+	if _grip_hold_start < 0:
+		_grip_hold_start = now
+	if now - _grip_hold_start >= 500:
+		_grip_latched = true
+		_grip_hold_start = -1
+		screenshot.capture()
+
+
+func _on_screenshot_button() -> void:
+	if screenshot != null:
+		screenshot.capture_from([pause_menu, left_ui_raycast, right_ui_raycast])
+
 
 func _enter_tree() -> void:
 	GlobalReferences.main_game_scene = self
@@ -217,6 +248,11 @@ func _ready() -> void:
 		left_controller,
 		right_controller
 	)
+
+	screenshot = ScreenshotServiceScript.new()
+	screenshot.name = "ScreenshotService"
+	screenshot.xr_camera = xr_camera
+	add_child(screenshot)
 
 	# Godot does not honour xr/openxr/render_target_size_multiplier from project.godot on this
 	# path: measured render_target_size stayed at the runtime's recommended 1680x1760 with the

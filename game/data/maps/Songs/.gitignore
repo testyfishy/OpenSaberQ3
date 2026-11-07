@@ -1,6 +1,5 @@
 # Ignore everything
 *
 
-# But not the ignore and the demo song
+# But keep the directory placeholder
 !.gitignore
-!TheFatRat_Timelapse/

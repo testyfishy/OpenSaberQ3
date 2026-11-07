@@ -69,6 +69,24 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
+[node name="screenshot" type="Button" parent="."]
+layout_mode = 0
+offset_left = 440.0
+offset_top = 400.0
+offset_right = 624.0
+offset_bottom = 464.0
+text = "Screenshot"
+
+[node name="screenshot_hint" type="Label" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 548.0
+offset_right = 624.0
+offset_bottom = 572.0
+theme_override_font_sizes/font_size = 14
+text = "Squeeze both grips to screenshot from any screen"
+horizontal_alignment = 1
+
 [node name="mainmenu" type="Button" parent="."]
 offset_left = 216.0
 offset_top = 480.0
@@ -133,5 +151,6 @@ __meta__ = {
 }
 
 [connection signal="button_up" from="mainmenu" to="." method="_on_mainmenu_button_up"]
+[connection signal="button_up" from="screenshot" to="." method="_on_screenshot_button_up"]
 [connection signal="button_up" from="restart" to="." method="_on_restart_button_up"]
 [connection signal="button_up" from="continue" to="." method="_on_continue_button_up"]

@@ -19,7 +19,7 @@ redistribution are permitted by that licence provided the notice is kept — whi
 
 | Asset | Author | License | Notes |
 |---|---|---|---|
-| "Time Lapse" demo track | TheFatRat | **not documented in this repo** | bundled by upstream; no licence grant is recorded here. Remove it from the itch build and the next release unless permission is confirmed. |
+| "Time Lapse" demo track (removed in 0.6.1) | TheFatRat | **not distributed** | bundled through 0.6.0 by upstream; no licence grant is recorded here. Removed from the repository, the 0.6.1 APK and matching existing libraries. Do not reintroduce without permission. |
 | BeepSaber UI art and saber models (the old BeepSaber logo/icon is replaced by the artwork below) | upstream authors | MIT unless noted | inherited; see `LICENSE` |
 | Logo, app icon, banner and wordmarks | AI-generated vector artwork created with AI assistants (DeepSeek V4 Flash wrote the SVG; Claude Opus 5.5 wrote the design brief), via OpenCode; reviewed by the project owner | MIT | original SVG in `docs/brand/`; no image-generation model, stock image or third-party artwork; text set in Roboto and converted to paths |
 | Roboto Medium | Google | **Apache-2.0** | wordmark typeface, `OQ_Toolkit/OQ_UI2D/theme/Roboto-Medium.ttf`; only glyph paths are embedded in the brand SVGs |

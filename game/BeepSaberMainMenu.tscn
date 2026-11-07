@@ -212,10 +212,10 @@ offset_left = 864.0
 offset_top = 320.0
 offset_right = 1328.0
 offset_bottom = 468.0
-text = "Song Author: TheFatRat
-Song Title: Time Lapse
-Beatmap Author: Timeweaver
-Play Count: 10"
+text = "Song Author: Artist
+Song Title: Song
+Beatmap Author: Mapper
+Play Count: 0"
 
 [node name="SongsMenu" type="ItemList" parent="."]
 layout_mode = 0
