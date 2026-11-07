@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-06
 
-**Status**: In progress (G0 approved with changes; G1 next)
+**Status**: Released - v0.6.1 on the headset; home tests pending
 
 **Input**: "The bundled TheFatRat 'Time Lapse' demo has no documented licence" -> "Remove it
 completely in v0.61"; "Real headset screenshots are still needed" -> "Build the ability to take
@@ -120,6 +120,33 @@ without the system screenshot gesture.
 - **SC-008**: The screenshot action is discoverable in the pause menu and documented; a player can
   take gameplay and menu screenshots without a PC.
 
+## Results (0.6.1)
+
+- **Capture**: the SubViewport camera returns a 1920×1080 PNG on the headset. Device bench on
+  ODDS: `screenshot_ok=true`, 309 KB, external screenshots dir, pulled and inspected. The frame
+  shows the map from the player's pose; near notes/HUD/sabers were not in that particular 15 s
+  frame (sparse moment + eye-line framing). The desktop menu test is non-black and shows the
+  menu/source tags. FOV was raised 60° → 75° after 60° cropped the play space (departure from the
+  G1 advice, recorded here).
+- **Demo**: repository folder gone; HighscorePanel cover, Playlists.json, placeholders, bench
+  default, PERF note updated; APK `OpenSaber-v061.apk` has no `TheFatRat`/`Timelapse`/`song_q1`
+  entry (771 entries, 77,933,281 bytes). On device the folder was removed, the marker written and
+  the highscore rows left in place. 0.6.0 history/asset untouched per the owner.
+- **Release**: 0.6.1 / code 11, same cert `d204a2…`, no `application-debuggable`, new icon
+  textures, installed over the debug 0.6.1 and launched (pid 13541). SHA-256
+  `2B12DDAE091E6D1F7E4A8FACAF6D040A1F8637B39B95875B0FDC3D0480938F9E`.
+- **Gates**: schema 53, panel, roundtrip, RELOAD/BPM/SUPPORT/HITAUDIO/ANALYSER, chain
+  geometry/cut, mapsource, beatleader, desktop screenshot PASS. The headless screenshot test is
+  expected to hang (no renderer); the windowed run passes.
+
+### Home tests (not proven in this session)
+
+- Both grips held 0.5 s produces exactly one capture; the 2 s cooldown blocks a second; the toast
+  is visible and absent from the image.
+- The pause-menu button captures without the pause canvas/rays and restores them.
+- A 0.6.0 -> 0.6.1 upgrade (this install came over a 0.6.1 debug build) does not crash highscore or
+  menu views with the demo's old rows.
+
 ## Out of scope
 
 - Publishing to itch.io (plan only; real screenshots are now possible).
@@ -142,4 +169,6 @@ failed FR-004 and the plan is revisited at G1/G4, not silently replaced with a s
 | G0 | Demo removal scope, screenshot capture design, interaction, storage, 0.6.1 release | GO WITH CHANGES: remove every reference (HighscorePanel cover, Playlists.json, placeholder text, bench default), empty-state message, copy-on-first-run removal; keep highscore/play-count rows; SubViewport camera works (copy cull_mask/env/attributes, fov 60, two frame_post_draw waits, toast after, worker-thread PNG); grip hold 0.5 s + 2 s cooldown + setting; external app dir; one 0.6.1 release | Spec updated; G1 next |
 | G2 | Owner decision on the old build/history | Skip the old builds/history; document the demo removal as a 0.6.1 change | FR-003/open question updated; no rewrite, no 0.6.0 asset change |
 
-| G1 | Capture implementation (SubViewport camera/world), grip combo, cleanup, build plan | (pending) | (pending) |
+| G1 | Capture implementation (SubViewport camera/world), grip combo, cleanup, build plan | GO WITH CHANGES: encode/save on the worker; service/toast PROCESS_MODE_ALWAYS; toast on a culled layer; hide UI rays; camera added/current before pose; own_world false/MSAA; first capture may stall; bench default ODDS; marker; remove empty playlist; 53 keys; publish 0.6.1; add APK-content/pause/cooldown/highscore SCs | Implemented; spec updated |
+| G4 | final review 0.6.1 @ea76a67 | APPROVE: add stall/adb/highscore lines to the release notes; tag and release | Release notes updated with the three lines; tagged/released |
+| G5 | drift FR-001..012 / SC-001..012 | Matches spec except home tests: grip hold+cooldown, toast, pause capture, highscore after a 0.6.0 upgrade | Status = Released, home tests pending |

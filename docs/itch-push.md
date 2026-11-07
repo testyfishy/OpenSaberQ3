@@ -13,8 +13,9 @@ All of these must be true before the page goes live:
 - [x] **Bundled demo song removed in 0.6.1.** TheFatRat “Time Lapse” is no longer in the
       repository, the 0.6.1 APK or matching libraries. Upload 0.6.1 only; do not upload or
       promote 0.6.0, which still contains it.
-- [ ] **Real headset screenshots** (3-5) and, ideally, a 15-30 s gameplay clip. The desktop
-      simulator renders are not store screenshots.
+- [ ] **Real headset screenshots** (3-5) and, ideally, a 15-30 s gameplay clip. Take them
+      through pause → Screenshot during a dense section so notes, sabers and HUD are in frame;
+      the bench frame is not a store shot. The desktop simulator renders are not store screenshots.
 - [ ] Page copy pasted from `docs/itch-page.md`, including **AI-generated content: Graphics** and
       the non-affiliation line.
 - [ ] The **AI disclosure field** is set to Yes / Graphics.

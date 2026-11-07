@@ -89,6 +89,9 @@ not store builds. The 0.6.1 APK carries the new icon and menu logo. Screenshots 
 adb pull /sdcard/Android/data/io.github.testyfishy.opensaberq3/files/screenshots
 ```
 
+The Quest Files app cannot open `Android/data`; use adb. The first capture in a session can stall
+for about a second while the renderer compiles; Pause → Screenshot is the reliable still.
+
 ## Documentation
 
 | | |
