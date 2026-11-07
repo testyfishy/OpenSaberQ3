@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: Released as `v0.7.3-q3` (APK 78,112,397, SHA-256 `447BFCCC…`). Ships Noodle static transforms, box-group colours and the audio fixes; Noodle animation and custom Chroma environments remain. In-VR checks (Noodle placement, box colours, resume-from-idle, above/below cue) are pending.
+**Status**: Released as `v0.7.4-q3` (APK 78,114,361, SHA-256 `C13B9EF7…`). 0.7.3 shipped Noodle static transforms, box-group colours and the audio fixes; 0.7.4 adds box-group transitions/extends, group-id folding and the basis-local cut angle. Noodle animation and custom Chroma environments remain. In-VR checks (Noodle placement, box-group fades, cut split on tilted notes, resume-from-idle, above/below cue) are pending.
 
 **Input**: Owner, after the BeatSaver feature review: "Fix 360/90 and lightshow/box groups on v7.
 Resolve Mapping Extensions precision, Noodle position/rotation/scale/animation/speed, Chroma events
@@ -272,6 +272,7 @@ angle, and the old Euler-z result differs.
 | Gate | Question | Verdict | Follow-up |
 |------|----------|---------|-----------|
 | G1 (0.7.4) | Plan for box `i` transition/extend, group-id fold and local cut angle | **PASS WITH CHANGES** | Keep `g % 5` fold but drop malformed ids and log folds; `i=1` → 4/8/12 with the one-gap lag and `s=0` instant-off noted; cut angle from the global basis via `orthonormalized().transposed()` with degenerate/near-z fallback; probe adds non-uniform/degenerate scale, tilt-diff, extend and group-7 cases; `active-spec` moved to 027. |
+| G4 (0.7.4) | Box-group i/s semantics, g%5 fold, basis-local cut angle, stale unsupported test | **PASS** | Tag after the APK SHA is recorded; in-VR checks of the cut split on tilted notes and box-group fades pending. Later: ChainLink measures cut distance from the local origin while BeepCube uses global. |
 | G4 (0.7.3) | Noodle static, box groups, audio resume/elevation review | **CHANGES** then **PASS** | First pass found pooled-note/wall rotation leakage, box-group `c` read as RGB instead of an index and no brightness, and an unguarded resume handler; fixed all three, added v3 key aliases (`coordinates`/`localRotation`/`size`), probe now covers both key spellings plus index colours and `s=0`. Re-review PASS with in-VR checks pending; LOW follow-ups for 0.7.4: box-group transition `i=1`/extend `i=2`, cut angle against Noodle x/y rotation, group id→light type mapping. |
 | G4 (0.7.2) | 360/90 rotation review | **CHANGES** | Replaced the track-wide yaw with per-beat lane nodes (in-flight objects keep their rotation); probe now checks the shipped lane path; v3 basic events 14/15 added; v4 per-object rotation recorded as unsupported. |
 | G4 (0.7.1) | ME precision release review | **CHANGES** | Fixed the 4001+ wall height (same 5-layer scale, start 4x/50 per layer); clamped zero-size ME walls to 1 cm; cut sign confirmed. 360/Noodle/Chroma recorded as 0.7.2. |
