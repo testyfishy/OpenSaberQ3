@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: 0.7.3 ships Noodle static transforms, box-group colours and the audio fixes; Noodle animation and custom Chroma environments remain. In-VR checks (Noodle placement, box colours, resume-from-idle, above/below cue) are pending.
+**Status**: Released as `v0.7.3-q3` (APK 78,112,397, SHA-256 `447BFCCC…`). Ships Noodle static transforms, box-group colours and the audio fixes; Noodle animation and custom Chroma environments remain. In-VR checks (Noodle placement, box colours, resume-from-idle, above/below cue) are pending.
 
 **Input**: Owner, after the BeatSaver feature review: "Fix 360/90 and lightshow/box groups on v7.
 Resolve Mapping Extensions precision, Noodle position/rotation/scale/animation/speed, Chroma events
