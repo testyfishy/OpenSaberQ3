@@ -8,14 +8,14 @@ account and an explicit go-ahead. Page copy is in [itch-page.md](itch-page.md).
 
 All of these must be true before the page goes live:
 
-- [ ] **0.6.3 APK** built from a tagged commit, with the new icon and menu logo, and the home-test
-      fixes. 0.6.0 must not be uploaded: its icon is the old mark and it still contains the demo.
+- [x] **0.6.3 APK** built from the tagged commit `v0.6.3-q3`: 78,146,219 bytes, SHA-256
+      `F123F07D30EBD38E8324303F6E31409DFD58778EB9F4A422EB9659F58DAD2D43`, versionCode 13. 0.6.0
+      must not be uploaded: its icon is the old mark and it still contains the demo.
 - [x] **Bundled demo song removed in 0.6.1.** TheFatRat “Time Lapse” is no longer in the
       repository, the 0.6.3 APK or matching libraries. Upload 0.6.3 only; do not upload or
       promote 0.6.0, which still contains it.
-- [ ] **Real headset screenshots** (3-5) and, ideally, a 15-30 s gameplay clip. Take them
-      through pause → Screenshot during a dense section so notes, sabers and HUD are in frame;
-      the bench frame is not a store shot. The desktop simulator renders are not store screenshots.
+- [x] **Real headset media.** The 24 s 1080p60 clip with game audio and four stills are in
+      `docs/media/` (`gameplay-0.6.3.mp4`, `gameplay-1..4.png`). Add menu stills later if wanted.
 - [ ] Page copy pasted from `docs/itch-page.md`, including **AI-generated content: Graphics** and
       the non-affiliation line.
 - [ ] The **AI disclosure field** is set to Yes / Graphics.
@@ -27,13 +27,14 @@ All of these must be true before the page goes live:
 
 ## 2. Build and verify
 
-1. Build 0.6.3 from the tagged commit with the new icon/menu logo and the home fixes.
-2. Optionally remove the bundled demo maps from the itch build (`game/data/maps/Songs`) and adjust
-   the first-run copy in `BeepSaberMainMenu._load_playlists`. The repository build can keep them.
+1. Build 0.6.3 from the tagged commit with the new icon/menu logo and the arc/menu fixes.
+2. The bundled demo is already absent (`game/data/maps/Songs` is empty) and the build
+   template was cleaned; nothing to remove.
 3. Verify the package:
-   - `aapt dump badging` shows versionName 0.6.3, versionCode 12, and no `application-debuggable`.
+   - `aapt dump badging` shows versionName 0.6.3, versionCode 13, and no `application-debuggable`.
    - `apksigner verify --print-certs` shows the same certificate as 0.6.0.
-   - Install over 0.6.0, launch, play one map, open the library source filter and BeatLeader.
+   - Install over 0.6.2 (done), launch, play one map, open the library source filter, both menu
+   signs and a BeastSaber playlist. The over-0.6.0 path still needs one run.
 4. Record the size and SHA-256 in the upload notes and in the release notes.
 5. Upload the file as an **Android** build. itch treats it as a download; it does not install it.
 
