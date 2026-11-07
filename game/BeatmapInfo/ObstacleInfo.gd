@@ -10,6 +10,13 @@ var height: float
 # Chroma can colour one wall; transparent means "use the map's wall colour".
 var custom_color := Color(0.0, 0.0, 0.0, 0.0)
 var fake := false
+# Noodle static transforms (specs/027 FR-007).
+var has_custom_position := false
+var custom_position := Vector2.ZERO
+var has_custom_rotation := false
+var custom_euler := Vector3.ZERO
+var has_custom_scale := false
+var custom_scale := Vector3.ONE
 
 @warning_ignore("shadowed_variable")
 func _init(beat: float, duration: float, line_index: float, line_layer: float, width: float, height: float) -> void:
@@ -50,6 +57,7 @@ static func new_v2(obstacle_dict: Dictionary) -> ObstacleInfo:
 	var cd := Utils.get_dict(obstacle_dict, "_customData", {})
 	obstacle.custom_color = PaletteResolver.chroma_color(cd.get("_color", cd.get("color", null)))
 	obstacle.fake = Utils.get_bool(cd, "_fake", false)
+	_read_custom_transform(obstacle, cd)
 	return obstacle
 
 static func new_v3(obstacle_dict: Dictionary) -> ObstacleInfo:
@@ -64,5 +72,25 @@ static func new_v3(obstacle_dict: Dictionary) -> ObstacleInfo:
 	var cd := Utils.get_dict(obstacle_dict, "customData", {})
 	obstacle.custom_color = PaletteResolver.chroma_color(cd.get("color", cd.get("_color", null)))
 	obstacle.fake = Utils.get_bool(cd, "fake", false)
+	_read_custom_transform(obstacle, cd)
 	return obstacle
 
+
+
+## Noodle static transform keys, shared by v2/v3 (underscored and modern names).
+static func _read_custom_transform(obstacle: ObstacleInfo, cd: Dictionary) -> void:
+	var pos = cd.get("_position", cd.get("position", null))
+	if pos is Array and pos.size() >= 2:
+		obstacle.has_custom_position = true
+		obstacle.custom_position = Vector2(float(pos[0]), float(pos[1]))
+	var rot = cd.get("_rotation", cd.get("rotation", null))
+	if rot is Array and rot.size() >= 3:
+		obstacle.has_custom_rotation = true
+		obstacle.custom_euler = Vector3(float(rot[0]), float(rot[1]), float(rot[2]))
+	var scl = cd.get("_scale", cd.get("scale", null))
+	if scl is Array and scl.size() >= 3:
+		obstacle.has_custom_scale = true
+		obstacle.custom_scale = Vector3(float(scl[0]), float(scl[1]), float(scl[2]))
+	elif scl is float or scl is int:
+		obstacle.has_custom_scale = true
+		obstacle.custom_scale = Vector3.ONE * float(scl)

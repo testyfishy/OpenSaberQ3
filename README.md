@@ -11,13 +11,13 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ![OpenSaberQ3](docs/images/banner.png)
 
-**v0.7.2** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
+**v0.7.3** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
 [install](#download-and-install). Built on BeepSaber and its lineage
 ([credits](ATTRIBUTION.md), [pinned upstream](UPSTREAM.md)).
 
 ## Since the fork
 
-| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.7.2 |
+| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.7.3 |
 |---|---|---|
 | **Engine** | Godot 4.3; 72 Hz, 60 Hz physics | **Godot 4.6.3**, 120 Hz with physics matched to the display, Performance / Balanced / Quality presets ([perf](docs/performance.md)) |
 | **Maps** | v2 | **v2, v3 and v4**, including the hybrid BeatSaver serves and v4's split beatmap/lightshow ([43-map audit](docs/map-data-audit.md)) |
@@ -30,6 +30,19 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 | **Measurement** | none | Bot and **human-play** captures, p99/max/spike metrics, release/rollback artifacts ([PERF.md](PERF.md)) |
 
 ## What's new
+
+### v0.7.3
+
+- **Noodle Extensions static transforms.** Notes and walls honour `_position`/`_coordinates`,
+  `_rotation` and `_scale`, so placed and scaled objects land where the mapper put them. Animation
+  tracks (`_animation`, `AnimateTrack`) and player/camera tracks remain.
+- **v4/v3 box-group colours.** `lightColorEventBoxGroups` are converted to the room's basic light
+  events (group colour at the event beat; filters and distributions are not applied).
+- **Audio survives idle.** On resume the game re-seats the music stream and pokes the mixer, so a
+  suspended app does not come back silent.
+- **Above/below hit cue.** Hits are routed through an EQ bus (bright highs above, warm lows below)
+  with a small pitch shift, so elevation is audible. This is a spectral cue, not convolution HRTF.
+- Chroma per-event colours and the map palette were already supported.
 
 ### v0.7.2
 
@@ -182,12 +195,12 @@ The latest signed APK is on the [releases page](https://github.com/testyfishy/Op
 Enable **Developer mode** on the headset, then sideload with SideQuest or run:
 
 ```sh
-adb install -r OpenSaberQ3-0.7.2.apk
+adb install -r OpenSaberQ3-0.7.3.apk
 ```
 
 Launch **Open Saber Q3** from *Unknown Sources*. Installs alongside upstream BeepSaber; songs and
 scores stay separate. Upgrading over 0.5.x keeps maps, scores and settings. Builds are test-signed,
-not store builds. The 0.7.2 APK carries the new icon and menu logo. Screenshots are in
+not store builds. The 0.7.3 APK carries the new icon and menu logo. Screenshots are in
 `/sdcard/Android/data/io.github.testyfishy.opensaberq3/files/screenshots/`:
 
 ```sh
@@ -216,10 +229,10 @@ Versions, commands and known gaps: [UPSTREAM.md](UPSTREAM.md).
 
 ## Known limitations
 
-- **No HRTF.** Left/right is stereo panning; above/below is not reproduced.
-- **Quest 3 speakers roll off below ~150–200 Hz**, so hit weight sits at 200–800 Hz.
-- **360°/90° lane rotation** is parsed but not applied; v4 event-box groups and VFX boxes are
-  ignored. Basic lighting events are supported.
+- **Above/below uses a spectral elevation cue** (EQ bus + small pitch), not convolution HRTF.
+- **Quest 3 speakers roll off below ~150-200 Hz**, so hit weight sits at 200-800 Hz.
+- **v4 per-object rotation** and VFX event boxes are not read; v2/v3 360/90 lanes and basic
+  box-group colours are supported.
 - The white highlights at chain joints are cosmetic.
 
 ## Credits and license

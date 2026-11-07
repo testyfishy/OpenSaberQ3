@@ -16,6 +16,11 @@ var custom_color: Color = Color(0.0, 0.0, 0.0, 0.0)
 # coordinates we use them; otherwise the lane formula is untouched.
 var has_custom_position := false
 var custom_position := Vector2.ZERO
+# Noodle static transforms (specs/027 FR-007): world rotation in degrees and a scale multiplier.
+var has_custom_rotation := false
+var custom_euler := Vector3.ZERO
+var has_custom_scale := false
+var custom_scale := Vector3.ONE
 
 @warning_ignore("shadowed_variable")
 func _init(beat: float, line_index: float, line_layer: float, color: int, cut_direction: int, angle_offset: int) -> void:
@@ -84,6 +89,21 @@ static func _read_custom_position(note: ColorNoteInfo, note_dict: Dictionary) ->
 			float(coords.get("x", 0.0)),
 			float(coords.get("y", 0.0))
 		)
+	var pos = cd.get("_position", cd.get("position", null))
+	if pos is Array and pos.size() >= 2:
+		note.has_custom_position = true
+		note.custom_position = Vector2(float(pos[0]), float(pos[1]))
+	var rot = cd.get("_rotation", cd.get("rotation", null))
+	if rot is Array and rot.size() >= 3:
+		note.has_custom_rotation = true
+		note.custom_euler = Vector3(float(rot[0]), float(rot[1]), float(rot[2]))
+	var scl = cd.get("_scale", cd.get("scale", null))
+	if scl is Array and scl.size() >= 3:
+		note.has_custom_scale = true
+		note.custom_scale = Vector3(float(scl[0]), float(scl[1]), float(scl[2]))
+	elif scl is float or scl is int:
+		note.has_custom_scale = true
+		note.custom_scale = Vector3.ONE * float(scl)
 
 # Maps express this differently per format: v2 uses `_customData._color` as {r,g,b},
 # v3 embeds `customData.color`. Returns transparent when absent so callers can fall back.

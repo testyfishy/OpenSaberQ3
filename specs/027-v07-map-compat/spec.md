@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: 0.7.2 ships ME precision and 360/90 per-beat lanes (v2/v3); v4 rotation unsupported; Noodle/Chroma/box groups move to 0.7.3
+**Status**: 0.7.3 ships Noodle static transforms, box-group colours and the audio fixes; Noodle animation and custom Chroma environments remain
 
 **Input**: Owner, after the BeatSaver feature review: "Fix 360/90 and lightshow/box groups on v7.
 Resolve Mapping Extensions precision, Noodle position/rotation/scale/animation/speed, Chroma events

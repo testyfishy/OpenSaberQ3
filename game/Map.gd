@@ -164,6 +164,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 			map_data["_version"] = info.version
 		else:
 			map_data["version"] = info.version
+	MapData.expand_box_group_colors(map_data, lightshow_data)
 	MapTimer.load_bpm_events(map_data, info.beats_per_minute, audio_data)
 	bpm_segments = MapTimer.segment_count()
 	_build_track_rotations(map_data)

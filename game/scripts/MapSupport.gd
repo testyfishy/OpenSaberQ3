@@ -28,10 +28,7 @@ static func is_fake_v2(entry: Dictionary) -> bool:
 # `info` is passed in rather than read from Map, so this class has no dependency on the loader.
 static func detect_unsupported(map_data: Dictionary, info: MapInfo) -> void:
 	var found := PackedStringArray()
-	if not Utils.get_array(map_data, "lightColorEventBoxGroups", []).is_empty() \
-			or not Utils.get_array(map_data, "lightRotationEventBoxGroups", []).is_empty() \
-			or not Utils.get_array(map_data, "lightTranslationEventBoxGroups", []).is_empty():
-		found.append("box-group lighting")
+
 	var cd := Utils.get_dict(map_data, "customData", Utils.get_dict(map_data, "_customData", {}))
 	for key: String in ["customEvents", "_customEvents", "environment", "_environment", "materials"]:
 		if cd.has(key):

@@ -86,6 +86,10 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	var x_size := maxf(wall_info.width * Constants.LANE_DISTANCE, 0.01)
 	var y_size := maxf(wall_info.height * Constants.LANE_DISTANCE, 0.01)
 	var z_size := maxf(wall_info.duration * Constants.BEAT_DISTANCE, 0.01)
+	if wall_info.has_custom_scale:
+		x_size *= absf(wall_info.custom_scale.x)
+		y_size *= absf(wall_info.custom_scale.y)
+		z_size *= absf(wall_info.custom_scale.z)
 	var depth := z_size * 0.5
 	_half_depth = depth
 	# Scale the mesh node, not the mesh. The BoxMesh is shared and unit-sized: mutating a
@@ -106,6 +110,11 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	transform.origin.x = (0.5 * wall_info.width + wall_info.line_index - 2) * Constants.LANE_DISTANCE
 	transform.origin.y = (0.5 * wall_info.height + wall_info.line_layer) * Constants.LANE_DISTANCE
 	transform.origin.z = (current_beat - wall_info.beat) * Constants.BEAT_DISTANCE - depth
+	if wall_info.has_custom_position:
+		transform.origin.x += wall_info.custom_position.x
+		transform.origin.y += wall_info.custom_position.y
+	if wall_info.has_custom_rotation:
+		rotation_degrees += wall_info.custom_euler
 	
 	speed = NoteMotion.speed_at(wall_info.beat)
 	# specs/029: the depth-based grow sets the initial height from the spawn z.

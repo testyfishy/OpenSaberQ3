@@ -97,6 +97,10 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	transform.origin.z = -(note_info.beat - current_beat) * Constants.BEAT_DISTANCE
 	
 	rotation.z = Constants.CUBE_ROTATIONS[note_info.cut_direction] + deg_to_rad(note_info.angle_offset)
+	if note_info.has_custom_rotation:
+		rotation_degrees += note_info.custom_euler
+	if note_info.has_custom_scale:
+		scale = note_info.custom_scale
 	
 	piece_left.set_color(color)
 	piece_right.set_color(color)

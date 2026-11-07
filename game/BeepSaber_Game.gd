@@ -714,6 +714,33 @@ func _on_PlayerHead_area_exited(area: Area3D) -> void:
 
 # when the song ended we want to display the current score and
 # the high score
+# Headset idle can suspend the app and leave the audio session dead. On resume, re-seat the music
+# stream and poke the mixer; if the headset's system audio is still dead, a reboot is the only fix.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_RESUMED or what == NOTIFICATION_APPLICATION_FOCUS_IN \
+			or what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
+		_recover_audio_after_idle()
+
+func _recover_audio_after_idle() -> void:
+	await get_tree().process_frame
+	if song_player == null:
+		return
+	var was_playing := song_player.playing
+	var resume_at := song_player.get_playback_position()
+	var stream := song_player.stream
+	if was_playing:
+		song_player.stop()
+		song_player.stream = null
+		await get_tree().process_frame
+		song_player.stream = stream
+		song_player.play(resume_at)
+	var master := AudioServer.get_bus_index(&"Master")
+	if master >= 0:
+		AudioServer.set_bus_mute(master, true)
+		await get_tree().create_timer(0.08).timeout
+		AudioServer.set_bus_mute(master, false)
+	vr.log_info("AUDIO recovered after resume (was_playing=%s)" % str(was_playing))
+
 func _on_song_ended() -> void:
 	song_player.stop()
 	PlayCount.increment_play_count(Map.current_info,Map.current_difficulty.difficulty_rank)

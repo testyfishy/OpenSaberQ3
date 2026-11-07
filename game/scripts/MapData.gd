@@ -442,3 +442,46 @@ static func _v4_expand_events(list: Array, data: Array) -> Array:
 	return out
 
 
+
+
+## specs/027 FR-010: turn v3/v4 light colour box groups into the basic events the driver already
+## understands. Filters and distributions are ignored (the colour is applied at the event beat to
+## the group), which is the practical subset for the room lights.
+static func expand_box_group_colors(map_data: Dictionary, lightshow_data: Dictionary) -> void:
+	var groups: Array = []
+	groups.append_array(Utils.get_array(map_data, "lightColorEventBoxGroups", []))
+	groups.append_array(Utils.get_array(lightshow_data, "lightColorEventBoxGroups", []))
+	if groups.is_empty():
+		return
+	var events: Array = Utils.get_array(map_data, "basicBeatmapEvents", [])
+	events = events.duplicate()
+	for group in groups:
+		if not (group is Dictionary):
+			continue
+		var g := int(Utils.get_float(group as Dictionary, "g", 0.0))
+		if g < 0 or g > 4:
+			continue
+		var group_beat := Utils.get_float(group as Dictionary, "b", 0.0)
+		for box in Utils.get_array(group as Dictionary, "e", []):
+			if not (box is Dictionary):
+				continue
+			for ev in Utils.get_array(box as Dictionary, "e", []):
+				if not (ev is Dictionary):
+					continue
+				var color: Variant = (ev as Dictionary).get("c", null)
+				var color_dict := {}
+				if color is Array and (color as Array).size() >= 3:
+					color_dict = {"r": float((color as Array)[0]), "g": float((color as Array)[1]),
+						"b": float((color as Array)[2])}
+				elif color is Dictionary:
+					color_dict = color
+				if color_dict.is_empty():
+					continue
+				events.append({
+					"b": group_beat + Utils.get_float(ev as Dictionary, "b", 0.0),
+					"et": g,
+					"i": 1,
+					"f": 1.0,
+					"customData": {"color": color_dict},
+				})
+	map_data["basicBeatmapEvents"] = events

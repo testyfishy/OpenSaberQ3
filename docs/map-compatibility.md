@@ -28,7 +28,7 @@ The badge is computed from:
 A map that requires an unimplemented feature is Partial even if it happens to load; a map that
 merely suggests one is Supported with a warning.
 
-## Support matrix (0.7.2)
+## Support matrix (0.7.3)
 
 | Feature | State |
 |---|---|
@@ -36,12 +36,12 @@ merely suggests one is Supported with a warning.
 | Notes, bombs, walls, arcs, chains, BPM changes | Supported |
 | Fake notes / fake walls | Filtered as decorative, not scored |
 | Chroma per-note colour | Supported |
-| Noodle `_coordinates` note position | Partial |
+| Noodle position/rotation/scale (static) | **Supported** (0.7.3); animation not yet |
 | Mapping Extensions precision (positions, cut angles, wall widths/heights) | **Supported** (0.7.1) |
 | 90° / 360° rotation events | **Supported** (0.7.2, per-beat lanes; v4 per-object `r` not yet) |
-| Noodle rotation, scale, animation tracks, per-object speed/offset | **Not yet** |
-| Chroma light/environment events, Chroma JSON environments | **Not yet** |
-| v4 box-group lighting / VFX event boxes | **Not yet** |
+| Noodle animation tracks, per-object speed/offset | **Not yet** |
+| Chroma per-event colours | **Supported**; Chroma environment objects not yet |
+| v4/v3 box-group colours | **Basic** (group colour at the beat) |
 | Vivify (Unity asset bundles) | **Not yet**; maps load as Visuals limited |
 | Cinema (background video) | **Not yet** |
 | Heck scripts | **Not yet** (needs a mod host) |
@@ -60,8 +60,8 @@ Visuals-limited counts beside it. Only the harness result counts; hand-picked ex
 
 ## Roadmap for 0.7 (goals, not release promises)
 
-**Shipped:** Cards/depth-grow in 0.7.0, ME precision in 0.7.1, 360/90 track rotation in 0.7.2.
-Noodle transforms/animation, Chroma events and v4 box-group lighting follow in 0.7.3.
+**Shipped:** Cards/depth-grow 0.7.0, ME precision 0.7.1, 360/90 lanes 0.7.2, Noodle static
+transforms and box-group colours 0.7.3. Noodle animation and custom Chroma environment objects remain.
 
 1. Corpus harness and classifier; publish the measured rate.
 2. Fix silent corruption: Mapping Extensions precision, enforce `_requirements` badges, apply

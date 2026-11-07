@@ -40,6 +40,10 @@ var _duck_current := 0.0
 var _music_base_db := 0.0
 var duck_min_db := 0.0
 var duck_frames := 0
+# Above/below cue (specs/027 audio follow-up). Godot's 3D panning is left/right only, so hits are
+# routed through one of two EQ buses: above brightens the highs and cuts the lows, below does the
+# reverse. This is a spectral elevation cue, not convolution HRTF.
+var _elevation_ready := false
 
 func _ready() -> void:
 	# Voices pause with the game (and with a paused tree), so a paused song cannot keep hits
@@ -58,6 +62,7 @@ func _ready() -> void:
 		_base_db.append(0.0)
 		_started_usec.append(0)
 		_active.append(0)
+	_ensure_elevation_buses()
 	_ducking = Settings.audio_ducking
 	_music_base_db = linear_to_db(maxf(Settings.audio_music, 0.0001))
 	Settings.changed.connect(_on_setting_changed)
@@ -79,7 +84,9 @@ func play(sample: AudioStream, pos: Vector3, gain_db: float, ratio: float, offse
 	var player := _players[index]
 	player.stream = sample
 	player.global_position = pos
-	player.pitch_scale = ratio
+	var elevation := _elevation_of(pos)
+	player.bus = &"HitAbove" if elevation > 0.12 else (&"HitBelow" if elevation < -0.12 else &"SFX")
+	player.pitch_scale = ratio * (1.0 + clampf(elevation * 0.03, -0.05, 0.05))
 	player.volume_db = gain_db
 	player.play(offset)
 	_base_db[index] = gain_db
@@ -228,3 +235,31 @@ func voice_gain_db(index: int) -> float:
 
 func voice_active(index: int) -> bool:
 	return _active[index] == 1
+
+
+# --- above/below cue -------------------------------------------------------------------------
+
+func _ensure_elevation_buses() -> void:
+	if _elevation_ready:
+		return
+	_elevation_ready = true
+	_make_elevation_bus(&"HitAbove", [-3.0, -3.0, -1.0, 0.0, 3.0, 4.0])
+	_make_elevation_bus(&"HitBelow", [3.0, 3.0, 1.0, 0.0, -3.0, -4.0])
+
+func _make_elevation_bus(bus_name: StringName, gains: Array) -> void:
+	if AudioServer.get_bus_index(bus_name) >= 0:
+		return
+	var index := AudioServer.bus_count
+	AudioServer.add_bus(index)
+	AudioServer.set_bus_name(index, bus_name)
+	AudioServer.set_bus_send(index, &"SFX")
+	var eq := AudioEffectEQ6.new()
+	for band in mini(gains.size(), 6):
+		eq.set_band_gain_db(band, float(gains[band]))
+	AudioServer.add_bus_effect(index, eq)
+
+func _elevation_of(pos: Vector3) -> float:
+	var camera := get_viewport().get_camera_3d() as Camera3D
+	if camera == null:
+		return 0.0
+	return (camera.global_transform.affine_inverse() * pos).y
