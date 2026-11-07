@@ -47,9 +47,10 @@ static func wall_height(raw: int) -> Dictionary:
 		var v := raw - 4001
 		var height_units := v / 1000
 		var start_units := v % 1000
-		# Literal height units: 1000 is one layer; start 250 is about a quarter layer, matching the
-		# mod's "start height of 250 is just above a normal wall" convention.
-		return {"height": float(height_units) / 1000.0, "layer": float(start_units) / 1000.0}
+		# Same scale as the 1000-4000 range, without the +1000: 1000 units = a normal full wall.
+		# Start height is on the mod's 4x scale ("250 is just above a normal wall"): start/50 layers.
+		return {"height": float(height_units) / 1000.0 * 5.0,
+			"layer": float(start_units) * 4.0 / 1000.0 * 5.0}
 	if raw >= 1000 and raw <= 4000:
 		return {"height": float(raw - 1000) / 1000.0 * 5.0, "layer": 0.0}
 	return {}

@@ -35,3 +35,4 @@ func _ready() -> void:
 	print("MEPROBE wall tall x=%.3f w=%.3f h=%.3f" % [tall.line_index, tall.width, tall.height])
 	get_tree().quit()
 
+

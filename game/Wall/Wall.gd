@@ -83,9 +83,9 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	var mesh := $WallMeshOrientation/WallMesh as MeshInstance3D
 	var shape := ($WallMeshOrientation/WallArea/CollisionShape3D as CollisionShape3D).shape as BoxShape3D
 	
-	var x_size := wall_info.width * Constants.LANE_DISTANCE
-	var y_size := wall_info.height * Constants.LANE_DISTANCE
-	var z_size := wall_info.duration * Constants.BEAT_DISTANCE
+	var x_size := maxf(wall_info.width * Constants.LANE_DISTANCE, 0.01)
+	var y_size := maxf(wall_info.height * Constants.LANE_DISTANCE, 0.01)
+	var z_size := maxf(wall_info.duration * Constants.BEAT_DISTANCE, 0.01)
 	var depth := z_size * 0.5
 	_half_depth = depth
 	# Scale the mesh node, not the mesh. The BoxMesh is shared and unit-sized: mutating a
@@ -157,4 +157,5 @@ func _update_inside_fade() -> void:
 		var mesh := _wall_mesh()
 		if mesh != null:
 			mesh.set_instance_shader_parameter(&"fade", _fade)
+
 

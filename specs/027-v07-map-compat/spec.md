@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: In progress - ME precision implemented (0.7.1); 360/Noodle/Chroma next
+**Status**: 0.7.1 ships Mapping Extensions precision; FR-006 (360) and FR-007..FR-010 (Noodle/Chroma) move to 0.7.2
 
 **Input**: Owner, after the BeatSaver feature review: "Fix 360/90 and lightshow/box groups on v7.
 Resolve Mapping Extensions precision, Noodle position/rotation/scale/animation/speed, Chroma events
@@ -195,8 +195,17 @@ bundle; otherwise they load with a Visuals-limited badge.
 - Asset bundles are Unity-format containers; an open-source reader is feasible for simple cases but
   not for arbitrary shaders/scripts.
 
+## Verification evidence (0.7.1)
+
+- `me_probe`: positions 1000=0, 2000=1, -1000=0, -2000=-1, 1500=0.5; cuts 1000/1090/1180/1270 =
+  0/90/180/270 and 2000 any; walls 1000=0, 2000=5, 4000=15, 2304301 = 11.5 layers / 6.0 start.
+- Real ME map (`Star Sky`, 6,631 walls): 55/400 sampled notes fractional; parsed without errors.
+- Zero-size ME walls clamp to 1 cm in the mesh and collision box.
+- Regression: SETTINGSTEST, VERIFYSCHEMA 56, library/arc/ME probes pass.
+
 ## Consultation Log
 
 | Gate | Question | Verdict | Follow-up |
 |------|----------|---------|-----------|
+| G4 (0.7.1) | ME precision release review | **CHANGES** | Fixed the 4001+ wall height (same 5-layer scale, start 4x/50 per layer); clamped zero-size ME walls to 1 cm; cut sign confirmed. 360/Noodle/Chroma recorded as 0.7.2. |
 | G0 | Is the 0.7 scope (all listed features, open-source only) and the tier/harness order right? | **GO WITH CHANGES** | Adopted: FR-005 precision details (cut angle, wall encodings, no clamping), FR-006 rotation specifics (v2 types 14/15, v3 `e`, v4 `r`, environment/track), FR-009b animation keys and one-shot track resolution, FR-010 Chroma environment JSON, FR-010b player-track as gameplay, FR-015 pinned corpus (no maps committed), FR-016 one shared per-object transform; bundle work is a spike defaulting to Visuals limited; fixed the tier wording and the public matrix rows. |
