@@ -66,6 +66,7 @@ static func construct_chain(chain_info: ChainInfo, current_beat: float, note_inf
 	while i < chain_info.slice_count:
 		var chain_link := GlobalReferences.link_pool.acquire() as ChainLink
 		chain_link.spawn(chain_info, current_beat, head_pos, tail_pos, mid_pos, i)
+		TrackLanes.place(chain_link, chain_info.head_beat)
 		i += 1
 
 static func _bezier_point(head_pos: Vector2, mid_pos: Vector2, tail_pos: Vector2, t: float) -> Vector2:
@@ -208,4 +209,5 @@ func _start_cut_pieces(cutplane: Plane) -> void:
 	var split_vector := cutplane.normal * 2.0
 	piece_left.apply_central_impulse(-split_vector)
 	piece_right.apply_central_impulse(split_vector)
+
 

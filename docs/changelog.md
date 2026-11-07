@@ -6,10 +6,11 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
 
 ## v0.7.2 - 2026-11-07
 
-**360/90 lane rotation.** Rotation events (v3/v4 `rotationEvents`, v2 types 14/15) now rotate the
-whole track around the player, so the lane ring and every object - notes, bombs, walls, arcs, chains
-- follow the mapper's layout. Early/late execution is respected, and the ME precision work from
-0.7.1 is included. The environment/room still does not rotate.
+**360/90 lane rotation.** Rotation events (v3 `rotationEvents`, v2 types 14/15, v3 basic events
+14/15) now put each object in a lane rotated by the event in force at its own beat, so notes,
+bombs, walls, arcs and chains come from the sides while the player turns. Objects already in flight
+keep their lane. Early/late execution is respected; v4 per-object rotation is not read yet. The ME
+precision work from 0.7.1 is included.
 
 [Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.7.2-q3) -
 [Spec](../specs/027-v07-map-compat/spec.md)

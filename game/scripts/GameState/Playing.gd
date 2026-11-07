@@ -39,9 +39,6 @@ func _process_map(game: BeepSaber_Game) -> void:
 	Harness.tick()
 	var song_position := Harness.song_time() if Harness.replay else game.song_player.get_playback_position()
 	var current_beat := Map.seconds_to_beat(song_position)
-	# 360/90: rotate the whole track around the player. Objects (including the ones already in
-	# flight) are children of the track, so their positions and motion follow the ring.
-	game.track.rotation.y = deg_to_rad(-Map.track_rotation_at(current_beat))
 	var look_ahead := current_beat + BEATS_AHEAD
 	
 	# chains connect to a regular colornote and modify it, so we have to keep
@@ -59,6 +56,7 @@ func _process_map(game: BeepSaber_Game) -> void:
 			Map.first_note_ms = (Time.get_ticks_usec() - Map.load_finished_usec) / 1000.0
 			Map.first_note_beat = note_info.beat
 		note.spawn(note_info, current_beat)
+		TrackLanes.place(note, note_info.beat)
 		Harness.log_spawn(note_info)
 		note_info_refs.append(note_info)
 		cube_refs.append(note)
@@ -67,8 +65,10 @@ func _process_map(game: BeepSaber_Game) -> void:
 	while not MapData.bomb_stack.is_empty() and MapData.bomb_stack[-1].beat <= look_ahead:
 		if probe: Cost.objs_spawned += 1
 		var bomb := bomb_template.instantiate() as Bomb
-		bomb.spawn(MapData.bomb_stack.pop_back() as BombInfo, current_beat)
+		var bomb_info := MapData.bomb_stack.pop_back() as BombInfo
+		bomb.spawn(bomb_info, current_beat)
 		game.track.add_child(bomb)
+		TrackLanes.place(bomb, bomb_info.beat)
 	
 	# spawn obstacles (walls)
 	while not MapData.obstacle_stack.is_empty() and MapData.obstacle_stack[-1].beat <= look_ahead:
@@ -81,7 +81,9 @@ func _process_map(game: BeepSaber_Game) -> void:
 		# Pooled, not instantiated. The pool adds its scene to the track at creation, so the
 		# node is already in the tree and spawn() can apply its material immediately.
 		var wall := GlobalReferences.wall_pool.acquire() as Wall
-		wall.spawn(MapData.obstacle_stack.pop_back() as ObstacleInfo, current_beat)
+		var wall_info := MapData.obstacle_stack.pop_back() as ObstacleInfo
+		wall.spawn(wall_info, current_beat)
+		TrackLanes.place(wall, wall_info.beat)
 	
 	while not MapData.arc_stack.is_empty() and MapData.arc_stack[-1].head_beat <= look_ahead:
 		if probe:
@@ -115,6 +117,7 @@ func _process_map(game: BeepSaber_Game) -> void:
 		
 		arc.spawn(arc_info, current_beat, cube)
 		game.track.add_child(arc)
+		TrackLanes.place(arc, arc_info.head_beat)
 	
 	while not MapData.chain_stack.is_empty() and MapData.chain_stack[-1].head_beat <= look_ahead:
 		var chain_info := MapData.chain_stack.pop_back() as ChainInfo
@@ -127,6 +130,7 @@ func _process_map(game: BeepSaber_Game) -> void:
 	if probe:
 		Cost.spawn_usec += Time.get_ticks_usec() - t0
 	game.hide_profile_panel()
+
 
 
 

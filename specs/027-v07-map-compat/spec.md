@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: 0.7.2 ships ME precision and 360/90 track rotation; Noodle/Chroma/box groups move to 0.7.3
+**Status**: 0.7.2 ships ME precision and 360/90 per-beat lanes (v2/v3); v4 rotation unsupported; Noodle/Chroma/box groups move to 0.7.3
 
 **Input**: Owner, after the BeatSaver feature review: "Fix 360/90 and lightshow/box groups on v7.
 Resolve Mapping Extensions precision, Noodle position/rotation/scale/animation/speed, Chroma events
@@ -207,5 +207,6 @@ bundle; otherwise they load with a Visuals-limited badge.
 
 | Gate | Question | Verdict | Follow-up |
 |------|----------|---------|-----------|
+| G4 (0.7.2) | 360/90 rotation review | **CHANGES** | Replaced the track-wide yaw with per-beat lane nodes (in-flight objects keep their rotation); probe now checks the shipped lane path; v3 basic events 14/15 added; v4 per-object rotation recorded as unsupported. |
 | G4 (0.7.1) | ME precision release review | **CHANGES** | Fixed the 4001+ wall height (same 5-layer scale, start 4x/50 per layer); clamped zero-size ME walls to 1 cm; cut sign confirmed. 360/Noodle/Chroma recorded as 0.7.2. |
 | G0 | Is the 0.7 scope (all listed features, open-source only) and the tier/harness order right? | **GO WITH CHANGES** | Adopted: FR-005 precision details (cut angle, wall encodings, no clamping), FR-006 rotation specifics (v2 types 14/15, v3 `e`, v4 `r`, environment/track), FR-009b animation keys and one-shot track resolution, FR-010 Chroma environment JSON, FR-010b player-track as gameplay, FR-015 pinned corpus (no maps committed), FR-016 one shared per-object transform; bundle work is a spike defaulting to Visuals limited; fixed the tier wording and the public matrix rows. |

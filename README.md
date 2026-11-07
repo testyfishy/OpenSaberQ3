@@ -33,9 +33,11 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ### v0.7.2
 
-- **360/90 lane rotation.** The map's rotation events (v3/v4 `rotationEvents`, v2 types 14/15) now
-  turn the whole track around the player, so the lane ring, notes, bombs, walls, arcs and chains
-  come from the sides as the mapper intended. Early/late events apply at the right beat.
+- **360/90 lane rotation.** Each object is placed in a lane rotated by the event in force at its
+  own beat (v3 `rotationEvents`, v2 types 14/15, v3 basic events 14/15), so notes, bombs, walls,
+  arcs and chains come from the sides as the mapper intended while the player turns. Objects already
+  in flight keep the lane they spawned in. Early/late events apply at the right beat. v4 per-object
+  rotation is not read yet.
 - Mapping Extensions precision from 0.7.1 is included.
 - Noodle transforms/animation, Chroma events and v4 box-group lighting remain the next slice.
 

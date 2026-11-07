@@ -661,6 +661,15 @@ func _clear_track() -> void:
 	for c in track.get_children():
 		if c.has_method("clear_from_track"):
 			c.clear_from_track()
+		elif c.name.begins_with("Lane"):
+			# specs/027 FR-006: a 360 lane is a container, not an object. Release its pooled
+			# children and keep the lane for the next map.
+			for child in c.get_children():
+				if child.has_method("clear_from_track"):
+					child.clear_from_track()
+				else:
+					c.remove_child(child)
+					child.queue_free()
 		else:
 			track.remove_child(c)
 			c.queue_free()
@@ -970,5 +979,6 @@ func recenter():
 	var xr_camera := $XROrigin3D/XRCamera3D as XRCamera3D
 	xr_origin.rotation.y -= xr_camera.global_rotation.y
 	xr_origin.position -= (xr_camera.global_position * Vector3(1,0,1)) - Vector3(0,0,1)
+
 
 

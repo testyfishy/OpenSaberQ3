@@ -55,6 +55,19 @@ static func _build_track_rotations(map_data: Dictionary) -> void:
 					"early": kind == 14,
 					"angle": angle,
 				})
+	for entry in Utils.get_array(map_data, "basicBeatmapEvents", []):
+		if entry is Dictionary:
+			var kind := int(float((entry as Dictionary).get("et", -1)))
+			if kind == 14 or kind == 15:
+				var value := int(float((entry as Dictionary).get("i", 0)))
+				var angle := 0.0
+				if value >= 0 and value < ROT_VALUES.size():
+					angle = ROT_VALUES[value]
+				events.append({
+					"beat": float((entry as Dictionary).get("b", 0.0)),
+					"early": kind == 14,
+					"angle": angle,
+				})
 	events.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		if not is_equal_approx(float(a["beat"]), float(b["beat"])):
 			return float(a["beat"]) < float(b["beat"])
