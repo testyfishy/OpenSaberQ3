@@ -7,22 +7,22 @@ const MID_ANCHOR_MODE_COUNTERCLOCKWISE := 2
 
 var color: int
 var head_beat: float
-var head_line_index: int
-var head_line_layer: int
+var head_line_index: float
+var head_line_layer: float
 var head_cut_direction: int
 var head_control_point_length_multiplier: float
 var tail_beat: float
-var tail_line_index: int
-var tail_line_layer: int
+var tail_line_index: float
+var tail_line_layer: float
 var tail_cut_direction: int
 var tail_control_point_length_multiplier: float
 var mid_anchor_mode: int
 
 @warning_ignore("shadowed_variable")
 func _init(
-	color: int, head_beat: float, head_line_index: int, head_line_layer: int,
+	color: int, head_beat: float, head_line_index: float, head_line_layer: float,
 	head_cut_direction: int, head_control_point_length_multiplier: float,
-	tail_beat: float, tail_line_index: int, tail_line_layer: int,
+	tail_beat: float, tail_line_index: float, tail_line_layer: float,
 	tail_cut_direction: int, tail_control_point_length_multiplier: float,
 	mid_anchor_mode: int
 ) -> void:
@@ -43,13 +43,13 @@ static func new_v2(arc_dict: Dictionary) -> ArcInfo:
 	return ArcInfo.new(
 		int(Utils.get_float(arc_dict, "_colorType", 0)),
 		Utils.get_float(arc_dict, "_headTime", 0.0),
-		int(Utils.get_float(arc_dict, "_headLineIndex", 0)),
-		int(Utils.get_float(arc_dict, "_headLineLayer", 0)),
+		BeatmapPrecision.decode_position(Utils.get_float(arc_dict, "_headLineIndex", 0.0)),
+		BeatmapPrecision.decode_position(Utils.get_float(arc_dict, "_headLineLayer", 0.0)),
 		int(Utils.get_float(arc_dict, "_headCutDirection", 0)),
 		Utils.get_float(arc_dict, "_headControlPointLengthMultiplier", 1.0),
 		Utils.get_float(arc_dict, "_tailTime", 0.0),
-		int(Utils.get_float(arc_dict, "_tailLineIndex", 0)),
-		int(Utils.get_float(arc_dict, "_tailLineLayer", 0)),
+		BeatmapPrecision.decode_position(Utils.get_float(arc_dict, "_tailLineIndex", 0.0)),
+		BeatmapPrecision.decode_position(Utils.get_float(arc_dict, "_tailLineLayer", 0.0)),
 		int(Utils.get_float(arc_dict, "_tailCutDirection", 0)),
 		Utils.get_float(arc_dict, "_tailControlPointLengthMultiplier", 1.0),
 		int(Utils.get_float(arc_dict, "_sliderMidAnchorMode", 0))
@@ -59,14 +59,15 @@ static func new_v3(arc_dict: Dictionary) -> ArcInfo:
 	return ArcInfo.new(
 		int(Utils.get_float(arc_dict, "c", 0)),
 		Utils.get_float(arc_dict, "b", 0.0),
-		int(Utils.get_float(arc_dict, "x", 0)),
-		int(Utils.get_float(arc_dict, "y", 0)),
+		BeatmapPrecision.decode_position(Utils.get_float(arc_dict, "x", 0.0)),
+		BeatmapPrecision.decode_position(Utils.get_float(arc_dict, "y", 0.0)),
 		int(Utils.get_float(arc_dict, "d", 0)),
 		Utils.get_float(arc_dict, "mu", 1.0),
 		Utils.get_float(arc_dict, "tb", 0.0),
-		int(Utils.get_float(arc_dict, "tx", 0)),
-		int(Utils.get_float(arc_dict, "ty", 0)),
+		BeatmapPrecision.decode_position(Utils.get_float(arc_dict, "tx", 0.0)),
+		BeatmapPrecision.decode_position(Utils.get_float(arc_dict, "ty", 0.0)),
 		int(Utils.get_float(arc_dict, "tc", 0)),
 		Utils.get_float(arc_dict, "tmu", 1.0),
 		int(Utils.get_float(arc_dict, "m", 0))
 	)
+

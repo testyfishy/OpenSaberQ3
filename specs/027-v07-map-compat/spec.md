@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: Draft (G0 pending)
+**Status**: In progress - ME precision implemented (0.7.1); 360/Noodle/Chroma next
 
 **Input**: Owner, after the BeatSaver feature review: "Fix 360/90 and lightshow/box groups on v7.
 Resolve Mapping Extensions precision, Noodle position/rotation/scale/animation/speed, Chroma events

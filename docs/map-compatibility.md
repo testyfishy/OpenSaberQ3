@@ -28,7 +28,7 @@ The badge is computed from:
 A map that requires an unimplemented feature is Partial even if it happens to load; a map that
 merely suggests one is Supported with a warning.
 
-## Support matrix (0.6.4)
+## Support matrix (0.7.1)
 
 | Feature | State |
 |---|---|
@@ -37,7 +37,7 @@ merely suggests one is Supported with a warning.
 | Fake notes / fake walls | Filtered as decorative, not scored |
 | Chroma per-note colour | Supported |
 | Noodle `_coordinates` note position | Partial |
-| Mapping Extensions precision (encoded positions, float walls) | **Not yet** — parsed as ints, positions snap to the grid |
+| Mapping Extensions precision (positions, cut angles, wall widths/heights) | **Supported** (0.7.1) |
 | 90° / 360° rotation events | **Not yet** — parsed, not applied |
 | Noodle rotation, scale, animation tracks, per-object speed/offset | **Not yet** |
 | Chroma light/environment events, Chroma JSON environments | **Not yet** |
@@ -60,8 +60,8 @@ Visuals-limited counts beside it. Only the harness result counts; hand-picked ex
 
 ## Roadmap for 0.7 (goals, not release promises)
 
-**Shipped in 0.7.0:** the Cards library and the depth-based wall grow. The map-compatibility
-features below follow in 0.7.1.
+**Shipped:** the Cards library and depth-grow in 0.7.0; Mapping Extensions precision in 0.7.1.
+The remaining map-compatibility features follow in 0.7.2.
 
 1. Corpus harness and classifier; publish the measured rate.
 2. Fix silent corruption: Mapping Extensions precision, enforce `_requirements` badges, apply

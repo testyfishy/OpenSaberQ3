@@ -4,6 +4,19 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.1 - 2026-11-07
+
+**Mapping Extensions precision.** Note, bomb, wall, arc and chain placements decode the ME
+coordinates (1000 = lane 0, 2000 = lane 1, 1/1000-lane steps), precision cut angles (1000-1360 =
+0-360 degrees, 2000-2360 any-direction, angle not scored), precision wall widths, and the 4001+
+wall height/start type. Vanilla maps are unchanged. Validated on a real ME wall map (55/400
+sampled notes fractional, 6,631 walls parsed) plus the synthetic probe.
+
+360/90 rotation, Noodle and Chroma follow.
+
+[Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.7.1-q3) -
+[Spec](../specs/027-v07-map-compat/spec.md)
+
 ## v0.7.0 - 2026-11-07
 
 **Library cards and sorting; depth-based wall grow.** The main menu gains a Cards view: All,

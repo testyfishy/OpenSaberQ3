@@ -22,8 +22,10 @@ var which_saber: int
 # The colour this note was drawn in; a cut tints its debris with it.
 var _cut_color := Color.WHITE
 var is_dot: bool
-var line_index: int
-var line_layer: int
+# Mapping Extensions any-direction: the arrow is drawn, but the cut angle is not scored.
+var ignore_cut_angle := false
+var line_index: float
+var line_layer: float
 
 # we store the mesh here as part of the BeepCube for easier access because we will
 # reuse it when we create the cut cube pieces
@@ -73,6 +75,7 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	beat = note_info.beat
 	which_saber = note_info.color
 	is_dot = note_info.cut_direction == 8
+	ignore_cut_angle = note_info.ignore_cut_angle
 	# Kept so an arc can find its head note unambiguously. Beat + colour alone picks the wrong
 	# note when two same-colour notes share a beat (stacks and windows), which is how an arc ends
 	# up attached to a note it does not belong to.
@@ -198,7 +201,7 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 	
 	if saber_type == which_saber:
 		var cut_angle_accuracy := clampf((base_cut_angle_accuracy-0.7)/0.3, 0.0, 1.0)
-		if is_dot: #ignore angle if is a dot
+		if is_dot or ignore_cut_angle: #ignore angle if is a dot or any-direction note
 			cut_angle_accuracy = 1.0
 		var cut_distance_accuracy := clampf((0.1 - absf(cut_distance))/0.1, 0.0, 1.0)
 		var travel_distance_factor := controller.movement_aabb.get_longest_axis_size()
@@ -258,3 +261,5 @@ func _start_cut_pieces(cutplane: Plane, _cut_speed: Vector3) -> void:
 	# written as instance records and the vertex shader does the flight (no node, no physics).
 	if DebrisField.instance != null:
 		DebrisField.instance.emit_burst(global_transform.origin, cutplane.normal, _cut_speed, _cut_color)
+
+

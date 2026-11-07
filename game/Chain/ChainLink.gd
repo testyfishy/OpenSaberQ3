@@ -39,8 +39,8 @@ static func construct_chain(chain_info: ChainInfo, current_beat: float, note_inf
 		var info_ref := note_info_refs[i]
 		if (
 			info_ref.beat == chain_info.head_beat
-			and info_ref.line_index == chain_info.head_line_index
-			and info_ref.line_layer == chain_info.head_line_layer
+			and is_equal_approx(info_ref.line_index, chain_info.head_line_index)
+			and is_equal_approx(info_ref.line_layer, chain_info.head_line_layer)
 		):
 			cube_refs[i].make_chain_head()
 		i += 1
@@ -208,3 +208,4 @@ func _start_cut_pieces(cutplane: Plane) -> void:
 	var split_vector := cutplane.normal * 2.0
 	piece_left.apply_central_impulse(-split_vector)
 	piece_right.apply_central_impulse(split_vector)
+

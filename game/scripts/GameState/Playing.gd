@@ -103,8 +103,8 @@ func _process_map(game: BeepSaber_Game) -> void:
 			var current_cube : BeepCube = cube_refs[cube_id]
 			if (absf(current_cube.beat - arc_info.head_beat) < 0.001
 				and current_cube.which_saber == arc_info.color
-				and current_cube.line_index == arc_info.head_line_index
-				and current_cube.line_layer == arc_info.head_line_layer
+				and is_equal_approx(current_cube.line_index, arc_info.head_line_index)
+				and is_equal_approx(current_cube.line_layer, arc_info.head_line_layer)
 				):
 					cube = current_cube
 					break
@@ -124,4 +124,5 @@ func _process_map(game: BeepSaber_Game) -> void:
 	if probe:
 		Cost.spawn_usec += Time.get_ticks_usec() - t0
 	game.hide_profile_panel()
+
 

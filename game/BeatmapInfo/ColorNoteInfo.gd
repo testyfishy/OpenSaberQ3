@@ -2,11 +2,13 @@ extends RefCounted
 class_name ColorNoteInfo
 
 var beat: float
-var line_index: int
-var line_layer: int
+var line_index: float
+var line_layer: float
 var color: int # 0=left, 1=right
 var cut_direction: int
 var angle_offset: int
+# Mapping Extensions any-direction note: show the arrow but ignore the cut angle when scoring.
+var ignore_cut_angle := false
 # Per-note colour from the map (FR per-note colour). Transparent means "not specified", so the
 # game falls back to the map's scheme colour and then to settings.
 var custom_color: Color = Color(0.0, 0.0, 0.0, 0.0)
@@ -16,7 +18,7 @@ var has_custom_position := false
 var custom_position := Vector2.ZERO
 
 @warning_ignore("shadowed_variable")
-func _init(beat: float, line_index: int, line_layer: int, color: int, cut_direction: int, angle_offset: int) -> void:
+func _init(beat: float, line_index: float, line_layer: float, color: int, cut_direction: int, angle_offset: int) -> void:
 	self.beat = beat
 	self.line_index = line_index
 	self.line_layer = line_layer
@@ -25,27 +27,48 @@ func _init(beat: float, line_index: int, line_layer: int, color: int, cut_direct
 	self.angle_offset = angle_offset
 
 static func new_v2(note_dict: Dictionary) -> ColorNoteInfo:
+	var raw_dir := int(Utils.get_float(note_dict, "_cutDirection", 0))
+	var precise := BeatmapPrecision.cut_angle(raw_dir)
+	var direction := raw_dir
+	var offset := 0
+	var any_direction := false
+	if not precise.is_empty():
+		# 0 = down, 90 = left, 180 = up; base direction 1 is the down arrow (rotation 0).
+		direction = 1
+		offset = -int(precise["angle"])
+		any_direction = bool(precise["any"])
 	var note := ColorNoteInfo.new(
 		Utils.get_float(note_dict, "_time", 0.0),
-		int(Utils.get_float(note_dict, "_lineIndex", 0)),
-		int(Utils.get_float(note_dict, "_lineLayer", 0)),
+		BeatmapPrecision.decode_position(Utils.get_float(note_dict, "_lineIndex", 0.0)),
+		BeatmapPrecision.decode_position(Utils.get_float(note_dict, "_lineLayer", 0.0)),
 		int(Utils.get_float(note_dict, "_type", -1.0)),
-		int(Utils.get_float(note_dict, "_cutDirection", 0)),
-		0
+		direction,
+		offset
 	)
+	note.ignore_cut_angle = any_direction
 	note.custom_color = _read_custom_color(note_dict)
 	_read_custom_position(note, note_dict)
 	return note
 
 static func new_v3(note_dict: Dictionary) -> ColorNoteInfo:
+	var raw_dir := int(Utils.get_float(note_dict, "d", 0))
+	var precise := BeatmapPrecision.cut_angle(raw_dir)
+	var direction := raw_dir
+	var offset := int(Utils.get_float(note_dict, "a", 0))
+	var any_direction := false
+	if not precise.is_empty():
+		direction = 1
+		offset = -int(precise["angle"])
+		any_direction = bool(precise["any"])
 	var note := ColorNoteInfo.new(
 		Utils.get_float(note_dict, "b", 0.0),
-		int(Utils.get_float(note_dict, "x", 0)),
-		int(Utils.get_float(note_dict, "y", 0)),
+		BeatmapPrecision.decode_position(Utils.get_float(note_dict, "x", 0.0)),
+		BeatmapPrecision.decode_position(Utils.get_float(note_dict, "y", 0.0)),
 		int(Utils.get_float(note_dict, "c", -1)),
-		int(Utils.get_float(note_dict, "d", 0)),
-		int(Utils.get_float(note_dict, "a", 0))
+		direction,
+		offset
 	)
+	note.ignore_cut_angle = any_direction
 	note.custom_color = _read_custom_color(note_dict)
 	_read_custom_position(note, note_dict)
 	return note
