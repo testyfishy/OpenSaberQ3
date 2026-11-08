@@ -13,6 +13,7 @@ static var instance: WallBatch = null
 var _mm: MultiMesh
 var _mmi: MultiMeshInstance3D
 var _walls: Array[Node3D] = []
+var _debug_frames := 5
 
 static func setup(track: Node3D) -> void:
 	if instance != null or track == null:
@@ -69,3 +70,10 @@ func _process(_delta: float) -> void:
 	if count > _mm.instance_count:
 		_mm.instance_count = maxi(count, MIN_INSTANCES)
 	_mm.visible_instance_count = count
+	if _debug_frames > 0:
+		_debug_frames -= 1
+		var first := _walls[0] if not _walls.is_empty() else null
+		vr.log_info("WALLBATCH walls=%d count=%d inst=%d first_size=%s first_color=%s" % [
+			_walls.size(), count, _mm.instance_count,
+			str(first.call("batch_size")) if first != null else "-",
+			str(first.call("batch_color")) if first != null else "-"])

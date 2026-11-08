@@ -159,9 +159,6 @@ stop changing resolution/AA and profile the main-thread spikes instead.
 | base A2 | 311 | 10.83 ms | 11.94 ms | 16.17 ms | 35.0 ms |
 | wall batch B2 | 258 | 7.80 ms | 9.42 ms | 8.78 ms | 15.3 ms |
 
-Batching the wall visuals into one MultiMesh removes ~54 draw calls at the p95, cuts GPU p95 by
-~3 ms and frame p95 by ~2.5 ms, and drops the worst frame from ~35 ms to ~15 ms. Process p95 also
-falls by ~7.5 ms because the per-wall MeshInstance render path disappears; collision, motion,
-grow and fade are unchanged. The wall material/instance look is the same size/colour/rim/fade via
-INSTANCE_CUSTOM and per-instance colour. Batched walls become the default; the `wall_batch=false`
-benchmark flag keeps the old path for A/B.
+**Retracted.** The batch path did not render the walls in the first headset test; the draw-call
+and GPU drop was the walls being absent, not a rendering win. The path is off by default and the
+numbers above must not be used until a batch arm is verified to draw the walls.

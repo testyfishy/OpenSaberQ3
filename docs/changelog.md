@@ -6,13 +6,11 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
 
 ## v0.7.6 - 2026-11-07
 
-**Batched wall visuals, filled red walls, measured perf.** Wall panels now draw through one
-MultiMesh (per-instance size/colour/rim/fade) instead of one draw call per wall: on Somewhere Out
-There, draw calls p95 312 -> 258, GPU p95 10.7 -> 7.8 ms, frame p95 12.3 -> 9.4 ms, worst frame
-35 -> 15 ms. The wall shader uses the classic red with 55-100% body alpha unless the map authors an
-obstacle colour. The benchmark records draw calls, objects, render CPU/GPU and wall/lightshow
-timers. The exported Wall.scn cache bug that kept an old noise shader is fixed by clearing
-`.godot/exported` before export.
+**Filled red walls, wall batching under test.** Walls use the classic red with 55-100% body alpha
+unless the map authors an obstacle colour, and the exported Wall.scn cache bug that kept an old
+noise shader is fixed by clearing `.godot/exported` before export. A one-MultiMesh wall visual path
+is implemented behind a benchmark flag, but it did not render in the first headset test, so it is
+off by default; the earlier A/B draw-call/GPU win is retracted because the walls were absent.
 
 [Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.7.6-q3) -
 [Spec](../specs/027-v07-map-compat/spec.md)

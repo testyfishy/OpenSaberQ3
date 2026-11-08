@@ -15,7 +15,7 @@ const WallBatchScript := preload("res://game/scripts/WallBatch.gd")
 static var depth_prepass := false
 static var opaque_walls := false
 # 0.7.6 A/B: draw every live wall through WallBatch instead of one MeshInstance per wall.
-static var batch_visual := true
+static var batch_visual := false
 
 # The scene's own material, shared by every wall. The only per-wall value is `size`, a regular
 # uniform on that material, so it is written per spawn. A fresnel variant (FR-009) was built and
@@ -178,12 +178,15 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	_apply_grow()
 	var mesh := _wall_mesh()
 	if mesh != null:
-		mesh.visible = not batch_visual
-	if WallBatchScript.instance != null:
-		if batch_visual:
-			WallBatchScript.instance.register(self)
-		else:
-			WallBatchScript.instance.unregister(self)
+		# Never hide the per-wall mesh unless the batch node actually exists; otherwise a setup
+		# failure makes every wall invisible while its collision still works.
+		var use_batch := batch_visual and WallBatchScript.instance != null
+		mesh.visible = not use_batch
+		if WallBatchScript.instance != null:
+			if use_batch:
+				WallBatchScript.instance.register(self)
+			else:
+				WallBatchScript.instance.unregister(self)
 
 func _wall_mesh() -> MeshInstance3D:
 	if _mesh_cache == null:

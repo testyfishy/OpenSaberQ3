@@ -33,11 +33,10 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ### v0.7.6
 
-- **Batched wall visuals.** All live wall panels draw through one MultiMesh instead of one
-  `MeshInstance3D` each. On the wall-heavy map this removes ~54 draw calls at p95, cuts GPU p95 by
-  ~3 ms and frame p95 by ~2.5 ms, and drops the worst frame from ~35 ms to ~15 ms. Size, colour,
-  rim, grow and fade are per-instance, so the look is unchanged; collision and motion stay on the
-  wall nodes.
+- **Wall batching is experimental and off by default.** The one-MultiMesh wall path is in the
+  build behind a benchmark flag, but it did not render the walls in the first headset test, so the
+  default remains the per-wall path. The A/B numbers that looked like a win were walls not being
+  drawn; they are retracted.
 - **Filled red walls.** The wall material uses the classic red unless the map authors an obstacle
   colour, with 55-100% body alpha; the stale exported-scene cache that kept the old noise shader is
   documented in the build note.
