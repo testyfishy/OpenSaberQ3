@@ -5,6 +5,8 @@
 extends Node3D
 class_name BeepSaber_Game
 
+const WallBatchScript := preload("res://game/scripts/WallBatch.gd")
+
 var version := str(ProjectSettings.get_setting("application/config/version", "0.1.0"))
 # Set by the benchmark runner's `hud_off` arm. A plain member, because the runner class is not in
 # release builds (specs/013 FR-004).
@@ -244,6 +246,7 @@ func _ready() -> void:
 	GlobalReferences.cube_pool = $BeepCubePool
 	GlobalReferences.link_pool = $ChainLinkPool
 	GlobalReferences.wall_pool = $WallPool
+	WallBatchScript.setup(track)
 	GlobalReferences.cube_pool.presize(100)
 	GlobalReferences.link_pool.presize(100)
 	# Wall maps spawn tens of walls a second (Gloom: 12,340 in one song). Measured peak usage on

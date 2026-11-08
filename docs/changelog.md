@@ -6,11 +6,13 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
 
 ## v0.7.6 - 2026-11-07
 
-**Filled walls.** The wall shader is alpha-blended at 75-100% with a solid body instead of a
-faint additive tint; the room no longer shows through the panel and the fill stops flickering as
-the background moves. The near-camera transparent patch is removed, notes behind a wall stay
-faintly visible, and cull_back avoids the two-faced translucent sort flicker. The v0.6 rim is
-unchanged.
+**Batched wall visuals, filled red walls, measured perf.** Wall panels now draw through one
+MultiMesh (per-instance size/colour/rim/fade) instead of one draw call per wall: on Somewhere Out
+There, draw calls p95 312 -> 258, GPU p95 10.7 -> 7.8 ms, frame p95 12.3 -> 9.4 ms, worst frame
+35 -> 15 ms. The wall shader uses the classic red with 55-100% body alpha unless the map authors an
+obstacle colour. The benchmark records draw calls, objects, render CPU/GPU and wall/lightshow
+timers. The exported Wall.scn cache bug that kept an old noise shader is fixed by clearing
+`.godot/exported` before export.
 
 [Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.7.6-q3) -
 [Spec](../specs/027-v07-map-compat/spec.md)

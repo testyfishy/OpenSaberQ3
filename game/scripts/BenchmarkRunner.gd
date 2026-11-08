@@ -519,6 +519,10 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		applied.append("replay=true")
 	# Environment palette arm (FR-027/FR-028): "classic" is the pre-v0.3 look, so an A/B can
 	# show whether the per-map palette costs anything at all.
+	Wall.batch_visual = bool(cfg.get_value("bench", "wall_batch", true))
+	_meta["wall_batch"] = "true" if Wall.batch_visual else "false"
+	if Wall.batch_visual:
+		applied.append("wall_batch=1")
 	Wall.opaque_walls = bool(cfg.get_value("bench", "wall_opaque", false))
 	Wall.depth_prepass = bool(cfg.get_value("bench", "wall_depth", false))
 	_meta["wall_depth"] = "true" if Wall.depth_prepass else "false"

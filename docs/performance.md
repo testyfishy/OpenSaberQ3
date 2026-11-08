@@ -150,3 +150,18 @@ Somewhere Out There, 60 s per arm, `debug.oculus.cpuLevel=4`, `gpuLevel=4`, 30 s
 Render scale 1.0 reproducibly lowers GPU p50 by ~16% but **raises frame/GPU p95 by ~2.5-3 ms**,
 even with clocks pinned and no DVFS. It is not a win for comfort. The tail is not pixel cost;
 stop changing resolution/AA and profile the main-thread spikes instead.
+## 0.7.6 wall-batch A/B (Somewhere Out There, clocks pinned, A/B/A/B)
+
+| Arm | draw calls p95 | GPU p95 | frame p95 | process p95 | frame max |
+|---|---|---|---|---|---|
+| base A1 | 312 | 10.71 ms | 12.35 ms | 16.44 ms | 37.1 ms |
+| wall batch B1 | 258 | 7.82 ms | 9.40 ms | 8.66 ms | 15.4 ms |
+| base A2 | 311 | 10.83 ms | 11.94 ms | 16.17 ms | 35.0 ms |
+| wall batch B2 | 258 | 7.80 ms | 9.42 ms | 8.78 ms | 15.3 ms |
+
+Batching the wall visuals into one MultiMesh removes ~54 draw calls at the p95, cuts GPU p95 by
+~3 ms and frame p95 by ~2.5 ms, and drops the worst frame from ~35 ms to ~15 ms. Process p95 also
+falls by ~7.5 ms because the per-wall MeshInstance render path disappears; collision, motion,
+grow and fade are unchanged. The wall material/instance look is the same size/colour/rim/fade via
+INSTANCE_CUSTOM and per-instance colour. Batched walls become the default; the `wall_batch=false`
+benchmark flag keeps the old path for A/B.
