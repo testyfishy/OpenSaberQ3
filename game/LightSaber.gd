@@ -19,6 +19,10 @@ class_name LightSaber
 @export var offset_rot := Vector3.ZERO
 var extra_offset_pos := Vector3.ZERO
 var extra_offset_rot := Vector3.ZERO
+# Hand-only correction from BeepSaberController. Kept separate from extra_offset_* because that
+# pair is the player's persisted saber-offset setting.
+var hand_offset_pos := Vector3.ZERO
+var hand_offset_rot := Vector3.ZERO
 
 var saber_end := Vector3.ZERO
 var saber_end_past := Vector3.ZERO
@@ -125,8 +129,8 @@ func _ready() -> void:
 	_hit_mask = _swing_cast.collision_mask
 
 func _physics_process(delta: float) -> void:
-	position = offset_pos + extra_offset_pos
-	rotation_degrees = offset_rot + extra_offset_rot
+	position = offset_pos + extra_offset_pos + hand_offset_pos
+	rotation_degrees = offset_rot + extra_offset_rot + hand_offset_rot
 	saber_end_past = saber_end
 	saber_end = saber_visual.tip.global_transform.origin
 	last_dt = delta

@@ -173,6 +173,14 @@ func show_MapSourceDialogs(showing: bool = true) -> void:
 			(first_dialog as OQ_UI2DCanvas)._show()
 
 func _check_and_update_saber(controller: BeepSaberController, saber: LightSaber) -> void:
+	# The hand aim pose and the Touch aim pose do not share an origin; apply the hand-only
+	# correction (identity by default) only while hand tracking is live.
+	if controller.is_hand_tracking():
+		saber.hand_offset_pos = controller.hand_saber_offset_pos
+		saber.hand_offset_rot = controller.hand_saber_offset_rot
+	else:
+		saber.hand_offset_pos = Vector3.ZERO
+		saber.hand_offset_rot = Vector3.ZERO
 	# to allow extending/sheething the saber while not playing a song
 	if ((not song_player.playing)
 		and (controller.ax_just_pressed() or controller.by_just_pressed())

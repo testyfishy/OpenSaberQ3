@@ -4,6 +4,19 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.7 - 2026-11-07
+
+**Quest 3 hand tracking as swords, pinch clicks the UI.** With the controllers set down, each hand's
+OpenXR hand interaction aim pose drives the existing `left_hand`/`right_hand` trackers, so the sabers,
+cuts, walls and arcs need no separate rig. A pinch (float `pinch_ext/value`, press at 0.8, release
+below 0.5) drives the existing UI ray click, so a button fires once per pinch and again after a
+release. The hand mapping only runs while `/user/hand_tracker/<side>` reports live joint data, so
+controller play is unchanged; there is no hand mesh and no hand haptics in this build. The custom
+action map now carries the hand interaction profile (default/aim/grip pose plus pinch) because Godot
+only auto-creates it for its built-in map.
+
+[Spec](../specs/030-hand-tracking/spec.md)
+
 ## v0.7.6 - 2026-11-07
 
 **Map wall colour with red option, pooled bombs, brighter arcs.** Walls use the map's authored

@@ -11,13 +11,13 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ![OpenSaberQ3](docs/images/banner.png)
 
-**v0.7.6** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
+**v0.7.7** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
 [install](#download-and-install). Built on BeepSaber and its lineage
 ([credits](ATTRIBUTION.md), [pinned upstream](UPSTREAM.md)).
 
 ## Since the fork
 
-| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.7.6 |
+| | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.7.7 |
 |---|---|---|
 | **Engine** | Godot 4.3; 72 Hz, 60 Hz physics | **Godot 4.6.3**, 120 Hz with physics matched to the display, Performance / Balanced / Quality presets ([perf](docs/performance.md)) |
 | **Maps** | v2 | **v2, v3 and v4**, including the hybrid BeatSaver serves and v4's split beatmap/lightshow ([43-map audit](docs/map-data-audit.md)) |
@@ -30,6 +30,17 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 | **Measurement** | none | Bot and **human-play** captures, p99/max/spike metrics, release/rollback artifacts ([PERF.md](PERF.md)) |
 
 ## What's new
+
+### v0.7.7
+
+- **Hand tracking.** Set the controllers down and your hands hold the sabers: the hand interaction
+  profile's aim pose drives the existing `left_hand`/`right_hand` trackers, so cuts, walls and arcs
+  work with no new rig. The headset must have hand tracking enabled.
+- **Pinch clicks the UI.** A pinch drives the existing UI ray: press at 0.8, release below 0.5, so a
+  menu button fires once per pinch and release + re-pinch fires again. Controllers are unchanged; the
+  hand mapping only runs while the hand tracker has live joint data.
+- **No hand mesh** in this build; haptics are controller-only, so hand clashes and cuts are
+  audio/visual.
 
 ### v0.7.6
 
@@ -235,12 +246,12 @@ The latest signed APK is on the [releases page](https://github.com/testyfishy/Op
 Enable **Developer mode** on the headset, then sideload with SideQuest or run:
 
 ```sh
-adb install -r OpenSaberQ3-0.7.6.apk
+adb install -r OpenSaberQ3-0.7.7.apk
 ```
 
 Launch **Open Saber Q3** from *Unknown Sources*. Installs alongside upstream BeepSaber; songs and
 scores stay separate. Upgrading over 0.5.x keeps maps, scores and settings. Builds are test-signed,
-not store builds. The 0.7.6 APK carries the new icon and menu logo. Screenshots are in
+not store builds. The 0.7.7 APK carries the new icon and menu logo. Screenshots are in
 `/sdcard/Android/data/io.github.testyfishy.opensaberq3/files/screenshots/`:
 
 ```sh
