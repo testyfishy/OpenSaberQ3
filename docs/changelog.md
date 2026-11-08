@@ -11,7 +11,7 @@ obstacle colour by default (Hand in Hand is black by design); a "Walls: map colo
 song selection page switches to classic red. The exported Wall.scn cache bug that kept an old noise
 shader is fixed by clearing `.godot/exported` before export. Bombs are pooled instead of
 instantiated/freed per bomb, the arc ribbon is wider/brighter and a missing head attaches to the
-saber, and the benchmark records draw calls, objects, render CPU/GPU and wall/lightshow timers. The
+saber, saber-vs-saber contact pulses the controllers and throws a spark, and the benchmark records draw calls, objects, render CPU/GPU and wall/lightshow timers. The
 default refresh rate is **120 Hz** (90 Hz remains in Settings); a one-time migration moves the
 previous 90 default back to 120 without blocking a later choice.
 

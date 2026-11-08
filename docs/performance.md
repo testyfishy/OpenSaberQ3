@@ -162,3 +162,21 @@ stop changing resolution/AA and profile the main-thread spikes instead.
 **Retracted.** The batch path did not render the walls in the first headset test; the draw-call
 and GPU drop was the walls being absent, not a rendering win. The path is off by default and the
 numbers above must not be used until a batch arm is verified to draw the walls.
+## 0.7.6 direct-path and empty-floor test (Somewhere Out There, clocks pinned)
+
+The advisor's final hypothesis was Godot's intermediate full-resolution buffer (glow/tonemap/AA
+forcing a separate pass). `direct_path` turns glow, non-linear tonemap, adjustments, screen-space AA
+and TAA off together.
+
+| Arm | GPU p50 | GPU p95 | frame p95 |
+|---|---|---|---|
+| baseline | 6.93 ms | 9.12 ms | 13.84 ms |
+| direct path | 6.54 ms | 8.56 ms | 12.56 ms |
+| direct + foveation 2 | 6.54 ms | 8.48 ms | 12.05 ms |
+| direct + room/walls/notes off | 5.87 ms | 6.50 ms | 9.68 ms |
+
+Direct path buys ~0.4 ms, not the 1.5-3 ms an intermediate-pass removal would. Foveation still
+barely moves GPU time. With everything off the floor is still ~5.9 ms at 1848x1936/MSAA 2x, which
+is the runtime/hardware floor, not scene content. The advisor's stop condition is met: **do not
+fork Godot for this**. Glow stays on (0.4 ms is not worth the look). 120 Hz remains the default
+because VrApi reports `FPS=121/120, Stale=0`; 90 Hz is the steady fallback in Settings.

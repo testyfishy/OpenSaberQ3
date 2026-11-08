@@ -538,6 +538,22 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 	_meta["wall_batch"] = "true" if Wall.batch_visual else "false"
 	if Wall.batch_visual:
 		applied.append("wall_batch=1")
+	var direct_path := bool(cfg.get_value("bench", "direct_path", false))
+	if direct_path:
+		# Godot's mobile renderer drops to an intermediate full-res buffer for glow/tonemap/AA.
+		# This arm removes every trigger at once so the pass structure can be tested.
+		Settings.glow_mode = 0
+		_game.call("_apply_glow")
+		var world_env := _game.get_node_or_null("WorldEnvironment") as WorldEnvironment
+		if world_env != null and world_env.environment != null:
+			var env := world_env.environment
+			env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+			env.adjustment_enabled = false
+		var viewport := _game.get_viewport()
+		viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
+		viewport.use_taa = false
+		applied.append("direct_path=1")
+	_meta["direct_path"] = "true" if direct_path else "false"
 	var coalesce_lights := bool(cfg.get_value("bench", "coalesce_lights", true))
 	GameStatePlaying.coalesce_lights = coalesce_lights
 	_meta["coalesce_lights"] = "true" if coalesce_lights else "false"

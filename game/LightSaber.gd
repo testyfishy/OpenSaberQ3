@@ -22,6 +22,9 @@ var extra_offset_rot := Vector3.ZERO
 
 var saber_end := Vector3.ZERO
 var saber_end_past := Vector3.ZERO
+# Last physics-tick blade segment, exposed for the saber-vs-saber clash check.
+var last_blade_base := Vector3.ZERO
+var last_blade_tip := Vector3.ZERO
 var last_dt := 0.0
 
 # Analytic hit path (specs/006-swing-hit-sweep). `_hit_mask` is the swing cast's
@@ -133,6 +136,8 @@ func _physics_process(delta: float) -> void:
 	var blade_xf := _swing_cast.global_transform
 	var blade_base := blade_xf.origin
 	var blade_tip := blade_xf * _swing_cast.target_position
+	last_blade_base = blade_base
+	last_blade_tip = blade_tip
 	if _hit_sampled and _hit_enabled and is_extended() and HitResolver.is_analytic():
 		_resolve_analytic_hits(blade_base, blade_tip)
 	_hit_prev_base = blade_base

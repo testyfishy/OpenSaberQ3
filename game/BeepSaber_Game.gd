@@ -6,6 +6,9 @@ extends Node3D
 class_name BeepSaber_Game
 
 const WallBatchScript := preload("res://game/scripts/WallBatch.gd")
+const CLASH_SAMPLE := preload("res://game/data/hits/hard_01.wav")
+const CLASH_COOLDOWN_MSEC := 90
+const CLASH_DISTANCE := 0.14
 
 var version := str(ProjectSettings.get_setting("application/config/version", "0.1.0"))
 # Set by the benchmark runner's `hud_off` arm. A plain member, because the runner class is not in
@@ -203,6 +206,7 @@ func _physics_process(_dt: float) -> void:
 	
 	_check_and_update_saber(left_controller, left_saber)
 	_check_and_update_saber(right_controller, right_saber)
+	_check_saber_clash()
 	_poll_screenshot_trigger()
 
 func _poll_screenshot_trigger() -> void:
@@ -1027,3 +1031,62 @@ func recenter():
 
 
 
+
+## Saber-vs-saber engagement (0.7.6): when the two blades touch, pulse both controllers, play a
+## crisp clash and throw a short spark burst at the contact point. There is no force feedback to
+## push the player's hands, so the interaction is haptic/audio/visual rather than rigid-body.
+var _last_clash_msec := 0
+
+func _check_saber_clash() -> void:
+	if gamestate != gamestate_playing or Scoreboard.paused:
+		return
+	if not left_saber.is_extended() or not right_saber.is_extended():
+		return
+	var points := Geometry3D.get_closest_points_between_segments(
+		left_saber.last_blade_base, left_saber.last_blade_tip,
+		right_saber.last_blade_base, right_saber.last_blade_tip)
+	if points.size() < 2:
+		return
+	var distance := points[0].distance_to(points[1])
+	if distance > CLASH_DISTANCE:
+		return
+	var now := Time.get_ticks_msec()
+	if now - _last_clash_msec < CLASH_COOLDOWN_MSEC:
+		return
+	_last_clash_msec = now
+	var contact: Vector3 = (points[0] + points[1]) * 0.5
+	left_controller.simple_rumble(0.7, 0.055)
+	right_controller.simple_rumble(0.7, 0.055)
+	if GlobalReferences.hit_audio != null:
+		GlobalReferences.hit_audio.play(CLASH_SAMPLE, contact, -1.5, 0.72)
+	_spawn_clash_sparks(contact)
+
+func _spawn_clash_sparks(at: Vector3) -> void:
+	var sparks := CPUParticles3D.new()
+	sparks.amount = 14
+	sparks.lifetime = 0.34
+	sparks.one_shot = true
+	sparks.explosiveness = 1.0
+	sparks.direction = Vector3.UP
+	sparks.spread = 180.0
+	sparks.gravity = Vector3.ZERO
+	sparks.initial_velocity_min = 1.0
+	sparks.initial_velocity_max = 2.6
+	sparks.scale_amount_min = 0.015
+	sparks.scale_amount_max = 0.035
+	sparks.color = Color(1.0, 0.9, 0.6)
+	var spark_mesh := SphereMesh.new()
+	spark_mesh.radius = 0.018
+	spark_mesh.height = 0.036
+	sparks.mesh = spark_mesh
+	var spark_material := StandardMaterial3D.new()
+	spark_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	spark_material.albedo_color = Color(1.0, 0.92, 0.65)
+	spark_material.emission_enabled = true
+	spark_material.emission = Color(1.0, 0.8, 0.4)
+	spark_material.emission_energy_multiplier = 4.0
+	sparks.material_override = spark_material
+	track.add_child(sparks)
+	sparks.global_position = at
+	sparks.emitting = true
+	get_tree().create_timer(sparks.lifetime + 0.15).timeout.connect(sparks.queue_free)

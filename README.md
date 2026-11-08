@@ -41,6 +41,9 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
   bombs-off arm to measure their cost.
 - **Arcs read as light lines.** The ribbon is wider and brighter, and an arc with no head note
   attaches its head to the saber instead of starting in mid-air.
+- **Saber clashes.** When the two blades touch, both controllers pulse, a clash sound plays and a
+  short spark burst appears at the contact point. There is no force feedback to push the player's
+  hands; the interaction is haptic/audio/visual.
 - **Perf instrumentation.** The benchmark records draw calls, objects, render CPU/GPU and the
   wall/lightshow timers.
 
