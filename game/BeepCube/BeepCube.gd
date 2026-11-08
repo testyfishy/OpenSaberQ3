@@ -18,6 +18,7 @@ const MIRROR_SHADER := preload("res://game/shaders/mirror_pass.gdshader")
 # One material for every note, so switching the setting is one write (007 rule 2).
 static var _mirror_material: ShaderMaterial
 
+static var debug_hide_visuals := false
 var which_saber: int
 # The colour this note was drawn in; a cut tints its debris with it.
 var _cut_color := Color.WHITE
@@ -63,6 +64,10 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	# can behave weirdly (ex. AnimationPlayer won't always play correctly)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	blade_min_dist = INF
+	if debug_hide_visuals:
+		mi.visible = false
+	else:
+		mi.visible = true
 	# Pooled notes keep the last Noodle rotation/scale unless every spawn starts clean.
 	rotation = Vector3.ZERO
 	scale = Vector3.ONE

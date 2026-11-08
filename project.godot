@@ -208,7 +208,7 @@ openxr/enabled=true
 openxr/reference_space=2
 openxr/startup_alert=false
 openxr/render_target_size_multiplier=1.2546
-openxr/default_refresh_rate=120
+openxr/default_refresh_rate=90
 shaders/enabled=true
 
 [gameplay]

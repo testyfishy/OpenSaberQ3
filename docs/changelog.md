@@ -10,7 +10,9 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
 unless the map authors an obstacle colour, and the exported Wall.scn cache bug that kept an old
 noise shader is fixed by clearing `.godot/exported` before export. A one-MultiMesh wall visual path
 is implemented behind a benchmark flag, but it did not render in the first headset test, so it is
-off by default; the earlier A/B draw-call/GPU win is retracted because the walls were absent.
+off by default; the earlier A/B draw-call/GPU win is retracted because the walls were absent. The
+default refresh rate is now **90 Hz** (120 Hz remains in Settings); a one-time migration moves
+existing installs to 90 without blocking a later choice.
 
 [Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.7.6-q3) -
 [Spec](../specs/027-v07-map-compat/spec.md)

@@ -258,6 +258,13 @@ for about a second while the renderer compiles; Pause → Screenshot is the reli
 | [Attribution](ATTRIBUTION.md) | Authors and asset provenance |
 | [Benchmarking](tools/perf/benchmark.md) | Capture method |
 
+## Refresh rate
+
+The default is **90 Hz**, which fits the measured frame budget on the Quest 3 and is steadier than
+120 Hz on wall-heavy maps. **120 Hz** remains selectable in Settings > Refresh rate; the choice is
+saved. The project default and the OpenXR startup rate are both 90 Hz so a fresh install never
+starts on 120 by accident.
+
 ## Build from source
 
 Godot **4.6.3** + JDK 17 + Android SDK 34/36, export preset **`Oculus Quest (RELEASE)`**.

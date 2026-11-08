@@ -519,6 +519,21 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		applied.append("replay=true")
 	# Environment palette arm (FR-027/FR-028): "classic" is the pre-v0.3 look, so an A/B can
 	# show whether the per-map palette costs anything at all.
+	Wall.debug_hide_visuals = bool(cfg.get_value("bench", "walls_off", false))
+	BeepCube.debug_hide_visuals = bool(cfg.get_value("bench", "notes_off", false))
+	var room := _game.get("event_driver") as Node3D
+	var room_off := bool(cfg.get_value("bench", "room_off", false))
+	if room != null:
+		room.visible = not room_off
+	_meta["walls_off"] = "true" if Wall.debug_hide_visuals else "false"
+	_meta["notes_off"] = "true" if BeepCube.debug_hide_visuals else "false"
+	_meta["room_off"] = "true" if room_off else "false"
+	if Wall.debug_hide_visuals:
+		applied.append("walls_off=1")
+	if BeepCube.debug_hide_visuals:
+		applied.append("notes_off=1")
+	if room_off:
+		applied.append("room_off=1")
 	Wall.batch_visual = bool(cfg.get_value("bench", "wall_batch", false))
 	_meta["wall_batch"] = "true" if Wall.batch_visual else "false"
 	if Wall.batch_visual:
