@@ -516,6 +516,14 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		applied.append("replay=true")
 	# Environment palette arm (FR-027/FR-028): "classic" is the pre-v0.3 look, so an A/B can
 	# show whether the per-map palette costs anything at all.
+	Wall.opaque_walls = bool(cfg.get_value("bench", "wall_opaque", false))
+	Wall.depth_prepass = bool(cfg.get_value("bench", "wall_depth", false))
+	_meta["wall_depth"] = "true" if Wall.depth_prepass else "false"
+	_meta["wall_opaque"] = "true" if Wall.opaque_walls else "false"
+	if Wall.opaque_walls:
+		applied.append("wall_opaque=1")
+	if Wall.depth_prepass:
+		applied.append("wall_depth=1")
 	if str(cfg.get_value("bench", "environment", "map")) == "classic":
 		Settings.environment_mode = 1
 		applied.append("environment=classic")
@@ -1256,12 +1264,14 @@ func _peak_of(values: PackedInt32Array) -> int:
 			peak = v
 	return peak
 
-func _p95_of(values: PackedInt64Array) -> int:
+func _p95_of(values) -> int:
 	if values.is_empty():
 		return 0
-	var copy := values.duplicate()
+	var copy: Array = []
+	for v in values:
+		copy.append(int(v))
 	copy.sort()
-	return copy[clampi(int(copy.size() * 0.95), 0, copy.size() - 1)]
+	return int(copy[clampi(int(copy.size() * 0.95), 0, copy.size() - 1)])
 
 const VRSlider := preload("res://game/vr_slider.gd")
 

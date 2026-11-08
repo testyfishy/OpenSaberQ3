@@ -5,6 +5,15 @@ class_name Wall
 # on the main thread, so it can be the spike rather than the spawn.
 const Cost := preload("res://game/scripts/CostProbe.gd")
 
+# A/B for wall overdraw (0.7.6): the normal material never writes depth, so overlapping walls
+# shade every layer. The prepass material renders depth first and lets the colour pass reject the
+# hidden layers. Set from the benchmark flag; default is the normal visual.
+const WALL_MATERIAL := preload("res://game/Wall/wall_shared.tres")
+const WALL_PREPASS_MATERIAL := preload("res://game/Wall/wall_depth.tres")
+const WALL_OPAQUE_MATERIAL := preload("res://game/Wall/wall_opaque.tres")
+static var depth_prepass := false
+static var opaque_walls := false
+
 # The scene's own material, shared by every wall. The only per-wall value is `size`, a regular
 # uniform on that material, so it is written per spawn. A fresnel variant (FR-009) was built and
 # then removed: it filled pixels additively across large surfaces, which is overdraw on a tiled
@@ -158,9 +167,13 @@ func _apply_material(size_in: Vector3, shard_color := Color(0.0, 0.0, 0.0, 0.0),
 	var mesh := _wall_mesh()
 	if mesh == null:
 		return
-	# Captured before anything can replace it, whichever call gets here first (spawn, not _ready).
-	if _base_mat == null:
-		_base_mat = mesh.material_override
+	# The only material choice is the A/B prepass switch; instance uniforms stay per wall.
+	if opaque_walls:
+		_base_mat = WALL_OPAQUE_MATERIAL
+	elif depth_prepass:
+		_base_mat = WALL_PREPASS_MATERIAL
+	else:
+		_base_mat = WALL_MATERIAL
 	if mesh.material_override != _base_mat:
 		mesh.material_override = _base_mat
 	# One shared material, per-wall values as instance uniforms: no material switch per wall.

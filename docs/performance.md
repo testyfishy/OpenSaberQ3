@@ -102,3 +102,20 @@ it out when the song ends. Method: [tools/perf/benchmark.md](../tools/perf/bench
 Ray tracing, physics ragdolls, HRTF spatialisation and per-hit music ducking at note rate are not
 supported: Godot has no RT API on Quest, and the hardware/audio path cannot deliver the rest.
 Sky, reflections and audio ship in the forms Quest 3 runs at 120 Hz.
+## 0.7.6 wall-overdraw A/B (Quest 3, 120 Hz)
+
+Map: Somewhere Out There (188 live walls), bot, 60 s per arm, same build. wall_depth=true uses
+depth_prepass_alpha; wall_opaque=true removes alpha blending and writes depth.
+
+| Arm | GPU p50 | GPU p95 | frame p95 | draw calls p95 |
+|---|---|---|---|---|
+| alpha (current) | 7.44 ms | 10.66 ms | 12.90 ms | 315 |
+| depth prepass | 7.45 ms | 10.80 ms | 12.49 ms | 315 |
+| opaque | 7.46 ms | 15.89 ms | 16.86 ms | 380 |
+
+Neither variant buys time. The prepass has no hidden layers to cull on this map and adds a pass;
+opaque walls write depth and make the GPU tail much worse. The wall cost is the single visible
+layer s screen coverage, which cannot be removed without changing the image. The current alpha
+material stays. The same run's **process p95 is 18 ms**, with spawn_usec p95 only 0.4 ms, so the
+next target is main-thread spikes outside wall spawning (lightshow/event processing), not wall
+fill.

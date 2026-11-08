@@ -1,0 +1,72 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[sub_resource type="Shader" id="1"]
+code = "shader_type spatial;
+render_mode unshaded, cull_back;
+
+// Walls: a filled panel, mostly opaque (0.7.6). The old additive panel added only a faint tint,
+// so the room showed through and the wall read as half-painted and flickered as the background
+// moved. Alpha blending at 75-100% keeps notes behind a wall visible while the panel reads solid.
+// cull_back keeps one layer per wall: a two-faced translucent box sorts per object, not per
+// triangle, so the far face would draw over the near one from some angles and flicker. The
+// per-wall bright rim turned wall art (hundreds of adjacent one-lane walls) into vertical stripes,
+// so it is suppressed through the `rim` instance uniform for Noodle/ME and off-grid walls (see
+// Wall.gd). Per-wall values are instance uniforms, so every wall shares this material.
+
+instance uniform vec4 wall_color : source_color = vec4(1.0, 0.08, 0.08, 1.0);
+instance uniform vec3 size = vec3(1.0);
+instance uniform float fade = 1.0;
+instance uniform float rim = 1.0;
+
+const float RIM_M = 0.015;
+
+varying vec3 local_pos;
+varying vec3 local_n;
+
+void vertex() {
+	local_pos = VERTEX * size;
+	// NORMAL is view-space in the fragment stage, so the face chosen for the rim would change
+	// with head orientation. This is the model-space normal, valid for an unrotated box.
+	local_n = NORMAL;
+}
+
+void fragment() {
+	vec3 half_size = size * 0.5;
+	vec3 p = local_pos;
+
+	// Distance to the nearest edge of the face we are shading, in metres. Using the two in-face
+	// axes means a thin wall and a wide wall get the same rim thickness.
+	float d;
+	if (abs(local_n.x) > 0.5) {
+		d = min(half_size.y - abs(p.y), half_size.z - abs(p.z));
+	} else if (abs(local_n.y) > 0.5) {
+		d = min(half_size.x - abs(p.x), half_size.z - abs(p.z));
+	} else {
+		d = min(half_size.x - abs(p.x), half_size.y - abs(p.y));
+	}
+
+	float rim_mask = 1.0 - smoothstep(RIM_M - fwidth(d), RIM_M + fwidth(d), d);
+
+	// Vertical gradient: brighter at the top, so the panel reads as a lit surface.
+	float up = clamp(p.y / max(half_size.y, 0.001) * 0.5 + 0.5, 0.0, 1.0);
+	float body = mix(0.80, 1.00, up);
+
+	// The bottom edge is a little brighter, which gives a contact cue where the wall meets the
+	// floor without a separate decal.
+	float bottom = smoothstep(-half_size.y, -half_size.y + RIM_M * 2.0, p.y);
+	float rim_gain = rim_mask * mix(0.55, 0.35, bottom) * rim;
+
+	vec3 col = wall_color.rgb * (body + rim_gain);
+	// No near fade: it punched transparent patches into a wall beside the player, which is what
+	// made the fill look half-painted as the head moved. The inside-wall dim uses `fade`.
+	ALBEDO = col * fade;
+
+}
+"
+
+[resource]
+render_priority = 0
+shader = SubResource("1")
+shader_parameter/wall_color = Color(1, 0.08, 0.08, 1)
+shader_parameter/size = Vector3(1, 1, 1)
+
