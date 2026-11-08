@@ -538,6 +538,48 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 	_meta["wall_batch"] = "true" if Wall.batch_visual else "false"
 	if Wall.batch_visual:
 		applied.append("wall_batch=1")
+	var coalesce_lights := bool(cfg.get_value("bench", "coalesce_lights", true))
+	GameStatePlaying.coalesce_lights = coalesce_lights
+	_meta["coalesce_lights"] = "true" if coalesce_lights else "false"
+	if not coalesce_lights:
+		applied.append("coalesce_lights=0")
+	var ui_off := bool(cfg.get_value("bench", "ui_off", false))
+	if ui_off:
+		for canvas in _game.find_children("*", "OQ_UI2DCanvas", true, false):
+			(canvas as Node).visible = false
+		applied.append("ui_off=1")
+	_meta["ui_off"] = "true" if ui_off else "false"
+	var mirror_off := bool(cfg.get_value("bench", "mirror_off", false))
+	if mirror_off:
+		Settings.mirror_reflections = false
+		applied.append("mirror_off=1")
+	_meta["mirror_off"] = "true" if mirror_off else "false"
+	var features_off := bool(cfg.get_value("bench", "features_off", false))
+	if features_off:
+		Settings.note_edge_glow = false
+		Settings.floor_light = false
+		Settings.saber_tail = false
+		Settings.saber_halo = false
+		Settings.hit_flash = false
+		applied.append("features_off=1")
+	_meta["features_off"] = "true" if features_off else "false"
+	var lights_off := bool(cfg.get_value("bench", "lights_off", false))
+	if lights_off:
+		Settings.events = false
+		_game.call("disable_events", true)
+		applied.append("lights_off=1")
+	_meta["lights_off"] = "true" if lights_off else "false"
+	var glow_off := bool(cfg.get_value("bench", "glow_off", false))
+	if glow_off:
+		Settings.glow_mode = 0
+		_game.call("_apply_glow")
+		applied.append("glow_off=1")
+	_meta["glow_off"] = "true" if glow_off else "false"
+	var bombs_off := bool(cfg.get_value("bench", "bombs_off", false))
+	GameStatePlaying.debug_skip_bombs = bombs_off
+	_meta["bombs_off"] = "true" if bombs_off else "false"
+	if bombs_off:
+		applied.append("bombs_off=1")
 	Wall.opaque_walls = bool(cfg.get_value("bench", "wall_opaque", false))
 	Wall.depth_prepass = bool(cfg.get_value("bench", "wall_depth", false))
 	_meta["wall_depth"] = "true" if Wall.depth_prepass else "false"

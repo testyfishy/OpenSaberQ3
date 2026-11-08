@@ -253,6 +253,13 @@ func _ready() -> void:
 	# that map is 569 live walls, so a pool below that grows during play; 256 covers every normal
 	# map without presizing 570 nodes at startup, and the growth on Gloom is amortised.
 	GlobalReferences.wall_pool.presize(256)
+	var bomb_pool := preload("res://game/scripts/ScenePool/ScenePool.tscn").instantiate() as ScenePool
+	bomb_pool.name = "BombPool"
+	bomb_pool.scene = preload("res://game/Bomb/Bomb.tscn")
+	add_child(bomb_pool)
+	bomb_pool.new_scene_instanced.connect(_on_ScenePool_new_scene_instanced)
+	bomb_pool.presize(64)
+	GlobalReferences.bomb_pool = bomb_pool
 	
 	var xr_camera := $XROrigin3D/XRCamera3D as XRCamera3D
 	vr.initialize(
@@ -1003,6 +1010,8 @@ func _on_ScenePool_new_scene_instanced(obj: Node3D, during_presizing: bool) -> v
 			obj.hide_cube()
 		elif obj is Wall:
 			obj.hide_wall()
+		elif obj is Bomb:
+			obj.hide_bomb()
 		else:
 			obj.visible = false
 

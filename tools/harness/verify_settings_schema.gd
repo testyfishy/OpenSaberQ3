@@ -26,7 +26,7 @@ const EXPECTED_ORDER: Array[String] = [
 	"environment_mode", "glow_mode", "hit_sound", "beatsaver_order", "beatsaver_curated",
 	"beatsaver_verified", "beatsaver_ranked", "beatsaver_playable_only", "beatsaver_duration",
 	"beatsaver_nps", "beatsaver_difficulties", "library_source_filter", "library_card",
-	"library_sort_field", "library_sort_desc", "screenshot_trigger",
+	"library_sort_field", "library_sort_desc", "screenshot_trigger", "wall_map_color",
 ]
 
 # Script variables that are not settings.

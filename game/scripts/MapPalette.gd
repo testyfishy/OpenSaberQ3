@@ -68,7 +68,9 @@ static func set_colors_from_custom_data(info: MapInfo, difficulty: DifficultyInf
 	env_right = _read_colour(diff_data, "_envColorRight", _read_colour(info_data, "_envColorRight", env_right))
 	env_left_boost = _read_colour(diff_data, "_envColorLeftBoost", _read_colour(info_data, "_envColorLeftBoost", env_left_boost))
 	env_right_boost = _read_colour(diff_data, "_envColorRightBoost", _read_colour(info_data, "_envColorRightBoost", env_right_boost))
-	wall_color = _read_colour(diff_data, "_obstacleColor", _read_colour(info_data, "_obstacleColor", wall_color))
+	# Respect the creator's authored obstacle colour; the menu toggle can force classic red.
+	if Settings.wall_map_color:
+		wall_color = _read_colour(diff_data, "_obstacleColor", _read_colour(info_data, "_obstacleColor", wall_color))
 
 	# Readability guards (FR-028): the room stays below 0.6x the note brightness, and a palette
 	# whose two hues are nearly the same (or nearly grey) falls back to the environment default.

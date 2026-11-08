@@ -70,6 +70,10 @@ var events: bool:
 	set(value):
 		events = value
 		set_and_emit(&"events", value)
+var wall_map_color: bool:
+	set(value):
+		wall_map_color = value
+		set_and_emit(&"wall_map_color", value)
 var disable_map_color: bool:
 	set(value):
 		disable_map_color = value
@@ -376,7 +380,7 @@ const SCHEMA := {
 	"audio_analyser": {"default": false},
 	"spectator_view": {"default": false},
 	"spectator_hud": {"default": true},
-	"display_refresh_rate": {"default": 90.0},
+	"display_refresh_rate": {"default": 120.0},
 	"render_scale": {"default": 1.2546, "min": 0.7, "max": 1.5, "step": 0.0001},
 	"msaa_3d": {"default": 2, "min": 0, "max": 2, "step": 1},
 	"foveation_level": {"default": 0, "min": 0, "max": 2, "step": 1},
@@ -408,6 +412,7 @@ const SCHEMA := {
 	"library_sort_field": {"default": "name"},
 	"library_sort_desc": {"default": false},
 	"screenshot_trigger": {"default": true},
+	"wall_map_color": {"default": true},
 }
 
 # Derived view for the loader, the panel and the tests. The platform patch in _ready() writes
@@ -471,13 +476,13 @@ func reload() -> void:
 	config.set_value(SECTION, "perf_preset", perf_preset)
 	if not had_preset:
 		_apply_perf_preset(perf_preset)
-	# 0.7.6: 90 Hz is the default now; existing configs keep 120 unless this one-time migration
-	# runs. The settings panel still offers 120, and a deliberate choice persists because the
-	# marker is written once.
-	if not config.has_section_key(SECTION, "refresh_default_90"):
-		display_refresh_rate = 90.0
-		config.set_value(SECTION, "display_refresh_rate", 90.0)
-		config.set_value(SECTION, "refresh_default_90", true)
+	# 0.7.6: back to 120 Hz as the default after the owner's test; 90 remains in Settings. Move
+	# the previous 90 default once, and keep a deliberate later choice because the marker is
+	# written once.
+	if not config.has_section_key(SECTION, "refresh_default_120"):
+		display_refresh_rate = 120.0
+		config.set_value(SECTION, "display_refresh_rate", 120.0)
+		config.set_value(SECTION, "refresh_default_120", true)
 		save()
 
 func load_old_config() -> void:

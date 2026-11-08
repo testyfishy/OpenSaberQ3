@@ -20,15 +20,17 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 	info.is_correct_saber = false
 	info.note_pos = global_position
 	if Cost.enabled: Cost.objs_freed += 1
-	queue_free()
+	_despawn()
 	return info
 
 func on_miss() -> void:
 	_unregister_hit()
 	if Cost.enabled: Cost.objs_freed += 1
-	queue_free()
+	_despawn()
 
 func spawn(info: BombInfo, current_beat: float) -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	visible = true
 	speed = NoteMotion.speed_at(info.beat)
 	beat = info.beat
 	
@@ -44,3 +46,17 @@ func spawn(info: BombInfo, current_beat: float) -> void:
 	anim.play(&"Spawn")
 
 
+
+func hide_bomb() -> void:
+	visible = false
+	process_mode = Node.PROCESS_MODE_DISABLED
+
+func _despawn() -> void:
+	hide_bomb()
+	if not is_released():
+		release()
+
+func clear_from_track() -> void:
+	hide_bomb()
+	if not is_released():
+		release()

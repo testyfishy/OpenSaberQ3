@@ -1,6 +1,11 @@
 extends GameState
 class_name GameStatePlaying
 
+static var debug_skip_bombs := false
+# Dense lightshows can issue several events for the same light type in one frame; only the last
+# one is visible. Coalescing keeps the latest per type and leaves ring/speed events in order.
+static var coalesce_lights := true
+
 func _ready(game) -> void:
 	_set_overlays(game, [])
 	game.show_MapSourceDialogs(false)
@@ -63,11 +68,13 @@ func _process_map(game: BeepSaber_Game) -> void:
 	
 	# spawn bombs
 	while not MapData.bomb_stack.is_empty() and MapData.bomb_stack[-1].beat <= look_ahead:
+		if debug_skip_bombs:
+			MapData.bomb_stack.pop_back()
+			continue
 		if probe: Cost.objs_spawned += 1
-		var bomb := bomb_template.instantiate() as Bomb
+		var bomb := GlobalReferences.bomb_pool.acquire() as Bomb
 		var bomb_info := MapData.bomb_stack.pop_back() as BombInfo
 		bomb.spawn(bomb_info, current_beat)
-		game.track.add_child(bomb)
 		TrackLanes.place(bomb, bomb_info.beat)
 	
 	# spawn obstacles (walls)
@@ -125,8 +132,18 @@ func _process_map(game: BeepSaber_Game) -> void:
 			ChainLink.construct_chain(chain_info, current_beat, note_info_refs, cube_refs)
 	
 	var event_t0 := Time.get_ticks_usec() if probe else 0
+	var coalesced := {}
+	var uncoalesced: Array[EventInfo] = []
 	while not MapData.event_stack.is_empty() and MapData.event_stack[-1].beat <= current_beat:
-		game.event_driver.process_event(MapData.event_stack.pop_back() as EventInfo)
+		var event := MapData.event_stack.pop_back() as EventInfo
+		if coalesce_lights and event.type >= 0 and event.type <= 7:
+			coalesced[event.type] = event
+		else:
+			uncoalesced.append(event)
+	for event in uncoalesced:
+		game.event_driver.process_event(event)
+	for type in coalesced:
+		game.event_driver.process_event(coalesced[type] as EventInfo)
 	if probe:
 		Cost.event_usec += Time.get_ticks_usec() - event_t0
 	

@@ -33,15 +33,16 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 
 ### v0.7.6
 
-- **Wall batching is experimental and off by default.** The one-MultiMesh wall path is in the
-  build behind a benchmark flag, but it did not render the walls in the first headset test, so the
-  default remains the per-wall path. The A/B numbers that looked like a win were walls not being
-  drawn; they are retracted.
-- **Filled red walls.** The wall material uses the classic red unless the map authors an obstacle
-  colour, with 55-100% body alpha; the stale exported-scene cache that kept the old noise shader is
+- **Walls respect the map.** Walls use the map's authored obstacle colour by default; Hand in Hand
+  is black because the map says so. A **“Walls: map colour”** toggle on the song selection page
+  switches to classic red. The stale exported-scene cache that kept the old noise shader is
   documented in the build note.
+- **Bombs are pooled** instead of instantiated and freed per bomb, and the benchmark has a
+  bombs-off arm to measure their cost.
+- **Arcs read as light lines.** The ribbon is wider and brighter, and an arc with no head note
+  attaches its head to the saber instead of starting in mid-air.
 - **Perf instrumentation.** The benchmark records draw calls, objects, render CPU/GPU and the
-  wall/lightshow timers, which is how the batch win was measured.
+  wall/lightshow timers.
 
 ### v0.7.5
 
@@ -260,10 +261,9 @@ for about a second while the renderer compiles; Pause → Screenshot is the reli
 
 ## Refresh rate
 
-The default is **90 Hz**, which fits the measured frame budget on the Quest 3 and is steadier than
-120 Hz on wall-heavy maps. **120 Hz** remains selectable in Settings > Refresh rate; the choice is
-saved. The project default and the OpenXR startup rate are both 90 Hz so a fresh install never
-starts on 120 by accident.
+The default is **120 Hz**; **90 Hz** remains selectable in Settings > Refresh rate. The owner
+tested 90 and preferred 120, so the project default and the OpenXR startup rate are 120 Hz again.
+A one-time migration moves the previous 90 default back to 120 without blocking a later choice.
 
 ## Build from source
 

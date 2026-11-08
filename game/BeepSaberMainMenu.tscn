@@ -286,6 +286,15 @@ theme_override_styles/pressed = SubResource("3")
 theme_override_styles/normal = SubResource("4")
 text = "Refresh Songs/Playlists"
 
+[node name="MapWallColour_Toggle" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 1050.0
+offset_top = 330.0
+offset_right = 1390.0
+offset_bottom = 374.0
+text = "Walls: map colour"
+tooltip_text = "Use the map's authored wall colour. Turn off for the classic red walls."
+
 [node name="upload_url" type="Label" parent="."]
 layout_mode = 1
 anchors_preset = 3
@@ -343,5 +352,6 @@ text = "0.4.1"
 [connection signal="item_selected" from="PlaylistSelector" to="." method="_on_PlaylistSelector_item_selected"]
 [connection signal="item_selected" from="DifficultyMenu" to="." method="_select_difficulty"]
 [connection signal="pressed" from="LoadPlaylists_Button" to="." method="_on_LoadPlaylists_Button_pressed"]
+[connection signal="toggled" from="MapWallColour_Toggle" to="." method="_on_MapWallColour_Toggle_toggled"]
 [connection signal="timeout" from="song_prev/stop_prev" to="." method="_on_stop_prev_timeout"]
 

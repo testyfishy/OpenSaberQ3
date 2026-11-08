@@ -6,13 +6,14 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
 
 ## v0.7.6 - 2026-11-07
 
-**Filled red walls, wall batching under test.** Walls use the classic red with 55-100% body alpha
-unless the map authors an obstacle colour, and the exported Wall.scn cache bug that kept an old
-noise shader is fixed by clearing `.godot/exported` before export. A one-MultiMesh wall visual path
-is implemented behind a benchmark flag, but it did not render in the first headset test, so it is
-off by default; the earlier A/B draw-call/GPU win is retracted because the walls were absent. The
-default refresh rate is now **90 Hz** (120 Hz remains in Settings); a one-time migration moves
-existing installs to 90 without blocking a later choice.
+**Map wall colour with red option, pooled bombs, brighter arcs.** Walls use the map's authored
+obstacle colour by default (Hand in Hand is black by design); a "Walls: map colour" toggle on the
+song selection page switches to classic red. The exported Wall.scn cache bug that kept an old noise
+shader is fixed by clearing `.godot/exported` before export. Bombs are pooled instead of
+instantiated/freed per bomb, the arc ribbon is wider/brighter and a missing head attaches to the
+saber, and the benchmark records draw calls, objects, render CPU/GPU and wall/lightshow timers. The
+default refresh rate is **120 Hz** (90 Hz remains in Settings); a one-time migration moves the
+previous 90 default back to 120 without blocking a later choice.
 
 [Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.7.6-q3) -
 [Spec](../specs/027-v07-map-compat/spec.md)

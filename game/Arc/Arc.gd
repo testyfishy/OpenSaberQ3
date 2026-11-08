@@ -45,6 +45,10 @@ static func _configure_fades() -> void:
 		material.set_shader_parameter(&"distance_fade_max", 40.0)
 		material.set_shader_parameter(&"distance_fade_tip_min", -10.0)
 		material.set_shader_parameter(&"distance_fade_tip_max", -5.0)
+		# specs/027 0.7.6: a brighter, more solid ribbon reads as a light line rather than a
+		# faint ribbon that seems to start in mid-air.
+		material.set_shader_parameter(&"emission", 2.2)
+		material.set_shader_parameter(&"noise_mult", 3.2)
 
 static func acquire() -> Arc:
 	_configure_fades()
@@ -78,9 +82,11 @@ func spawn(info: ArcInfo, current_beat: float, _activator_cube: BeepCube = null)
 		# One-shot: a note that is released (missed) goes back to the pool, and a stale
 		# connection would let the NEXT note reusing that cube fire this arc's magnet.
 		activator_cube.cutted.connect(_on_activator_cube_cutted, CONNECT_ONE_SHOT)
-	# With no activator, the arc stays in its map position, unmagnetised. This used to call
-	# start_magnet() here, which snapped the head to the saber the instant the arc spawned -
-	# the "arc disconnected from the block" the player reported.
+	else:
+		# No head note (missing/fake): attach the visible head to the saber. The old comment
+		# against this assumed a head note that the player would cut; with none, the arc had no
+		# visible anchor and started in mid-air.
+		start_magnet()
 
 	
 	var head_pos := Vector3(

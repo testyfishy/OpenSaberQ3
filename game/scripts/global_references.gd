@@ -6,6 +6,7 @@ const AudioAnalyserScript := preload("res://game/scripts/AudioAnalyser.gd")
 var cube_pool : ScenePool # the pool of BeepCubes
 var link_pool : ScenePool # the pool of ChainLinks
 var wall_pool : ScenePool # the pool of Walls - a wall map spawns tens per second
+var bomb_pool : ScenePool # bomb nodes are pooled; the bomb-heavy maps churned instantiate/free
 var main_game_scene : BeepSaber_Game
 # Positioned hit voices (Part 6, FR-031).
 var hit_audio

@@ -27,6 +27,7 @@ var _cover_texture_create_sw := StopwatchFactory.create("cover_texture_create",1
 
 @onready var playlist_selector := $PlaylistSelector as OptionButton
 @onready var source_filter := $SourceFilter as OptionButton
+@onready var wall_colour_toggle := $MapWallColour_Toggle as CheckButton
 @onready var _bg_img_loader := preload("res://game/scripts/BackgroundImgLoader.gd").new()
 
 # Source backfill (specs/020 FR-007): menu-only, one map at a time, once per session.
@@ -507,6 +508,7 @@ func _delete_map(map: MapInfo) -> void:
 	_on_LoadPlaylists_Button_pressed()
 
 func _ready() -> void:
+	wall_colour_toggle.button_pressed = Settings.wall_map_color
 	UI_AudioEngine.attach_children(self)
 	vr.log_info("BeepSaber search path is " + Constants.APPDATA_PATH)
 	if not ProfileManager.changed.is_connected(_refresh_user_badge):
@@ -765,3 +767,6 @@ func _on_canvas_visibility_changed() -> void:
 		_backfill.stop()
 
 
+
+func _on_MapWallColour_Toggle_toggled(pressed: bool) -> void:
+	Settings.wall_map_color = pressed
