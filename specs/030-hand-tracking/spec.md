@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: Approved (G0/G1) — building 0.7.7
+**Status**: In progress — 0.7.7 installed, awaiting on-device validation
 
 **Input**: User description: "Quest 3 hand tracking as swords with pinch UI clicks for 0.7.7" — owner chose the hand-ray + pinch-click approach over direct poke.
 

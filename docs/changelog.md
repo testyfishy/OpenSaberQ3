@@ -17,6 +17,9 @@ only auto-creates it for its built-in map.
 
 [Spec](../specs/030-hand-tracking/spec.md)
 
+The installed APK is OpenSaber-v077.apk, SHA-256
+7E026C4C5FCD96BF6F32782501DD8D398E981DDC19D31DA1967B52960EBF0B4C.
+
 ## v0.7.6 - 2026-11-07
 
 **Map wall colour with red option, pooled bombs, brighter arcs.** Walls use the map's authored
