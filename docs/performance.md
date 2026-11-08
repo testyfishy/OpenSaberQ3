@@ -136,3 +136,17 @@ Foveation 2 alone changes nothing measurable. Render scale 1.0 and MSAA 0 cut GP
 with thermal drift across sequential runs rather than the settings. No arm improved the tail. The
 next CPU step is the per-frame profile of the 15-20 ms process spikes, and any setting A/B must be
 interleaved (A/B/A/B) or cooled between arms.
+## 0.7.6 interleaved render-scale A/B (clocks pinned, A/B/A/B)
+
+Somewhere Out There, 60 s per arm, `debug.oculus.cpuLevel=4`, `gpuLevel=4`, 30 s cool-down.
+
+| Arm | frame p95 | process p95 | GPU p50 | GPU p95 |
+|---|---|---|---|---|
+| base A1 | 12.36 ms | 17.65 ms | 7.59 ms | 11.25 ms |
+| scale 1.0 B1 | 15.14 ms | 17.72 ms | 6.37 ms | 13.60 ms |
+| base A2 | 12.55 ms | 17.88 ms | 7.57 ms | 10.75 ms |
+| scale 1.0 B2 | 14.98 ms | 18.55 ms | 6.37 ms | 13.86 ms |
+
+Render scale 1.0 reproducibly lowers GPU p50 by ~16% but **raises frame/GPU p95 by ~2.5-3 ms**,
+even with clocks pinned and no DVFS. It is not a win for comfort. The tail is not pixel cost;
+stop changing resolution/AA and profile the main-thread spikes instead.
