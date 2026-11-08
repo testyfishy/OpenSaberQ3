@@ -4,6 +4,34 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.9 - 2026-11-07
+
+**Quick settings on the main menu.** A pinned panel at the top of the menu carries the three settings
+that matter most in one place: **Hands** (hand tracking on/off), **120 Hz** (on = 120, off = 90) and
+**Lights** (map light show). Turning Hands off hides the rendered hands and returns the sabers to the
+controllers without a restart; the states are read before their signals connect, so loading the menu
+cannot write a different value back. `Settings.hand_tracking_enabled` is the new persisted key
+(schema 58 keys).
+
+[Spec](../specs/030-hand-tracking/spec.md)
+
+The installed APK is OpenSaber-v079.apk, SHA-256
+DABA74C80A933D34E917DFD7D907B27F8F2AE21E6E1C128761D8E52A5C9704D8.
+
+## v0.7.8 - 2026-11-07
+
+**Rendered hands that hold the sabers.** The MIT Godot demo hand models are drawn at
+`/user/hand_tracker/left|right` with `XRHandModifier3D` (rotation-only) and hidden when a hand is
+not tracked. Quest does not implement the OpenXR hand interaction profile, so the sabers no longer
+wait for it: while hand data is live each blade takes its pose from the same palm transform the hand
+mesh uses, and pinch is computed from the thumb-tip/index-tip distance (press 30 mm, release 50 mm)
+to drive the existing UI-ray click. The controller path and the persisted saber offset are unchanged
+when hands are not live; haptics remain suppressed for hands.
+
+Hand models: Godot demo projects, MIT, `game/hands/`.
+
+[Spec](../specs/030-hand-tracking/spec.md)
+
 ## v0.7.7 - 2026-11-07
 
 **Quest 3 hand tracking as swords, pinch clicks the UI.** With the controllers set down, each hand's
@@ -13,7 +41,7 @@ below 0.5) drives the existing UI ray click, so a button fires once per pinch an
 release. The hand mapping only runs while `/user/hand_tracker/<side>` reports live joint data, so
 controller play is unchanged; there is no hand mesh and no hand haptics in this build. The custom
 action map now carries the hand interaction profile (default/aim/grip pose plus pinch) because Godot
-only auto-creates it for its built-in map.
+only auto-creates it for its built-in map. Meta's Quest runtime does not activate that profile; 0.7.8 moves the hand pose and pinch to the joint data.
 
 [Spec](../specs/030-hand-tracking/spec.md)
 

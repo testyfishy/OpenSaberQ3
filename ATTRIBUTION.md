@@ -25,6 +25,7 @@ redistribution are permitted by that licence provided the notice is kept — whi
 | Roboto Medium | Google | **Apache-2.0** | wordmark typeface, `OQ_Toolkit/OQ_UI2D/theme/Roboto-Medium.ttf`; only glyph paths are embedded in the brand SVGs |
 | Nightsky skybox | ESO / S. Brunier | **CC-BY-4.0** | `https://www.eso.org/public/images/eso0932a/` — attribution required. Present in `arpruss/OpenSaberPlus`, **not** in this fork's base. If cherry-picked, this credit must ship with it |
 | Hit-feedback one-shots — `game/data/hits/{soft,hard,dull}_0{1,2,3}.wav`, `accent_01.wav` (9 files) | generated for this fork by `tools/audio/gen_hitsounds.py` | **MIT** (same as this repository) | No third-party samples, so no attribution obligation. Synthesised from scratch (deterministic seeds); regenerating produces byte-identical files. Provenance: created 2026-11-01 for `specs/002-hit-audio-research` |
+| Hand models - game/hands/{Left,Right}HandHumanoid.gltf, their .bin buffers and hand.png | Godot demo projects contributors | **MIT** | https://github.com/godotengine/godot-demo-projects/tree/master/xr/openxr_hand_tracking_demo; licence copy in game/hands/LICENSE-godot-demo-projects.md. Imported unmodified and drawn with an unshaded material override |
 
 Retired hit stream: `game/data/beepcube_cut.ogg` had no provenance record (violating the rule
 below), so it was removed 2026-11-01 and replaced by the generated one-shots above.

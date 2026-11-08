@@ -74,6 +74,11 @@ var wall_map_color: bool:
 	set(value):
 		wall_map_color = value
 		set_and_emit(&"wall_map_color", value)
+# Off keeps the controllers in charge even when the headset reports tracked hands.
+var hand_tracking_enabled: bool:
+	set(value):
+		hand_tracking_enabled = value
+		set_and_emit(&"hand_tracking_enabled", value)
 var disable_map_color: bool:
 	set(value):
 		disable_map_color = value
@@ -413,6 +418,7 @@ const SCHEMA := {
 	"library_sort_desc": {"default": false},
 	"screenshot_trigger": {"default": true},
 	"wall_map_color": {"default": true},
+	"hand_tracking_enabled": {"default": true},
 }
 
 # Derived view for the loader, the panel and the tests. The platform patch in _ready() writes

@@ -4,9 +4,55 @@
 
 **Created**: 2026-11-07
 
-**Status**: In progress — 0.7.7 installed, awaiting on-device validation
+**Status**: In progress — 0.7.9 (quick settings) building, awaiting on-device validation
 
 **Input**: User description: "Quest 3 hand tracking as swords with pinch UI clicks for 0.7.7" — owner chose the hand-ray + pinch-click approach over direct poke.
+
+## Scoped change — rendered hands and a runtime-independent hand path (post-0.7.7 install)
+
+Symptom: with controllers set down, the runtime switched to hands (logcat: controllers sent to sleep,
+hand tracking enabled) but the sabers did not follow. Cause: Meta's Quest runtime does not implement
+`XR_EXT_hand_interaction`, so the hand interaction profile's aim pose and pinch float never arrive;
+the hand *joint* data (`XR_EXT_hand_tracking`) is live. The owner also cannot see whether hands are
+tracked because nothing is drawn.
+
+Change:
+- **FR-011**: Render both hands from the MIT Godot demo hand models, each in an `XRNode3D` bound to
+  `/user/hand_tracker/left|right` with `show_when_tracked`, plus `XRHandModifier3D`
+  (`BONE_UPDATE_ROTATION_ONLY`) so the hand mesh follows the live joints and stays hidden when the
+  hand is not tracked.
+- **FR-012**: When hand data is live, drive each saber from the hand tracker's `default` (palm) pose,
+  the same pose the rendered hand uses, via a saber base-transform override. The blade therefore
+  sits in the visible hand and follows it even without the hand interaction profile.
+- **FR-013**: Compute pinch from the thumb-tip/index-tip joint distance (press `30 mm`, release
+  `50 mm`, both joints position-valid) and drive the existing UI `trigger` edge. Do not depend on
+  `pinch_ext`.
+- **FR-014**: Keep the hand-only saber offset (`hand_saber_offset_pos/rot`) for on-device alignment;
+  the controller path and the persisted saber offset stay unchanged when hands are not live.
+- The hand interaction profile stays in the action map (harmless, and used on runtimes that support
+  it), but nothing depends on it for 0.7.7.
+
+**SC-006**: Controllers down, hands visible: both rendered hands hold the sabers, a hand swing cuts
+notes, and a pinch clicks a menu button.
+
+## Scoped change — quick settings panel with a Hands toggle
+
+The owner asked for a few important settings in one pinned place on the main window, with the hands
+toggle inside it, rather than hunting through the full settings panel.
+
+- **FR-015**: The main menu MUST show a pinned `QuickSettings` panel with three toggles: **Hands**
+  (`Settings.hand_tracking_enabled`), **120 Hz** (on = 120, off = 90, `Settings.display_refresh_rate`)
+  and **Lights** (`Settings.events`). Initial states MUST be read before connecting so loading the
+  menu cannot write a different value back.
+- **FR-016**: Turning **Hands** off MUST stop the hand path (`is_hand_tracking()` false), hide the
+  rendered hands, and leave controller input untouched. Turning it on restores both when hand data is
+  live; no app restart.
+- **FR-017**: The quick panel MUST use the existing menu theme and sit inside the 1408x640 menu
+  canvas without overlapping the Play/Exit/Settings controls.
+
+**SC-007**: In the main menu, pinching or triggering the Hands toggle hides/shows the rendered hands
+and changes only `Settings.hand_tracking_enabled`; the 120 Hz and Lights toggles persist their
+settings.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -161,3 +207,6 @@ haptics fire.
 |---|---|---|---|
 | G0/G1 | Hand-tracking approach for 0.7.7: hand interaction profile in the custom action map, pose via the existing controller trackers, pinch-ready → trigger for UI; any hidden trap? | APPROVE WITH CHANGES: `ready_ext` is not a click edge — bind `pinch_ext/value` to a dedicated float action and use hysteresis; drop the `palm_pose` binding; `default_pose` → aim pose is sufficient; expose a hand-only saber offset for on-device tuning | Implemented: `pinch` float action (0.8 press / 0.5 release), hand profile = default/aim/grip pose + pinch, palm/select removed, `FR-010` hand offset |
 | G4 | Review the implemented diff before install | APPROVE with three small changes: guard `simple_rumble` for hands (FR-008), use `is XRHandTracker` not `get_class()`, clear `_pinch_down` when tracking drops; pre-existing test-script parse errors do not block install | All three applied. Pause-with-hands recorded as out of scope. |
+| G4 | Rendered hands implementation | CHANGES NEEDED: `get_adjusted_transform()` is in XR-origin space, so a top-level saber must be lifted by the origin's world transform; otherwise the blade sits about 1 m from the hand. `-90 X` confirmed as the correct finger-direction basis; timing and switch-back logic fine | Fixed `hand_world_transform()` with `parent.global_transform * palm.get_adjusted_transform()`; rebuilding 0.7.8 |
+| G4 | Quick settings panel with Hands toggle | APPROVE: gating is safe because the panel is menu-only; hardcoded 90 Hz is clamped by `_resolve_refresh_rate`; read-before-connect is correct. One medium follow-up: keep the toggles in sync when the full settings panel changes the same keys | Added `Settings.changed` sync with `set_pressed_no_signal` and `_exit_tree` disconnect. Noted: with Hands off and controllers asleep, a pinch cannot re-enable Hands; pick up a controller |
+| G1 | Rendered hands + runtime-independent hand path: hand tracker palm pose drives both the mesh and the saber; joint-distance pinch | GO WITH CHANGES: do not stack the Touch offset on the hand path; make the saber top-level with the palm world pose (sleeping controller stale transform); gate on unobstructed hand data; arm pinch after an open-hand frame | Applied: -90 X hand-only default, top_level hand drive in _process, unobstructed/unknown source gate, 30/50 mm pinch with open-hand arming; no quick-settings toggle (auto mode is unambiguous) |

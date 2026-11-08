@@ -340,6 +340,39 @@ grow_horizontal = 0
 grow_vertical = 0
 text = "0.4.1"
 
+[node name="QuickSettings" type="PanelContainer" parent="."]
+layout_mode = 0
+offset_left = 1050.0
+offset_top = 12.0
+offset_right = 1390.0
+offset_bottom = 60.0
+theme_override_styles/panel = SubResource("4")
+
+[node name="Row" type="HBoxContainer" parent="QuickSettings"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Hands_Toggle" type="CheckButton" parent="QuickSettings/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 16
+text = "Hands"
+tooltip_text = "Drive the sabers from hand tracking when the hands are tracked. Off keeps the controllers in charge."
+
+[node name="Refresh_Toggle" type="CheckButton" parent="QuickSettings/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 16
+text = "120 Hz"
+tooltip_text = "On: 120 Hz. Off: 90 Hz."
+
+[node name="Events_Toggle" type="CheckButton" parent="QuickSettings/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 16
+text = "Lights"
+tooltip_text = "Map light show and event-driven lights."
+
 [connection signal="pressed" from="Play_Button" to="." method="_on_Play_Button_pressed"]
 [connection signal="button_up" from="Delete_Button" to="." method="_on_Delete_Button_button_up"]
 [connection signal="pressed" from="Leaderboard_Button" to="." method="_on_Leaderboard_Button_pressed"]

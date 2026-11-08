@@ -19,10 +19,9 @@ class_name LightSaber
 @export var offset_rot := Vector3.ZERO
 var extra_offset_pos := Vector3.ZERO
 var extra_offset_rot := Vector3.ZERO
-# Hand-only correction from BeepSaberController. Kept separate from extra_offset_* because that
-# pair is the player's persisted saber-offset setting.
-var hand_offset_pos := Vector3.ZERO
-var hand_offset_rot := Vector3.ZERO
+# True while the saber is driven from the hand tracker's palm pose instead of the controller.
+# The saber is top-level in that mode so a sleeping controller's stale transform cannot drag it.
+var hand_drive_active := false
 
 var saber_end := Vector3.ZERO
 var saber_end_past := Vector3.ZERO
@@ -128,9 +127,28 @@ func _ready() -> void:
 	# same bits the rays use, so eligibility cannot drift from the ray path.
 	_hit_mask = _swing_cast.collision_mask
 
+func _process(_dt: float) -> void:
+	if controller == null:
+		return
+	if controller.is_hand_tracking():
+		if not hand_drive_active:
+			hand_drive_active = true
+			top_level = true
+		# Palm pose * hand correction. The saber +Y runs along the palm -Z (finger direction),
+		# which is what the -90 X default in BeepSaberController does.
+		var correction_rot := controller.hand_saber_offset_rot * (PI / 180.0)
+		var correction := Transform3D(Basis.from_euler(correction_rot), controller.hand_saber_offset_pos)
+		global_transform = controller.hand_world_transform() * correction
+		return
+	if hand_drive_active and controller.get_is_active():
+		# The controllers are back: return to the normal parented controller path.
+		hand_drive_active = false
+		top_level = false
+
 func _physics_process(delta: float) -> void:
-	position = offset_pos + extra_offset_pos + hand_offset_pos
-	rotation_degrees = offset_rot + extra_offset_rot + hand_offset_rot
+	if not hand_drive_active:
+		position = offset_pos + extra_offset_pos
+		rotation_degrees = offset_rot + extra_offset_rot
 	saber_end_past = saber_end
 	saber_end = saber_visual.tip.global_transform.origin
 	last_dt = delta

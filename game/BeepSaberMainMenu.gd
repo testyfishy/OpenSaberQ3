@@ -28,6 +28,9 @@ var _cover_texture_create_sw := StopwatchFactory.create("cover_texture_create",1
 @onready var playlist_selector := $PlaylistSelector as OptionButton
 @onready var source_filter := $SourceFilter as OptionButton
 @onready var wall_colour_toggle := $MapWallColour_Toggle as CheckButton
+@onready var quick_hands_toggle := $QuickSettings/Row/Hands_Toggle as CheckButton
+@onready var quick_refresh_toggle := $QuickSettings/Row/Refresh_Toggle as CheckButton
+@onready var quick_events_toggle := $QuickSettings/Row/Events_Toggle as CheckButton
 @onready var _bg_img_loader := preload("res://game/scripts/BackgroundImgLoader.gd").new()
 
 # Source backfill (specs/020 FR-007): menu-only, one map at a time, once per session.
@@ -509,6 +512,16 @@ func _delete_map(map: MapInfo) -> void:
 
 func _ready() -> void:
 	wall_colour_toggle.button_pressed = Settings.wall_map_color
+	# Quick settings pinned at the top of the main menu. Values are set before connecting so a
+	# programmatic button_pressed change cannot write a different value back on load.
+	quick_hands_toggle.button_pressed = Settings.hand_tracking_enabled
+	quick_refresh_toggle.button_pressed = Settings.display_refresh_rate >= 120.0
+	quick_events_toggle.button_pressed = Settings.events
+	quick_hands_toggle.toggled.connect(_on_quick_hands_toggled)
+	quick_refresh_toggle.toggled.connect(_on_quick_refresh_toggled)
+	quick_events_toggle.toggled.connect(_on_quick_events_toggled)
+	if not Settings.changed.is_connected(_on_setting_changed):
+		Settings.changed.connect(_on_setting_changed)
 	UI_AudioEngine.attach_children(self)
 	vr.log_info("BeepSaber search path is " + Constants.APPDATA_PATH)
 	if not ProfileManager.changed.is_connected(_refresh_user_badge):
@@ -770,3 +783,26 @@ func _on_canvas_visibility_changed() -> void:
 
 func _on_MapWallColour_Toggle_toggled(pressed: bool) -> void:
 	Settings.wall_map_color = pressed
+
+func _on_quick_hands_toggled(pressed: bool) -> void:
+	Settings.hand_tracking_enabled = pressed
+
+func _on_quick_refresh_toggled(pressed: bool) -> void:
+	Settings.display_refresh_rate = 120.0 if pressed else 90.0
+
+func _on_quick_events_toggled(pressed: bool) -> void:
+	Settings.events = pressed
+
+# Keep the pinned toggles honest when the same setting is changed in the full settings panel.
+func _on_setting_changed(key: StringName) -> void:
+	match key:
+		&"hand_tracking_enabled":
+			quick_hands_toggle.set_pressed_no_signal(Settings.hand_tracking_enabled)
+		&"display_refresh_rate":
+			quick_refresh_toggle.set_pressed_no_signal(Settings.display_refresh_rate >= 120.0)
+		&"events":
+			quick_events_toggle.set_pressed_no_signal(Settings.events)
+
+func _exit_tree() -> void:
+	if Settings.changed.is_connected(_on_setting_changed):
+		Settings.changed.disconnect(_on_setting_changed)

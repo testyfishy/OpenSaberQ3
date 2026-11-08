@@ -11,19 +11,22 @@ var trigger := false
 var trigger_last_frame := false
 static var _hand_logged := false
 
-# Hand interaction profile. Pinch is a float 0..1 on the `pinch` action (bound to
-# pinch_ext/value in openxr_action_map.tres). `ready_ext` only means a pinch is possible, so it
-# cannot be used as a click edge. Hysteresis keeps a value hovering at the press point from
-# firing twice; the UI button layer already latches one press per pinch.
-const PINCH_PRESS := 0.8
-const PINCH_RELEASE := 0.5
+# Hand input. Quest's native runtime does not implement XR_EXT_hand_interaction, so the pinch
+# float from the action map never arrives. The XR_EXT_hand_tracking joints are live, so pinch is
+# computed from the thumb-tip/index-tip distance instead. The rendered hand and the saber both use
+# the hand tracker's palm pose, which keeps the blade in the visible hand.
+const PINCH_PRESS_M := 0.030
+const PINCH_RELEASE_M := 0.050
+const PINCH_FLAGS := XRHandTracker.HAND_JOINT_FLAG_POSITION_VALID | XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED
 var _pinch_down := false
+# A hand that appears already pinched must not fire a click. Wait for one open-hand frame first.
+var _pinch_open_seen := false
 
-# Hand-only saber correction. The Touch grip/aim pose and the hand aim pose do not share an
-# origin, so the blade can sit shifted or tilted on the headset. Defaults are identity; the game
-# applies these to the saber while hand tracking is live.
+# Hand-only saber correction. The Touch grip/aim pose and the hand palm pose do not share an
+# origin or a basis; -90 about X points the blade (+Y in saber space) along the palm's -Z, which is
+# the finger direction. X rotation is symmetric across hands; any Y/Z tweak is mirror-sensitive.
 @export var hand_saber_offset_pos := Vector3.ZERO
-@export var hand_saber_offset_rot := Vector3.ZERO
+@export var hand_saber_offset_rot := Vector3(-90, 0, 0)
 
 var movement_aabb := AABB()
 
@@ -61,23 +64,39 @@ func _update_buttons_and_sticks() -> void:
 	ax = is_button_pressed(&"ax_button")
 	by = is_button_pressed(&"by_button")
 	trigger = is_button_pressed(&"trigger")
-	# With the hand interaction profile the pose and inputs arrive on the same left_hand/
-	# right_hand tracker. Pinch drives the internal trigger, which is what the UI raycast
-	# already polls, so a pinch clicks buttons exactly once per press.
+	# With hand tracking the pose and joints arrive on /user/hand_tracker/<side>. Pinch drives
+	# the internal trigger, which is what the UI raycast already polls.
 	if is_hand_tracking():
-		var pinch := get_float(&"pinch")
-		if _pinch_down:
-			if pinch < PINCH_RELEASE:
-				_pinch_down = false
-		elif pinch >= PINCH_PRESS:
-			_pinch_down = true
+		_update_hand_pinch()
 		trigger = trigger or _pinch_down
 		if not _hand_logged:
 			_hand_logged = true
-			vr.log_info("HAND tracking active on %s (pinch = trigger/UI click)" % tracker)
+			vr.log_info("HAND tracking active on %s (joint pinch = trigger/UI click)" % tracker)
 	else:
 		# Tracking lost mid-pinch: clear it so the next live frame cannot fire a stale press.
 		_pinch_down = false
+		_pinch_open_seen = false
+
+func _update_hand_pinch() -> void:
+	var hand := _hand_tracker()
+	if hand == null:
+		_pinch_down = false
+		_pinch_open_seen = false
+		return
+	var thumb_flags := hand.get_hand_joint_flags(XRHandTracker.HAND_JOINT_THUMB_TIP)
+	var index_flags := hand.get_hand_joint_flags(XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP)
+	if (thumb_flags & PINCH_FLAGS) != PINCH_FLAGS or (index_flags & PINCH_FLAGS) != PINCH_FLAGS:
+		_pinch_down = false
+		_pinch_open_seen = false
+		return
+	var thumb := hand.get_hand_joint_transform(XRHandTracker.HAND_JOINT_THUMB_TIP).origin
+	var index := hand.get_hand_joint_transform(XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP).origin
+	var distance := thumb.distance_to(index)
+	if distance > PINCH_RELEASE_M:
+		_pinch_open_seen = true
+		_pinch_down = false
+	elif _pinch_open_seen and distance < PINCH_PRESS_M:
+		_pinch_down = true
 
 func _update_movement_aabb() -> void:
 	movement_aabb = movement_aabb.expand(global_transform.origin)
@@ -122,13 +141,36 @@ func _physics_process(dt: float) -> void:
 			first_time = false
 
 
-func is_hand_tracking() -> bool:
+func _hand_tracker() -> XRHandTracker:
 	# Hand joints live on their own OpenXR tracker at /user/hand_tracker/<side>; the
-	# left_hand/right_hand tracker this node uses carries the hand's pose and pinch input.
+	# left_hand/right_hand tracker this node uses carries the controller pose and inputs.
 	var side := "left" if String(tracker).begins_with("left") else "right"
-	var hand := XRServer.get_tracker("/user/hand_tracker/%s" % side)
-	if not (hand is XRHandTracker):
+	return XRServer.get_tracker("/user/hand_tracker/%s" % side) as XRHandTracker
+
+func is_hand_tracking() -> bool:
+	if not Settings.hand_tracking_enabled:
 		return false
-	# The tracker object exists from startup; only treat it as hand input when joints are live,
-	# otherwise a sleeping hand would keep the pinch mapping on while controllers play.
-	return (hand as XRHandTracker).has_tracking_data
+	var hand := _hand_tracker()
+	if hand == null or not hand.has_tracking_data:
+		return false
+	# Only optical/unobstructed hand data may take over the sabers. Controller-inferred data is
+	# rejected so holding a controller can never enter the hand path (FR-005); UNKNOWN is allowed
+	# because this project does not request the controller data source at all.
+	var source := hand.hand_tracking_source
+	return source == XRHandTracker.HAND_TRACKING_SOURCE_UNOBSTRUCTED \
+		or source == XRHandTracker.HAND_TRACKING_SOURCE_UNKNOWN
+
+# The palm pose, in world space, used by both the rendered hand and the saber. The XR node and
+# this call see the same tracker pose, so the blade sits in the visible hand.
+func hand_world_transform() -> Transform3D:
+	var hand := _hand_tracker()
+	if hand == null:
+		return Transform3D.IDENTITY
+	var palm := hand.get_pose(&"default")
+	if palm == null:
+		return Transform3D.IDENTITY
+	# get_adjusted_transform() is in the XR origin's space (the hand XRNode3D is a child of the
+	# origin and uses it directly). The saber is top-level while hand-driven, so lift it to world.
+	var parent := get_parent() as Node3D
+	var base := parent.global_transform if parent != null else Transform3D.IDENTITY
+	return base * palm.get_adjusted_transform()

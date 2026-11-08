@@ -1,4 +1,4 @@
-[gd_scene load_steps=48 format=3 uid="uid://dqb3ybvpsfcbw"]
+[gd_scene load_steps=49 format=3 uid="uid://dqb3ybvpsfcbw"]
 
 [ext_resource type="PackedScene" uid="uid://cs8e62lsifik5" path="res://game/floor.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://game/BeepCube/DebrisField.tscn" id="45_debris"]
@@ -40,6 +40,7 @@
 [ext_resource type="PackedScene" path="res://game/ProfilePanel.tscn" id="36_profiles"]
 [ext_resource type="PackedScene" path="res://game/ui/BeastSaberPanel/BeastSaberPanel.tscn" id="48_beastsaber"]
 [ext_resource type="PackedScene" path="res://game/ui/StoragePanel/StoragePanel.tscn" id="49_storage"]
+[ext_resource type="Script" path="res://game/hands/RenderedHand.gd" id="50_hands"]
 
 [sub_resource type="Environment" id="1"]
 background_mode = 2
@@ -161,6 +162,20 @@ song_player_ref = NodePath("../../../SongPlayer")
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0)
 ui_raycast_length = 5.0
 controller = NodePath("../..")
+
+[node name="LeftHand" type="XRNode3D" parent="XROrigin3D"]
+tracker = &"/user/hand_tracker/left"
+pose = &"default"
+show_when_tracked = true
+script = ExtResource("50_hands")
+hand = 0
+
+[node name="RightHand" type="XRNode3D" parent="XROrigin3D"]
+tracker = &"/user/hand_tracker/right"
+pose = &"default"
+show_when_tracked = true
+script = ExtResource("50_hands")
+hand = 1
 
 [node name="Track" type="Node3D" parent="."]
 
