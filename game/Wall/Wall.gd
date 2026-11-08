@@ -70,11 +70,14 @@ func _apply_grow() -> void:
 
 func _physics_process(delta: float) -> void:
 	if Scoreboard.paused: return
+	var t0 := Time.get_ticks_usec() if Cost.enabled else 0
 	_update_inside_fade()
 	transform.origin.z += speed * delta
 	_apply_grow()
 	
 	# remove children that go to far
+	if Cost.enabled:
+		Cost.wall_usec += Time.get_ticks_usec() - t0
 	if transform.origin.z > despawn_z:
 		if Cost.enabled: Cost.objs_freed += 1
 		# Pooled, not freed. A wall map can spawn ~74 walls a second; instantiating and freeing a

@@ -34,6 +34,12 @@ static var cuttable_usec := 0
 static var floor_ray_usec := 0
 # Self-time of Playing's spawn/despawn pass (map beatmap -> scene nodes).
 static var spawn_usec := 0
+# Self-time of Wall._physics_process, summed over every live wall (0.7.6 attribution).
+static var wall_usec := 0
+# Self-time of the lightshow event drain in Playing.
+static var event_usec := 0
+# Self-time of Arc._process, summed over every live arc.
+static var arc_usec := 0
 
 # Counts, not times: cheaper than timing, and a count is enough to prove or
 # disprove "this write happens every tick for every note".
@@ -70,6 +76,9 @@ static func reset() -> void:
 	cuttable_usec = 0
 	floor_ray_usec = 0
 	spawn_usec = 0
+	wall_usec = 0
+	event_usec = 0
+	arc_usec = 0
 	shape_reenable = 0
 	physics_ticks = 0
 	cuts = 0

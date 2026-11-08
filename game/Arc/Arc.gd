@@ -171,7 +171,10 @@ func start_magnet() -> void:
 
 func _process(delta: float) -> void:
 	if Scoreboard.paused or not is_visible_in_tree() or not Map.current_info: return
+	var t0 := Time.get_ticks_usec() if Cost.enabled else 0
 	transform.origin.z += speed * delta
+	if Cost.enabled:
+		Cost.arc_usec += Time.get_ticks_usec() - t0
 	if transform.origin.z >= despawn_z:
 		if Cost.enabled: Cost.objs_freed += 1
 		_release_to_pool()

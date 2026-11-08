@@ -124,8 +124,11 @@ func _process_map(game: BeepSaber_Game) -> void:
 		if chain_info.slice_count > 1: # skip if the chain doesn't have any links
 			ChainLink.construct_chain(chain_info, current_beat, note_info_refs, cube_refs)
 	
+	var event_t0 := Time.get_ticks_usec() if probe else 0
 	while not MapData.event_stack.is_empty() and MapData.event_stack[-1].beat <= current_beat:
 		game.event_driver.process_event(MapData.event_stack.pop_back() as EventInfo)
+	if probe:
+		Cost.event_usec += Time.get_ticks_usec() - event_t0
 	
 	if probe:
 		Cost.spawn_usec += Time.get_ticks_usec() - t0
