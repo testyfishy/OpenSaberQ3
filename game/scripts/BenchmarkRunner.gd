@@ -642,6 +642,22 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 	if msaa != null:
 		Settings.msaa_3d = int(msaa)
 		applied.append("msaa=%d" % Settings.msaa_3d)
+	if scale != null or fov != null or msaa != null:
+		# Settings alone is only data until the game applies it.
+		_game.call("_apply_render_settings")
+		_meta["render_scale_multiplier"] = str(Settings.render_scale)
+		_meta["foveation_level"] = str(Settings.foveation_level)
+		_meta["msaa_3d"] = str(get_viewport().msaa_3d)
+	# CPU/GPU performance hints (OpenXR XR_EXT_performance_settings). 2 = sustained high, 3 = boost.
+	var perf = cfg.get_value("bench", "perf_level", null)
+	if perf != null:
+		var xr_perf := XRServer.primary_interface
+		if xr_perf != null:
+			if xr_perf.has_method("set_cpu_level"):
+				xr_perf.call("set_cpu_level", int(perf))
+			if xr_perf.has_method("set_gpu_level"):
+				xr_perf.call("set_gpu_level", int(perf))
+			applied.append("perf_level=%d" % int(perf))
 	# The upload page is a live setting (Settings.changed -> SongUploader.apply_enabled), so
 	# this arm proves the toggle really closes the port instead of only ignoring requests.
 	var upload = cfg.get_value("bench", "upload_server", null)

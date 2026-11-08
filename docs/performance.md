@@ -119,3 +119,20 @@ layer s screen coverage, which cannot be removed without changing the image. The
 material stays. The same run's **process p95 is 18 ms**, with spawn_usec p95 only 0.4 ms, so the
 next target is main-thread spikes outside wall spawning (lightshow/event processing), not wall
 fill.
+## 0.7.6 render-setting matrix (Somewhere Out There, 60 s arms)
+
+Sequential runs on one charge, so later arms carry more heat. Read the p50s as the setting effect
+and the p95s as thermal/order-confounded until the arms are interleaved.
+
+| Arm | GPU p50 | GPU p95 | frame p95 | process p95 |
+|---|---|---|---|---|
+| baseline | 7.44 ms | 10.61 ms | 12.85 ms | 15.74 ms |
+| foveation 2 + perf level 2 | 7.45 ms | 10.67 ms | 12.03 ms | 20.17 ms |
+| + render scale 1.0 | 6.23 ms | 13.97 ms | 15.44 ms | 19.43 ms |
+| + MSAA 0 | 6.91 ms | 12.89 ms | 14.23 ms | 21.01 ms |
+
+Foveation 2 alone changes nothing measurable. Render scale 1.0 and MSAA 0 cut GPU p50 by ~16% and
+~7%, but the p95/frame tail gets worse, and the later arms also show higher process p95 - consistent
+with thermal drift across sequential runs rather than the settings. No arm improved the tail. The
+next CPU step is the per-frame profile of the 15-20 ms process spikes, and any setting A/B must be
+interleaved (A/B/A/B) or cooled between arms.
