@@ -4,7 +4,7 @@ Notes for posting OpenSaberQ3 publicly.
 
 ## Before posting: the current state
 
-- **It is a fork** of BeepSaber, MIT, no Beat Saber assets. Credit is in the README and
+- **It is a fork** of BeepSaber (MIT); this fork is GPLv3. No Beat Saber assets. Credit is in the README and
   `ATTRIBUTION.md`.
 - **Quest 3 only for now.** 120 Hz with a measured frame budget; other headsets work but are
   untested.
@@ -27,7 +27,7 @@ Notes for posting OpenSaberQ3 publicly.
 > 120 fps with **0.01% dropped frames** over three minutes, and a 2,913-note map holds 120 fps at
 > **0.14% dropped**.
 >
-> Free, MIT, sideload the APK. No Beat Saber assets, not affiliated with Beat Games or Meta.
+> Free, GPLv3, sideload the APK. No Beat Saber assets, not affiliated with Beat Games or Meta.
 >
 > Known rough edges: no HRTF; the white highlights at chain joints are cosmetic; audio can freeze
 > after a long idle and needs a headset reboot. Play tests very welcome.

@@ -4,6 +4,12 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## Unreleased
+
+**Licence: GPL-3.0.** From 2026-11-09 this fork is licensed under the GNU GPL v3 (`LICENSE`). Releases
+up to and including v0.7.5 were published under MIT and stay MIT. The upstream BeepSaber MIT notice is
+kept unmodified in `LICENSE-MIT`. The banner and itch.io cover now read "Free · GPLv3".
+
 ## v0.7.5 - 2026-11-07
 
 **Wall growth and rim, cheaper lightshows, arc head position.** Walls now keep their bottom edge on

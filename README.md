@@ -5,7 +5,7 @@ Open-source rhythm game for Meta Quest 3. Plays BeatSaver custom maps in v2, v3 
 [BeepSaber](https://github.com/leandrodreamer/BeepSaber).
 
 [![Release](https://img.shields.io/github/v/release/testyfishy/OpenSaberQ3?label=release)](https://github.com/testyfishy/OpenSaberQ3/releases)
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-GPLv3-blue)](LICENSE)
 [![Godot](https://img.shields.io/badge/Godot-4.6.3-478cbf)](UPSTREAM.md)
 [![Quest 3](https://img.shields.io/badge/Meta-Quest%203-1c1e21)](https://www.meta.com/quest/quest-3/)
 
@@ -268,7 +268,9 @@ Versions, commands and known gaps: [UPSTREAM.md](UPSTREAM.md).
 (DeepSeek V4 Flash and Claude Opus 5.5) from a design brief, reviewed by the owner; sources,
 palette and provenance are in [docs/brand.md](docs/brand.md).
 
-MIT — [LICENSE](LICENSE) retains the original copyright (© 2020 Holger Dammertz). Contains no Beat
+GPL-3.0 — see [LICENSE](LICENSE). OpenSaberQ3 is a fork of BeepSaber, which is MIT-licensed: its
+original notice (© 2020 Holger Dammertz) is kept unmodified in [LICENSE-MIT](LICENSE-MIT) and still
+covers the upstream code. Releases up to v0.7.5 were published under MIT and stay MIT. Contains no Beat
 Saber assets and does not use the Beat Saber name, logo or branding. Not affiliated with or
 endorsed by Beat Games, Meta, BeatSaver or BeatLeader.
 

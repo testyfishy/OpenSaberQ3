@@ -217,7 +217,7 @@ def make_cover(size=(1280, 640)):
            font=load_font(29), fill=(196, 214, 232))
     d.text((x, int(h * 0.50)), "120 Hz", font=load_font(27), fill=CYAN)
     d.text((x + 132, int(h * 0.50)), "v2/v3/v4 maps", font=load_font(27), fill=(196, 214, 232))
-    d.text((x + 356, int(h * 0.50)), "MIT", font=load_font(27), fill=(196, 214, 232))
+    d.text((x + 356, int(h * 0.50)), "GPLv3", font=load_font(27), fill=(196, 214, 232))
     return img.convert("RGB")
 
 

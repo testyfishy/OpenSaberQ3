@@ -19,7 +19,7 @@ upload steps: [itch-push.md](itch-push.md).
 | Genre | Rhythm |
 | Tags | `vr`, `meta-quest`, `rhythm`, `open-source`, `sidequest`, `beatsaver` |
 | AI disclosure | Yes — Graphics |
-| Links | GitHub source, MIT licence |
+| Links | GitHub source, GPLv3 licence |
 
 ## Tagline
 
@@ -28,7 +28,7 @@ upload steps: [itch-push.md](itch-push.md).
 
 ## Short description
 
-> Free, MIT-licensed and sideloadable. Plays BeatSaver custom maps in v2, v3 and v4 at 120 Hz,
+> Free, GPLv3-licensed and sideloadable. Plays BeatSaver custom maps in v2, v3 and v4 at 120 Hz,
 > filters the library by source, and shows BeatLeader scores in the menu.
 
 ## Full description
