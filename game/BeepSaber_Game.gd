@@ -544,6 +544,15 @@ var _gradient_sky: Sky
 # colours. Called at map start and when the Environment setting changes.
 # FR-031: glow. Godot's default chain is measured at ~1% GPU on Quest 3, so it ships as a
 # setting; Subtle keeps one blur level, Full restores Godot's authored levels.
+#
+# Environment.get/set_glow_level take a 0-based index, 0..6 (the inspector's "levels/1..7").
+# This code used to walk 1..7, so index 7 logged an out-of-bounds error twice per boot and on
+# every glow change, and index 0 was never captured or written. The range below is the part of
+# that loop that actually did something, so the rendered result is unchanged: Subtle keeps
+# index 4 (the inspector's level 5) and index 0 stays as authored in every mode.
+const GLOW_FIRST_LEVEL := 1
+const GLOW_LEVEL_END := 7
+const GLOW_SUBTLE_LEVEL := 4
 var _glow_base_levels := PackedFloat32Array()
 
 func _capture_glow_levels() -> void:
@@ -551,7 +560,7 @@ func _capture_glow_levels() -> void:
 	var env := ($WorldEnvironment as WorldEnvironment).environment
 	if env == null:
 		return
-	for i in range(1, 8):
+	for i in range(GLOW_FIRST_LEVEL, GLOW_LEVEL_END):
 		_glow_base_levels.append(env.get_glow_level(i))
 
 func _apply_glow() -> void:
@@ -569,12 +578,12 @@ func _apply_glow() -> void:
 	env.glow_hdr_threshold = 1.0
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
 	if mode == 1:
-		for i in range(1, 8):
+		for i in range(GLOW_FIRST_LEVEL, GLOW_LEVEL_END):
 			env.set_glow_level(i, 0.0)
-		env.set_glow_level(4, 1.0)
-	elif _glow_base_levels.size() == 7:
-		for i in range(1, 8):
-			env.set_glow_level(i, _glow_base_levels[i - 1])
+		env.set_glow_level(GLOW_SUBTLE_LEVEL, 1.0)
+	elif _glow_base_levels.size() == GLOW_LEVEL_END - GLOW_FIRST_LEVEL:
+		for i in range(GLOW_FIRST_LEVEL, GLOW_LEVEL_END):
+			env.set_glow_level(i, _glow_base_levels[i - GLOW_FIRST_LEVEL])
 
 func _apply_map_colours() -> void:
 	update_left_color(MapPalette.env_left)
