@@ -142,6 +142,40 @@ func _run() -> void:
 	var hinge := _saber.cut_origin().distance_to(_expected_saber_origin())
 	_check("cut plane origin is the hand", hinge < 0.001, "error %.3f m" % hinge)
 
+	# --- 6. a parked blade (hand data lost, no controller) cuts nothing ---------------------
+	# Driven through the real detection path of whichever mode the project ships
+	# (gameplay/swing_hit/detection): the stub is both a physics area and a resolver entry.
+	var player := AudioStreamPlayer.new()
+	add_child(player)
+	_saber.song_player_ref = player
+	_saber._show()
+	_saber.set_swingcast_enabled(true)
+	# The Show animation extends the blade over a second; wait it out.
+	await _ticks(200)
+	_check("premise: the blade is extended",
+		_saber.is_extended() and _saber.last_blade_base.distance_to(_saber.last_blade_tip) > 1.0)
+	var target := _StubNote.new()
+	add_child(target)
+	# Positive control first: a note resting on a live, extended blade is cut.
+	target.global_position = _saber.last_blade_base.lerp(_saber.last_blade_tip, 0.5)
+	target.arm(_saber._hit_mask)
+	await _ticks(4)
+	_check("control: a live blade cuts a note resting on it (%s mode)" % ("analytic" if HitResolver.is_analytic() else "rays"),
+		target.cuts >= 1, "cuts=%d" % target.cuts)
+	target.disarm()
+	# The same note on the same blade, with the hand gone and the controller asleep.
+	_hand.has_tracking_data = false
+	await _ticks(2)
+	_check("premise: hand path dropped", not _controller.is_hand_tracking())
+	_check("premise: the blade is parked, still extended", _saber.hand_drive_active and _saber.is_extended())
+	target.cuts = 0
+	target.global_position = _saber.last_blade_base.lerp(_saber.last_blade_tip, 0.5)
+	target.arm(_saber._hit_mask)
+	await _ticks(30)
+	_check("a parked blade cuts nothing", target.cuts == 0, "cuts=%d" % target.cuts)
+	target.disarm()
+	target.queue_free()
+
 	# --- 7. hand data returns: the blade follows again --------------------------------------
 	_hand.has_tracking_data = true
 	_palm.origin += Vector3(0.1, 0.0, 0.0)
@@ -203,3 +237,37 @@ func _run() -> void:
 
 var _lag_check := false
 var _lag_worst := 0.0
+
+
+# A cuttable that only counts. It carries a real Area3D for the ray fan and registers with the
+# analytic resolver by hand, so no map has to be loaded for either detection mode.
+class _StubNote extends Cuttable:
+	var cuts := 0
+	var _area := Area3D.new()
+	var _shape_node := CollisionShape3D.new()
+	var _armed := false
+
+	func _init() -> void:
+		var box := BoxShape3D.new()
+		box.size = Vector3(0.4, 0.4, 0.4)
+		_shape_node.shape = box
+		_area.collision_layer = 0
+		_area.collision_mask = 0
+		_area.add_child(_shape_node)
+		add_child(_area)
+
+	func arm(mask: int) -> void:
+		disarm()
+		_area.collision_layer = mask
+		HitResolver.add(self, mask, _shape_node)
+		_armed = true
+
+	func disarm() -> void:
+		if _armed:
+			_area.collision_layer = 0
+			HitResolver.remove(self)
+			_armed = false
+
+	func cut(_saber_type: int, _cut_speed: Vector3, _cut_plane: Plane, _controller: BeepSaberController) -> HitInfo:
+		cuts += 1
+		return HitInfo.new()

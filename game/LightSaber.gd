@@ -158,6 +158,11 @@ func _apply_controller_offset() -> void:
 	position = offset_pos + extra_offset_pos
 	rotation_degrees = offset_rot + extra_offset_rot
 
+# False while the hands own the saber but no hand data is arriving and no controller has taken
+# over: the blade is parked at its last pose and nobody is holding it.
+func is_pose_live() -> bool:
+	return not hand_drive_active or (controller != null and controller.is_hand_tracking())
+
 # The point the cut plane hinges on. See BeepSaberController.swing_origin.
 func cut_origin() -> Vector3:
 	return controller.swing_origin()
@@ -177,7 +182,10 @@ func _physics_process(delta: float) -> void:
 	var blade_tip := blade_xf * _swing_cast.target_position
 	last_blade_base = blade_base
 	last_blade_tip = blade_tip
-	if _hit_sampled and _hit_enabled and is_extended() and HitResolver.is_analytic():
+	# A parked blade resolves nothing (see _handle_cuttable). Its pose does not change while
+	# parked, so the previous sample stays valid and a hand that was only occluded mid-swing
+	# still sweeps the gap when it reappears.
+	if _hit_sampled and _hit_enabled and is_extended() and HitResolver.is_analytic() and is_pose_live():
 		_resolve_analytic_hits(blade_base, blade_tip)
 	_hit_prev_base = blade_base
 	_hit_prev_tip = blade_tip
@@ -264,6 +272,10 @@ func _handle_area_collided(area: Area3D) -> void:
 
 func _handle_cuttable(cut_object: Node3D) -> void:
 	if Scoreboard.paused: return
+	# A note flying into a saber nobody is holding is not a hit. Checked here because both
+	# detection modes funnel through this function: the ray fan (the shipped mode) arrives
+	# from an area signal, the analytic resolver from _resolve_analytic_hits.
+	if not is_pose_live(): return
 	if not cut_object is Cuttable: return
 	var note := cut_object as Cuttable
 	
