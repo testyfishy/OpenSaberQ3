@@ -38,4 +38,7 @@ static func place(obj: Node3D, beat: float) -> void:
 		return
 	var lane := lane_for(track, beat)
 	if obj.get_parent() != lane:
-		obj.reparent(lane)
+		# keep_global_transform = false: spawn() has already written the object's transform in
+		# lane-local coordinates. The default (keep the global transform) cancelled the lane's
+		# rotation on the way in, and left a pooled node rotated on the way back to Lane0.
+		obj.reparent(lane, false)

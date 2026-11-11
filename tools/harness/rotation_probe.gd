@@ -15,6 +15,18 @@ func _ready() -> void:
 	var late := Node3D.new()
 	track.add_child(late)
 	TrackLanes.place(late, 11.0)
+	# An object is positioned (lane-local) by spawn() and then placed: the placement must not
+	# rewrite that position, in either direction.
+	var mover := Node3D.new()
+	track.add_child(mover)
+	mover.position = Vector3(0.3, 1.0, -16.0)
+	TrackLanes.place(mover, 11.0)
+	var into_rotated := mover.position.is_equal_approx(Vector3(0.3, 1.0, -16.0))
+	mover.transform = Transform3D(Basis.IDENTITY, Vector3(-0.3, 1.5, -16.0))
+	TrackLanes.place(mover, 9.0)
+	var back_to_straight := mover.transform.is_equal_approx(Transform3D(Basis.IDENTITY, Vector3(-0.3, 1.5, -16.0)))
+	print("LANEPROBE local transform kept: into_rotated=%s back_to_straight=%s %s" % [
+		into_rotated, back_to_straight, "PASS" if into_rotated and back_to_straight else "FAIL"])
 	var early_parent := early.get_parent() as Node3D
 	var late_parent := late.get_parent() as Node3D
 	print("LANEPROBE early=%s yaw=%.1f late=%s yaw=%.1f early_still=%s" % [
