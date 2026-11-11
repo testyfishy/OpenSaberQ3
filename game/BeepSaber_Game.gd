@@ -652,7 +652,7 @@ func update_left_color(color: Color) -> void:
 	_apply_light_tint()
 
 func update_right_color(color: Color) -> void:
-	if !left_saber:
+	if !right_saber:
 		await get_tree().process_frame
 	right_saber.set_color(color)
 	goggles_shader.set_shader_parameter(&"right_color", color)
@@ -699,12 +699,14 @@ func _clear_track() -> void:
 			track.remove_child(c)
 			c.queue_free()
 
+# Share of the scored notes that were hit. A run with nothing scored yet reads as 100 %, on the
+# HUD and on the end screen alike (the end screen used to divide 0 by 0 and show NaN).
+func _hit_rate() -> float:
+	var scored := Scoreboard.right_notes + Scoreboard.wrong_notes
+	return Scoreboard.right_notes / scored if scored > 0.0 else 1.0
+
 func _display_points() -> void:
-	var hit_rate: float
-	if Scoreboard.right_notes+Scoreboard.wrong_notes > 0:
-		hit_rate = Scoreboard.right_notes/(Scoreboard.right_notes+Scoreboard.wrong_notes)
-	else:
-		hit_rate = 1.0
+	var hit_rate := _hit_rate()
 	
 	# FR-033: this runs once per cut (Scoreboard.score_changed) and a TextMesh.text
 	# assignment re-triangulates glyphs and re-uploads the mesh. The displayed
@@ -786,7 +788,7 @@ func _on_song_ended() -> void:
 		highscore = Scoreboard.points
 		new_record = true
 
-	var current_percent := Scoreboard.right_notes/(Scoreboard.right_notes+Scoreboard.wrong_notes)
+	var current_percent := _hit_rate()
 	
 	# FR-005: no name prompt any more. The score is written under the profile that is
 	# currently playing, before the board is faded in, and only when it earns a slot - a

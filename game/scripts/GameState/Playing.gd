@@ -26,9 +26,6 @@ func _physics_process(game: BeepSaber_Game) -> void:
 		if game.song_player.get_playback_position() < 0.5:
 			game._audio_synced_after_restart = true
 
-var bomb_template := load("res://game/Bomb/Bomb.tscn") as PackedScene
-var wall_template := load("res://game/Wall/Wall.tscn") as PackedScene
-var arc_template := load("res://game/Arc/Arc.tscn") as PackedScene
 const BEATS_AHEAD := 4.0
 
 const Cost := preload("res://game/scripts/CostProbe.gd")
