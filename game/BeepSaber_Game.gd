@@ -128,8 +128,12 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 	# ...and with no light event carried over from the last one (FR-005).
 	_event_tint = Color.WHITE
 	
-	if (map_data == null):
+	# load_json_file returns {} for a missing or unreadable file (never null, so the old null
+	# check could not fire). An empty beatmap must not start: it used to play the song with no
+	# notes at all.
+	if map_data == null or map_data.is_empty():
 		vr.log_error("Could not read map data from " + map_filename)
+		return
 	if not Map.load_beatmap(info, map_difficulty, map_data, lightshow_data, audio_data):
 		return
 	
