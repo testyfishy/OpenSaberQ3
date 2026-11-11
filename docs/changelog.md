@@ -4,9 +4,9 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
-## Unreleased - audit branch `audit/fable-5.2`
+## v0.7.10 - 2026-11-11 (installed from `audit/fable-5.2`, untagged)
 
-Code audit of 0.7.9; not built or installed. Full findings: [audit report](audit-fable-5.2.md).
+Code audit of 0.7.9, built as 0.7.10 (versionCode 26) and installed on the headset; boots with no script errors, gameplay and hands not yet played. The APK now declares hand tracking (`com.oculus.permission.HAND_TRACKING`, `oculus.software.handtracking`); that edit lives in the gitignored `android/build/src/main/AndroidManifest.xml`. Full findings: [audit report](audit-fable-5.2.md).
 
 - **Hands**: pinch now works with the controllers asleep; hand swings score swing travel and cut
   on the right plane; cuts use the blade pose of the same tick; a parked saber no longer cuts.
