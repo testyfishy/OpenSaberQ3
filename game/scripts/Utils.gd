@@ -40,15 +40,34 @@ func get_dict(dict: Dictionary, key: String, default: Dictionary, platform_defau
 		return platform_defaults[OS.get_name()]
 	return default
 
+## A zip entry name is attacker-controlled (BeatSaver/BeastSaber downloads, the LAN upload page).
+## Only a plain relative path may be extracted: no drive or scheme, no leading slash, no `..`
+## segment that would climb out of the destination folder.
+static func is_safe_zip_entry(entry: String) -> bool:
+	var normalized := entry.replace("\\", "/")
+	if normalized.is_empty() or normalized.begins_with("/") or normalized.contains(":"):
+		return false
+	return not (".." in normalized.split("/"))
+
 func unzip(zip_file: String, destination: String) -> void:
 	var zreader := ZIPReader.new()
 	if zreader.open(zip_file) != OK:
 		vr.log_warning("unable to open zip file %s" % zip_file)
 		return
 	for file in zreader.get_files():
+		if not is_safe_zip_entry(file):
+			vr.log_warning("skipping unsafe zip entry %s in %s" % [file, zip_file])
+			continue
 		var buffer := zreader.read_file(file)
 		if buffer:
-			var filea := FileAccess.open(destination+"/"+file, FileAccess.WRITE)
+			var target := destination.path_join(file)
+			# A zip may keep files in subfolders; the folder has to exist before the open.
+			@warning_ignore("return_value_discarded")
+			DirAccess.make_dir_recursive_absolute(target.get_base_dir())
+			var filea := FileAccess.open(target, FileAccess.WRITE)
+			if filea == null:
+				vr.log_file_error(FileAccess.get_open_error(), target, "unzip() in Utils.gd")
+				continue
 			filea.store_buffer(buffer)
 			filea.close()
 	@warning_ignore("return_value_discarded")
