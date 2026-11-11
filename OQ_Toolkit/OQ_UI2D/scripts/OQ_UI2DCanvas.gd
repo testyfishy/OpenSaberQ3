@@ -100,7 +100,9 @@ func _input_update() -> void:
 	# pointer move cannot start the old `update_once` coroutine alongside it (that coroutine forces
 	# UPDATE_DISABLED three frames later, which used to cut a scroll short).
 	if viewport != null:
-		var refresh: Variant = viewport.get_meta(&"canvas_refresh", null)
+		# has_meta first: get_meta() treats a null default as "no default" and logs an error for
+		# every canvas that never asked for a CanvasRefresh.
+		var refresh: Variant = viewport.get_meta(&"canvas_refresh") if viewport.has_meta(&"canvas_refresh") else null
 		if refresh != null and refresh.has_method(&"request"):
 			refresh.call(&"request")
 			return
