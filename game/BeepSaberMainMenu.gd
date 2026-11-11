@@ -572,8 +572,10 @@ func _ready() -> void:
 	keyboard.text_input_cancel.connect(_text_input_cancel)
 	@warning_ignore("return_value_discarded")
 	keyboard._text_edit.text_changed.connect(_text_input_changed)
-	@warning_ignore("return_value_discarded")
-	keyboard._text_edit.focus_exited.connect(_text_input_enter)
+	# focus_exited was connected to _text_input_enter here, but that handler takes the entered
+	# text and focus_exited passes nothing, so every emission only logged "expected 1 argument"
+	# and the keyboard stayed up. The connection is dropped rather than repaired: closing the
+	# keyboard on focus loss has never actually happened, and turning it on is a UI change.
 	
 	playlist_selector.visible = false
 	source_filter.visible = false
