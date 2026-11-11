@@ -534,10 +534,6 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		applied.append("notes_off=1")
 	if room_off:
 		applied.append("room_off=1")
-	Wall.batch_visual = bool(cfg.get_value("bench", "wall_batch", false))
-	_meta["wall_batch"] = "true" if Wall.batch_visual else "false"
-	if Wall.batch_visual:
-		applied.append("wall_batch=1")
 	var direct_path := bool(cfg.get_value("bench", "direct_path", false))
 	if direct_path:
 		# Godot's mobile renderer drops to an intermediate full-res buffer for glow/tonemap/AA.

@@ -11,11 +11,8 @@ const Cost := preload("res://game/scripts/CostProbe.gd")
 const WALL_MATERIAL := preload("res://game/Wall/wall_shared.tres")
 const WALL_PREPASS_MATERIAL := preload("res://game/Wall/wall_depth.tres")
 const WALL_OPAQUE_MATERIAL := preload("res://game/Wall/wall_opaque.tres")
-const WallBatchScript := preload("res://game/scripts/WallBatch.gd")
 static var depth_prepass := false
 static var opaque_walls := false
-# 0.7.6 A/B: draw every live wall through WallBatch instead of one MeshInstance per wall.
-static var batch_visual := false
 # Attribution only: hide the visual while collision/motion keep running.
 static var debug_hide_visuals := false
 
@@ -54,12 +51,6 @@ var _half_depth := 0.0
 # True once the grow has written its full-height state, so a settled wall stops touching its
 # mesh every physics tick.
 var _grow_settled := false
-# Per-wall visual state for WallBatch (used only when batch_visual is on).
-var _batch_size := Vector3.ONE
-var _batch_offset_y := 0.0
-var _batch_rim := 1.0
-var _batch_color := Color.WHITE
-var _batch_fade := 1.0
 
 func _apply_grow() -> void:
 	var front_z := transform.origin.z + _half_depth
@@ -75,12 +66,8 @@ func _apply_grow() -> void:
 	if mesh == null:
 		return
 	var visible := Vector3(_size.x, _size.y * h, _size.z)
-	_batch_size = visible
-	_batch_offset_y = (h - 1.0) * _size.y * 0.5
-	if batch_visual:
-		return
 	mesh.scale = visible
-	mesh.position.y = _batch_offset_y
+	mesh.position.y = (h - 1.0) * _size.y * 0.5
 	mesh.set_instance_shader_parameter(&"size", visible)
 
 func _physics_process(delta: float) -> void:
@@ -105,8 +92,6 @@ func hide_wall() -> void:
 	process_mode = Node.PROCESS_MODE_DISABLED
 
 func _despawn() -> void:
-	if WallBatchScript.instance != null:
-		WallBatchScript.instance.unregister(self)
 	hide_wall()
 	release()
 
@@ -115,8 +100,6 @@ func _despawn() -> void:
 # makes the next acquire() hand out a freed object ("Trying to cast a freed object", then
 # spawn() on a null). Notes and chain links already implement this; walls now do too.
 func clear_from_track() -> void:
-	if WallBatchScript.instance != null:
-		WallBatchScript.instance.unregister(self)
 	hide_wall()
 	if not is_released():
 		release()
@@ -180,15 +163,7 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	_apply_grow()
 	var mesh := _wall_mesh()
 	if mesh != null:
-		# Never hide the per-wall mesh unless the batch node actually exists; otherwise a setup
-		# failure makes every wall invisible while its collision still works.
-		var use_batch := batch_visual and WallBatchScript.instance != null
-		mesh.visible = not (use_batch or debug_hide_visuals)
-		if WallBatchScript.instance != null:
-			if use_batch:
-				WallBatchScript.instance.register(self)
-			else:
-				WallBatchScript.instance.unregister(self)
+		mesh.visible = not debug_hide_visuals
 
 func _wall_mesh() -> MeshInstance3D:
 	if _mesh_cache == null:
@@ -211,7 +186,7 @@ func _apply_material(size_in: Vector3, shard_color := Color(0.0, 0.0, 0.0, 0.0),
 		mesh.material_override = _base_mat
 	# 0.7.5: the v0.6 rim is back for ordinary walls; wall art and Noodle/ME walls keep the
 	# flat panel so adjacent one-lane walls do not turn into vertical stripes.
-	_batch_rim = 1.0 if rim_enabled else 0.0
+	var rim := 1.0 if rim_enabled else 0.0
 	var tint := MapPalette.wall_color
 	if shard_color.a > 0.0:
 		tint = shard_color
@@ -221,12 +196,9 @@ func _apply_material(size_in: Vector3, shard_color := Color(0.0, 0.0, 0.0, 0.0),
 		# Scale to the cap. darkened() multiplies by (1 - amount), which turns an HDR
 		# obstacle colour black and makes an additive wall invisible.
 		tint = Color(tint.r, tint.g, tint.b) * (cap / tint.v)
-	_batch_color = tint
-	if batch_visual:
-		return
 	# One shared material, per-wall values as instance uniforms: no material switch per wall.
 	mesh.set_instance_shader_parameter(&"size", size_in)
-	mesh.set_instance_shader_parameter(&"rim", _batch_rim)
+	mesh.set_instance_shader_parameter(&"rim", rim)
 	mesh.set_instance_shader_parameter(&"wall_color", tint)
 
 # A crouch under an overhead wall can put the camera inside the box. With back-face culling no
@@ -243,25 +215,6 @@ func _update_inside_fade() -> void:
 	var target := 0.12 if inside else 1.0
 	if not is_equal_approx(target, _fade):
 		_fade = target
-		_batch_fade = _fade
-		if batch_visual:
-			return
 		var mesh := _wall_mesh()
 		if mesh != null:
 			mesh.set_instance_shader_parameter(&"fade", _fade)
-
-# --- WallBatch accessors (0.7.6) --------------------------------------------------------------
-func batch_size() -> Vector3:
-	return _batch_size
-
-func batch_offset_y() -> float:
-	return _batch_offset_y
-
-func batch_rim() -> float:
-	return _batch_rim
-
-func batch_color() -> Color:
-	return _batch_color
-
-func batch_fade() -> float:
-	return _batch_fade

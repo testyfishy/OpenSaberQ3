@@ -5,7 +5,6 @@
 extends Node3D
 class_name BeepSaber_Game
 
-const WallBatchScript := preload("res://game/scripts/WallBatch.gd")
 const CLASH_SAMPLE := preload("res://game/data/hits/hard_01.wav")
 const CLASH_COOLDOWN_MSEC := 90
 const CLASH_DISTANCE := 0.14
@@ -254,7 +253,6 @@ func _ready() -> void:
 	GlobalReferences.cube_pool = $BeepCubePool
 	GlobalReferences.link_pool = $ChainLinkPool
 	GlobalReferences.wall_pool = $WallPool
-	WallBatchScript.setup(track)
 	GlobalReferences.cube_pool.presize(100)
 	GlobalReferences.link_pool.presize(100)
 	# Wall maps spawn tens of walls a second (Gloom: 12,340 in one song). Measured peak usage on
