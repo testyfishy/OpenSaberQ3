@@ -484,7 +484,9 @@ func _on_retry_pressed() -> void:
 func _on_back_pressed() -> void:
 	if _history.is_empty():
 		return
-	_query = _history.pop_back()
+	# `_query` is a getter-only view of query.data; assigning to it restored nothing and Back
+	# re-ran the current search.
+	query.data = _history.pop_back()
 	_update_controls()
 	_new_search()
 
