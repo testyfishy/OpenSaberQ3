@@ -54,6 +54,30 @@ toggle inside it, rather than hunting through the full settings panel.
 and changes only `Settings.hand_tracking_enabled`; the 120 Hz and Lights toggles persist their
 settings.
 
+## Scoped change — audit fixes on `audit/fable-5.2` (not yet in an installed build)
+
+Found by the 0.7.9 code audit ([report](../../docs/audit-fable-5.2.md)) and reproduced headless with
+a synthetic hand tracker (`tools/harness/verify_hand_path.tscn`). All of them follow from one fact:
+with the controllers asleep, `XRController3D.get_is_active()` is false and the node keeps its last
+transform.
+
+- **FR-018**: Pinch MUST be evaluated whenever hand data is live, not only while the controller is
+  active. (0.7.9 computed the pinch inside a block gated on `get_is_active()`.)
+- **FR-019**: Swing travel (`movement_aabb`) and the cut-plane origin MUST be measured at the palm
+  while the hands drive the sabers (`BeepSaberController.swing_origin()`), and at the controller
+  node, exactly as before, while a controller is tracked.
+- **FR-020**: The hand pose MUST be applied to the saber in `_physics_process` as well as in
+  `_process`, so the blade segment used for cuts is the pose of the same tick.
+- **FR-021**: Buttons MUST only be read from a tracked controller.
+- **FR-022**: A parked saber (hands own it, no hand data, no controller) MUST NOT cut. It stays
+  drawn at its last pose and resumes when data returns. Hiding it while parked is an open owner
+  decision.
+
+**SC-008**: `verify_hand_path.tscn` prints `HANDPATH PASS`.
+
+Still unverified on the headset: SC-006/SC-007, and whether the APK manifest declares hand
+tracking at all (see the audit report, finding H-1).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Hands drive the sabers (Priority: P1)
@@ -137,6 +161,9 @@ haptics fire.
   a dedicated `pinch` float action bound to `pinch_ext/value` per hand. Godot only auto-creates
   these for its built-in map; this project ships a custom map. `palm_pose` and `select_button` are
   deliberately not bound (nothing uses the palm; `ready_ext` does not mean "fingers touching").
+- *FR-003 and FR-004 are superseded by FR-012 and FR-013: Quest does not deliver the hand
+  interaction profile, so the saber pose comes from the hand tracker's palm pose and the pinch from
+  joint distance.*
 - **FR-003**: The sabers MUST follow the hand pose through the existing
   `left_hand`/`right_hand` `XRController3D` trackers (the hand interaction profile's aim pose), with
   no new rig and no per-hand scene duplication.
@@ -154,7 +181,8 @@ haptics fire.
 - **FR-008**: Haptics MUST NOT be called for hand input; `simple_rumble` on a hand tracker is a
   no-op in the runtime and must not error.
 - **FR-009**: Version MUST be 0.7.7 (versionCode 23) for this build.
-- **FR-010**: A hand-only saber position/rotation correction MUST exist (identity by default) and
+- **FR-010**: A hand-only saber position/rotation correction MUST exist (default: zero position,
+  -90 degrees about X, see FR-014; it was identity in 0.7.7) and
   apply only while hand tracking is live, so the blade can be aligned to the hand aim pose on-device
   without changing the controller or the player's persisted saber offset.
 
@@ -182,7 +210,8 @@ haptics fire.
 
 ## Out of scope
 
-- Rendered hand meshes / skin and `XRHandModifier3D` skeleton rigs.
+- Rendered hand meshes / skin and `XRHandModifier3D` skeleton rigs. *(Superseded by FR-011 in
+  0.7.8: the hands are rendered.)*
 - Direct poke/touch UI (index-tip collision, press depth) — the owner chose hand ray + pinch.
 - Custom gestures beyond pinch: palm-up menu, swipe, two-hand gestures, microgestures.
 - Hand-based locomotion or turning.
@@ -194,7 +223,8 @@ haptics fire.
 ## Assumptions
 
 - The owner enables hand tracking in the headset's settings and the Quest 3 runtime supports
-  `XR_EXT_hand_tracking` and `XR_EXT_hand_interaction` (it does on current firmware).
+  `XR_EXT_hand_tracking`. *(The 0.7.7 assumption that it also supports `XR_EXT_hand_interaction`
+  was wrong; see the first scoped change above.)*
 - The hand interaction aim pose is a sensible saber direction; if the blade angle reads wrong
   on-device, the hand-only correction (`FR-010`) is tuned, not a redesign.
 - Pinch is the click edge: the `pinch_ext/value` float crosses 0.8 = press, drops below 0.5 =

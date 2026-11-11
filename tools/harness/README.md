@@ -31,9 +31,31 @@ After each refactor slice the dump must be byte-identical.
 
 `settings_roundtrip.tscn` checks three things and prints `SETTINGSTEST PASS`:
 
-1. defaults survive save -> reload unchanged (48 keys);
+1. defaults survive save -> reload unchanged (every schema key; the run prints the count);
 2. a v0.3-era file with unknown keys still loads the known ones;
 3. a missing key falls back to its declared default.
+
+## Parse gate
+
+`verify_parse.tscn` loads every `.gd` in the project with the autoloads present and prints
+`PARSECHECK files=<n> bad=<m>`. `godot --headless --quit` only compiles what the main scene
+reaches, so a broken script nothing loads is invisible to it.
+
+## Hand path (specs/030)
+
+`verify_hand_path.tscn` registers a synthetic `XRHandTracker` (and later an `XRControllerTracker`)
+and drives the real controller and saber scripts with no XR runtime: saber pose in world space, cut
+segment timing, joint pinch with the controller asleep, swing travel, cut-plane origin, a parked
+blade, the Hands setting, the tracking-source gate and the return to controllers. Prints
+`HANDPATH PASS`. The "controller asleep" state is simulated by the `left_hand` tracker not
+existing; it is not a recording of the headset.
+
+## I/O regressions
+
+`verify_io_fixes.tscn` covers zip extraction (subfolders, `../` entries), the Storage panel's
+confirmed delete, `HTTPRequestPool` (freed nodes, stable tokens), the upload server's bounded read
+and the v2 note loader. It only touches its own probe folders under `user://` and loopback.
+Prints `IOFIX PASS`.
 
 ## Baseline recorded on harness-base
 
