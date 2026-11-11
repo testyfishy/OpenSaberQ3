@@ -93,7 +93,11 @@ static func load_note_stack_v2(note_data: Array) -> void:
 		var bomb_array: Array[BombInfo] = []
 		var i := start
 		while i < end:
-			if not note_data[i] is Dictionary: continue
+			if not note_data[i] is Dictionary:
+				# Advance first: a bare `continue` here never left the loop, so one non-object
+				# entry in `_notes` hung the loader (and the game) for good.
+				i += 1
+				continue
 			@warning_ignore("unsafe_cast")
 			var note_dict := note_data[i] as Dictionary
 			var note_type := int(Utils.get_float(note_dict, "_type", -1.0))

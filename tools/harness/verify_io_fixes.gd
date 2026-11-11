@@ -29,6 +29,7 @@ func _run() -> void:
 	await _test_storage_delete()
 	await _test_pool()
 	await _test_uploader()
+	_test_v2_loader()
 	print("IOFIX ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(0 if _fails == 0 else 1)
 
@@ -123,6 +124,16 @@ func _orphan_http_requests() -> int:
 		if obj is HTTPRequest:
 			count += 1
 	return count
+
+
+# --- MapData: a non-object entry in a v2 `_notes` array does not hang the loader -----------------
+func _test_v2_loader() -> void:
+	# Before the fix this call never returned.
+	MapData.load_note_stack_v2([1, {"_time": 2.0, "_lineIndex": 1.0, "_lineLayer": 0.0, "_type": 0.0, "_cutDirection": 1.0}, "x"])
+	_check("v2 loader: skips non-object note entries", MapData.note_stack.size() == 1,
+		"notes=%d" % MapData.note_stack.size())
+	MapData.note_stack.clear()
+	MapData.bomb_stack.clear()
 
 
 # --- SongUploader: a client that connects and says nothing cannot hang the game -----------------
