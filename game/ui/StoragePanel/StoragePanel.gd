@@ -218,6 +218,9 @@ func _on_delete_source_pressed() -> void:
 	_arm(batch, delete_source_button, "Delete %d %s maps" % [batch.size(), MapSource.label(source)])
 
 func _execute(batch: Array) -> void:
+	# Both callers pass `_pending` itself, and _reset_confirm() clears that array in place. Take
+	# a copy first, or the loop below runs over nothing and reports "Deleted 0 maps".
+	batch = batch.duplicate()
 	_reset_confirm()
 	var removed := 0
 	var removed_bytes := 0
