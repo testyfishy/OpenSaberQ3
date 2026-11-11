@@ -44,7 +44,8 @@ func _ready() -> void:
 	beatsage_request_.download_dir = BS_TEMP_DIR
 	
 	# setup youtube search UI and connect signal handlers
-	youtube_ui = get_node(youtube_ui_path)
+	# Optional: the panel still works from a pasted URL when no search UI is wired up.
+	youtube_ui = get_node_or_null(youtube_ui_path) as YoutubeUI if not youtube_ui_path.is_empty() else null
 	if is_instance_valid(youtube_ui):
 		youtube_ui.song_selected.connect(_on_youtube_song_selected)
 	

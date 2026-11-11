@@ -261,6 +261,7 @@ transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
 visible = false
 
 [node name="BeatSageUI" parent="MapSourceDialogs/BeatSage_Canvas" instance=ExtResource("29")]
+youtube_ui_path = NodePath("../../YouTube_Canvas/YouTubeUI")
 
 [node name="BeastSaber_Canvas" parent="MapSourceDialogs" instance=ExtResource("3")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
