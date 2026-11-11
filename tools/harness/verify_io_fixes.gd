@@ -43,7 +43,7 @@ func _test_unzip() -> void:
 	var zip_path := base + "probe.zip"
 	var packer := ZIPPacker.new()
 	packer.open(zip_path)
-	for entry: String in ["Info.dat", "sub/inner.dat", "../escaped.dat", "after.dat"]:
+	for entry: String in ["../escaped.dat", "Info.dat", "sub/inner.dat", "after.dat"]:
 		packer.start_file(entry)
 		packer.write_file("x".to_utf8_buffer())
 		packer.close_file()

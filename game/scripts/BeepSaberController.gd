@@ -170,7 +170,9 @@ func _physics_process(dt: float) -> void:
 	# Wait for a live input source. With the controllers asleep get_is_active() is false, and
 	# the pinch is computed in _update_buttons_and_sticks, so live hand data has to open this
 	# gate too or a pinch can never click.
-	if get_is_active() or is_hand_tracking():
+	# `hand_driven`, not is_hand_tracking(): it stays true through a dropout, and that tick has
+	# to run too, or a pinch held when the hand was lost would stay pressed with no release.
+	if get_is_active() or hand_driven:
 		_update_rumble(dt)
 		_update_buttons_and_sticks()
 		# this avoid getting just_pressed events when a key is pressed and the controller becomes

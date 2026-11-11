@@ -130,6 +130,24 @@ func _run() -> void:
 	await _ticks(2)
 	_check("opening the hand releases the trigger", not _controller.trigger_pressed())
 
+	# --- 3b. hand data drops mid-pinch: the trigger releases, and does not re-fire on return ---
+	_pinch_gap = 0.01
+	await _ticks(2)
+	_check("premise: pinching again", _controller.trigger_pressed())
+	_hand.has_tracking_data = false
+	await _ticks(2)
+	_check("a dropout mid-pinch releases the trigger", not _controller.trigger_pressed())
+	_hand.has_tracking_data = true
+	await _ticks(2)
+	_check("a hand that returns still pinched does not click", not _controller.trigger_pressed())
+	_pinch_gap = 0.10
+	await _ticks(2)
+	_pinch_gap = 0.01
+	await _ticks(2)
+	_check("after opening once, a pinch clicks again", _controller.trigger_pressed())
+	_pinch_gap = 0.10
+	await _ticks(2)
+
 	# --- 4. swing travel is measured at the hand, not at the sleeping controller ------------
 	_controller.reset_movement_aabb()
 	for i in 10:
