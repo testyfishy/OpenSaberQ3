@@ -128,27 +128,44 @@ func _ready() -> void:
 	_hit_mask = _swing_cast.collision_mask
 
 func _process(_dt: float) -> void:
+	_sync_pose_source()
+
+# Chooses what positions the saber: the parent controller (the normal, parented path) or the
+# hand tracker's palm pose (top-level, written in world space).
+#
+# Runs in _process so the blade the player sees is this frame's hand pose, and again at the top
+# of _physics_process so the segment the cut sweep reads is that same pose. Physics ticks run
+# before _process within a frame; without the second call every hand cut was resolved against
+# the previous frame's blade.
+func _sync_pose_source() -> void:
 	if controller == null:
 		return
-	if controller.is_hand_tracking():
+	if controller.hand_driven != hand_drive_active:
+		hand_drive_active = controller.hand_driven
+		top_level = hand_drive_active
 		if not hand_drive_active:
-			hand_drive_active = true
-			top_level = true
+			# The controllers are back: return to the parented path at once instead of
+			# waiting for the next physics tick.
+			_apply_controller_offset()
+	if hand_drive_active and controller.is_hand_tracking():
 		# Palm pose * hand correction. The saber +Y runs along the palm -Z (finger direction),
 		# which is what the -90 X default in BeepSaberController does.
 		var correction_rot := controller.hand_saber_offset_rot * (PI / 180.0)
 		var correction := Transform3D(Basis.from_euler(correction_rot), controller.hand_saber_offset_pos)
 		global_transform = controller.hand_world_transform() * correction
-		return
-	if hand_drive_active and controller.get_is_active():
-		# The controllers are back: return to the normal parented controller path.
-		hand_drive_active = false
-		top_level = false
+
+func _apply_controller_offset() -> void:
+	position = offset_pos + extra_offset_pos
+	rotation_degrees = offset_rot + extra_offset_rot
+
+# The point the cut plane hinges on. See BeepSaberController.swing_origin.
+func cut_origin() -> Vector3:
+	return controller.swing_origin()
 
 func _physics_process(delta: float) -> void:
+	_sync_pose_source()
 	if not hand_drive_active:
-		position = offset_pos + extra_offset_pos
-		rotation_degrees = offset_rot + extra_offset_rot
+		_apply_controller_offset()
 	saber_end_past = saber_end
 	saber_end = saber_visual.tip.global_transform.origin
 	last_dt = delta
@@ -251,7 +268,7 @@ func _handle_cuttable(cut_object: Node3D) -> void:
 	var note := cut_object as Cuttable
 	
 	var time_offset: float = Map.beat_to_seconds(note.beat) - song_player_ref.get_playback_position()
-	var o := controller.global_transform.origin
+	var o := cut_origin()
 	var controller_speed: Vector3 = (saber_end - saber_end_past) / last_dt
 	const BEAT_DISTANCE := 4.0
 	var cutplane := Plane(o, saber_end, saber_end_past + Vector3(0, 0, BEAT_DISTANCE * Map.bpm_at_beat(note.beat) * last_dt / 30)) # Account for relative position to track speed

@@ -28,6 +28,15 @@ var _pinch_open_seen := false
 @export var hand_saber_offset_pos := Vector3.ZERO
 @export var hand_saber_offset_rot := Vector3(-90, 0, 0)
 
+# True from the first live hand frame until a controller is tracked again. Deliberately sticky
+# across a tracking dropout: while the hand is occluded the controller is still asleep, and its
+# node still holds the transform it had when it went to sleep, so falling back to it would
+# teleport everything that follows this controller.
+var hand_driven := false
+# World-space palm origin of the last live hand frame; what `swing_origin()` reports during a
+# dropout.
+var _last_hand_origin := Vector3.ZERO
+
 var movement_aabb := AABB()
 
 func ax_pressed() -> bool:
@@ -61,9 +70,12 @@ func _update_buttons_and_sticks() -> void:
 	ax_last_frame = ax
 	by_last_frame = by
 	trigger_last_frame = trigger
-	ax = is_button_pressed(&"ax_button")
-	by = is_button_pressed(&"by_button")
-	trigger = is_button_pressed(&"trigger")
+	# A sleeping controller is not a button source: only read it while it is tracked, so a value
+	# left on the tracker cannot hold a button down under the pinch.
+	var controller_live := get_is_active()
+	ax = controller_live and is_button_pressed(&"ax_button")
+	by = controller_live and is_button_pressed(&"by_button")
+	trigger = controller_live and is_button_pressed(&"trigger")
 	# With hand tracking the pose and joints arrive on /user/hand_tracker/<side>. Pinch drives
 	# the internal trigger, which is what the UI raycast already polls.
 	if is_hand_tracking():
@@ -98,11 +110,31 @@ func _update_hand_pinch() -> void:
 	elif _pinch_open_seen and distance < PINCH_PRESS_M:
 		_pinch_down = true
 
+# Where the swing is measured from, in world space: the controller while it is tracked, the palm
+# while the hands drive the sabers. The controller node cannot be used for both - asleep, it
+# keeps its last transform, so every hand swing would measure zero travel and hinge its cut
+# plane on wherever the controller was put down.
+func swing_origin() -> Vector3:
+	return _last_hand_origin if hand_driven else global_transform.origin
+
 func _update_movement_aabb() -> void:
-	movement_aabb = movement_aabb.expand(global_transform.origin)
+	movement_aabb = movement_aabb.expand(swing_origin())
 
 func reset_movement_aabb() -> void:
-	movement_aabb = AABB(global_transform.origin, Vector3.ZERO)
+	movement_aabb = AABB(swing_origin(), Vector3.ZERO)
+
+# Keeps `hand_driven` and the palm origin current. Called from both _process and
+# _physics_process, ahead of the saber (a child, so it runs after this node in either callback).
+func _refresh_hand_mode() -> void:
+	if is_hand_tracking():
+		_last_hand_origin = hand_world_transform().origin
+		if not hand_driven:
+			hand_driven = true
+			# The travel box must not span the sleeping controller and the hand.
+			reset_movement_aabb()
+	elif hand_driven and get_is_active():
+		hand_driven = false
+		reset_movement_aabb()
 
 var _is_simple_rumbling := false
 var _rumble_duration_remaining := 0.0
@@ -127,11 +159,18 @@ func _update_rumble(dt: float) -> void:
 
 var first_time := true
 
+func _process(_dt: float) -> void:
+	_refresh_hand_mode()
+
 func _physics_process(dt: float) -> void:
+	_refresh_hand_mode()
 	if not Scoreboard.paused:
 		_update_movement_aabb()
 	
-	if get_is_active(): # wait for active controller
+	# Wait for a live input source. With the controllers asleep get_is_active() is false, and
+	# the pinch is computed in _update_buttons_and_sticks, so live hand data has to open this
+	# gate too or a pinch can never click.
+	if get_is_active() or is_hand_tracking():
 		_update_rumble(dt)
 		_update_buttons_and_sticks()
 		# this avoid getting just_pressed events when a key is pressed and the controller becomes
@@ -141,11 +180,16 @@ func _physics_process(dt: float) -> void:
 			first_time = false
 
 
+# Built on first use: this is asked for several times a frame per hand.
+var _hand_tracker_name := &""
+
 func _hand_tracker() -> XRHandTracker:
 	# Hand joints live on their own OpenXR tracker at /user/hand_tracker/<side>; the
 	# left_hand/right_hand tracker this node uses carries the controller pose and inputs.
-	var side := "left" if String(tracker).begins_with("left") else "right"
-	return XRServer.get_tracker("/user/hand_tracker/%s" % side) as XRHandTracker
+	if _hand_tracker_name.is_empty():
+		var side := "left" if String(tracker).begins_with("left") else "right"
+		_hand_tracker_name = StringName("/user/hand_tracker/%s" % side)
+	return XRServer.get_tracker(_hand_tracker_name) as XRHandTracker
 
 func is_hand_tracking() -> bool:
 	if not Settings.hand_tracking_enabled:
