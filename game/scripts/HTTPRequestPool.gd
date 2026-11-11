@@ -42,7 +42,7 @@ func _request(url: String, user_data: Dictionary, token: int) -> void:
 		vr.log_error('failed to request url = "%s"' % url)
 		if new_request.request_completed.is_connected(bound):
 			new_request.request_completed.disconnect(bound)
-		remove_child(new_request)
+		_discard(new_request)
 		_bound_callables.erase(token)
 		_pending_requests_by_token.erase(token)
 		# Still answer, deferred so the caller has returned from request() first: a caller that
@@ -57,7 +57,7 @@ func cancel_request(token: int) -> void:
 		if bound.is_valid() and request.request_completed.is_connected(bound):
 			request.request_completed.disconnect(bound)
 		request.cancel_request()
-		remove_child(request)
+		_discard(request)
 		_pending_requests_by_token.erase(token)
 	_bound_callables.erase(token)
 	# A request that has not started yet is only in the queue; make sure it never starts.
@@ -65,6 +65,14 @@ func cancel_request(token: int) -> void:
 		if int(_request_queue[i][2]) == token:
 			_request_queue.remove_at(i)
 	
+# A finished request is done for good. remove_child() alone left every HTTPRequest alive as an
+# orphan - one per cover image, for the life of the app.
+func _discard(http: HTTPRequest) -> void:
+	if http == null:
+		return
+	remove_child(http)
+	http.queue_free()
+
 func cancel_all() -> void:
 	for token in _pending_requests_by_token.keys():
 		self.cancel_request(token)
@@ -73,7 +81,7 @@ func cancel_all() -> void:
 func _on_request_complete(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray, token: int, user_data: Dictionary) -> void:
 	# clean up request
 	if _pending_requests_by_token.has(token):
-		remove_child(_pending_requests_by_token[token])
+		_discard(_pending_requests_by_token[token] as HTTPRequest)
 		_pending_requests_by_token.erase(token)
 	_bound_callables.erase(token)
 	
@@ -81,6 +89,9 @@ func _on_request_complete(result: int, response_code: int, headers: PackedString
 	if ! _request_queue.is_empty():
 		var request_args = _request_queue[0]
 		_request_queue.pop_front()
-		self.request(request_args[0],request_args[1])
+		# Start it under the token its caller was given when it was queued; going back through
+		# request() would mint a new one, and the original could then never be matched or
+		# cancelled.
+		_request(request_args[0], request_args[1], request_args[2])
 		
 	request_complete.emit(result, response_code, headers, body, token, user_data)
