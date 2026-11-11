@@ -69,6 +69,8 @@ transform.
 - **FR-020**: The hand pose MUST be applied to the saber in `_physics_process` as well as in
   `_process`, so the blade segment used for cuts is the pose of the same tick.
 - **FR-021**: Buttons MUST only be read from a tracked controller.
+- **FR-023**: A pinch held when hand data drops MUST release the trigger on that tick, and a hand
+  that returns still pinched MUST open once before it can click.
 - **FR-022**: A parked saber (hands own it, no hand data, no controller) MUST NOT cut. It stays
   drawn at its last pose and resumes when data returns. Hiding it while parked is an open owner
   decision.

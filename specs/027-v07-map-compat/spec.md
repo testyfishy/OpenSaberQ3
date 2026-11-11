@@ -11,6 +11,17 @@ Resolve Mapping Extensions precision, Noodle position/rotation/scale/animation/s
 and the bundle-based effects for v7 as long as it does not need closed-source content. Update the
 public compatibility position now."
 
+## Scoped change on `audit/fable-5.2` (not in an installed build): lane placement (FR-006)
+
+`TrackLanes.place()` moved an object into its lane with `reparent(lane)`, which keeps the global
+transform. `spawn()` has already written the transform in lane-local coordinates, so the move
+cancelled the lane's rotation, and a pooled node returning to Lane0 after a 360 map stayed rotated.
+It now uses `reparent(lane, false)`. `tools/harness/rotation_probe.tscn` asserts the local
+transform survives the move in both directions. Maps without rotation events never change lane.
+Not yet seen on a headset; note that `BeepCube.cut` still scores beat and angle accuracy from
+global z / global basis, which is wrong inside a rotated lane and is more exposed now that notes
+really fly down one. See [the audit report](../../docs/audit-fable-5.2.md), G-1 and G-11.
+
 ## Context and evidence
 
 - Public policy already published: `README.md` → "Map compatibility", `docs/map-compatibility.md`.

@@ -54,7 +54,9 @@ existing; it is not a recording of the headset.
 
 `verify_io_fixes.tscn` covers zip extraction (subfolders, `../` entries), the Storage panel's
 confirmed delete, `HTTPRequestPool` (freed nodes, stable tokens), the upload server's bounded read
-and the v2 note loader. It only touches its own probe folders under `user://` and loopback.
+and the v2 note loader. It creates and removes its own probe folders under `user://` and uses loopback only. The storage
+check goes through the real delete path, so it also re-saves this PC's `user://` highscore,
+play-count and playlist-manifest files (unchanged apart from the probe map's entries).
 Prints `IOFIX PASS`.
 
 ## Baseline recorded on harness-base
