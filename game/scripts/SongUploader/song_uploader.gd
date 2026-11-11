@@ -9,6 +9,10 @@ const UPLOAD_DIR := Constants.APPDATA_PATH+"temp/"
 const CRLF := "\r\n"
 const CRLFCRLF := "\r\n\r\n"
 const GET := "GET "
+# Bounds for the blocking read in handle_connection. The idle timeout is "no bytes for this
+# long", not a total, so a large zip on a slow link still uploads.
+const IDLE_TIMEOUT_MSEC := 2000
+const MAX_HEADER_BYTES := 16 * 1024
 
 var active := false
 
@@ -65,14 +69,30 @@ func handle_connection(connection: StreamPeerTCP) -> void:
 	var headers_complete := false
 	var buffer := PackedByteArray()
 	
+	# This runs on the main thread, so every wait in it must be bounded: a client that connects
+	# and then says nothing (a port scan, a browser's speculative connection, an aborted upload)
+	# used to spin here forever and freeze the game.
+	var last_data_msec := Time.get_ticks_msec()
 	while not headers_complete:
+		@warning_ignore("return_value_discarded")
+		connection.poll()
+		if connection.get_status() != StreamPeerTCP.STATUS_CONNECTED:
+			return
 		if connection.get_available_bytes() > 0:
+			last_data_msec = Time.get_ticks_msec()
 			buffer.append_array(connection.get_partial_data(1)[1])
 			# Check for end of headers
 			if buffer.size() >= 4:
 				var last_four := buffer.slice(buffer.size() - 4)
 				if last_four == CRLFCRLF.to_utf8_buffer():
 					headers_complete = true
+			if buffer.size() > MAX_HEADER_BYTES:
+				connection.put_data(make_error_response("431 Request Header Fields Too Large"))
+				connection.disconnect_from_host()
+				return
+		elif Time.get_ticks_msec() - last_data_msec > IDLE_TIMEOUT_MSEC:
+			connection.disconnect_from_host()
+			return
 	
 	request.append_array(buffer)
 	var headers := request.get_string_from_utf8()
@@ -90,9 +110,17 @@ func handle_connection(connection: StreamPeerTCP) -> void:
 			
 			# Read the rest of the data
 			var post_body := PackedByteArray()
+			last_data_msec = Time.get_ticks_msec()
 			while post_body.size() < content_length and connection.get_status() == StreamPeerTCP.STATUS_CONNECTED:
+				@warning_ignore("return_value_discarded")
+				connection.poll()
 				if connection.get_available_bytes() > 0:
+					last_data_msec = Time.get_ticks_msec()
 					post_body.append_array(connection.get_partial_data(connection.get_available_bytes())[1])
+				elif Time.get_ticks_msec() - last_data_msec > IDLE_TIMEOUT_MSEC:
+					# A stalled upload: give up instead of holding the frame.
+					connection.disconnect_from_host()
+					return
 			connection.put_data(handle_post(headers, post_body, content_length))
 			if main_menu_ref:
 				main_menu_ref._on_LoadPlaylists_Button_pressed()
