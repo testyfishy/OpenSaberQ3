@@ -4,6 +4,15 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.14 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
+
+Owner feedback on 0.7.13.
+
+- **An open hand holds nothing.** With hand tracking the hilt used to stay drawn at the palm after
+  the blade retracted; now the whole saber disappears until the next fist.
+- **The held blade leans forward.** It ran exactly along the knuckles, square to the forearm; it
+  now leans 25 degrees further forward, closer to how a sword sits in a relaxed grip.
+
 ## v0.7.13 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
 
 **Grip to ignite.** With hand tracking, make a fist and the saber ignites in it like a held hilt,

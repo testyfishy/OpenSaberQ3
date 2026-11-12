@@ -14,6 +14,7 @@ class_name LightSaber
 @onready var _swing_cast := $SwingableRayCast as SwingableRayCast
 @onready var saber_visual := $saber_holder.get_child(0) as DefaultSaber
 @onready var controller := get_parent() as BeepSaberController
+@onready var _saber_holder := $saber_holder as Node3D
 
 @export var offset_pos := Vector3.ZERO
 @export var offset_rot := Vector3.ZERO
@@ -171,6 +172,10 @@ func _sync_pose_source() -> void:
 			_apply_controller_offset()
 	if hand_drive_active:
 		_apply_blade()
+	# With a controller the hilt is always in the hand, blade or no blade. An open hand holds
+	# nothing: once the blade has finished retracting, the whole saber goes with it, hilt
+	# included, instead of a hilt floating at the palm. (The UI ray is not part of the visual.)
+	_saber_holder.visible = not hand_drive_active or is_extended() or _anim.is_playing()
 	if hand_drive_active and controller.is_hand_tracking():
 		# Two poses. Blade out (or still animating in or out): a hilt held in the fist, along
 		# the knuckle line. Blade away: the open-hand pointer along the fingers, which is what

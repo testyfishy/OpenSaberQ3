@@ -46,6 +46,12 @@ var _gripping := false
 # back of the hand): a little back along the blade so it emerges from the fist, and into the
 # palm so it runs through the curled fingers.
 @export var grip_saber_offset := Vector3(0.0, -0.03, -0.025)
+# How far the blade leans forward (away from the wrist) from the knuckle line, in degrees.
+# A stick held in a relaxed fist does not stand square to the forearm: with the wrist neutral it
+# leans forward, and a sword is held with the point further forward still. The knuckle line
+# itself already leans about 15 degrees (the index knuckle sits further from the wrist than the
+# little one); this adds the rest, to roughly the 40 degrees a controller-held saber has.
+@export var grip_blade_lean_deg := 25.0
 
 # True from the first live hand frame until a controller is tracked again. Deliberately sticky
 # across a tracking dropout: while the hand is occluded the controller is still asleep, and its
@@ -163,6 +169,14 @@ func hand_grip_transform() -> Transform3D:
 	if along.length() < 0.01:
 		return hand_world_transform()
 	var y := along.normalized()
+	# Lean the blade forward: rotate it toward the wrist-to-knuckle direction, in the plane the
+	# two span. Skipped when the wrist is not tracked.
+	if _joint_tracked(hand, XRHandTracker.HAND_JOINT_WRIST):
+		var forward := _joint_origin(hand, XRHandTracker.HAND_JOINT_PALM) - _joint_origin(hand, XRHandTracker.HAND_JOINT_WRIST)
+		forward -= y * forward.dot(y)
+		if forward.length() > 0.005:
+			var lean := deg_to_rad(grip_blade_lean_deg)
+			y = (y * cos(lean) + forward.normalized() * sin(lean)).normalized()
 	# Back of the hand, made perpendicular to the blade.
 	var back := palm.basis.y - y * palm.basis.y.dot(y)
 	if back.length() < 0.01:

@@ -111,7 +111,17 @@ ignites, and then you just start smashing". The light-skeleton hands of FR-024 a
 - **FR-029**: The grip is sticky through a tracking dropout (a fist hides its own fingers); FR-022
   still stops a parked blade from cutting.
 
-Not yet seen on the headset: the two grip thresholds and the hilt offset are first guesses.
+Owner on 0.7.13: hands approved; the held saber's position "doesn't feel natural", and an open
+hand should hold nothing rather than a hilt at the wrist.
+
+- **FR-030** (0.7.14): With hands, the whole saber visual, hilt included, MUST be hidden unless
+  the blade is out or animating. With a controller the hilt is always drawn, as before.
+- **FR-031** (0.7.14): The gripped blade MUST lean forward from the knuckle line, away from the
+  wrist, by `grip_blade_lean_deg` (default 25, on top of the ~15 degrees the knuckle line already
+  has), the way a sword sits in a neutral wrist.
+
+Still first guesses, to be tuned from owner feedback: the two grip thresholds, the hilt offset and
+the lean angle.
 
 ## User Scenarios & Testing *(mandatory)*
 

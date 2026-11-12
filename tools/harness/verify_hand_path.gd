@@ -235,6 +235,7 @@ func _run() -> void:
 	_check("open hand: the blade stays sheathed even though the game wants it", not _saber.is_extended())
 	var pointer_err := _saber.global_position.distance_to(_expected_saber_origin())
 	_check("open hand: the saber node is the pointer at the palm", pointer_err < 0.001, "error %.3f m" % pointer_err)
+	_check("open hand: nothing of the saber is drawn, hilt included", not (_saber.get_node("saber_holder") as Node3D).visible)
 	_grip = GRIP_FIST
 	await _ticks(4)
 	_check("fist: gripping", _controller.is_gripping())
@@ -252,8 +253,14 @@ func _run() -> void:
 		_saber.is_extended() and _saber.last_blade_base.distance_to(_saber.last_blade_tip) > 1.0)
 	var blade_dir := (_saber.last_blade_tip - _saber.last_blade_base).normalized()
 	var knuckle_dir := (ORIGIN_XF.basis * (KNUCKLE_INDEX - KNUCKLE_LITTLE)).normalized()
-	_check("fist: the blade runs along the knuckle line, out of the thumb side",
-		blade_dir.dot(knuckle_dir) > 0.999, "dot %.4f" % blade_dir.dot(knuckle_dir))
+	# Palm is 0.07 m in front of the wrist along -Z in the synthetic hand.
+	var hand_forward := (ORIGIN_XF.basis * Vector3(0.0, 0.0, -1.0)).normalized()
+	var lean_deg := rad_to_deg(acos(clampf(blade_dir.dot(knuckle_dir), -1.0, 1.0)))
+	_check("fist: the blade leans %.0f degrees off the knuckle line" % _controller.grip_blade_lean_deg,
+		absf(lean_deg - _controller.grip_blade_lean_deg) < 0.5, "measured %.1f" % lean_deg)
+	_check("fist: the lean is forward, away from the wrist, and still out of the thumb side",
+		blade_dir.dot(hand_forward) > knuckle_dir.dot(hand_forward) and blade_dir.dot(knuckle_dir) > 0.8)
+	_check("fist: the hilt is drawn", (_saber.get_node("saber_holder") as Node3D).visible)
 	var hilt_gap := _saber.global_position.distance_to(_expected_saber_origin())
 	_check("fist: the hilt sits in the fist", hilt_gap < 0.06, "%.3f m from the palm" % hilt_gap)
 	var target := _StubNote.new()
@@ -288,6 +295,7 @@ func _run() -> void:
 	_check("open hand: the blade retracts", not _saber.is_extended())
 	# The Hide animation shrinks the blade over a second; the pointer pose returns after it.
 	await _ticks(200)
+	_check("open hand: the hilt is gone once the blade has retracted", not (_saber.get_node("saber_holder") as Node3D).visible)
 
 	# --- 7. hand data returns: the blade follows again --------------------------------------
 	_palm.origin += Vector3(0.1, 0.0, 0.0)
@@ -326,6 +334,7 @@ func _run() -> void:
 	await _ticks(2)
 	_check("controller is active again", _controller.get_is_active())
 	_check("saber is parented again", not _saber.hand_drive_active and not _saber.top_level)
+	_check("controller mode: the hilt is always drawn", (_saber.get_node("saber_holder") as Node3D).visible)
 	var local_err := _saber.position.distance_to(_saber.offset_pos + _saber.extra_offset_pos)
 	_check("saber is back on its controller offset", local_err < 0.0001, "error %.4f m" % local_err)
 	var pad_world := (ORIGIN_XF * pad_pose).origin
