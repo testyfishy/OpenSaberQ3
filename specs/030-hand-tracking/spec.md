@@ -166,6 +166,17 @@ headset's own pointer.
 - **FR-040** (0.7.19): The hand-tracking manifest entries come from the export preset
   (`meta_xr_features/hand_tracking=1`, optional) instead of a hand edit to the Gradle template.
 
+Measured from the owner's recording (`hand_capture.csv`, 0.7.18, 60 s, right hand tracked
+throughout, left hand 20 % of the time):
+
+| Quantity | Measured | What it changed (0.7.20) |
+|---|---|---|
+| Palm pose orientation | +Y runs along the hand (cosine 1.00), +X across, +Z through the palm | `hand_saber_offset_rot` -90 X -> 0. This is why the saber first stood square to the hand |
+| Finger curl ratio | fist 0.3, relaxed 0.7-0.8, open 1.0-1.2 | grip on 0.62 -> 0.50, release 0.80 -> 0.58 (a relaxed hand never released) |
+| Thumb-index gap | pinch 0.2-1.1 cm, relaxed 1.7-3.6 cm | fallback pinch 3.0/5.0 cm -> 1.2/2.2 cm (the trigger read as held 55 % of the time) |
+| Grip centre in a fist | 9 cm from the wrist, 1.8 cm from the knuckle row | none: FR-036 puts the hilt in the fingers as intended |
+| Blade with fists held level | 44-50 degrees above horizontal, pointing forward, 47 degrees to the forearm | none: the 25 degree lean gives a sword-like hold |
+
 Still first guesses, to be tuned from owner feedback: the shoulder estimate (0.18 m to the side,
 0.22 m below the head), the 60 ms smoothing, the two grip thresholds, the hilt offset and
 the lean angle.

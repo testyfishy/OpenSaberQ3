@@ -15,8 +15,13 @@ static var _hand_logged := false
 # float from the action map never arrives. The XR_EXT_hand_tracking joints are live, so pinch is
 # computed from the thumb-tip/index-tip distance instead. The rendered hand and the saber both use
 # the hand tracker's palm pose, which keeps the blade in the visible hand.
-const PINCH_PRESS_M := 0.030
-const PINCH_RELEASE_M := 0.050
+# Measured on the owner's hands (hand_capture.csv, 0.7.18): a deliberate pinch closes the tips to
+# 0.2-1.1 cm, while a relaxed hand rests with them 1.7-3.6 cm apart. The first values here
+# (3 cm press, 5 cm release) sat inside that resting range, so the trigger read as held for most
+# of a minute of ordinary hand movement. These are the fallback for when the runtime's own pinch
+# is not available.
+const PINCH_PRESS_M := 0.012
+const PINCH_RELEASE_M := 0.022
 const PINCH_FLAGS := XRHandTracker.HAND_JOINT_FLAG_POSITION_VALID | XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED
 var _pinch_down := false
 # A hand that appears already pinched must not fire a click. Wait for one open-hand frame first.
@@ -26,16 +31,22 @@ var _pinch_open_seen := false
 # origin or a basis; -90 about X points the blade (+Y in saber space) along the palm's -Z, which is
 # the finger direction. X rotation is symmetric across hands; any Y/Z tweak is mirror-sensitive.
 @export var hand_saber_offset_pos := Vector3.ZERO
-@export var hand_saber_offset_rot := Vector3(-90, 0, 0)
+# Zero since 0.7.20: the recording shows the palm pose's +Y already runs along the hand (wrist to
+# knuckles, cosine 1.00 on both hands), and +Y is the saber's blade axis. The -90 degrees about
+# X used until then assumed -Z ran along the fingers, which is what stood the saber square to the
+# hand. Only the fallback path uses this now; the normal poses are built from joint positions.
+@export var hand_saber_offset_rot := Vector3.ZERO
 
 # Grip to ignite (owner decision, 0.7.13): a fist holds the saber, an open hand is the pointer.
 #
 # Curl is measured as fingertip-to-palm distance for the middle, ring and little fingers, divided
 # by the wrist-to-middle-knuckle length so hand size cancels out. The index finger and thumb are
-# left out on purpose: they are the pinch, and a pinch must not read as a grip. Roughly 0.45 in a
-# fist and 1.0 with the hand open; the gap between the two thresholds is the hysteresis.
-const GRIP_ON_RATIO := 0.62
-const GRIP_OFF_RATIO := 0.80
+# left out on purpose: they are the pinch, and a pinch must not read as a grip.
+# Measured on the owner's hands (hand_capture.csv, 0.7.18): about 0.3 in a fist, 1.0-1.2 open,
+# and 0.7-0.8 for a relaxed, half-curled hand. The release threshold was 0.80, so a hand that
+# merely relaxed after a fist never let go of the saber; both now sit between fist and relaxed.
+const GRIP_ON_RATIO := 0.50
+const GRIP_OFF_RATIO := 0.58
 const _GRIP_FINGERTIPS: Array[int] = [
 	XRHandTracker.HAND_JOINT_MIDDLE_FINGER_TIP,
 	XRHandTracker.HAND_JOINT_RING_FINGER_TIP,

@@ -4,6 +4,13 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.20 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
+
+**Hand thresholds set from a recording of real hands.** The first on-device hand recording showed
+that a relaxed hand kept the fallback pinch "pressed" more than half the time, and that a hand
+which relaxed after a fist never released the saber. Both thresholds now sit where the measured
+gestures actually separate. The recording also settled which way the palm pose faces.
+
 ## v0.7.19 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
 
 **The headset's own hand pointer.** The project now uses the open-source Godot OpenXR Vendors

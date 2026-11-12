@@ -98,8 +98,8 @@ func _publish() -> void:
 			XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_INTERMEDIATE: o + KNUCKLE_INDEX + fold,
 			XRHandTracker.HAND_JOINT_PINKY_FINGER_PHALANX_INTERMEDIATE: o + KNUCKLE_LITTLE + fold,
 			XRHandTracker.HAND_JOINT_MIDDLE_FINGER_TIP: o + reach,
-			XRHandTracker.HAND_JOINT_RING_FINGER_TIP: o + reach + Vector3(0.015, 0.0, 0.0),
-			XRHandTracker.HAND_JOINT_PINKY_FINGER_TIP: o + reach + Vector3(0.03, 0.0, 0.0),
+			XRHandTracker.HAND_JOINT_RING_FINGER_TIP: o + reach + Vector3(0.008, 0.0, 0.0),
+			XRHandTracker.HAND_JOINT_PINKY_FINGER_TIP: o + reach + Vector3(0.016, 0.0, 0.0),
 		}
 		for joint: int in placed:
 			_hand.set_hand_joint_transform(joint as XRHandTracker.HandJoint, Transform3D(Basis.IDENTITY, placed[joint]))
@@ -300,6 +300,15 @@ func _run() -> void:
 	await _ticks(3)
 	_check("runtime aim: releasing it releases the trigger", not _controller.trigger_pressed())
 	XRServer.remove_tracker(aim)
+	await _ticks(90)
+	# --- 5d. thresholds measured on a real hand (hand_capture.csv) ---------------------------
+	# A relaxed hand rests with thumb and index 2-3.6 cm apart: that is not a click.
+	_pinch_gap = 0.10
+	await _ticks(2)
+	_pinch_gap = 0.025
+	await _ticks(3)
+	_check("a relaxed hand (tips 2.5 cm apart) does not click", not _controller.trigger_pressed())
+	_pinch_gap = 0.10
 	await _ticks(90)
 	# In a menu the game does not ask for the blade; a fist still ignites it.
 	_saber._hide()
