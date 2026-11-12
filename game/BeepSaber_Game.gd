@@ -351,6 +351,16 @@ func _ready() -> void:
 	bomb_warm.queue_free()
 	wall_warm.queue_free()
 
+	# Hand recorder (game/scripts/HandCapture.gd): only when its flag file has been pushed.
+	var capture_script: Script = load("res://game/scripts/HandCapture.gd")
+	if capture_script != null:
+		var capture_dir := str(capture_script.call("flag_dir"))
+		if not capture_dir.is_empty():
+			var capture: Node = capture_script.call("new")
+			capture.name = "HandCapture"
+			add_child(capture)
+			capture.call("setup", capture_dir, left_controller, right_controller)
+
 	# Deterministic benchmark mode. The runner is normally debug-only; a sideloaded flag opts a
 	# release build in, so a device run can be measured without shipping a debug APK (0.7.5).
 	var runner: Script = load("res://game/scripts/BenchmarkRunner.gd")

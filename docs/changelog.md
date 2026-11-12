@@ -4,6 +4,13 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.18 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
+
+**Hand recorder for off-device debugging.** With a `hand_capture.flag` file pushed next to
+`bench.flag`, the game records 60 seconds of real hand joints to `hand_capture.csv`, so hand
+geometry can be replayed and inspected on a PC instead of described from inside the headset.
+Nothing runs without the flag. No gameplay change from 0.7.17.
+
 ## v0.7.17 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
 
 **A steadier hand pointer, modelled on the system one.** The selection line pointed along the
