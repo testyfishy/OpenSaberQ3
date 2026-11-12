@@ -131,6 +131,17 @@ a pinch is impossible) and, with the hand open, ran square to the hand.
   built from joint positions. The palm pose's orientation is no longer used for it: the -90 degree
   X correction of FR-014 produced a ray square to the hand on the headset.
 
+Owner on 0.7.15: the selection line should start between the thumb and index finger, where the
+click happens; and the hilt still reads as attached to the wrist - a held stick sits in the
+fingers at the MCP and PIP joints, inside the palm.
+
+- **FR-035** (0.7.16): The open-hand pointer MUST start midway between the thumb tip and the index
+  tip and run the way the hand points.
+- **FR-036** (0.7.16, replaces the position half of FR-028): The gripped hilt MUST be centred in
+  the loop of the curled fingers: the centroid of the knuckle row (MCP), the middle-joint row
+  (PIP) and the fingertips. The palm joint and the palm pose's orientation are no longer used for
+  the grip pose. `grip_saber_offset` is now (0, 0.03, 0): the hilt mesh's own centre offset.
+
 Still first guesses, to be tuned from owner feedback: the two grip thresholds, the hilt offset and
 the lean angle.
 

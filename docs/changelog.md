@@ -4,6 +4,16 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.16 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
+
+Owner feedback on 0.7.15.
+
+- **The selection line starts at the pinch.** It began at the palm and ran out between the
+  fingers; it now starts midway between the thumb tip and the index tip.
+- **The hilt is held in the fingers.** It was placed from the palm joint, which sits back toward
+  the wrist. It is now centred in the loop the curled fingers make (knuckles, middle joints,
+  fingertips), so the saber sits in the fist rather than on the wrist.
+
 ## v0.7.15 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
 
 Owner feedback on 0.7.14: one rule for hands everywhere.

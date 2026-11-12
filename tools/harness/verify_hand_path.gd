@@ -88,11 +88,15 @@ func _publish() -> void:
 		# knuckle) is 0.10 m; fingertips sit 0.10 m from the palm when open, 0.04 m in a fist.
 		var o := _palm.origin
 		var reach := Vector3(0.0, 0.0, -0.10) if _grip == GRIP_OPEN else Vector3(0.0, -0.03, -0.025)
+		# Middle joints: straight out when open, folded 4 cm toward the palm side in a fist.
+		var fold := Vector3(0.0, 0.0, -0.04) if _grip == GRIP_OPEN else Vector3(0.0, -0.04, 0.0)
 		var placed := {
 			XRHandTracker.HAND_JOINT_WRIST: o + Vector3(0.0, 0.0, 0.07),
 			XRHandTracker.HAND_JOINT_MIDDLE_FINGER_PHALANX_PROXIMAL: o + Vector3(0.0, 0.0, -0.03),
 			XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_PROXIMAL: o + KNUCKLE_INDEX,
 			XRHandTracker.HAND_JOINT_PINKY_FINGER_PHALANX_PROXIMAL: o + KNUCKLE_LITTLE,
+			XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_INTERMEDIATE: o + KNUCKLE_INDEX + fold,
+			XRHandTracker.HAND_JOINT_PINKY_FINGER_PHALANX_INTERMEDIATE: o + KNUCKLE_LITTLE + fold,
 			XRHandTracker.HAND_JOINT_MIDDLE_FINGER_TIP: o + reach,
 			XRHandTracker.HAND_JOINT_RING_FINGER_TIP: o + reach + Vector3(0.015, 0.0, 0.0),
 			XRHandTracker.HAND_JOINT_PINKY_FINGER_TIP: o + reach + Vector3(0.03, 0.0, 0.0),
@@ -124,6 +128,11 @@ func _ticks(n: int) -> void:
 	# frame's _process has run since the last tick.
 	await get_tree().process_frame
 	await get_tree().process_frame
+
+
+# Where the open-hand pointer must start: midway between the thumb tip and the index tip.
+func _expected_pointer_origin() -> Vector3:
+	return ORIGIN_XF * (_palm.origin + Vector3(_pinch_gap * 0.5, 0.0, -0.08))
 
 
 # The world-space pose the blade root must have for the current palm pose.
@@ -170,7 +179,11 @@ func _run() -> void:
 	_check("Hands off hides the rendered hand", not drawn.visible)
 	Settings.hand_tracking_enabled = true
 	_publish_all_joints = false
+	# Back to the three-joint hand: joints that are no longer published must not stay "tracked".
+	for joint in XRHandTracker.HAND_JOINT_MAX:
+		_hand.set_hand_joint_flags(joint, 0)
 	drawn.queue_free()
+	await _ticks(2)
 
 	# --- 2. the cut segment is the pose of the same tick, not the previous frame's ----------
 	# Move the hand every tick; the segment the resolver sweeps must be the one just delivered.
@@ -256,8 +269,8 @@ func _run() -> void:
 	await _ticks(200)
 	_check("menu: opening the hand puts it away again", not _saber.is_extended())
 	_saber._show()
-	var pointer_err := _saber.global_position.distance_to(_expected_saber_origin())
-	_check("open hand: the saber node is the pointer at the palm", pointer_err < 0.001, "error %.3f m" % pointer_err)
+	var pointer_err := _saber.global_position.distance_to(_expected_pointer_origin())
+	_check("open hand: the pointer starts midway between thumb tip and index tip", pointer_err < 0.001, "error %.3f m" % pointer_err)
 	_check("open hand: nothing of the saber is drawn, hilt included", not (_saber.get_node("saber_holder") as Node3D).visible)
 	_grip = GRIP_FIST
 	await _ticks(4)
@@ -284,8 +297,16 @@ func _run() -> void:
 	_check("fist: the lean is forward, away from the wrist, and still out of the thumb side",
 		blade_dir.dot(hand_forward) > knuckle_dir.dot(hand_forward) and blade_dir.dot(knuckle_dir) > 0.8)
 	_check("fist: the hilt is drawn", (_saber.get_node("saber_holder") as Node3D).visible)
-	var hilt_gap := _saber.global_position.distance_to(_expected_saber_origin())
-	_check("fist: the hilt sits in the fist", hilt_gap < 0.06, "%.3f m from the palm" % hilt_gap)
+	# The hilt mesh is centred 3 cm below the saber origin. Its centre must sit in the loop of
+	# the curled fingers: close to the knuckle row, on the palm side of it, and well away from
+	# the wrist.
+	var hilt_center := _saber.global_position - blade_dir * 0.03
+	var knuckle_row := ORIGIN_XF * (_palm.origin + (KNUCKLE_INDEX + KNUCKLE_LITTLE) * 0.5)
+	var wrist := ORIGIN_XF * (_palm.origin + Vector3(0.0, 0.0, 0.07))
+	_check("fist: the hilt is held in the curled fingers, not at the wrist",
+		hilt_center.distance_to(knuckle_row) < 0.04 and hilt_center.distance_to(wrist) > 0.07
+		and hilt_center.y < knuckle_row.y,
+		"%.3f m from the knuckle row, %.3f m from the wrist" % [hilt_center.distance_to(knuckle_row), hilt_center.distance_to(wrist)])
 	var target := _StubNote.new()
 	add_child(target)
 	# Positive control first: a note resting on a live, extended blade is cut.
@@ -323,7 +344,7 @@ func _run() -> void:
 	# --- 7. hand data returns: the blade follows again --------------------------------------
 	_palm.origin += Vector3(0.1, 0.0, 0.0)
 	await _ticks(3)
-	err = _saber.global_position.distance_to(_expected_saber_origin())
+	err = _saber.global_position.distance_to(_expected_pointer_origin())
 	_check("saber follows again when hand data returns", err < 0.001, "error %.3f m" % err)
 
 	# --- 8. Hands off: the hand path stops, pinch cannot press the trigger ------------------

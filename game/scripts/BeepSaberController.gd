@@ -42,10 +42,10 @@ const _GRIP_FINGERTIPS: Array[int] = [
 	XRHandTracker.HAND_JOINT_PINKY_FINGER_TIP,
 ]
 var _gripping := false
-# Where the hilt sits relative to the fist, in the grip frame (y along the blade, z out of the
-# back of the hand): a little back along the blade so it emerges from the fist, and into the
-# palm so it runs through the curled fingers.
-@export var grip_saber_offset := Vector3(0.0, -0.03, -0.025)
+# Where the saber's origin sits relative to the centre of the grip, in the grip frame (y along
+# the blade). The hilt mesh is centred 3 cm below the saber origin, so +3 cm along the blade
+# puts the middle of the hilt in the middle of the fist.
+@export var grip_saber_offset := Vector3(0.0, 0.03, 0.0)
 # How far the blade leans forward (away from the wrist) from the knuckle line, in degrees.
 # A stick held in a relaxed fist does not stand square to the forearm: with the wrist neutral it
 # leans forward, and a sword is held with the point further forward still. The knuckle line
@@ -152,45 +152,60 @@ func _update_grip() -> void:
 	elif total / float(_GRIP_FINGERTIPS.size()) > GRIP_OFF_RATIO:
 		_gripping = false
 
-# The saber pose for a gripped hand, in world space: the blade runs along the knuckle line and
-# leaves the fist on the thumb side, the way a held hilt does. The knuckle line (little-finger
-# knuckle to index knuckle) points to the thumb side on both hands, so nothing here is mirrored.
-# Falls back to the palm pose when the knuckles are not tracked.
+# The saber pose for a gripped hand, in world space.
+#
+# Where: in the channel a fist makes. A held stick lies against the palm, wrapped by the fingers
+# from the knuckles (MCP) round the middle joints (PIP) to the fingertips; the centre of that
+# loop is the centre of the grip. It is taken from those joints directly, so the hilt sits in
+# the curled fingers whatever the hand size - not at the palm joint, which is back toward the
+# wrist and is where 0.7.13/0.7.14 put it.
+# Which way: along the knuckle line (little knuckle to index knuckle, which points to the thumb
+# side on both hands, so nothing is mirrored), leaned forward by grip_blade_lean_deg.
+# Falls back to the palm pose when those joints are not tracked.
 func hand_grip_transform() -> Transform3D:
 	var hand := _hand_tracker()
 	if hand == null:
 		return hand_world_transform()
-	var index_knuckle := XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_PROXIMAL
-	var little_knuckle := XRHandTracker.HAND_JOINT_PINKY_FINGER_PHALANX_PROXIMAL
-	if not _joint_tracked(hand, index_knuckle) or not _joint_tracked(hand, little_knuckle):
-		return hand_world_transform()
-	var palm := hand.get_hand_joint_transform(XRHandTracker.HAND_JOINT_PALM)
-	var along := _joint_origin(hand, index_knuckle) - _joint_origin(hand, little_knuckle)
+	var index_mcp := XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_PROXIMAL
+	var little_mcp := XRHandTracker.HAND_JOINT_PINKY_FINGER_PHALANX_PROXIMAL
+	var index_pip := XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_INTERMEDIATE
+	var little_pip := XRHandTracker.HAND_JOINT_PINKY_FINGER_PHALANX_INTERMEDIATE
+	var needed: Array[int] = [index_mcp, little_mcp, index_pip, little_pip,
+		XRHandTracker.HAND_JOINT_WRIST, XRHandTracker.HAND_JOINT_PALM]
+	needed.append_array(_GRIP_FINGERTIPS)
+	for joint in needed:
+		if not _joint_tracked(hand, joint):
+			return hand_world_transform()
+	var knuckles := (_joint_origin(hand, index_mcp) + _joint_origin(hand, little_mcp)) * 0.5
+	var middles := (_joint_origin(hand, index_pip) + _joint_origin(hand, little_pip)) * 0.5
+	var tips := Vector3.ZERO
+	for joint in _GRIP_FINGERTIPS:
+		tips += _joint_origin(hand, joint)
+	tips /= float(_GRIP_FINGERTIPS.size())
+	var center := (knuckles + middles + tips) / 3.0
+
+	var along := _joint_origin(hand, index_mcp) - _joint_origin(hand, little_mcp)
 	if along.length() < 0.01:
 		return hand_world_transform()
 	var y := along.normalized()
-	# Lean the blade forward: rotate it toward the wrist-to-knuckle direction, in the plane the
-	# two span. Skipped when the wrist is not tracked.
-	if _joint_tracked(hand, XRHandTracker.HAND_JOINT_WRIST):
-		var forward := _joint_origin(hand, XRHandTracker.HAND_JOINT_PALM) - _joint_origin(hand, XRHandTracker.HAND_JOINT_WRIST)
-		forward -= y * forward.dot(y)
-		if forward.length() > 0.005:
-			var lean := deg_to_rad(grip_blade_lean_deg)
-			y = (y * cos(lean) + forward.normalized() * sin(lean)).normalized()
-	# Back of the hand, made perpendicular to the blade.
-	var back := palm.basis.y - y * palm.basis.y.dot(y)
-	if back.length() < 0.01:
+	# Forward: the way the hand points, wrist to palm, made square to the knuckle line.
+	var forward := _joint_origin(hand, XRHandTracker.HAND_JOINT_PALM) - _joint_origin(hand, XRHandTracker.HAND_JOINT_WRIST)
+	forward -= y * forward.dot(y)
+	if forward.length() < 0.005:
 		return hand_world_transform()
-	var z := back.normalized()
-	var x := y.cross(z)
-	var grip := Transform3D(Basis(x, y, z), palm.origin)
+	forward = forward.normalized()
+	var lean := deg_to_rad(grip_blade_lean_deg)
+	var blade := (y * cos(lean) + forward * sin(lean)).normalized()
+	# The roll about the blade does not matter to a round hilt; any square frame will do.
+	var side := (forward - blade * forward.dot(blade)).normalized()
+	var grip := Transform3D(Basis(side.cross(blade), blade, side), center)
 	grip.origin += grip.basis * grip_saber_offset
 	# Joint transforms are in the XR origin's space, like the palm pose (see hand_world_transform).
 	var parent := get_parent() as Node3D
 	var base := parent.global_transform if parent != null else Transform3D.IDENTITY
 	return base * grip
 
-# The saber-node pose for an open hand, in world space: at the palm, with the saber's +Y (the
+# The saber-node pose for an open hand, in world space: at the pinch point, with the saber's +Y (the
 # axis the UI ray runs along) pointing the way the hand points, wrist to middle knuckle.
 #
 # Built from joint positions, not from the palm pose's orientation. 0.7.8-0.7.14 rotated the palm
@@ -220,7 +235,13 @@ func hand_pointer_transform() -> Transform3D:
 	if across.length() < 0.005:
 		return fallback
 	var x := across.normalized()
-	var pointer := Transform3D(Basis(x, y, x.cross(y)), _joint_origin(hand, XRHandTracker.HAND_JOINT_PALM))
+	# The line starts where the click happens: midway between the thumb tip and the index tip,
+	# the two that meet in a pinch. It still runs the way the hand points.
+	var start := _joint_origin(hand, XRHandTracker.HAND_JOINT_PALM)
+	if _joint_tracked(hand, XRHandTracker.HAND_JOINT_THUMB_TIP) and _joint_tracked(hand, XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP):
+		start = (_joint_origin(hand, XRHandTracker.HAND_JOINT_THUMB_TIP)
+			+ _joint_origin(hand, XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP)) * 0.5
+	var pointer := Transform3D(Basis(x, y, x.cross(y)), start)
 	var parent := get_parent() as Node3D
 	var base := parent.global_transform if parent != null else Transform3D.IDENTITY
 	return base * pointer
