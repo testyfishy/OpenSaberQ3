@@ -80,6 +80,20 @@ transform.
 Still unverified on the headset: SC-006/SC-007, and whether the APK manifest declares hand
 tracking at all (see the audit report, finding H-1).
 
+## Scoped change — light-skeleton hands (0.7.11, owner feedback on 0.7.10)
+
+Owner, in the headset: the humanoid hand mesh looks jarring in a light-show game, and there is a
+visible gap between the ring and little fingers.
+
+- **FR-024**: Each hand MUST be drawn as glowing bars between the tracked joints (27 bars, one
+  MultiMesh draw per hand, unshaded, in that hand's saber colour, bright enough for the glow pass).
+  This replaces the humanoid mesh and `XRHandModifier3D` of FR-011. The bars are placed from the
+  joint positions directly, so nothing is skinned and the mesh's proportions cannot open gaps.
+- **FR-025**: A bar whose joints have no valid position MUST be hidden, not drawn to the origin.
+- The hand node is a plain `Node3D` under the XR origin (joint transforms are already in the
+  origin's space). The humanoid `.gltf` assets stay in the repo, unused, until the owner confirms
+  the new look on the headset.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Hands drive the sabers (Priority: P1)

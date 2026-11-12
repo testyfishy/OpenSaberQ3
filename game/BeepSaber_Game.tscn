@@ -163,17 +163,11 @@ transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 
 ui_raycast_length = 5.0
 controller = NodePath("../..")
 
-[node name="LeftHand" type="XRNode3D" parent="XROrigin3D"]
-tracker = &"/user/hand_tracker/left"
-pose = &"default"
-show_when_tracked = true
+[node name="LeftHand" type="Node3D" parent="XROrigin3D"]
 script = ExtResource("50_hands")
 hand = 0
 
-[node name="RightHand" type="XRNode3D" parent="XROrigin3D"]
-tracker = &"/user/hand_tracker/right"
-pose = &"default"
-show_when_tracked = true
+[node name="RightHand" type="Node3D" parent="XROrigin3D"]
 script = ExtResource("50_hands")
 hand = 1
 

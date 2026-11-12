@@ -13,6 +13,7 @@ extends Node
 const SABER_SCENE := preload("res://game/LightSaber.tscn")
 const ControllerScript := preload("res://game/scripts/BeepSaberController.gd")
 const HitResolver := preload("res://game/scripts/HitResolver.gd")
+const RenderedHandScript := preload("res://game/hands/RenderedHand.gd")
 
 const TRACKER_NAME := &"/user/hand_tracker/left"
 # Deliberately not at the world origin and rotated, so a pose left in XR-origin space is caught.
@@ -78,6 +79,15 @@ func _publish() -> void:
 	_hand.set_hand_joint_transform(XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP,
 		Transform3D(Basis.IDENTITY, thumb + Vector3(_pinch_gap, 0.0, 0.0)))
 	_hand.set_hand_joint_flags(XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP, flags)
+	if _publish_all_joints:
+		for joint in XRHandTracker.HAND_JOINT_MAX:
+			_hand.set_hand_joint_transform(joint, Transform3D(Basis.IDENTITY, _joint_position(joint)))
+			_hand.set_hand_joint_flags(joint, flags)
+
+
+# A made-up but distinct position per joint, relative to the palm, for the rendered-hand check.
+func _joint_position(joint: int) -> Vector3:
+	return _palm.origin + Vector3(0.01 * float(joint % 5), 0.004 * float(joint), -0.006 * float(joint))
 
 
 func _check(label: String, ok: bool, detail: String = "") -> void:
@@ -110,6 +120,36 @@ func _run() -> void:
 	# --- 1. the blade sits in the hand, in world space --------------------------------------
 	var err := _saber.global_position.distance_to(_expected_saber_origin())
 	_check("saber follows the palm in world space", err < 0.001, "error %.3f m" % err)
+
+	# --- 1b. the rendered hand: bars sit on the tracked joints, in world space ---------------
+	var drawn := RenderedHandScript.new() as Node3D
+	drawn.set("hand", 0)
+	_origin.add_child(drawn)
+	await _ticks(2)
+	_check("rendered hand is visible while tracked", drawn.visible)
+	_check("rendered hand has one bar per bone", int(drawn.call(&"segment_count")) == 27,
+		"bars=%d" % int(drawn.call(&"segment_count")))
+	# This harness only publishes palm, thumb tip and index tip, so every bar touches a joint
+	# with no valid position: all of them must be hidden rather than drawn to the origin.
+	var stray := 0
+	for i in int(drawn.call(&"segment_count")):
+		var xf: Transform3D = drawn.call(&"segment_transform", i)
+		if xf.basis.z.length() > 0.0001:
+			stray += 1
+	_check("bars to untracked joints are hidden", stray == 0, "visible bars=%d" % stray)
+	_publish_all_joints = true
+	await _ticks(2)
+	var bar: Transform3D = drawn.call(&"segment_transform", 0)
+	var bar_world := drawn.global_transform * bar.origin
+	var want := ORIGIN_XF * ((_joint_position(XRHandTracker.HAND_JOINT_WRIST) + _joint_position(XRHandTracker.HAND_JOINT_THUMB_METACARPAL)) * 0.5)
+	_check("a bar is centred between its two joints, in world space", bar_world.distance_to(want) < 0.001,
+		"error %.3f m" % bar_world.distance_to(want))
+	Settings.hand_tracking_enabled = false
+	await _ticks(1)
+	_check("Hands off hides the rendered hand", not drawn.visible)
+	Settings.hand_tracking_enabled = true
+	_publish_all_joints = false
+	drawn.queue_free()
 
 	# --- 2. the cut segment is the pose of the same tick, not the previous frame's ----------
 	# Move the hand every tick; the segment the resolver sweeps must be the one just delivered.
@@ -254,6 +294,7 @@ func _run() -> void:
 
 
 var _lag_check := false
+var _publish_all_joints := false
 var _lag_worst := 0.0
 
 

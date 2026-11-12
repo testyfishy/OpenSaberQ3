@@ -4,6 +4,14 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.11 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
+
+**Light-skeleton hands.** The humanoid hand mesh is replaced by glowing bars between the tracked
+joints, in each hand's saber colour: 27 bars and one draw call per hand. Owner feedback on 0.7.10
+was that real-looking hands were jarring in this game and showed a gap at the little finger.
+
+[Spec](../specs/030-hand-tracking/spec.md)
+
 ## v0.7.10 - 2026-11-11 (installed from `audit/fable-5.2`, untagged)
 
 Code audit of 0.7.9, built as 0.7.10 (versionCode 26) and installed on the headset; boots with no script errors, gameplay and hands not yet played. The APK now declares hand tracking (`com.oculus.permission.HAND_TRACKING`, `oculus.software.handtracking`); that edit lives in the gitignored `android/build/src/main/AndroidManifest.xml`. Full findings: [audit report](audit-fable-5.2.md).
