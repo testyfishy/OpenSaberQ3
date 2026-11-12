@@ -28,6 +28,25 @@ var _pinch_open_seen := false
 @export var hand_saber_offset_pos := Vector3.ZERO
 @export var hand_saber_offset_rot := Vector3(-90, 0, 0)
 
+# Grip to ignite (owner decision, 0.7.13): a fist holds the saber, an open hand is the pointer.
+#
+# Curl is measured as fingertip-to-palm distance for the middle, ring and little fingers, divided
+# by the wrist-to-middle-knuckle length so hand size cancels out. The index finger and thumb are
+# left out on purpose: they are the pinch, and a pinch must not read as a grip. Roughly 0.45 in a
+# fist and 1.0 with the hand open; the gap between the two thresholds is the hysteresis.
+const GRIP_ON_RATIO := 0.62
+const GRIP_OFF_RATIO := 0.80
+const _GRIP_FINGERTIPS: Array[int] = [
+	XRHandTracker.HAND_JOINT_MIDDLE_FINGER_TIP,
+	XRHandTracker.HAND_JOINT_RING_FINGER_TIP,
+	XRHandTracker.HAND_JOINT_PINKY_FINGER_TIP,
+]
+var _gripping := false
+# Where the hilt sits relative to the fist, in the grip frame (y along the blade, z out of the
+# back of the hand): a little back along the blade so it emerges from the fist, and into the
+# palm so it runs through the curled fingers.
+@export var grip_saber_offset := Vector3(0.0, -0.03, -0.025)
+
 # True from the first live hand frame until a controller is tracked again. Deliberately sticky
 # across a tracking dropout: while the hand is occluded the controller is still asleep, and its
 # node still holds the transform it had when it went to sleep, so falling back to it would
@@ -89,7 +108,80 @@ func _update_buttons_and_sticks() -> void:
 		_pinch_down = false
 		_pinch_open_seen = false
 
+# True while the hands drive the sabers and this hand is closed into a fist. Sticky through a
+# tracking dropout: a fist hides its own fingers from the cameras, and a blade that flickered
+# off every time that happened would be worse than one that holds its last state.
+func is_gripping() -> bool:
+	return hand_driven and _gripping
+
+func _joint_tracked(hand: XRHandTracker, joint: int) -> bool:
+	return (hand.get_hand_joint_flags(joint as XRHandTracker.HandJoint) & PINCH_FLAGS) == PINCH_FLAGS
+
+func _joint_origin(hand: XRHandTracker, joint: int) -> Vector3:
+	return hand.get_hand_joint_transform(joint as XRHandTracker.HandJoint).origin
+
+func _update_grip() -> void:
+	var hand := _hand_tracker()
+	if hand == null:
+		return
+	var needed: Array[int] = [XRHandTracker.HAND_JOINT_PALM, XRHandTracker.HAND_JOINT_WRIST,
+		XRHandTracker.HAND_JOINT_MIDDLE_FINGER_PHALANX_PROXIMAL]
+	needed.append_array(_GRIP_FINGERTIPS)
+	for joint in needed:
+		if not _joint_tracked(hand, joint):
+			return
+	var palm := _joint_origin(hand, XRHandTracker.HAND_JOINT_PALM)
+	var hand_size := _joint_origin(hand, XRHandTracker.HAND_JOINT_WRIST).distance_to(
+		_joint_origin(hand, XRHandTracker.HAND_JOINT_MIDDLE_FINGER_PHALANX_PROXIMAL))
+	if hand_size < 0.03:
+		return
+	var most_open := 0.0
+	var total := 0.0
+	for joint in _GRIP_FINGERTIPS:
+		var ratio := _joint_origin(hand, joint).distance_to(palm) / hand_size
+		most_open = maxf(most_open, ratio)
+		total += ratio
+	if most_open < GRIP_ON_RATIO:
+		_gripping = true
+	elif total / float(_GRIP_FINGERTIPS.size()) > GRIP_OFF_RATIO:
+		_gripping = false
+
+# The saber pose for a gripped hand, in world space: the blade runs along the knuckle line and
+# leaves the fist on the thumb side, the way a held hilt does. The knuckle line (little-finger
+# knuckle to index knuckle) points to the thumb side on both hands, so nothing here is mirrored.
+# Falls back to the palm pose when the knuckles are not tracked.
+func hand_grip_transform() -> Transform3D:
+	var hand := _hand_tracker()
+	if hand == null:
+		return hand_world_transform()
+	var index_knuckle := XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_PROXIMAL
+	var little_knuckle := XRHandTracker.HAND_JOINT_PINKY_FINGER_PHALANX_PROXIMAL
+	if not _joint_tracked(hand, index_knuckle) or not _joint_tracked(hand, little_knuckle):
+		return hand_world_transform()
+	var palm := hand.get_hand_joint_transform(XRHandTracker.HAND_JOINT_PALM)
+	var along := _joint_origin(hand, index_knuckle) - _joint_origin(hand, little_knuckle)
+	if along.length() < 0.01:
+		return hand_world_transform()
+	var y := along.normalized()
+	# Back of the hand, made perpendicular to the blade.
+	var back := palm.basis.y - y * palm.basis.y.dot(y)
+	if back.length() < 0.01:
+		return hand_world_transform()
+	var z := back.normalized()
+	var x := y.cross(z)
+	var grip := Transform3D(Basis(x, y, z), palm.origin)
+	grip.origin += grip.basis * grip_saber_offset
+	# Joint transforms are in the XR origin's space, like the palm pose (see hand_world_transform).
+	var parent := get_parent() as Node3D
+	var base := parent.global_transform if parent != null else Transform3D.IDENTITY
+	return base * grip
+
 func _update_hand_pinch() -> void:
+	# A fist brings the thumb and index tips together; that is a grip, not a click.
+	if _gripping:
+		_pinch_down = false
+		_pinch_open_seen = false
+		return
 	var hand := _hand_tracker()
 	if hand == null:
 		_pinch_down = false
@@ -128,12 +220,14 @@ func reset_movement_aabb() -> void:
 func _refresh_hand_mode() -> void:
 	if is_hand_tracking():
 		_last_hand_origin = hand_world_transform().origin
+		_update_grip()
 		if not hand_driven:
 			hand_driven = true
 			# The travel box must not span the sleeping controller and the hand.
 			reset_movement_aabb()
 	elif hand_driven and get_is_active():
 		hand_driven = false
+		_gripping = false
 		reset_movement_aabb()
 
 var _is_simple_rumbling := false

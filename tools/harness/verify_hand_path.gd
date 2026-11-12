@@ -83,6 +83,23 @@ func _publish() -> void:
 	_hand.set_hand_joint_transform(XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP,
 		Transform3D(Basis.IDENTITY, thumb + Vector3(_pinch_gap, 0.0, 0.0)))
 	_hand.set_hand_joint_flags(XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP, flags)
+	if _grip != GRIP_UNPUBLISHED:
+		# Enough of the hand for the grip test and the hilt pose. Hand size (wrist to middle
+		# knuckle) is 0.10 m; fingertips sit 0.10 m from the palm when open, 0.04 m in a fist.
+		var o := _palm.origin
+		var reach := Vector3(0.0, 0.0, -0.10) if _grip == GRIP_OPEN else Vector3(0.0, -0.03, -0.025)
+		var placed := {
+			XRHandTracker.HAND_JOINT_WRIST: o + Vector3(0.0, 0.0, 0.07),
+			XRHandTracker.HAND_JOINT_MIDDLE_FINGER_PHALANX_PROXIMAL: o + Vector3(0.0, 0.0, -0.03),
+			XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_PROXIMAL: o + KNUCKLE_INDEX,
+			XRHandTracker.HAND_JOINT_PINKY_FINGER_PHALANX_PROXIMAL: o + KNUCKLE_LITTLE,
+			XRHandTracker.HAND_JOINT_MIDDLE_FINGER_TIP: o + reach,
+			XRHandTracker.HAND_JOINT_RING_FINGER_TIP: o + reach + Vector3(0.015, 0.0, 0.0),
+			XRHandTracker.HAND_JOINT_PINKY_FINGER_TIP: o + reach + Vector3(0.03, 0.0, 0.0),
+		}
+		for joint: int in placed:
+			_hand.set_hand_joint_transform(joint as XRHandTracker.HandJoint, Transform3D(Basis.IDENTITY, placed[joint]))
+			_hand.set_hand_joint_flags(joint as XRHandTracker.HandJoint, flags)
 	if _publish_all_joints:
 		for joint in XRHandTracker.HAND_JOINT_MAX:
 			_hand.set_hand_joint_transform(joint, Transform3D(Basis.IDENTITY, _joint_position(joint)))
@@ -210,12 +227,35 @@ func _run() -> void:
 	var player := AudioStreamPlayer.new()
 	add_child(player)
 	_saber.song_player_ref = player
+	# --- 5b. grip to ignite ---------------------------------------------------------------
+	_grip = GRIP_OPEN
 	_saber._show()
+	await _ticks(4)
+	_check("open hand: not gripping", not _controller.is_gripping())
+	_check("open hand: the blade stays sheathed even though the game wants it", not _saber.is_extended())
+	var pointer_err := _saber.global_position.distance_to(_expected_saber_origin())
+	_check("open hand: the saber node is the pointer at the palm", pointer_err < 0.001, "error %.3f m" % pointer_err)
+	_grip = GRIP_FIST
+	await _ticks(4)
+	_check("fist: gripping", _controller.is_gripping())
+	_check("fist: the blade ignites", _saber.is_extended())
+	_pinch_gap = 0.10
+	await _ticks(2)
+	_pinch_gap = 0.01
+	await _ticks(2)
+	_check("fist: thumb on index is not a click", not _controller.trigger_pressed())
+	_pinch_gap = 0.10
 	_saber.set_swingcast_enabled(true)
 	# The Show animation extends the blade over a second; wait it out.
 	await _ticks(200)
 	_check("premise: the blade is extended",
 		_saber.is_extended() and _saber.last_blade_base.distance_to(_saber.last_blade_tip) > 1.0)
+	var blade_dir := (_saber.last_blade_tip - _saber.last_blade_base).normalized()
+	var knuckle_dir := (ORIGIN_XF.basis * (KNUCKLE_INDEX - KNUCKLE_LITTLE)).normalized()
+	_check("fist: the blade runs along the knuckle line, out of the thumb side",
+		blade_dir.dot(knuckle_dir) > 0.999, "dot %.4f" % blade_dir.dot(knuckle_dir))
+	var hilt_gap := _saber.global_position.distance_to(_expected_saber_origin())
+	_check("fist: the hilt sits in the fist", hilt_gap < 0.06, "%.3f m from the palm" % hilt_gap)
 	var target := _StubNote.new()
 	add_child(target)
 	# Positive control first: a note resting on a live, extended blade is cut.
@@ -230,6 +270,7 @@ func _run() -> void:
 	await _ticks(2)
 	_check("premise: hand path dropped", not _controller.is_hand_tracking())
 	_check("premise: the blade is parked, still extended", _saber.hand_drive_active and _saber.is_extended())
+	_check("a dropout does not drop the grip", _controller.is_gripping())
 	target.cuts = 0
 	target.global_position = _saber.last_blade_base.lerp(_saber.last_blade_tip, 0.5)
 	target.arm(_saber._hit_mask)
@@ -238,8 +279,17 @@ func _run() -> void:
 	target.disarm()
 	target.queue_free()
 
-	# --- 7. hand data returns: the blade follows again --------------------------------------
+	# --- 6b. opening the hand sheathes the blade --------------------------------------------
 	_hand.has_tracking_data = true
+	await _ticks(2)
+	_check("premise: still ignited when the hand returns as a fist", _saber.is_extended())
+	_grip = GRIP_OPEN
+	await _ticks(4)
+	_check("open hand: the blade retracts", not _saber.is_extended())
+	# The Hide animation shrinks the blade over a second; the pointer pose returns after it.
+	await _ticks(200)
+
+	# --- 7. hand data returns: the blade follows again --------------------------------------
 	_palm.origin += Vector3(0.1, 0.0, 0.0)
 	await _ticks(3)
 	err = _saber.global_position.distance_to(_expected_saber_origin())
@@ -299,6 +349,14 @@ func _run() -> void:
 
 var _lag_check := false
 var _publish_all_joints := false
+# What the synthetic hand is doing with its three grip fingers.
+const GRIP_UNPUBLISHED := 0
+const GRIP_OPEN := 1
+const GRIP_FIST := 2
+var _grip := GRIP_UNPUBLISHED
+# Knuckle positions relative to the palm; the blade of a gripped saber runs little -> index.
+const KNUCKLE_INDEX := Vector3(-0.035, 0.0, -0.03)
+const KNUCKLE_LITTLE := Vector3(0.03, 0.0, -0.02)
 var _lag_worst := 0.0
 
 

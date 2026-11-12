@@ -94,6 +94,25 @@ visible gap between the ring and little fingers.
   origin's space). The humanoid `.gltf` assets stay in the repo, unused, until the owner confirms
   the new look on the headset.
 
+## Scoped change — grip to ignite (0.7.13, owner decision)
+
+Owner, after playing 0.7.10: the saber stuck to the wrist reads wrong; "make a fist, the lightsaber
+ignites, and then you just start smashing". The light-skeleton hands of FR-024 are approved.
+
+- **FR-026**: With hands, the blade MUST be out only while the game state wants it AND that hand is
+  a fist. Opening the hand sheathes it; closing it ignites it again. Controllers are unchanged.
+- **FR-027**: A fist is detected from the middle, ring and little fingertips' distance to the palm,
+  divided by the wrist-to-middle-knuckle length (grip below 0.62, release above 0.80). The index
+  finger and thumb are excluded, and a pinch is ignored while gripping, so a fist never clicks.
+- **FR-028**: While the blade is out (or animating), the saber is posed as a hilt held in the fist:
+  along the little-knuckle to index-knuckle line, leaving the fist on the thumb side, offset by
+  `grip_saber_offset`. With the blade away the saber node is the open-hand pointer of FR-012, which
+  the UI ray rides on. The pose only switches while the blade has no length.
+- **FR-029**: The grip is sticky through a tracking dropout (a fist hides its own fingers); FR-022
+  still stops a parked blade from cutting.
+
+Not yet seen on the headset: the two grip thresholds and the hilt offset are first guesses.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Hands drive the sabers (Priority: P1)

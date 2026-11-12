@@ -45,7 +45,29 @@ var _hit_prev_tip := Vector3.ZERO
 
 const Cost := preload("res://game/scripts/CostProbe.gd")
 
+# The game states ask for the blade with _show()/_hide(). With controllers that is the whole
+# story. With hands the player also has to be holding it: the blade is out only while the state
+# wants it AND the hand is a fist (grip to ignite), so opening the hand sheathes it.
+var _blade_wanted := false
+
 func _show() -> void:
+	_blade_wanted = true
+	_apply_blade()
+
+func _hide() -> void:
+	_blade_wanted = false
+	_apply_blade()
+
+func _apply_blade() -> void:
+	var out := _blade_wanted
+	if out and hand_drive_active and controller != null:
+		out = controller.is_gripping()
+	if out:
+		_extend()
+	else:
+		_retract()
+
+func _extend() -> void:
 	if not is_extended():
 		_anim.play(&"Show")
 		saber_visual._show()
@@ -53,7 +75,7 @@ func _show() -> void:
 func is_extended() -> bool:
 	return saber_visual.is_extended
 
-func _hide() -> void:
+func _retract() -> void:
 	# This check makes sure that we are not already in the hidden state
 	# (where we translated the light saber to the hilt) to avoid playing it back
 	# again from the fully extended light saber position
@@ -147,12 +169,21 @@ func _sync_pose_source() -> void:
 			# The controllers are back: return to the parented path at once instead of
 			# waiting for the next physics tick.
 			_apply_controller_offset()
+	if hand_drive_active:
+		_apply_blade()
 	if hand_drive_active and controller.is_hand_tracking():
-		# Palm pose * hand correction. The saber +Y runs along the palm -Z (finger direction),
-		# which is what the -90 X default in BeepSaberController does.
-		var correction_rot := controller.hand_saber_offset_rot * (PI / 180.0)
-		var correction := Transform3D(Basis.from_euler(correction_rot), controller.hand_saber_offset_pos)
-		global_transform = controller.hand_world_transform() * correction
+		# Two poses. Blade out (or still animating in or out): a hilt held in the fist, along
+		# the knuckle line. Blade away: the open-hand pointer along the fingers, which is what
+		# the UI ray rides on. The switch only happens while the blade has no length, so the
+		# blade never swings a quarter turn through the lane.
+		if controller.is_gripping() or is_extended() or _anim.is_playing():
+			global_transform = controller.hand_grip_transform()
+		else:
+			# Palm pose * hand correction. The saber +Y runs along the palm -Z (finger
+			# direction), which is what the -90 X default in BeepSaberController does.
+			var correction_rot := controller.hand_saber_offset_rot * (PI / 180.0)
+			var correction := Transform3D(Basis.from_euler(correction_rot), controller.hand_saber_offset_pos)
+			global_transform = controller.hand_world_transform() * correction
 
 func _apply_controller_offset() -> void:
 	position = offset_pos + extra_offset_pos

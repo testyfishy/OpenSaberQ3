@@ -4,6 +4,15 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.13 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
+
+**Grip to ignite.** With hand tracking, make a fist and the saber ignites in it like a held hilt,
+running along the knuckles and out of the thumb side; open the hand and it sheathes, and the open
+hand is the menu pointer with pinch to click. A fist is never read as a click. Controllers are
+unchanged.
+
+[Spec](../specs/030-hand-tracking/spec.md)
+
 ## v0.7.12 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
 
 Owner feedback from playing 0.7.10.
