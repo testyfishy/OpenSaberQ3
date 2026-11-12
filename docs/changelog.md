@@ -4,6 +4,13 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.17 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
+
+**A steadier hand pointer, modelled on the system one.** The selection line pointed along the
+hand, so the finger movement of a pinch swung its far end off the button. It now takes its
+direction from the arm (an estimated shoulder through the index knuckle), is smoothed, and holds
+its start point still while the fingers close. It still starts between the thumb and index tips.
+
 ## v0.7.16 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
 
 Owner feedback on 0.7.15.

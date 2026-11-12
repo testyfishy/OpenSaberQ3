@@ -142,7 +142,19 @@ fingers at the MCP and PIP joints, inside the palm.
   (PIP) and the fingertips. The palm joint and the palm pose's orientation are no longer used for
   the grip pose. `grip_saber_offset` is now (0, 0.03, 0): the hilt mesh's own centre offset.
 
-Still first guesses, to be tuned from owner feedback: the two grip thresholds, the hilt offset and
+Owner on 0.7.16: tapping thumb and index is itself movement and swings the far end of the line;
+can we not do what Meta's own pointer does?
+
+- **FR-037** (0.7.17, replaces the direction half of FR-034): The open-hand pointer MUST behave
+  like the system pointer: direction from an estimated shoulder through the index knuckle (not
+  along the hand), low-pass filtered, with the start point held relative to the hand while the
+  fingers close to pinch. The start stays at the thumb/index midpoint (FR-035).
+- The runtime's real aim pose (`XR_FB_hand_tracking_aim`) is only reachable through the
+  open-source Godot OpenXR Vendors extension, which this project does not ship. FR-037 is an
+  emulation; adopting the extension is an open option if the emulation is not good enough.
+
+Still first guesses, to be tuned from owner feedback: the shoulder estimate (0.18 m to the side,
+0.22 m below the head), the 60 ms smoothing, the two grip thresholds, the hilt offset and
 the lean angle.
 
 ## User Scenarios & Testing *(mandatory)*

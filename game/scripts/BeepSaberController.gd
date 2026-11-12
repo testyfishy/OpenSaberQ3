@@ -205,14 +205,38 @@ func hand_grip_transform() -> Transform3D:
 	var base := parent.global_transform if parent != null else Transform3D.IDENTITY
 	return base * grip
 
-# The saber-node pose for an open hand, in world space: at the pinch point, with the saber's +Y (the
-# axis the UI ray runs along) pointing the way the hand points, wrist to middle knuckle.
+# --- Open-hand pointer --------------------------------------------------------------------
 #
-# Built from joint positions, not from the palm pose's orientation. 0.7.8-0.7.14 rotated the palm
-# pose by -90 degrees about X on the assumption that its -Z runs along the fingers; on the headset
-# the pointer came out square to the hand. Joint positions leave nothing to assume, and a pinch
-# moves the thumb and index tips, not the wrist or the knuckles, so the ray holds still while
-# clicking. Falls back to the old palm-pose construction when the joints are not tracked.
+# The saber-node pose for an open hand, in world space; the UI ray runs along its +Y.
+#
+# This follows the way the Quest system pointer behaves rather than pointing "where the hand
+# points". A ray along the hand swings with every finger and wrist twitch, and a pinch is exactly
+# such a twitch, so the far end of the line jumped off the button being clicked (owner feedback,
+# 0.7.16). The system pointer avoids that with three ideas, all used here:
+#   1. Direction comes from the arm, not the hand: a ray from an estimated shoulder through a
+#      stable point on the hand (the index knuckle). Fingers and wrist roll barely move it.
+#   2. The ray is low-pass filtered, so tracking noise does not reach the far end.
+#   3. While the fingers are closing to pinch, the start point is held where it was relative to
+#      the hand, so the click itself does not drag the line.
+# The start is still midway between thumb tip and index tip, where the click happens.
+#
+# Everything is computed in tracking space (the XR origin's space), which is where both the
+# joints and XRServer.get_hmd_transform() live, then lifted to world.
+#
+# The runtime's own aim pose (XR_FB_hand_tracking_aim) is not reachable from core Godot; it
+# needs the open-source Godot OpenXR Vendors extension. This is an emulation of it.
+const POINTER_SHOULDER_SIDE_M := 0.18
+const POINTER_SHOULDER_DROP_M := 0.22
+const POINTER_SMOOTH_SEC := 0.06
+# A jump larger than this is a new hand position, not noise: snap instead of gliding.
+const POINTER_SNAP_M := 0.25
+var _pointer_dir := Vector3.ZERO
+var _pointer_start := Vector3.ZERO
+var _pointer_usec := 0
+# Pinch-point offset from the index knuckle, in the hand's own frame, from the last open frame.
+var _pointer_start_local := Vector3.ZERO
+var _pointer_start_known := false
+
 func hand_pointer_transform() -> Transform3D:
 	var fallback := hand_world_transform() * Transform3D(
 		Basis.from_euler(hand_saber_offset_rot * (PI / 180.0)), hand_saber_offset_pos)
@@ -222,26 +246,58 @@ func hand_pointer_transform() -> Transform3D:
 	var middle_knuckle := XRHandTracker.HAND_JOINT_MIDDLE_FINGER_PHALANX_PROXIMAL
 	var index_knuckle := XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_PROXIMAL
 	var little_knuckle := XRHandTracker.HAND_JOINT_PINKY_FINGER_PHALANX_PROXIMAL
-	for joint: int in [XRHandTracker.HAND_JOINT_WRIST, XRHandTracker.HAND_JOINT_PALM,
-			middle_knuckle, index_knuckle, little_knuckle]:
+	for joint: int in [XRHandTracker.HAND_JOINT_WRIST, middle_knuckle, index_knuckle, little_knuckle]:
 		if not _joint_tracked(hand, joint):
 			return fallback
-	var y := _joint_origin(hand, middle_knuckle) - _joint_origin(hand, XRHandTracker.HAND_JOINT_WRIST)
+	var anchor := _joint_origin(hand, index_knuckle)
+
+	# 1. Direction: shoulder -> index knuckle. The shoulder is estimated from the head: out to
+	# this hand's side along the head's level right vector, and down.
+	var head := XRServer.get_hmd_transform()
+	var right := Vector3(head.basis.x.x, 0.0, head.basis.x.z)
+	right = right.normalized() if right.length() > 0.01 else Vector3.RIGHT
+	var side := -1.0 if String(tracker).begins_with("left") else 1.0
+	var shoulder := head.origin + right * (POINTER_SHOULDER_SIDE_M * side) + Vector3.DOWN * POINTER_SHOULDER_DROP_M
+	var aim := anchor - shoulder
+	if aim.length() < 0.05:
+		return fallback
+	aim = aim.normalized()
+
+	# 3. Start point: the pinch midpoint while the hand is open, remembered in the hand's frame
+	# and replayed from that memory while the fingers close.
+	var hand_y := (_joint_origin(hand, middle_knuckle) - _joint_origin(hand, XRHandTracker.HAND_JOINT_WRIST)).normalized()
 	var across := _joint_origin(hand, index_knuckle) - _joint_origin(hand, little_knuckle)
-	if y.length() < 0.01:
-		return fallback
-	y = y.normalized()
-	across -= y * across.dot(y)
-	if across.length() < 0.005:
-		return fallback
-	var x := across.normalized()
-	# The line starts where the click happens: midway between the thumb tip and the index tip,
-	# the two that meet in a pinch. It still runs the way the hand points.
-	var start := _joint_origin(hand, XRHandTracker.HAND_JOINT_PALM)
+	across -= hand_y * across.dot(hand_y)
+	var hand_frame := Basis.IDENTITY
+	if across.length() > 0.005:
+		var hand_x := across.normalized()
+		hand_frame = Basis(hand_x, hand_y, hand_x.cross(hand_y))
+	var start := anchor
 	if _joint_tracked(hand, XRHandTracker.HAND_JOINT_THUMB_TIP) and _joint_tracked(hand, XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP):
-		start = (_joint_origin(hand, XRHandTracker.HAND_JOINT_THUMB_TIP)
-			+ _joint_origin(hand, XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP)) * 0.5
-	var pointer := Transform3D(Basis(x, y, x.cross(y)), start)
+		var thumb := _joint_origin(hand, XRHandTracker.HAND_JOINT_THUMB_TIP)
+		var index := _joint_origin(hand, XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP)
+		if thumb.distance_to(index) > PINCH_RELEASE_M or not _pointer_start_known:
+			_pointer_start_local = hand_frame.inverse() * ((thumb + index) * 0.5 - anchor)
+			_pointer_start_known = true
+	if _pointer_start_known:
+		start = anchor + hand_frame * _pointer_start_local
+
+	# 2. Low-pass both, by elapsed time so the feel does not depend on the frame rate.
+	var now := Time.get_ticks_usec()
+	var dt := float(now - _pointer_usec) / 1000000.0
+	_pointer_usec = now
+	if _pointer_dir == Vector3.ZERO or dt > 0.25 or start.distance_to(_pointer_start) > POINTER_SNAP_M:
+		_pointer_dir = aim
+		_pointer_start = start
+	else:
+		var blend := 1.0 - exp(-dt / POINTER_SMOOTH_SEC)
+		_pointer_dir = _pointer_dir.lerp(aim, blend).normalized()
+		_pointer_start = _pointer_start.lerp(start, blend)
+
+	var y := _pointer_dir
+	var x := Vector3.UP.cross(y)
+	x = x.normalized() if x.length() > 0.01 else Vector3.RIGHT
+	var pointer := Transform3D(Basis(x, y, x.cross(y)), _pointer_start)
 	var parent := get_parent() as Node3D
 	var base := parent.global_transform if parent != null else Transform3D.IDENTITY
 	return base * pointer

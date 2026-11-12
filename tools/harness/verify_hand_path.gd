@@ -246,20 +246,35 @@ func _run() -> void:
 	await _ticks(4)
 	_check("open hand: not gripping", not _controller.is_gripping())
 	_check("open hand: the blade stays sheathed even though the game wants it", not _saber.is_extended())
-	# The UI ray runs along the saber node's +Y: it must point the way the hand points
-	# (wrist to middle knuckle, -Z in the synthetic hand), not square to it.
+	# The UI ray runs along the saber node's +Y. It is the arm's ray, shoulder to index knuckle,
+	# not the hand's: with no headset the head is at the tracking origin, so the left shoulder
+	# is 0.18 m to the left of it and 0.22 m below.
+	await _ticks(90)
 	var ray_dir := _saber.global_transform.basis.y.normalized()
-	var hand_dir := (ORIGIN_XF.basis * Vector3(0.0, 0.0, -1.0)).normalized()
-	_check("open hand: the pointer runs along the hand", ray_dir.dot(hand_dir) > 0.999, "dot %.4f" % ray_dir.dot(hand_dir))
+	var shoulder := Vector3(-_controller.POINTER_SHOULDER_SIDE_M, -_controller.POINTER_SHOULDER_DROP_M, 0.0)
+	var arm_dir := (ORIGIN_XF.basis * (_palm.origin + KNUCKLE_INDEX - shoulder)).normalized()
+	_check("open hand: the pointer is the arm's ray, shoulder to index knuckle", ray_dir.dot(arm_dir) > 0.9999,
+		"dot %.5f" % ray_dir.dot(arm_dir))
+	var start_before := _saber.global_position
 	_pinch_gap = 0.10
 	await _ticks(2)
 	_pinch_gap = 0.01
-	await _ticks(2)
+	await _ticks(30)
 	var pinched_dir := _saber.global_transform.basis.y.normalized()
-	_check("open hand: pinching clicks and does not move the pointer",
-		_controller.trigger_pressed() and pinched_dir.dot(ray_dir) > 0.9999)
+	var start_shift := _saber.global_position.distance_to(start_before)
+	_check("open hand: a pinch clicks", _controller.trigger_pressed())
+	_check("open hand: a pinch moves neither the ray's direction nor its start",
+		pinched_dir.dot(ray_dir) > 0.999999 and start_shift < 0.0005,
+		"direction dot %.7f, start moved %.4f m" % [pinched_dir.dot(ray_dir), start_shift])
+	# A finger twitch that is not a pinch (tips 6 cm apart instead of 10) moves the start by
+	# the 2 cm the midpoint moved, and the direction not at all.
+	_pinch_gap = 0.06
+	await _ticks(90)
+	var twitch_dir := _saber.global_transform.basis.y.normalized()
+	_check("open hand: finger movement does not swing the ray", twitch_dir.dot(ray_dir) > 0.999999,
+		"direction dot %.7f" % twitch_dir.dot(ray_dir))
 	_pinch_gap = 0.10
-	await _ticks(2)
+	await _ticks(90)
 	# In a menu the game does not ask for the blade; a fist still ignites it.
 	_saber._hide()
 	_grip = GRIP_FIST
@@ -269,6 +284,7 @@ func _run() -> void:
 	await _ticks(200)
 	_check("menu: opening the hand puts it away again", not _saber.is_extended())
 	_saber._show()
+	await _ticks(90)
 	var pointer_err := _saber.global_position.distance_to(_expected_pointer_origin())
 	_check("open hand: the pointer starts midway between thumb tip and index tip", pointer_err < 0.001, "error %.3f m" % pointer_err)
 	_check("open hand: nothing of the saber is drawn, hilt included", not (_saber.get_node("saber_holder") as Node3D).visible)
@@ -343,7 +359,7 @@ func _run() -> void:
 
 	# --- 7. hand data returns: the blade follows again --------------------------------------
 	_palm.origin += Vector3(0.1, 0.0, 0.0)
-	await _ticks(3)
+	await _ticks(90)
 	err = _saber.global_position.distance_to(_expected_pointer_origin())
 	_check("saber follows again when hand data returns", err < 0.001, "error %.3f m" % err)
 
