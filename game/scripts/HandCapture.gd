@@ -17,6 +17,7 @@ extends Node
 # File: one header line, then one line per sample (every SAMPLE_EVERY rendered frames):
 #   t_usec, head(12), then for each hand (left, right):
 #     tracked(0/1), source, gripping(0/1), trigger(0/1), palm_pose(12),
+#     aim_live(0/1), aim_pose(12), index_pinch(0/1), index_pinch_strength   (v2; runtime aim)
 #     26 x [flags, px, py, pz, qx, qy, qz, qw]
 # Transforms are 12 floats: basis x, y, z columns then origin. Everything is in tracking space
 # (the XR origin's space), exactly as the engine hands it over.
@@ -26,6 +27,7 @@ const OUT_NAME := "hand_capture.csv"
 const DURATION_SEC := 60.0
 const SAMPLE_EVERY := 3
 const TRACKERS: Array[StringName] = [&"/user/hand_tracker/left", &"/user/hand_tracker/right"]
+const AIM_TRACKERS: Array[StringName] = [&"/user/fbhandaim/left", &"/user/fbhandaim/right"]
 
 var _dir := ""
 var _lines := PackedStringArray()
@@ -93,6 +95,14 @@ func _sample(t_usec: int, hands: Array[XRHandTracker]) -> String:
 			if pose != null:
 				palm = pose.get_adjusted_transform()
 		_put_transform(out, palm)
+		var aim_tracker := XRServer.get_tracker(AIM_TRACKERS[i]) as XRPositionalTracker
+		var aim_pose: XRPose = aim_tracker.get_pose(&"default") if aim_tracker != null else null
+		var aim_live := aim_pose != null and aim_pose.has_tracking_data
+		out.append("1" if aim_live else "0")
+		_put_transform(out, aim_pose.get_adjusted_transform() if aim_live else Transform3D.IDENTITY)
+		out.append("1" if aim_tracker != null and bool(aim_tracker.get_input(&"index_pinch")) else "0")
+		var strength: Variant = aim_tracker.get_input(&"index_pinch_strength") if aim_tracker != null else null
+		out.append("%.3f" % float(strength) if strength != null else "0")
 		for joint in XRHandTracker.HAND_JOINT_MAX:
 			if hand == null:
 				out.append("0,0,0,0,0,0,0,1")
@@ -116,7 +126,7 @@ func _finish() -> void:
 	if file == null:
 		vr.log_file_error(FileAccess.get_open_error(), path, "HandCapture._finish")
 		return
-	file.store_line("hand_capture v1 joints=%d sample_every=%d" % [XRHandTracker.HAND_JOINT_MAX, SAMPLE_EVERY])
+	file.store_line("hand_capture v2 joints=%d sample_every=%d" % [XRHandTracker.HAND_JOINT_MAX, SAMPLE_EVERY])
 	for line in _lines:
 		file.store_line(line)
 	file.close()

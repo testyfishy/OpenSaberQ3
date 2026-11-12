@@ -153,6 +153,19 @@ can we not do what Meta's own pointer does?
   open-source Godot OpenXR Vendors extension, which this project does not ship. FR-037 is an
   emulation; adopting the extension is an open option if the emulation is not good enough.
 
+Owner decision after 0.7.17: adopt the open-source Godot OpenXR Vendors extension to get the
+headset's own pointer.
+
+- **FR-038** (0.7.19): The project uses Godot OpenXR Vendors 5.1.0-stable (MIT, GodotVR) with
+  `xr/openxr/extensions/meta/hand_tracking_aim` enabled. It lives in `addons/godotopenxrvendors`,
+  which is gitignored (48 MB of binaries): a fresh clone must install that release before
+  exporting. Its Meta package contains only the extension's own library; no Meta SDK binary ships.
+- **FR-039** (0.7.19): When the runtime's aim pose (`/user/fbhandaim/<side>`, pose `default`) is
+  live, the open-hand pointer MUST be that pose and the click MUST be the runtime's `index_pinch`.
+  Otherwise the emulation of FR-037 and the joint-distance pinch of FR-013 apply unchanged.
+- **FR-040** (0.7.19): The hand-tracking manifest entries come from the export preset
+  (`meta_xr_features/hand_tracking=1`, optional) instead of a hand edit to the Gradle template.
+
 Still first guesses, to be tuned from owner feedback: the shoulder estimate (0.18 m to the side,
 0.22 m below the head), the 60 ms smoothing, the two grip thresholds, the hilt offset and
 the lean angle.

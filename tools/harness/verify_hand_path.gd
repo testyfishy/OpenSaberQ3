@@ -275,6 +275,32 @@ func _run() -> void:
 		"direction dot %.7f" % twitch_dir.dot(ray_dir))
 	_pinch_gap = 0.10
 	await _ticks(90)
+	# --- 5c. the runtime's own pointer (XR_FB_hand_tracking_aim) wins when it is there ------
+	var aim := XRControllerTracker.new()
+	aim.name = &"/user/fbhandaim/left"
+	var aim_pose := Transform3D(Basis(Vector3.UP, -0.4), _palm.origin + Vector3(0.02, 0.03, -0.05))
+	aim.set_pose(&"default", aim_pose, Vector3.ZERO, Vector3.ZERO, XRPose.XR_TRACKING_CONFIDENCE_HIGH)
+	aim.set_input(&"index_pinch", false)
+	XRServer.add_tracker(aim)
+	await _ticks(4)
+	var aim_ray := _saber.global_transform.basis.y.normalized()
+	var aim_want := (ORIGIN_XF.basis * (-aim_pose.basis.z)).normalized()
+	_check("runtime aim: the pointer runs along the aim pose's forward", aim_ray.dot(aim_want) > 0.9999,
+		"dot %.5f" % aim_ray.dot(aim_want))
+	_check("runtime aim: the pointer starts at the aim pose",
+		_saber.global_position.distance_to(ORIGIN_XF * aim_pose.origin) < 0.001)
+	_pinch_gap = 0.01
+	await _ticks(3)
+	_check("runtime aim: touching fingertips alone is not a click; the runtime decides", not _controller.trigger_pressed())
+	_pinch_gap = 0.10
+	aim.set_input(&"index_pinch", true)
+	await _ticks(3)
+	_check("runtime aim: the runtime's index pinch clicks", _controller.trigger_pressed())
+	aim.set_input(&"index_pinch", false)
+	await _ticks(3)
+	_check("runtime aim: releasing it releases the trigger", not _controller.trigger_pressed())
+	XRServer.remove_tracker(aim)
+	await _ticks(90)
 	# In a menu the game does not ask for the blade; a fist still ignites it.
 	_saber._hide()
 	_grip = GRIP_FIST

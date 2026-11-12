@@ -238,6 +238,16 @@ var _pointer_start_local := Vector3.ZERO
 var _pointer_start_known := false
 
 func hand_pointer_transform() -> Transform3D:
+	# The runtime's own pointer, when the Godot OpenXR Vendors extension is installed and the
+	# runtime supports XR_FB_hand_tracking_aim: exactly the ray the Quest system UI draws, with
+	# Meta's stabilisation. Everything below this block is the emulation used without it.
+	var runtime_aim := _aim_pose()
+	if runtime_aim != null:
+		var xf := runtime_aim.get_adjusted_transform()
+		# OpenXR aim poses look down their -Z; the UI ray runs along the saber node's +Y.
+		var runtime_pointer := Transform3D(Basis(xf.basis.x, -xf.basis.z, xf.basis.y).orthonormalized(), xf.origin)
+		var origin_node := get_parent() as Node3D
+		return (origin_node.global_transform if origin_node != null else Transform3D.IDENTITY) * runtime_pointer
 	var fallback := hand_world_transform() * Transform3D(
 		Basis.from_euler(hand_saber_offset_rot * (PI / 180.0)), hand_saber_offset_pos)
 	var hand := _hand_tracker()
@@ -307,6 +317,17 @@ func _update_hand_pinch() -> void:
 	if _gripping:
 		_pinch_down = false
 		_pinch_open_seen = false
+		return
+	# The runtime's own index pinch, when it is available (see _aim_tracker): the same gesture
+	# recognition the system UI uses. The open-hand arming still applies.
+	var aim_tracker := _aim_tracker()
+	if aim_tracker != null and _aim_pose() != null:
+		var pinched := bool(aim_tracker.get_input(&"index_pinch"))
+		if not pinched:
+			_pinch_open_seen = true
+			_pinch_down = false
+		elif _pinch_open_seen:
+			_pinch_down = true
 		return
 	var hand := _hand_tracker()
 	if hand == null:
@@ -404,6 +425,29 @@ func _physics_process(dt: float) -> void:
 
 # Built on first use: this is asked for several times a frame per hand.
 var _hand_tracker_name := &""
+var _aim_tracker_name := &""
+static var _aim_logged := false
+
+# The XR_FB_hand_tracking_aim tracker for this hand (Godot OpenXR Vendors extension), or null
+# when the extension or the runtime feature is missing - on a desktop, or another headset.
+func _aim_tracker() -> XRPositionalTracker:
+	if _aim_tracker_name.is_empty():
+		var side := "left" if String(tracker).begins_with("left") else "right"
+		_aim_tracker_name = StringName("/user/fbhandaim/%s" % side)
+	return XRServer.get_tracker(_aim_tracker_name) as XRPositionalTracker
+
+# The runtime's aim pose for this hand, or null unless it is live right now.
+func _aim_pose() -> XRPose:
+	var aim_tracker := _aim_tracker()
+	if aim_tracker == null:
+		return null
+	var pose := aim_tracker.get_pose(&"default")
+	if pose == null or not pose.has_tracking_data:
+		return null
+	if not _aim_logged:
+		_aim_logged = true
+		vr.log_info("HAND aim: using the runtime pointer on %s" % _aim_tracker_name)
+	return pose
 
 func _hand_tracker() -> XRHandTracker:
 	# Hand joints live on their own OpenXR tracker at /user/hand_tracker/<side>; the

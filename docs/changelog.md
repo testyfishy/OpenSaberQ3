@@ -4,6 +4,14 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.19 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
+
+**The headset's own hand pointer.** The project now uses the open-source Godot OpenXR Vendors
+extension (5.1.0-stable). With it, the selection line is the pose the Quest system itself aims
+with, and a click is the system's own index-pinch recognition, instead of this game's emulation
+of both. The emulation remains as the fallback. Hand tracking is declared through the export
+preset rather than a manual manifest edit.
+
 ## v0.7.18 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
 
 **Hand recorder for off-device debugging.** With a `hand_capture.flag` file pushed next to
