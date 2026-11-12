@@ -16,6 +16,11 @@ uniform float distance_fade_magnet_min : hint_range(0.0, 4096.0, 0.01);
 uniform float distance_fade_magnet_max : hint_range(0.0, 4096.0, 0.01);
 uniform float distance_fade_tip_min : hint_range(0.0, 4096.0, 0.01);
 uniform float distance_fade_tip_max : hint_range(0.0, 4096.0, 0.01);
+// Distance from the tail over which the saber magnet eases to zero, so the ribbon still ends on
+// its tail note. This used to reuse distance_fade_tip_max; when that was set negative to switch
+// the tip fade off, the magnet's weight went negative too and pushed the ribbon AWAY from the
+// saber - which is why an arc could arrive at the wrong side of its tail note.
+uniform float magnet_tail_ease = 2.0;
 
 uniform float distance_effect : hint_range(0.01, 4096.0, 0.01);
 uniform float distance_power : hint_range(0.01, 4096.0, 0.01);
@@ -40,7 +45,7 @@ void vertex() {
 	dist = abs(wrld_pos.z - saber_pos.z);
 	float force = max(0.0, 1.0 - (dist / distance_effect));
 	VERTEX = mix(wrld_pos, saber_pos,
-		pow(force, distance_power) * min(tip_dist / distance_fade_tip_max, 1.0)
+		pow(force, distance_power) * clamp(tip_dist / max(magnet_tail_ease, 0.001), 0.0, 1.0)
 		) - NODE_POSITION_WORLD;
 	to_discard = float(wrld_pos.z > saber_pos.z);
 }

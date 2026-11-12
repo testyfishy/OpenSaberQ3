@@ -4,6 +4,18 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.12 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
+
+Owner feedback from playing 0.7.10.
+
+- **Arcs no longer appear before their notes.** The ribbon fades in over the last 3 m before the
+  16 m spawn distance, so it grows out of the horizon with the boxes it joins.
+- **Arcs bend toward the saber again.** The magnet's weight had been negative since the tip fade
+  was switched off in 0.6.5, pushing the ribbon away from the blade; that is what made an arc
+  arrive on the wrong side of its tail note. The map data was checked and is not at fault.
+- **Saber clash only on contact, and quieter.** The clash fired at 14 cm between blade centres;
+  it now needs the blades to touch (4.5 cm at full thickness) and plays at -12 dB, under every cut.
+
 ## v0.7.11 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
 
 **Light-skeleton hands.** The humanoid hand mesh is replaced by glowing bars between the tracked

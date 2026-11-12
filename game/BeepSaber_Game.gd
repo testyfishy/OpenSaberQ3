@@ -7,7 +7,13 @@ class_name BeepSaber_Game
 
 const CLASH_SAMPLE := preload("res://game/data/hits/hard_01.wav")
 const CLASH_COOLDOWN_MSEC := 90
-const CLASH_DISTANCE := 0.14
+# Centre-line distance at which two blades at full thickness actually touch (about 2 cm of
+# drawn radius each, plus a few millimetres for one tick of motion). It was 0.14 m, so the clash
+# fired with a visible 5 cm of air between the blades. Scaled by the thickness setting.
+const CLASH_CONTACT_M := 0.045
+# Below every cut (cuts land between -8.5 and +0.5 dB): a clash is an aside, not the main event.
+# It was -1.5 dB, louder than most cuts and repeated every 90 ms while the blades stayed close.
+const CLASH_GAIN_DB := -12.0
 
 var version := str(ProjectSettings.get_setting("application/config/version", "0.1.0"))
 # Set by the benchmark runner's `hud_off` arm. A plain member, because the runner class is not in
@@ -1061,7 +1067,7 @@ func _check_saber_clash() -> void:
 	if points.size() < 2:
 		return
 	var distance := points[0].distance_to(points[1])
-	if distance > CLASH_DISTANCE:
+	if distance > CLASH_CONTACT_M * Settings.thickness:
 		return
 	var now := Time.get_ticks_msec()
 	if now - _last_clash_msec < CLASH_COOLDOWN_MSEC:
@@ -1071,7 +1077,7 @@ func _check_saber_clash() -> void:
 	left_controller.simple_rumble(0.7, 0.055)
 	right_controller.simple_rumble(0.7, 0.055)
 	if GlobalReferences.hit_audio != null:
-		GlobalReferences.hit_audio.play(CLASH_SAMPLE, contact, -1.5, 0.72)
+		GlobalReferences.hit_audio.play(CLASH_SAMPLE, contact, CLASH_GAIN_DB, 0.72)
 	_spawn_clash_sparks(contact)
 
 func _spawn_clash_sparks(at: Vector3) -> void:

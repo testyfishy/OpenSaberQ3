@@ -39,6 +39,10 @@ func _ready() -> void:
 	_hand.name = TRACKER_NAME
 	_hand.hand = XRPositionalTracker.TRACKER_HAND_LEFT
 	_hand.hand_tracking_source = XRHandTracker.HAND_TRACKING_SOURCE_UNOBSTRUCTED
+	# A script-made tracker does not zero its joint flags (the engine array is uninitialised;
+	# OpenXR writes every joint each frame, so this only matters here). Start them all invalid.
+	for joint in XRHandTracker.HAND_JOINT_MAX:
+		_hand.set_hand_joint_flags(joint, 0)
 	XRServer.add_tracker(_hand)
 
 	_origin = XROrigin3D.new()

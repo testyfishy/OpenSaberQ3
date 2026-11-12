@@ -28,11 +28,16 @@ static var right_material := left_material.duplicate() as ShaderMaterial
 static var left_material_magnet := left_material.duplicate() as ShaderMaterial
 static var right_material_magnet := right_material.duplicate() as ShaderMaterial
 
-# specs/028 FR-003/FR-010: the material's distance fade is fragment `length(VERTEX)` (distance from
-# the camera) with 15 m..3 m, and the tip fade is 0.2..2 m from the tail. Notes spawn 4 beats
-# (16 m) ahead, so a 15 m fade made the far end pop in at spawn and hid the last 2 m before the tail.
-# Move the far fade well beyond the spawn distance and switch the tip fade off; the magnet fade is
-# independent and stays.
+# The material's distance fade is fragment `length(VERTEX)`, the distance from the camera. Notes
+# spawn 4 beats (16 m) ahead, and an arc's tail can be many beats beyond its head, so an arc
+# drawn at full length reaches into space where no note exists yet. Owner feedback on 0.7.10:
+# an arc must not be visible before the boxes it joins. The ribbon therefore fades in across the
+# last 3 m before the spawn distance and grows out of the horizon with its notes. (0.6.5 pushed
+# the fade out to 40..60 m to stop the far end popping in at 15 m; this keeps that fix - the
+# fade is smooth and ends at full strength 13 m out - without showing the far end early.)
+# The tip fade stays off; the magnet has its own ease in the shader.
+const SPAWN_DISTANCE_M := 16.0
+const FADE_IN_M := 3.0
 static var _fades_configured := false
 static var _arc_probe_logged := 0
 
@@ -41,8 +46,8 @@ static func _configure_fades() -> void:
 		return
 	_fades_configured = true
 	for material: ShaderMaterial in [left_material, right_material, left_material_magnet, right_material_magnet]:
-		material.set_shader_parameter(&"distance_fade_min", 60.0)
-		material.set_shader_parameter(&"distance_fade_max", 40.0)
+		material.set_shader_parameter(&"distance_fade_min", SPAWN_DISTANCE_M)
+		material.set_shader_parameter(&"distance_fade_max", SPAWN_DISTANCE_M - FADE_IN_M)
 		material.set_shader_parameter(&"distance_fade_tip_min", -10.0)
 		material.set_shader_parameter(&"distance_fade_tip_max", -5.0)
 		# specs/027 0.7.6: a brighter, more solid ribbon reads as a light line rather than a
