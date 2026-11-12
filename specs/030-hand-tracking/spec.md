@@ -120,6 +120,17 @@ hand should hold nothing rather than a hilt at the wrist.
   wrist, by `grip_blade_lean_deg` (default 25, on top of the ~15 degrees the knuckle line already
   has), the way a sword sits in a neutral wrist.
 
+Owner on 0.7.14: a fist in the menu spawned no saber; the selection line followed the fist (where
+a pinch is impossible) and, with the hand open, ran square to the hand.
+
+- **FR-032** (0.7.15, replaces the state half of FR-026): With hands, a fist ignites the saber in
+  every game state and an open hand sheathes it. Hits are still only scored in play.
+- **FR-033** (0.7.15): The UI ray MUST be hidden, and must not hover or click, while the hand is a
+  fist. Pointing and pinching belong to the open hand only.
+- **FR-034** (0.7.15): The open-hand pointer MUST run along the hand (wrist to middle knuckle),
+  built from joint positions. The palm pose's orientation is no longer used for it: the -90 degree
+  X correction of FR-014 produced a ray square to the hand on the headset.
+
 Still first guesses, to be tuned from owner feedback: the two grip thresholds, the hilt offset and
 the lean angle.
 

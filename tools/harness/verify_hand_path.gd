@@ -233,6 +233,29 @@ func _run() -> void:
 	await _ticks(4)
 	_check("open hand: not gripping", not _controller.is_gripping())
 	_check("open hand: the blade stays sheathed even though the game wants it", not _saber.is_extended())
+	# The UI ray runs along the saber node's +Y: it must point the way the hand points
+	# (wrist to middle knuckle, -Z in the synthetic hand), not square to it.
+	var ray_dir := _saber.global_transform.basis.y.normalized()
+	var hand_dir := (ORIGIN_XF.basis * Vector3(0.0, 0.0, -1.0)).normalized()
+	_check("open hand: the pointer runs along the hand", ray_dir.dot(hand_dir) > 0.999, "dot %.4f" % ray_dir.dot(hand_dir))
+	_pinch_gap = 0.10
+	await _ticks(2)
+	_pinch_gap = 0.01
+	await _ticks(2)
+	var pinched_dir := _saber.global_transform.basis.y.normalized()
+	_check("open hand: pinching clicks and does not move the pointer",
+		_controller.trigger_pressed() and pinched_dir.dot(ray_dir) > 0.9999)
+	_pinch_gap = 0.10
+	await _ticks(2)
+	# In a menu the game does not ask for the blade; a fist still ignites it.
+	_saber._hide()
+	_grip = GRIP_FIST
+	await _ticks(4)
+	_check("menu: a fist ignites the saber even when the game has not asked for it", _saber.is_extended())
+	_grip = GRIP_OPEN
+	await _ticks(200)
+	_check("menu: opening the hand puts it away again", not _saber.is_extended())
+	_saber._show()
 	var pointer_err := _saber.global_position.distance_to(_expected_saber_origin())
 	_check("open hand: the saber node is the pointer at the palm", pointer_err < 0.001, "error %.3f m" % pointer_err)
 	_check("open hand: nothing of the saber is drawn, hilt included", not (_saber.get_node("saber_holder") as Node3D).visible)

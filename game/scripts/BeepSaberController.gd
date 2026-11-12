@@ -190,6 +190,41 @@ func hand_grip_transform() -> Transform3D:
 	var base := parent.global_transform if parent != null else Transform3D.IDENTITY
 	return base * grip
 
+# The saber-node pose for an open hand, in world space: at the palm, with the saber's +Y (the
+# axis the UI ray runs along) pointing the way the hand points, wrist to middle knuckle.
+#
+# Built from joint positions, not from the palm pose's orientation. 0.7.8-0.7.14 rotated the palm
+# pose by -90 degrees about X on the assumption that its -Z runs along the fingers; on the headset
+# the pointer came out square to the hand. Joint positions leave nothing to assume, and a pinch
+# moves the thumb and index tips, not the wrist or the knuckles, so the ray holds still while
+# clicking. Falls back to the old palm-pose construction when the joints are not tracked.
+func hand_pointer_transform() -> Transform3D:
+	var fallback := hand_world_transform() * Transform3D(
+		Basis.from_euler(hand_saber_offset_rot * (PI / 180.0)), hand_saber_offset_pos)
+	var hand := _hand_tracker()
+	if hand == null:
+		return fallback
+	var middle_knuckle := XRHandTracker.HAND_JOINT_MIDDLE_FINGER_PHALANX_PROXIMAL
+	var index_knuckle := XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_PROXIMAL
+	var little_knuckle := XRHandTracker.HAND_JOINT_PINKY_FINGER_PHALANX_PROXIMAL
+	for joint: int in [XRHandTracker.HAND_JOINT_WRIST, XRHandTracker.HAND_JOINT_PALM,
+			middle_knuckle, index_knuckle, little_knuckle]:
+		if not _joint_tracked(hand, joint):
+			return fallback
+	var y := _joint_origin(hand, middle_knuckle) - _joint_origin(hand, XRHandTracker.HAND_JOINT_WRIST)
+	var across := _joint_origin(hand, index_knuckle) - _joint_origin(hand, little_knuckle)
+	if y.length() < 0.01:
+		return fallback
+	y = y.normalized()
+	across -= y * across.dot(y)
+	if across.length() < 0.005:
+		return fallback
+	var x := across.normalized()
+	var pointer := Transform3D(Basis(x, y, x.cross(y)), _joint_origin(hand, XRHandTracker.HAND_JOINT_PALM))
+	var parent := get_parent() as Node3D
+	var base := parent.global_transform if parent != null else Transform3D.IDENTITY
+	return base * pointer
+
 func _update_hand_pinch() -> void:
 	# A fist brings the thumb and index tips together; that is a grip, not a click.
 	if _gripping:

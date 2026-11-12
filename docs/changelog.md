@@ -4,6 +4,17 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.15 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
+
+Owner feedback on 0.7.14: one rule for hands everywhere.
+
+- **Fist = saber, open hand = pointer, in menus too.** A fist now ignites the saber in every
+  screen; the selection line is hidden while the hand is a fist, so a hand is never asked to
+  grip and pinch at once.
+- **The selection line follows the hand.** With the hand open it ran square to the hand; it is
+  now built from the wrist and knuckle positions and points where the hand points. A pinch does
+  not move it.
+
 ## v0.7.14 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
 
 Owner feedback on 0.7.13.
