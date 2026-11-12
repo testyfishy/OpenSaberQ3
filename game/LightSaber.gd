@@ -47,10 +47,13 @@ var _hit_prev_tip := Vector3.ZERO
 const Cost := preload("res://game/scripts/CostProbe.gd")
 
 # The game states ask for the blade with _show()/_hide(). With controllers that is the whole
-# story. With hands the fist is the whole story instead (grip to ignite): a fist holds a saber
-# and an open hand is the pointer, in the menus as much as in a song, so there is never a
-# moment where the hand is asked to grip and to pinch at once. Hits are still only scored while
-# the play state enables them (set_swingcast_enabled).
+# story. With hands there is one hard line (owner decision, 0.7.21):
+#   in a song  - the sabers are out and stay out, whatever the hand is doing and whether or not
+#                the cameras can currently see it;
+#   everywhere else (menus, pause, results) - no sabers at all, the hands only point and pinch.
+# "In a song" is the play state's own switch, set_swingcast_enabled(true). Grip-to-ignite
+# (0.7.13-0.7.20) is gone: hand tracking loses a hand the moment it leaves the cameras' view, so
+# a blade tied to the hand's shape went out and re-lit, with its sound, every wide swing.
 var _blade_wanted := false
 
 func _show() -> void:
@@ -63,8 +66,8 @@ func _hide() -> void:
 
 func _apply_blade() -> void:
 	var out := _blade_wanted
-	if hand_drive_active and controller != null:
-		out = controller.is_gripping()
+	if hand_drive_active:
+		out = _blade_wanted and _hit_enabled
 	if out:
 		_extend()
 	else:
@@ -179,11 +182,11 @@ func _sync_pose_source() -> void:
 	# included, instead of a hilt floating at the palm. (The UI ray is not part of the visual.)
 	_saber_holder.visible = not hand_drive_active or is_extended() or _anim.is_playing()
 	if hand_drive_active and controller.is_hand_tracking():
-		# Two poses. Blade out (or still animating in or out): a hilt held in the fist. Blade
-		# away: the open-hand pointer along the hand, which is what the UI ray rides on. The
-		# switch only happens while the blade has no length, so the blade never swings a
-		# quarter turn through the lane.
-		if controller.is_gripping() or is_extended() or _anim.is_playing():
+		# Two poses. Blade out (or still animating in or out): a hilt held in the hand. Blade
+		# away: the open-hand pointer, which is what the UI ray rides on. The switch only
+		# happens while the blade has no length, so the blade never swings a quarter turn
+		# through the lane.
+		if is_extended() or _anim.is_playing():
 			global_transform = controller.hand_grip_transform()
 		else:
 			global_transform = controller.hand_pointer_transform()
@@ -267,6 +270,8 @@ func set_saber(saber_path: String) -> void:
 
 func set_swingcast_enabled(value: bool) -> void:
 	_hit_enabled = value
+	# With hands this is also what puts the blade out or away (see _apply_blade).
+	_apply_blade()
 	# Re-seed the sweep on the next tick, so resuming after a pause does not
 	# sweep from wherever the blade was before it.
 	_hit_sampled = false

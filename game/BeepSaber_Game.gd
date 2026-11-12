@@ -1066,10 +1066,31 @@ func recenter():
 ## push the player's hands, so the interaction is haptic/audio/visual rather than rigid-body.
 var _last_clash_msec := 0
 
+# Hands have no pause button. Holding the two blades together for this long pauses the song:
+# long enough that crossing swings never do it by accident, short enough to do on purpose.
+const HAND_PAUSE_HOLD_SEC := 2.5
+# A little more forgiving than a clash, so a held cross does not flicker in and out.
+const HAND_PAUSE_DISTANCE_M := 0.07
+var _blades_together_sec := 0.0
+
+func _check_hand_pause(blade_distance: float) -> void:
+	var hands := left_controller.hand_driven or right_controller.hand_driven
+	var both_live := left_saber.is_pose_live() and right_saber.is_pose_live()
+	if not hands or not both_live or blade_distance > HAND_PAUSE_DISTANCE_M:
+		_blades_together_sec = 0.0
+		return
+	_blades_together_sec += 1.0 / float(Engine.physics_ticks_per_second)
+	if _blades_together_sec >= HAND_PAUSE_HOLD_SEC:
+		_blades_together_sec = 0.0
+		vr.log_info("HAND pause: blades held together for %.1f s" % HAND_PAUSE_HOLD_SEC)
+		_transition_game_state(gamestate_paused)
+
 func _check_saber_clash() -> void:
 	if gamestate != gamestate_playing or Scoreboard.paused:
+		_blades_together_sec = 0.0
 		return
 	if not left_saber.is_extended() or not right_saber.is_extended():
+		_blades_together_sec = 0.0
 		return
 	var points := Geometry3D.get_closest_points_between_segments(
 		left_saber.last_blade_base, left_saber.last_blade_tip,
@@ -1077,6 +1098,9 @@ func _check_saber_clash() -> void:
 	if points.size() < 2:
 		return
 	var distance := points[0].distance_to(points[1])
+	_check_hand_pause(distance)
+	if gamestate != gamestate_playing:
+		return
 	if distance > CLASH_CONTACT_M * Settings.thickness:
 		return
 	var now := Time.get_ticks_msec()

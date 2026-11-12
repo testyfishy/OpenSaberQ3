@@ -53,6 +53,7 @@ const _GRIP_FINGERTIPS: Array[int] = [
 	XRHandTracker.HAND_JOINT_PINKY_FINGER_TIP,
 ]
 var _gripping := false
+const GRIP_CENTER_REACH_M := 0.03
 # Where the saber's origin sits relative to the centre of the grip, in the grip frame (y along
 # the blade). The hilt mesh is centred 3 cm below the saber origin, so +3 cm along the blade
 # puts the middle of the hilt in the middle of the fist.
@@ -194,6 +195,12 @@ func hand_grip_transform() -> Transform3D:
 		tips += _joint_origin(hand, joint)
 	tips /= float(_GRIP_FINGERTIPS.size())
 	var center := (knuckles + middles + tips) / 3.0
+	# In a song the saber stays out with the hand open too, and an open hand's fingertips would
+	# drag that centroid out along the fingers. Keep it within reach of the knuckle row: 1.8 cm
+	# is where it sits in a real fist (hand_capture.csv), 3 cm is the limit.
+	var from_knuckles := center - knuckles
+	if from_knuckles.length() > GRIP_CENTER_REACH_M:
+		center = knuckles + from_knuckles.normalized() * GRIP_CENTER_REACH_M
 
 	var along := _joint_origin(hand, index_mcp) - _joint_origin(hand, little_mcp)
 	if along.length() < 0.01:

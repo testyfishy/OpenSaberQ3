@@ -4,6 +4,16 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.21 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
+
+**One rule for hands: sabers in a song, pointer everywhere else.**
+
+- In a song the sabers are always out and stay on your hands, whether the hand is open, closed, or
+  outside the cameras' view. They no longer go out and re-light with every wide swing.
+- In every menu, including pause and results, there are no sabers: the hands point and pinch.
+- **Pause with hands**: hold the two blades together for 2.5 seconds.
+- Grip-to-ignite is removed.
+
 ## v0.7.20 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
 
 **Hand thresholds set from a recording of real hands.** The first on-device hand recording showed

@@ -49,15 +49,5 @@ func _ready() -> void:
 
 # we use the physics process here be in sync with the controller position
 func _physics_process(_dt: float) -> void:
-	# A fist is holding a saber, not pointing: no ray, no hover, no click until the hand opens.
-	# (is_gripping() is only ever true with hand tracking, so controllers are unaffected.)
-	var gripping := controller != null and controller.is_gripping()
-	if active and visible and not gripping:
+	if active and visible:
 		_update_raycasts()
-	elif gripping and ui_raycast_mesh.visible:
-		ui_raycast_mesh.visible = false
-		ui_raycast_hitmarker.visible = false
-		if colliding_with is UIRaycastTarget:
-			(colliding_with as UIRaycastTarget).ui_raycast_exit()
-		colliding_with = null
-		is_colliding = false

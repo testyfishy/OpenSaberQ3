@@ -166,6 +166,23 @@ headset's own pointer.
 - **FR-040** (0.7.19): The hand-tracking manifest entries come from the export preset
   (`meta_xr_features/hand_tracking=1`, optional) instead of a hand edit to the Gradle template.
 
+Owner on 0.7.20, after playing: hand tracking only sees hands in front of the body, so every wide
+swing put the saber out and re-lit it with its sound. Wanted: one clear line.
+
+- **FR-041** (0.7.21, replaces FR-026, FR-029 and FR-032): With hands, the sabers are out for the
+  whole of a song - open hand, fist, or hand out of the cameras' view - and never out anywhere
+  else. "In a song" is the play state's `set_swingcast_enabled(true)`; menus, pause and results
+  show no saber and no hilt, only the pointer. Grip-to-ignite is removed; the fist is still
+  detected, only so that a fist is never read as a pinch.
+- **FR-042** (0.7.21, replaces FR-033): The UI ray is available whenever the game state shows it,
+  fist or not.
+- **FR-043** (0.7.21): With hands, holding the two blades together (within 7 cm) for 2.5 seconds
+  pauses the song. It needs both hands tracked. Resume is the pause menu's own button, by pinch.
+- **FR-044** (0.7.21): The hilt stays within 3 cm of the knuckle row when the hand is open, so
+  the in-song saber does not slide out along the fingers.
+- FR-022 still holds: a saber whose hand is not currently tracked is drawn where it was last seen
+  and cuts nothing.
+
 Measured from the owner's recording (`hand_capture.csv`, 0.7.18, 60 s, right hand tracked
 throughout, left hand 20 % of the time):
 

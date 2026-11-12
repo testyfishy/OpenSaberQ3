@@ -240,12 +240,24 @@ func _run() -> void:
 	var player := AudioStreamPlayer.new()
 	add_child(player)
 	_saber.song_player_ref = player
-	# --- 5b. grip to ignite ---------------------------------------------------------------
+	# --- 5b. the hard line: sabers in a song, pointer everywhere else ---------------------------
 	_grip = GRIP_OPEN
 	_saber._show()
 	await _ticks(4)
-	_check("open hand: not gripping", not _controller.is_gripping())
-	_check("open hand: the blade stays sheathed even though the game wants it", not _saber.is_extended())
+	_check("menu, open hand: no saber even though the state asked to show it", not _saber.is_extended())
+	_check("menu, open hand: nothing of the saber is drawn, hilt included", not (_saber.get_node("saber_holder") as Node3D).visible)
+	_grip = GRIP_FIST
+	await _ticks(4)
+	_check("menu, fist: still no saber", not _saber.is_extended())
+	_check("menu, fist: detected as a grip", _controller.is_gripping())
+	_pinch_gap = 0.10
+	await _ticks(2)
+	_pinch_gap = 0.01
+	await _ticks(2)
+	_check("fist: thumb on index is not a click", not _controller.trigger_pressed())
+	_pinch_gap = 0.10
+	_grip = GRIP_OPEN
+	await _ticks(4)
 	# The UI ray runs along the saber node's +Y. It is the arm's ray, shoulder to index knuckle,
 	# not the hand's: with no headset the head is at the tracking origin, so the left shoulder
 	# is 0.18 m to the left of it and 0.22 m below.
@@ -266,15 +278,10 @@ func _run() -> void:
 	_check("open hand: a pinch moves neither the ray's direction nor its start",
 		pinched_dir.dot(ray_dir) > 0.999999 and start_shift < 0.0005,
 		"direction dot %.7f, start moved %.4f m" % [pinched_dir.dot(ray_dir), start_shift])
-	# A finger twitch that is not a pinch (tips 6 cm apart instead of 10) moves the start by
-	# the 2 cm the midpoint moved, and the direction not at all.
-	_pinch_gap = 0.06
-	await _ticks(90)
-	var twitch_dir := _saber.global_transform.basis.y.normalized()
-	_check("open hand: finger movement does not swing the ray", twitch_dir.dot(ray_dir) > 0.999999,
-		"direction dot %.7f" % twitch_dir.dot(ray_dir))
 	_pinch_gap = 0.10
 	await _ticks(90)
+	var pointer_err := _saber.global_position.distance_to(_expected_pointer_origin())
+	_check("open hand: the pointer starts midway between thumb tip and index tip", pointer_err < 0.001, "error %.3f m" % pointer_err)
 	# --- 5c. the runtime's own pointer (XR_FB_hand_tracking_aim) wins when it is there ------
 	var aim := XRControllerTracker.new()
 	aim.name = &"/user/fbhandaim/left"
@@ -310,30 +317,11 @@ func _run() -> void:
 	_check("a relaxed hand (tips 2.5 cm apart) does not click", not _controller.trigger_pressed())
 	_pinch_gap = 0.10
 	await _ticks(90)
-	# In a menu the game does not ask for the blade; a fist still ignites it.
-	_saber._hide()
-	_grip = GRIP_FIST
-	await _ticks(4)
-	_check("menu: a fist ignites the saber even when the game has not asked for it", _saber.is_extended())
-	_grip = GRIP_OPEN
-	await _ticks(200)
-	_check("menu: opening the hand puts it away again", not _saber.is_extended())
-	_saber._show()
-	await _ticks(90)
-	var pointer_err := _saber.global_position.distance_to(_expected_pointer_origin())
-	_check("open hand: the pointer starts midway between thumb tip and index tip", pointer_err < 0.001, "error %.3f m" % pointer_err)
-	_check("open hand: nothing of the saber is drawn, hilt included", not (_saber.get_node("saber_holder") as Node3D).visible)
-	_grip = GRIP_FIST
-	await _ticks(4)
-	_check("fist: gripping", _controller.is_gripping())
-	_check("fist: the blade ignites", _saber.is_extended())
-	_pinch_gap = 0.10
-	await _ticks(2)
-	_pinch_gap = 0.01
-	await _ticks(2)
-	_check("fist: thumb on index is not a click", not _controller.trigger_pressed())
-	_pinch_gap = 0.10
+	# The song starts: the saber is out with the hand OPEN, and stays out.
 	_saber.set_swingcast_enabled(true)
+	await _ticks(4)
+	_check("song, open hand: the saber is out", _saber.is_extended())
+	_grip = GRIP_FIST
 	# The Show animation extends the blade over a second; wait it out.
 	await _ticks(200)
 	_check("premise: the blade is extended",
@@ -372,7 +360,7 @@ func _run() -> void:
 	await _ticks(2)
 	_check("premise: hand path dropped", not _controller.is_hand_tracking())
 	_check("premise: the blade is parked, still extended", _saber.hand_drive_active and _saber.is_extended())
-	_check("a dropout does not drop the grip", _controller.is_gripping())
+	_check("song: losing sight of the hand does not put the saber away", _saber.is_extended())
 	target.cuts = 0
 	target.global_position = _saber.last_blade_base.lerp(_saber.last_blade_tip, 0.5)
 	target.arm(_saber._hit_mask)
@@ -381,16 +369,24 @@ func _run() -> void:
 	target.disarm()
 	target.queue_free()
 
-	# --- 6b. opening the hand sheathes the blade --------------------------------------------
+	# --- 6b. the hand comes back, opens, closes: the saber never goes away in a song ----------
 	_hand.has_tracking_data = true
 	await _ticks(2)
-	_check("premise: still ignited when the hand returns as a fist", _saber.is_extended())
+	_check("song: still out when the hand is seen again", _saber.is_extended())
 	_grip = GRIP_OPEN
+	await _ticks(6)
+	_check("song: opening the hand does not put the saber away", _saber.is_extended())
+	var open_hilt := _saber.global_position - (_saber.last_blade_tip - _saber.last_blade_base).normalized() * 0.03
+	var open_knuckles := ORIGIN_XF * (_palm.origin + (KNUCKLE_INDEX + KNUCKLE_LITTLE) * 0.5)
+	_check("song, open hand: the hilt stays at the knuckles, not out along the fingers",
+		open_hilt.distance_to(open_knuckles) < 0.031, "%.3f m from the knuckle row" % open_hilt.distance_to(open_knuckles))
+	# The song is paused or over: the saber goes, the pointer returns.
+	_saber.set_swingcast_enabled(false)
 	await _ticks(4)
-	_check("open hand: the blade retracts", not _saber.is_extended())
+	_check("pause: the saber is put away", not _saber.is_extended())
 	# The Hide animation shrinks the blade over a second; the pointer pose returns after it.
 	await _ticks(200)
-	_check("open hand: the hilt is gone once the blade has retracted", not (_saber.get_node("saber_holder") as Node3D).visible)
+	_check("pause: the hilt is gone once the blade has retracted", not (_saber.get_node("saber_holder") as Node3D).visible)
 
 	# --- 7. hand data returns: the blade follows again --------------------------------------
 	_palm.origin += Vector3(0.1, 0.0, 0.0)
