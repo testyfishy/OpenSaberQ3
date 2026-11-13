@@ -46,6 +46,7 @@ func _run() -> void:
 	await _apply_nodes()
 	_jumps()
 	_support()
+	await _zero_scale()
 	print("NOODLE checks=%d failed=%d" % [_checks, _fails])
 	print("NOODLE ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(0 if _fails == 0 else 1)
@@ -701,3 +702,40 @@ func _support() -> void:
 	NoodleTracks.reset()
 	NoodleEvents.reset()
 	MapTimer.reset()
+
+
+# Scale 0 hides an object in many Noodle maps: it must not leave a singular transform.
+func _zero_scale() -> void:
+	var T := NoodleTracks
+	T.reset()
+	T.active = true
+	var hidden := T.get_track(T.index_of("hide"))
+	hidden.set_vec(T.P_SCALE, Vector3.ZERO)
+	var c := Cuttable.new()
+	add_child(c)
+	c.set_physics_process(false)
+	c.speed = 10.0
+	c.transform = Transform3D(Basis.IDENTITY, Vector3(0, 1, -10))
+	c.rotation = Vector3(0, 0, PI / 2.0)
+	c.scale = Vector3.ZERO
+	c.noodle_spawn(_obj({"track": "hide"}), 1.0)
+	_check("static and animated scale 0: invertible note", absf(c.transform.basis.determinant()) > 0.0 and c.transform.affine_inverse().origin.is_finite())
+	_check("static rotation kept through a static scale 0", c._n_rot.is_equal_approx(Quaternion.from_euler(Vector3(0, 0, PI / 2.0))))
+	c.queue_free()
+	var wall := (load("res://game/Wall/Wall.tscn") as PackedScene).instantiate() as Wall
+	add_child(wall)
+	wall.set_physics_process(false)
+	MapTimer.load_bpm_events({}, 120.0)
+	var info := ObstacleInfo.new_v3({"b": 4.0, "d": 1.0, "x": 1, "y": 0, "w": 1, "h": 5, "customData": {"track": "hide"}})
+	T._resolve(info.noodle)
+	wall.speed = 10.0
+	wall._half_depth = 0.5
+	wall.transform = Transform3D(Basis.IDENTITY, Vector3(0, 1.5, -10.5))
+	wall._noodle_spawn(info, 1.0)
+	wall._noodle_tick(0.1)
+	wall._update_inside_fade()
+	_check("animated scale 0: invertible wall", absf(wall.transform.basis.determinant()) > 0.0 and wall.transform.affine_inverse().origin.is_finite())
+	wall.queue_free()
+	await get_tree().physics_frame
+	MapTimer.reset()
+	T.reset()

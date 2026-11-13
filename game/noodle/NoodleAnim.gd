@@ -21,6 +21,7 @@ class_name NoodleAnim
 # call by the object that asked.
 
 const LANE := 0.6
+const MIN_SCALE := 0.0001
 
 static var song_sec := 0.0
 
@@ -173,7 +174,16 @@ static func compose(base: Vector3, static_rot: Quaternion, static_scale: Vector3
 	var pos := base + out_offset * LANE
 	if out_has_definite:
 		pos = Vector3(base.x, base.y, 0.0) + (out_offset + out_definite) * LANE
-	var basis := Basis(out_world * static_rot * out_local) * Basis.from_scale(static_scale * out_scale)
+	# Scale 0 is a common way to hide an object. Kept just off zero: a singular basis breaks
+	# every affine_inverse() downstream (hit tests, the wall fade) and the cut-plane maths.
+	var s := static_scale * out_scale
+	if absf(s.x) < MIN_SCALE:
+		s.x = MIN_SCALE
+	if absf(s.y) < MIN_SCALE:
+		s.y = MIN_SCALE
+	if absf(s.z) < MIN_SCALE:
+		s.z = MIN_SCALE
+	var basis := Basis(out_world * static_rot * out_local) * Basis.from_scale(s)
 	var xf := Transform3D(basis, out_world * pos)
 	if out_has_parent:
 		xf = out_parent * xf

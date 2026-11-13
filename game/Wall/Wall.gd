@@ -208,7 +208,7 @@ func _noodle_spawn(wall_info: ObstacleInfo, half_sec: float) -> void:
 	noodle = info_noodle
 	_n_front = transform.origin.z + _half_depth
 	_n_base = Vector3(transform.origin.x, transform.origin.y, _n_front)
-	_n_rot = transform.basis.get_rotation_quaternion()
+	_n_rot = Quaternion.from_euler(rotation)
 	_n_half_sec = maxf(half_sec, 0.001)
 	var dur_sec := Map.beat_to_seconds(wall_info.beat + wall_info.duration) - Map.beat_to_seconds(wall_info.beat)
 	# Heck ObstacleUpdateNoodlifier: lifetime over the jump plus the wall's own duration.

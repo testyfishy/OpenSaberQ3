@@ -58,6 +58,9 @@ static var _path_tweens: Array[Anim] = []
 # takes so the world is drawn relative to that player (see update()).
 static var player_track := -1
 static var root_xform := Transform3D.IDENTITY
+# The tracks that drive a transform (parents and the player's track), so the per-tick refresh
+# does not walk every track of a map with hundreds of them.
+static var _transform_tracks: Array[NoodleTrack] = []
 # Custom event type -> count, for every type this build does not act on.
 static var ignored := {}
 # How many event properties used point features that are not evaluated (bases, modifiers), and
@@ -76,6 +79,7 @@ static func reset() -> void:
 	_path_tweens.clear()
 	player_track = -1
 	root_xform = Transform3D.IDENTITY
+	_transform_tracks.clear()
 	ignored = {}
 	unsupported_points = 0
 	unsupported_targets = 0
@@ -244,12 +248,18 @@ static func dispatch(ev: Event, song_sec: float) -> void:
 						_path_tweens.append(tw)
 						_step_path(tw, song_sec)
 		ASSIGN_TRACK_PARENT:
-			NoodleTracks.tracks[ev.parent].is_transform = true
+			_mark_transform(NoodleTracks.tracks[ev.parent])
 			for ti in ev.tracks:
 				NoodleTracks.tracks[ti].parent = ev.parent
 		ASSIGN_PLAYER_TO_TRACK:
 			player_track = ev.tracks[0]
-			NoodleTracks.tracks[player_track].is_transform = true
+			_mark_transform(NoodleTracks.tracks[player_track])
+
+
+static func _mark_transform(t: NoodleTrack) -> void:
+	if not t.is_transform:
+		t.is_transform = true
+		_transform_tracks.append(t)
 
 
 static func _stop(list: Array[Anim], track: NoodleTrack, p: int) -> void:
@@ -296,15 +306,12 @@ static func update(song_sec: float) -> void:
 static func _update_transforms() -> void:
 	var list := NoodleTracks.tracks
 	var v2 := NoodleTracks.is_v2
-	for t in list:
-		if t.is_transform:
-			t.local = _local_xform(t, v2)
+	for t in _transform_tracks:
+		t.local = _local_xform(t, v2)
 	# Chain parents (a parent track can itself be a child of another), always from the local
 	# transforms so the order the tracks are visited in does not matter. Depth-limited so a
 	# cycle in a broken map cannot hang the game.
-	for t in list:
-		if not t.is_transform:
-			continue
+	for t in _transform_tracks:
 		var world := t.local
 		var up := t.parent
 		var depth := 0

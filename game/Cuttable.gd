@@ -194,8 +194,10 @@ func noodle_spawn(info_noodle: NoodleObject, half_sec: float) -> void:
 	noodle = info_noodle
 	_n_half_sec = maxf(half_sec, 0.001)
 	_n_base = transform.origin
-	_n_rot = transform.basis.get_rotation_quaternion()
-	_n_scale = transform.basis.get_scale()
+	# From the node's properties, not the basis: a static Noodle scale of 0 leaves a basis with
+	# no rotation to decompose.
+	_n_rot = Quaternion.from_euler(rotation)
+	_n_scale = scale
 	_noodle_tick(0.0)
 
 # One animated tick. The object's travel is integrated exactly as an un-animated one (so it is
