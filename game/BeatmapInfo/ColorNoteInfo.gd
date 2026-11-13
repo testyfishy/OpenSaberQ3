@@ -23,6 +23,8 @@ var has_custom_rotation := false
 var custom_euler := Vector3.ZERO
 var has_custom_scale := false
 var custom_scale := Vector3.ONE
+# Noodle Extensions tracks and animation (game/noodle); null for an object without any.
+var noodle: NoodleObject = null
 
 @warning_ignore("shadowed_variable")
 func _init(beat: float, line_index: float, line_layer: float, color: int, cut_direction: int, angle_offset: int) -> void:
@@ -55,6 +57,7 @@ static func new_v2(note_dict: Dictionary) -> ColorNoteInfo:
 	note.ignore_cut_angle = any_direction
 	note.custom_color = _read_custom_color(note_dict)
 	_read_custom_position(note, note_dict)
+	note.noodle = NoodleObject.from_entry(note_dict)
 	return note
 
 static func new_v3(note_dict: Dictionary) -> ColorNoteInfo:
@@ -78,6 +81,7 @@ static func new_v3(note_dict: Dictionary) -> ColorNoteInfo:
 	note.ignore_cut_angle = any_direction
 	note.custom_color = _read_custom_color(note_dict)
 	_read_custom_position(note, note_dict)
+	note.noodle = NoodleObject.from_entry(note_dict)
 	return note
 
 static func _read_custom_position(note: ColorNoteInfo, note_dict: Dictionary) -> void:

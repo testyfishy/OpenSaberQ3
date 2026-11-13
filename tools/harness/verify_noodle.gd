@@ -37,6 +37,8 @@ func _run() -> void:
 	_easings()
 	_points()
 	_named()
+	_tracks()
+	_fixtures()
 	print("NOODLE checks=%d failed=%d" % [_checks, _fails])
 	print("NOODLE ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(0 if _fails == 0 else 1)
@@ -143,3 +145,113 @@ func _named() -> void:
 		{"_name": "zag", "_points": [[0, 0], [4, 1]]}]}})
 	_near("v2 named definition", P.from_value("zag", P.KIND_FLOAT, v2).eval_float(0.25), 1.0)
 	_check("unknown name is null", P.from_value("nope", P.KIND_FLOAT, v2) == null)
+
+
+# --- step 2: track registry -----------------------------------------------------------------
+func _tracks() -> void:
+	var T := NoodleTracks
+	_check("no customData, no NoodleObject", NoodleObject.from_entry({"b": 1.0}) == null)
+	_check("customData without track, no NoodleObject", NoodleObject.from_entry({"customData": {"color": [1, 0, 0]}}) == null)
+	_check("empty track name ignored", NoodleObject.from_entry({"customData": {"track": ""}}) == null)
+	var one := NoodleObject.from_entry({"customData": {"track": "solo"}})
+	_check("v3 track string", one != null and one.track_names == PackedStringArray(["solo"]))
+	var many := NoodleObject.from_entry({"customData": {"track": ["move", "leftnotes"]}})
+	_check("v3 track array", many != null and many.track_names == PackedStringArray(["move", "leftnotes"]))
+	var v2 := NoodleObject.from_entry({"_customData": {"_track": "zig"}})
+	_check("v2 _track string", v2 != null and v2.track_names == PackedStringArray(["zig"]))
+	var v2a := NoodleObject.from_entry({"_customData": {"_track": ["a", 3, "b"]}})
+	_check("v2 _track array skips non-strings", v2a != null and v2a.track_names == PackedStringArray(["a", "b"]))
+
+	# Through the real parsers, both spellings, every object type.
+	var n3 := ColorNoteInfo.new_v3({"b": 4.0, "x": 1, "y": 0, "c": 0, "d": 1, "customData": {"track": ["move", "leftnotes"]}})
+	_check("v3 note joins its tracks", n3.noodle != null and n3.noodle.track_names.size() == 2)
+	var n2 := ColorNoteInfo.new_v2({"_time": 4.0, "_lineIndex": 1, "_lineLayer": 0, "_type": 0, "_cutDirection": 1, "_customData": {"_track": "zig"}})
+	_check("v2 note joins its track", n2.noodle != null and n2.noodle.track_names[0] == "zig")
+	var plain := ColorNoteInfo.new_v3({"b": 4.0, "x": 1, "y": 0, "c": 0, "d": 1})
+	_check("plain note has no Noodle data", plain.noodle == null)
+	var b3 := BombInfo.new_v3({"b": 2.0, "x": 0, "y": 0, "customData": {"track": "bombs"}})
+	var b2 := BombInfo.new_v2({"_time": 2.0, "_lineIndex": 0, "_lineLayer": 0, "_type": 3, "_customData": {"_track": "bombs"}})
+	_check("bombs join tracks (v3, v2)", b3.noodle != null and b2.noodle != null and b2.noodle.track_names[0] == "bombs")
+	var w3 := ObstacleInfo.new_v3({"b": 2.0, "d": 1.0, "x": 0, "y": 0, "w": 1, "h": 5, "customData": {"track": "walls"}})
+	var w2 := ObstacleInfo.new_v2({"_time": 2.0, "_duration": 1.0, "_lineIndex": 0, "_type": 0, "_width": 1, "_customData": {"_track": ["walls"]}})
+	_check("walls join tracks (v3, v2)", w3.noodle != null and w2.noodle != null and w3.noodle.track_names[0] == "walls")
+
+	# Registry: indices are stable, lookups do not create.
+	T.reset()
+	_check("registry starts inactive", not T.active and T.tracks.is_empty())
+	var ia := T.index_of("a")
+	var ib := T.index_of("b")
+	_check("index_of creates in order", ia == 0 and ib == 1 and T.index_of("a") == 0 and T.tracks.size() == 2)
+	_check("find does not create", T.find("c") == -1 and T.tracks.size() == 2)
+	var track := T.get_track(ia)
+	_check("a new track has nothing set", track.has[T.P_SCALE] == 0 and track.has[T.P_OFFSET_POSITION] == 0 and not track.has_path_for(T.P_DEFINITE_POSITION))
+	track.set_from_points(T.P_OFFSET_POSITION, NoodlePoints.parse([[0, 0, 0, 0], [2, 4, 6, 1]], NoodlePoints.KIND_POSITION), 0.5)
+	_check("a track holds its value", track.has[T.P_OFFSET_POSITION] == 1)
+	_near3("held value", track.vec[T.P_OFFSET_POSITION], Vector3(1, 2, -3))
+	track.set_from_points(T.P_DISSOLVE, NoodlePoints.parse([[1, 0], [0, 1]], NoodlePoints.KIND_FLOAT), 0.25)
+	_near("held float", track.flt[T.P_DISSOLVE], 0.75)
+	track.clear_value(T.P_DISSOLVE)
+	_check("null clears a value", track.has[T.P_DISSOLVE] == 0)
+
+	# Resolution after load: names become indices and the registry turns active.
+	T.reset()
+	MapData.reset()
+	MapData.note_stack = [n3, plain]
+	MapData.bomb_stack = [b2]
+	MapData.obstacle_stack = [w3]
+	T.resolve_objects()
+	_check("resolution activates the registry", T.active)
+	_check("note tracks resolved", n3.noodle.tracks == PackedInt32Array([0, 1]) and T.tracks[1].name == "leftnotes")
+	_check("bomb and wall tracks resolved", b2.noodle.tracks == PackedInt32Array([2]) and w3.noodle.tracks == PackedInt32Array([3]))
+	MapData.reset()
+	T.reset()
+
+
+# --- real fixture maps (skipped when the fixture folder is not on this machine) -------------
+func _fixture_dir(folder: String) -> String:
+	return OS.get_environment("TEMP").replace("\\", "/") + "/toolchain/allsongs/" + folder + "/"
+
+
+func _load_fixture(folder: String, file: String) -> bool:
+	var path := _fixture_dir(folder)
+	if not FileAccess.file_exists(path + file):
+		print("NOODLE skip fixture %s/%s (not on this machine)" % [folder, file])
+		return false
+	var info := Map.load_map_info(path)
+	if info == null:
+		_check("fixture %s info loads" % folder, false)
+		return false
+	for diff in info.difficulty_beatmaps:
+		if diff.beatmap_filename == file:
+			var data: Variant = vr.load_json_file(path + file)
+			var ok := data is Dictionary and Map.load_beatmap(info, diff, data as Dictionary)
+			_check("fixture %s/%s loads" % [folder, file], ok)
+			return ok
+	_check("fixture %s/%s listed in Info.dat" % [folder, file], false)
+	return false
+
+
+func _fixtures() -> void:
+	# 4a2b3 Hard (v3): notes on ["move", "leftnotes"]; a plain map must leave the registry off.
+	if _load_fixture("4a2b3", "HardStandard.dat"):
+		var with_tracks := 0
+		for note in MapData.note_stack:
+			if note != null and note.noodle != null:
+				with_tracks += 1
+		_check("v3 fixture: notes carry tracks", with_tracks > 0, "%d notes" % with_tracks)
+		_check("v3 fixture: move and leftnotes exist", NoodleTracks.find("move") >= 0 and NoodleTracks.find("leftnotes") >= 0)
+		_check("v3 fixture: registry active", NoodleTracks.active and not NoodleTracks.is_v2)
+	# 198f3 ExpertPlus (v2): `_track` spelling end to end.
+	if _load_fixture("198f3", "ExpertPlus.dat"):
+		_check("v2 fixture: registry active with tracks", NoodleTracks.active and NoodleTracks.is_v2 and not NoodleTracks.tracks.is_empty(), "%d tracks" % NoodleTracks.tracks.size())
+	if _load_fixture("3af66", _first_dat("3af66")):
+		_check("plain fixture: registry stays off", not NoodleTracks.active and NoodleTracks.tracks.is_empty())
+	MapData.reset()
+	NoodleTracks.reset()
+
+
+func _first_dat(folder: String) -> String:
+	var info := Map.load_map_info(_fixture_dir(folder))
+	if info == null or info.difficulty_beatmaps.is_empty():
+		return "-"
+	return info.difficulty_beatmaps[0].beatmap_filename

@@ -17,6 +17,8 @@ var has_custom_rotation := false
 var custom_euler := Vector3.ZERO
 var has_custom_scale := false
 var custom_scale := Vector3.ONE
+# Noodle Extensions tracks and animation (game/noodle); null for an object without any.
+var noodle: NoodleObject = null
 
 @warning_ignore("shadowed_variable")
 func _init(beat: float, duration: float, line_index: float, line_layer: float, width: float, height: float) -> void:
@@ -58,6 +60,7 @@ static func new_v2(obstacle_dict: Dictionary) -> ObstacleInfo:
 	obstacle.custom_color = PaletteResolver.chroma_color(cd.get("_color", cd.get("color", null)))
 	obstacle.fake = Utils.get_bool(cd, "_fake", false)
 	_read_custom_transform(obstacle, cd)
+	obstacle.noodle = NoodleObject.from_custom_data(cd)
 	return obstacle
 
 static func new_v3(obstacle_dict: Dictionary) -> ObstacleInfo:
@@ -73,6 +76,7 @@ static func new_v3(obstacle_dict: Dictionary) -> ObstacleInfo:
 	obstacle.custom_color = PaletteResolver.chroma_color(cd.get("color", cd.get("_color", null)))
 	obstacle.fake = Utils.get_bool(cd, "fake", false)
 	_read_custom_transform(obstacle, cd)
+	obstacle.noodle = NoodleObject.from_custom_data(cd)
 	return obstacle
 
 

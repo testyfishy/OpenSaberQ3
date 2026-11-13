@@ -182,8 +182,11 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 	vr.log_info("MAP data: bpm_segments=%d fakes_filtered=%d unsupported=%s" % [bpm_segments, MapSupport.fakes_filtered, str(MapSupport.unsupported_features)])
 	
 	MapData.reset()
+	# Before the loader threads start: they read the map's named point definitions.
+	NoodleTracks.begin_load(map_data)
 	if map_data.has("_version"):
 		MapData.load_v2(map_data)
+		NoodleTracks.finish_load(map_data)
 		current_info = info
 		current_difficulty = difficulty
 		Map.set_colors_from_custom_data()
@@ -193,6 +196,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 		var version := Utils.get_str(map_data, "version", "")
 		if version.begins_with("3."):
 			MapData.load_v3(map_data)
+			NoodleTracks.finish_load(map_data)
 			current_info = info
 			current_difficulty = difficulty
 			Map.set_colors_from_custom_data()
