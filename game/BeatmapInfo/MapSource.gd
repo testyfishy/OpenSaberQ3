@@ -200,7 +200,29 @@ static func _difficulty_files(info_dict: Dictionary) -> Array[String]:
 				if diff is Dictionary:
 					files.append(_string_of(diff as Dictionary, "_beatmapFilename", ""))
 		return files
-	# v3/v4: one flat array.
+	# v4: Info.dat, then the audio data file, then each difficulty's beatmap file followed by
+	# its lightshow file (repeats included). Checked against BeatSaver's published hash for map
+	# 55878. v4 names the file `beatmapDataFilename`; reading the v3 key here left every v4 map
+	# with an empty hash, so BeatLeader could never match one.
+	var is_v4 := false
+	for diff: Variant in _array_of(info_dict, "difficultyBeatmaps"):
+		if diff is Dictionary and (diff as Dictionary).has("beatmapDataFilename"):
+			is_v4 = true
+			break
+	if is_v4:
+		var audio: Variant = info_dict.get("audio")
+		if audio is Dictionary:
+			var audio_file := _string_of(audio as Dictionary, "audioDataFilename", "")
+			if not audio_file.is_empty():
+				files.append(audio_file)
+		for diff: Variant in _array_of(info_dict, "difficultyBeatmaps"):
+			if diff is Dictionary:
+				files.append(_string_of(diff as Dictionary, "beatmapDataFilename", ""))
+				var lightshow := _string_of(diff as Dictionary, "lightshowDataFilename", "")
+				if not lightshow.is_empty():
+					files.append(lightshow)
+		return files
+	# v3: one flat array.
 	for diff: Variant in _array_of(info_dict, "difficultyBeatmaps"):
 		if diff is Dictionary:
 			files.append(_string_of(diff as Dictionary, "beatmapFilename", ""))

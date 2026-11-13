@@ -294,6 +294,15 @@ static func v4_to_v3(map_data: Dictionary, lightshow_data: Dictionary) -> void:
 	var chain_data := Utils.get_array(map_data, "chainsData", [])
 	var event_data := Utils.get_array(lightshow_data, "basicEventsData", [])
 
+	# v4 has no rotation events: each object carries the lane rotation it belongs to as `r`.
+	# The lanes are driven by rotation events (Map._build_track_rotations), so turn the
+	# per-object value back into "rotate by this much at this beat". Must run before the
+	# lists below are replaced by their expanded copies, which do not keep `r`.
+	if Utils.get_array(map_data, "rotationEvents", []).is_empty():
+		var turns := _v4_rotation_events(map_data)
+		if not turns.is_empty():
+			map_data["rotationEvents"] = turns
+
 	map_data["colorNotes"] = _v4_expand_notes(Utils.get_array(map_data, "colorNotes", []), note_data)
 	map_data["bombNotes"] = _v4_expand_bombs(Utils.get_array(map_data, "bombNotes", []), bomb_data)
 	map_data["obstacles"] = _v4_expand_obstacles(Utils.get_array(map_data, "obstacles", []), obstacle_data)
@@ -303,6 +312,27 @@ static func v4_to_v3(map_data: Dictionary, lightshow_data: Dictionary) -> void:
 		Utils.get_array(map_data, "chains", []), note_data, chain_data)
 	map_data["basicBeatmapEvents"] = _v4_expand_events(
 		Utils.get_array(lightshow_data, "basicEvents", []), event_data)
+
+
+static func _v4_rotation_events(map_data: Dictionary) -> Array:
+	var samples: Array[Vector2] = []
+	for list_name: String in ["colorNotes", "bombNotes", "obstacles"]:
+		for e: Variant in Utils.get_array(map_data, list_name, []):
+			if e is Dictionary and (e as Dictionary).has("r"):
+				samples.append(Vector2(Utils.get_float(e as Dictionary, "b", 0.0), Utils.get_float(e as Dictionary, "r", 0.0)))
+	for list_name: String in ["arcs", "chains"]:
+		for e: Variant in Utils.get_array(map_data, list_name, []):
+			if e is Dictionary and (e as Dictionary).has("hr"):
+				samples.append(Vector2(Utils.get_float(e as Dictionary, "hb", 0.0), Utils.get_float(e as Dictionary, "hr", 0.0)))
+	samples.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.x < b.x)
+	var events: Array = []
+	var current := 0.0
+	for sample in samples:
+		if not is_equal_approx(sample.y, current):
+			# "e": 0 is an early event: it applies to objects on its own beat.
+			events.append({"b": sample.x, "e": 0.0, "r": sample.y - current})
+			current = sample.y
+	return events
 
 
 static func _v4_at(entry: Dictionary, data: Array, key: String, default: int = -1) -> Dictionary:

@@ -127,8 +127,13 @@ static func load_map_info(load_path: String) -> MapInfo:
 		info_dict = vr.load_json_file(load_path + "Info.dat")
 	elif FileAccess.file_exists(load_path + "info.dat"):
 		info_dict = vr.load_json_file(load_path + "info.dat")
+	else:
+		# A folder with no Info.dat is not a broken map, it is not a map: an interrupted
+		# download or a leftover folder. Say so instead of calling it "invalid".
+		vr.log_warning("Skipping %s: no Info.dat in the folder (incomplete download or leftover)" % load_path)
+		return null
 	if (info_dict.is_empty()):
-		vr.log_error("Invalid info.dat found in " + load_path)
+		vr.log_error("Invalid info.dat found in %s (the file exists but is not readable JSON)" % load_path)
 		return null
 	
 	if info_dict.has("_version"):

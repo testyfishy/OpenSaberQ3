@@ -108,6 +108,11 @@ var _shown_combo := -1
 var _audio_synced_after_restart := false
 
 var _in_wall := false
+# Set by the unpause path so the play state can tell a resume from a fresh start.
+var resuming_from_pause := false
+# The song ended because the energy bar emptied (only with No Fail off).
+var _song_failed := false
+var _shown_energy := -1
 
 #prevents the song for starting from the start when pausing and unpausing
 var pause_position := 0.0
@@ -152,6 +157,7 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 	song_player.stream = AudioStreamOggVorbis.load_from_file(info.filepath + info.song_filename)
 	
 	_audio_synced_after_restart = false
+	_song_failed = false
 	song_player.play(0.0)
 	song_player.volume_db = 0.0
 	_in_wall = false
@@ -212,6 +218,8 @@ func _physics_process(_dt: float) -> void:
 		(debug_info_label.mesh as TextMesh).text = dbg_text
 	
 	gamestate._physics_process(self)
+	if gamestate == gamestate_playing and _in_wall and not Scoreboard.paused:
+		Scoreboard.drain(Scoreboard.ENERGY_WALL_PER_SEC * _dt)
 	
 	_check_and_update_saber(left_controller, left_saber)
 	_check_and_update_saber(right_controller, right_saber)
@@ -314,6 +322,8 @@ func _ready() -> void:
 	Scoreboard.score_changed.connect(_display_points)
 	@warning_ignore("return_value_discarded")
 	Scoreboard.points_awarded.connect(points_label_driver.show_points)
+	@warning_ignore("return_value_discarded")
+	Scoreboard.failed.connect(_on_energy_empty)
 	
 	#render common assets for a couple of frames to prevent performance issues when loading them mid game
 	($pre_renderer as Node3D).visible = true
@@ -737,7 +747,13 @@ func _display_points() -> void:
 		_shown_multiplier = Scoreboard.multiplier
 		_shown_combo = Scoreboard.combo
 		if Cost.enabled: Cost.text_mesh_writes += 1
-		(multiplier_label.mesh as TextMesh).text = "x %d\nCombo %d" % [Scoreboard.multiplier, Scoreboard.combo]
+		(multiplier_label.mesh as TextMesh).text = _multiplier_text()
+	# The energy line only exists when it can end the song; whole percents, so it rewrites the
+	# mesh at most once per cut.
+	var energy_percent := int(round(Scoreboard.energy * 100.0)) if not Settings.no_fail else -1
+	if energy_percent != _shown_energy:
+		_shown_energy = energy_percent
+		(multiplier_label.mesh as TextMesh).text = _multiplier_text()
 	percent_indicator.update_percent(hit_rate)
 
 # accessor method for the player name selector UI element
@@ -789,6 +805,19 @@ func _recover_audio_after_idle() -> void:
 	vr.log_info("AUDIO recovered after resume (was_playing=%s)" % str(was_playing))
 	_audio_recovering = false
 
+func _multiplier_text() -> String:
+	var text := "x %d\nCombo %d" % [Scoreboard.multiplier, Scoreboard.combo]
+	if not Settings.no_fail:
+		text += "\nEnergy %d%%" % int(round(Scoreboard.energy * 100.0))
+	return text
+
+func _on_energy_empty() -> void:
+	if Settings.no_fail or gamestate != gamestate_playing:
+		return
+	_song_failed = true
+	vr.log_info("FAIL: energy empty at %.1f s" % song_player.get_playback_position())
+	_on_song_ended()
+
 func _on_song_ended() -> void:
 	song_player.stop()
 	# Cuts whose follow-through was still being measured are settled before the total is read.
@@ -814,7 +843,10 @@ func _on_song_ended() -> void:
 	_saved_record = {}
 	_saved_map_info = Map.current_info
 	_saved_diff_rank = Map.current_difficulty.difficulty_rank
-	if Highscores.is_new_highscore(Map.current_info, Map.current_difficulty.difficulty_rank, Scoreboard.points):
+	# A failed song is not a result: nothing is stored for it.
+	if _song_failed:
+		new_record = false
+	elif Highscores.is_new_highscore(Map.current_info, Map.current_difficulty.difficulty_rank, Scoreboard.points):
 		_saved_record = Highscores.add_highscore(
 			Map.current_info,
 			Map.current_difficulty.difficulty_rank,
@@ -830,7 +862,7 @@ func _on_song_ended() -> void:
 		Scoreboard.points,
 		highscore,
 		current_percent,
-		"%s By %s\n%s     Map author: %s" % [
+		("FAILED  -  " if _song_failed else "") + "%s By %s\n%s     Map author: %s" % [
 			Map.current_info.song_name,
 			Map.current_info.song_author_name,
 			Map.current_difficulty.custom_name,
@@ -1003,6 +1035,7 @@ func _unpause_button() -> void:
 	pause_countdown.visible = false
 	
 	# continue game play
+	resuming_from_pause = true
 	song_player.play(pause_position)
 	_transition_game_state(gamestate_playing)
 

@@ -14,7 +14,7 @@ func set_collision_disabled(value: bool) -> void:
 func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: BeepSaberController) -> HitInfo:
 	_unregister_hit()
 	# A bomb was never worth points, so it does not raise the best possible score.
-	Scoreboard.bad_cut(transform.origin, 0)
+	Scoreboard.bad_cut(transform.origin, 0, Scoreboard.ENERGY_MISS)
 	var info := HitInfo.new()
 	info.kind = HitInfo.Kind.BAD
 	info.speed_len = cut_speed.length()

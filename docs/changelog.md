@@ -4,6 +4,24 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.24 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
+
+**Tier 1 gameplay mechanics.**
+
+- **Strict cut rules** (Settings > Gameplay, on by default): a cut more than 60 degrees off the
+  arrow, or slower than 2 m/s, is a bad cut, as in Beat Saber. Off restores the older behaviour.
+- **Arc and chain scoring**: a chain head has no follow-through and tops out at 85; an arc's head
+  is given its follow-through and an arc's tail its swing in.
+- **Energy and fail**: misses, bad cuts, bombs and walls drain an energy bar. **No Fail** (Settings
+  > Gameplay) is on by default; with it off, an empty bar ends the song and nothing is saved.
+- **90/360 maps**: notes are judged in their own lane, so angle and timing are right in rotated
+  lanes; v4 maps, which store rotation on each object, now rotate.
+- **v4 maps get their level hash**, so BeatLeader can match them. Checked against BeatSaver's
+  published hash.
+- **Library**: a folder with no Info.dat is reported as an incomplete download instead of an
+  "invalid" map, and a download that extracts nothing no longer leaves a tagged empty folder.
+- Not in this build: Noodle Extensions animation and per-object note speed.
+
 ## v0.7.23 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 
 **Standard scoring.** Scores now follow the Beat Saber model, so they mean the same thing here as

@@ -80,6 +80,18 @@ var hand_tracking_enabled: bool:
 	set(value):
 		hand_tracking_enabled = value
 		set_and_emit(&"hand_tracking_enabled", value)
+# Beat Saber's hit rules: a cut against the arrow, or slower than 2 m/s, is a bad cut. Off keeps
+# this fork's older behaviour, where any contact with the right saber counts as a hit.
+var strict_cuts: bool:
+	set(value):
+		strict_cuts = value
+		set_and_emit(&"strict_cuts", value)
+# On: the energy bar is not enforced and a song always plays to the end. Off: energy reaching
+# zero ends the song as a fail, and nothing is saved for it.
+var no_fail: bool:
+	set(value):
+		no_fail = value
+		set_and_emit(&"no_fail", value)
 var disable_map_color: bool:
 	set(value):
 		disable_map_color = value
@@ -420,6 +432,8 @@ const SCHEMA := {
 	"screenshot_trigger": {"default": true},
 	"wall_map_color": {"default": true},
 	"hand_tracking_enabled": {"default": false},
+	"strict_cuts": {"default": true},
+	"no_fail": {"default": true},
 }
 
 # Derived view for the loader, the panel and the tests. The platform patch in _ready() writes

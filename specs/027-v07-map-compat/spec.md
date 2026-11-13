@@ -22,6 +22,18 @@ Not yet seen on a headset; note that `BeepCube.cut` still scores beat and angle 
 global z / global basis, which is wrong inside a rotated lane and is more exposed now that notes
 really fly down one. See [the audit report](../../docs/audit-fable-5.2.md), G-1 and G-11.
 
+## Scoped change on `audit/fable-5.2`: v4 rotation, lane-local judging, v4 hash (0.7.24)
+
+- v4 difficulty files carry the lane rotation on each object (`r`; `hr` on arcs and chains) and
+  have no rotation events. `MapData.v4_to_v3` now rebuilds rotation events from those values
+  before expanding the lists, so the existing lane system (FR-006) turns v4 maps too. Two objects
+  on one beat with different rotations cannot be represented; the later value wins.
+- `BeepCube.cut` judges cut angle and timing in the note's lane (lane-local velocity, the note's
+  local up and local z) instead of world axes. Identical numbers in an unrotated lane.
+- `MapSource.compute_level_hash` handles v4: Info.dat, the audio data file, then each
+  difficulty's beatmap file followed by its lightshow file. Verified equal to BeatSaver's hash
+  for map `55878`.
+
 ## Context and evidence
 
 - Public policy already published: `README.md` → "Map compatibility", `docs/map-compatibility.md`.

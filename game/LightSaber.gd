@@ -211,6 +211,15 @@ func _physics_process(delta: float) -> void:
 	saber_end_past = saber_end
 	saber_end = saber_visual.tip.global_transform.origin
 	last_dt = delta
+	# The tip's last real movement. A pose source slower than the physics rate repeats its pose
+	# for several ticks, and a note can meet the blade on one of those ticks; judged on that
+	# tick alone the swing would have no speed and no direction.
+	var tip_velocity := (saber_end - saber_end_past) / delta if delta > 0.0 else Vector3.ZERO
+	if tip_velocity.length() > TIP_MOVING_MPS:
+		_recent_tip_velocity = tip_velocity
+		_recent_tip_age = 0
+	else:
+		_recent_tip_age += 1
 	# The blade segment the fan casts from: the swing cast's origin and its
 	# animated target_position (the Show/Hide animation drives it, so a retracted
 	# saber sweeps nothing, exactly as the rays sweep nothing).
@@ -324,6 +333,8 @@ func _handle_cuttable(cut_object: Node3D) -> void:
 	var time_offset: float = Map.beat_to_seconds(note.beat) - song_player_ref.get_playback_position()
 	var o := cut_origin()
 	var controller_speed: Vector3 = (saber_end - saber_end_past) / last_dt
+	if controller_speed.length() <= TIP_MOVING_MPS and _recent_tip_age <= SWING_REST_TICKS:
+		controller_speed = _recent_tip_velocity
 	const BEAT_DISTANCE := 4.0
 	var cutplane := Plane(o, saber_end, saber_end_past + Vector3(0, 0, BEAT_DISTANCE * Map.bpm_at_beat(note.beat) * last_dt / 30)) # Account for relative position to track speed
 	# The cut scores the hit and hands back the components it computed, so the
@@ -350,6 +361,9 @@ func _handle_cuttable(cut_object: Node3D) -> void:
 # The blade's direction is recorded every physics tick; the pre-swing is read back out of that
 # history, the follow-through is accumulated forward until the swing reverses, stops or times
 # out. Only direction matters here, so the measurement is the same for controllers and hands.
+const TIP_MOVING_MPS := 0.05
+var _recent_tip_velocity := Vector3.ZERO
+var _recent_tip_age := 1000
 const SWING_HISTORY_TICKS := 72
 const SWING_STILL_RAD := 0.0005
 # A step counts as part of the same swing while its axis stays within ~70 degrees of the cut's.

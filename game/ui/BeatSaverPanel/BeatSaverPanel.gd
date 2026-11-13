@@ -905,6 +905,15 @@ func _on_download_completed(result: int, _response_code: int, _headers: PackedSt
 
 		if not has_error:
 			Utils.unzip(zippath, song_out_dir)
+			# A bad response or a corrupt zip extracts nothing. Do not leave an empty folder
+			# behind (it shows up at every boot as a map that cannot load) and do not tag it.
+			if not FileAccess.file_exists(song_out_dir + "Info.dat") and not FileAccess.file_exists(song_out_dir + "info.dat"):
+				vr.log_error("_on_download_completed - no Info.dat after extracting '%s'; removing the folder" % song_out_dir)
+				if StorageTools.is_safe_map_path(song_out_dir):
+					Utils.remove_tree(song_out_dir)
+				has_error = true
+
+		if not has_error:
 			# The API record is the authoritative hash for this download (FR-001/FR-007).
 			# Written after the unzip so a failed download never leaves a tag behind.
 			MapSource.write(

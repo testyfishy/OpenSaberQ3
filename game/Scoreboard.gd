@@ -22,6 +22,8 @@ extends Node
 # finish_cut() adds the points once the saber has measured the swing out (see LightSaber).
 
 signal score_changed()
+# Energy reached zero. The game decides what that means (nothing, with No Fail on).
+signal failed()
 signal points_awarded(position: Vector3, amount: String)
 
 # Spike attribution (FR-033): one branch when off, one integer add when on.
@@ -41,6 +43,22 @@ const ACCURACY_ZERO_M := 0.3
 const MULTIPLIER_STEPS := {1: 2, 2: 4, 4: 8}
 const MULTIPLIER_MAX := 8
 
+# What kind of note was cut. Arcs and chains change which swing a note is judged on:
+#   an arc's head has to be held into the arc, so its follow-through is given;
+#   an arc's tail arrives along the arc, so its swing in is given;
+#   a chain's head is followed by the links, so it has no follow-through and tops out at 85.
+const FREE_PRE_SWING := 1
+const FREE_POST_SWING := 2
+const NO_POST_SWING := 4
+
+# Energy, as in Beat Saber: starts half full, a good cut adds 1 %, a bad cut costs 10 %, a miss or
+# a bomb 15 %, and standing in a wall drains 130 % a second.
+const ENERGY_START := 0.5
+const ENERGY_GOOD_CUT := 0.01
+const ENERGY_BAD_CUT := 0.10
+const ENERGY_MISS := 0.15
+const ENERGY_WALL_PER_SEC := 1.3
+
 var points: int
 var combo: int
 var multiplier: int
@@ -52,6 +70,8 @@ var max_points: int
 var right_notes: float
 var wrong_notes: float
 
+var energy := ENERGY_START
+var _failed := false
 var _progress := 0
 # The multiplier ladder of a run with no mistakes, used for max_points.
 var _ideal_multiplier := 1
@@ -71,6 +91,21 @@ func restart() -> void:
 	_ideal_multiplier = 1
 	_ideal_progress = 0
 	_pending = {}
+	energy = ENERGY_START
+	_failed = false
+	score_changed.emit()
+
+
+func _change_energy(amount: float) -> void:
+	energy = clampf(energy + amount, 0.0, 1.0)
+	if energy <= 0.0 and not _failed:
+		_failed = true
+		failed.emit()
+
+
+## Energy lost over time, for standing in a wall.
+func drain(amount: float) -> void:
+	_change_energy(-amount)
 	score_changed.emit()
 
 
@@ -111,17 +146,21 @@ func _count_possible(value: int) -> void:
 ## `center_distance` the cut's distance from the note centre in metres. `swing_counts` is false
 ## for a cut that went against the note's arrow: it still hits, but only the accuracy part scores.
 ## The points are not added yet - take the ticket with take_pending() and pass it to finish_cut().
-func note_cut(position: Vector3, pre_swing: float, center_distance: float, swing_counts: bool = true) -> void:
+func note_cut(position: Vector3, pre_swing: float, center_distance: float, swing_counts: bool = true, kind: int = 0) -> void:
 	if Cost.enabled: Cost.cuts += 1
 	_hit()
-	_count_possible(NOTE_MAX)
+	_count_possible(NOTE_MAX - POST_SWING_MAX if (kind & NO_POST_SWING) != 0 else NOTE_MAX)
 	right_notes += 1.0
+	_change_energy(ENERGY_GOOD_CUT)
+	if (kind & FREE_PRE_SWING) != 0:
+		pre_swing = 1.0
 	var pre := roundi(PRE_SWING_MAX * clampf(pre_swing, 0.0, 1.0)) if swing_counts else 0
 	var acc := roundi(ACCURACY_MAX * (1.0 - clampf(absf(center_distance) / ACCURACY_ZERO_M, 0.0, 1.0)))
 	# A second cut in the same tick must not lose the first one's ticket.
 	if not _pending.is_empty():
 		finish_cut(_pending, 0.0)
-	_pending = {"position": position, "base": pre + acc, "multiplier": multiplier, "swing_counts": swing_counts}
+	_pending = {"position": position, "base": pre + acc, "multiplier": multiplier, "swing_counts": swing_counts,
+		"kind": kind}
 	score_changed.emit()
 
 
@@ -136,7 +175,12 @@ func take_pending() -> Dictionary:
 func finish_cut(ticket: Dictionary, post_swing: float) -> void:
 	if ticket.is_empty():
 		return
+	var kind := int(ticket.get("kind", 0))
+	if (kind & FREE_POST_SWING) != 0:
+		post_swing = 1.0
 	var post := roundi(POST_SWING_MAX * clampf(post_swing, 0.0, 1.0)) if bool(ticket.get("swing_counts", true)) else 0
+	if (kind & NO_POST_SWING) != 0:
+		post = 0
 	var amount := int(ticket["base"]) + post
 	points += amount * int(ticket["multiplier"])
 	points_awarded.emit(ticket["position"], str(amount))
@@ -148,6 +192,7 @@ func chain_link_cut(position: Vector3) -> void:
 	_hit()
 	_count_possible(LINK_POINTS)
 	right_notes += 1.0
+	_change_energy(ENERGY_GOOD_CUT * 0.2)
 	points += LINK_POINTS * multiplier
 	points_awarded.emit(position, str(LINK_POINTS))
 	score_changed.emit()
@@ -155,8 +200,9 @@ func chain_link_cut(position: Vector3) -> void:
 
 ## A miss. `possible` is what the missed object was worth (115 for a note, 20 for a link, 0 for
 ## anything that was never worth points, such as hitting a bomb).
-func reset_combo(possible: int = NOTE_MAX) -> void:
+func reset_combo(possible: int = NOTE_MAX, energy_loss: float = ENERGY_MISS) -> void:
 	_count_possible(possible)
+	_change_energy(-energy_loss)
 	@warning_ignore("integer_division")
 	multiplier = maxi(1, multiplier / 2)
 	_progress = 0
@@ -167,6 +213,6 @@ func reset_combo(possible: int = NOTE_MAX) -> void:
 
 
 ## A cut with the wrong saber, or a bomb. See reset_combo for `possible`.
-func bad_cut(position: Vector3, possible: int = NOTE_MAX) -> void:
-	reset_combo(possible)
+func bad_cut(position: Vector3, possible: int = NOTE_MAX, energy_loss: float = ENERGY_BAD_CUT) -> void:
+	reset_combo(possible, energy_loss)
 	points_awarded.emit(position, "x")

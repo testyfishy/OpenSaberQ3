@@ -9,6 +9,9 @@ static var coalesce_lights := true
 func _ready(game) -> void:
 	_set_overlays(game, [])
 	game.show_MapSourceDialogs(false)
+	if not game.resuming_from_pause:
+		_arc_tails.clear()
+	game.resuming_from_pause = false
 	_set_sabers(game, true, true)
 	_set_hud(game, true, true, false)
 	Scoreboard.paused = false
@@ -27,6 +30,22 @@ func _physics_process(game: BeepSaber_Game) -> void:
 			game._audio_synced_after_restart = true
 
 const BEATS_AHEAD := 4.0
+
+# Arcs whose tail note has not been spawned yet.
+var _arc_tails: Array[ArcInfo] = []
+
+func _mark_arc_tail(note: BeepCube) -> void:
+	for i in range(_arc_tails.size() - 1, -1, -1):
+		var arc_info := _arc_tails[i]
+		if arc_info.tail_beat < note.beat - 8.0:
+			# Long past: the tail note never came (or the arc ends on nothing).
+			_arc_tails.remove_at(i)
+			continue
+		if (absf(arc_info.tail_beat - note.beat) < 0.001 and arc_info.color == note.which_saber
+				and is_equal_approx(arc_info.tail_line_index, note.line_index)
+				and is_equal_approx(arc_info.tail_line_layer, note.line_layer)):
+			note.arc_tail = true
+			_arc_tails.remove_at(i)
 
 const Cost := preload("res://game/scripts/CostProbe.gd")
 
@@ -58,6 +77,7 @@ func _process_map(game: BeepSaber_Game) -> void:
 			Map.first_note_ms = (Time.get_ticks_usec() - Map.load_finished_usec) / 1000.0
 			Map.first_note_beat = note_info.beat
 		note.spawn(note_info, current_beat)
+		_mark_arc_tail(note)
 		TrackLanes.place(note, note_info.beat)
 		Harness.log_spawn(note_info)
 		note_info_refs.append(note_info)
@@ -119,6 +139,14 @@ func _process_map(game: BeepSaber_Game) -> void:
 					break
 			cube_id -= 1
 		
+		if cube != null:
+			cube.arc_head = true
+		# The tail note is later in the map: usually not spawned yet, sometimes in this same
+		# pass. Remember the arc so the note can be marked when it appears, and check the
+		# notes of this pass now.
+		_arc_tails.append(arc_info)
+		for spawned in cube_refs:
+			_mark_arc_tail(spawned)
 		arc.spawn(arc_info, current_beat, cube)
 		game.track.add_child(arc)
 		TrackLanes.place(arc, arc_info.head_beat)

@@ -25,6 +25,12 @@ var _cut_color := Color.WHITE
 var is_dot: bool
 # Mapping Extensions any-direction: the arrow is drawn, but the cut angle is not scored.
 var ignore_cut_angle := false
+# Set by the spawner when this note starts a chain, starts an arc or ends an arc; each changes
+# which part of the swing the note is scored on (see Scoreboard.note_cut).
+var is_chain_head := false
+var arc_head := false
+var arc_tail := false
+const STRICT_MIN_SPEED_MPS := 2.0
 var line_index: float
 var line_layer: float
 
@@ -84,6 +90,9 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	which_saber = note_info.color
 	is_dot = note_info.cut_direction == 8
 	ignore_cut_angle = note_info.ignore_cut_angle
+	is_chain_head = false
+	arc_head = false
+	arc_tail = false
 	# Kept so an arc can find its head note unambiguously. Beat + colour alone picks the wrong
 	# note when two same-colour notes share a beat (stacks and windows), which is how an arc ends
 	# up attached to a note it does not belong to.
@@ -182,6 +191,7 @@ func hide_cube() -> void:
 	process_mode = Node.PROCESS_MODE_DISABLED
 
 func make_chain_head() -> void:
+	is_chain_head = true
 	mi.set_instance_shader_parameter(&"note_chain_head", 1.0)
 	piece_left.set_chain_head(true)
 	piece_right.set_chain_head(true)
@@ -201,8 +211,14 @@ func set_collision_disabled(value: bool) -> void:
 
 func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: BeepSaberController) -> HitInfo:
 	# compute the angle between the cube orientation and the cut direction
-	var cut_direction_xy := -Vector3(cut_speed.x, cut_speed.y, 0.0).normalized()
-	var base_cut_angle_accuracy := global_transform.basis.y.dot(cut_direction_xy)
+	# Judged in the note's own lane. In a 90/360 map the lane is turned about the player, so
+	# the note's "up" and its distance along the track are not the world's Y and Z; comparing
+	# against world axes mis-scored every note outside the straight-ahead lane. In an unrotated
+	# lane the two are the same numbers.
+	var lane := get_parent() as Node3D
+	var lane_speed := lane.global_transform.basis.inverse() * cut_speed if lane != null else cut_speed
+	var cut_direction_xy := -Vector3(lane_speed.x, lane_speed.y, 0.0).normalized()
+	var base_cut_angle_accuracy := transform.basis.y.normalized().dot(cut_direction_xy)
 	var cut_distance := cut_plane.distance_to(global_transform.origin)
 	
 	# The hit sound needs these, so they are returned rather than re-derived by
@@ -211,7 +227,12 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 	info.speed_len = cut_speed.length()
 	info.note_pos = global_position
 	
-	if saber_type == which_saber:
+	# Strict rules (Settings.strict_cuts): a cut more than 60 degrees off the arrow, or made
+	# with the blade moving slower than 2 m/s, is a bad cut even with the right saber.
+	var with_the_arrow := is_dot or ignore_cut_angle or base_cut_angle_accuracy >= 0.5
+	var too_slow := cut_speed.length() < STRICT_MIN_SPEED_MPS
+	var rejected := Settings.strict_cuts and (not with_the_arrow or too_slow)
+	if saber_type == which_saber and not rejected:
 		var cut_angle_accuracy := clampf((base_cut_angle_accuracy-0.7)/0.3, 0.0, 1.0)
 		if is_dot or ignore_cut_angle: #ignore angle if is a dot or any-direction note
 			cut_angle_accuracy = 1.0
@@ -219,13 +240,19 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 		var travel_distance_factor := controller.movement_aabb.get_longest_axis_size()
 		travel_distance_factor = clampf((travel_distance_factor-0.5)/0.5, 0.0, 1.0)
 		# allows a bit of save margin where the beat is considered 100% correct
-		var beat_accuracy := clampf((1.0 - absf(global_transform.origin.z)) / 0.5, 0.0, 1.0)
+		var beat_accuracy := clampf((1.0 - absf(transform.origin.z)) / 0.5, 0.0, 1.0)
 		# Standard model (see Scoreboard): the swing into the note, measured by the saber, and
 		# how close the cut passed to the centre. A cut more than 60 degrees off the arrow
 		# still hits, as it always has here, but earns the accuracy part only. The four
 		# numbers above are still computed because the hit sound and the replay log use them.
-		var with_the_arrow := is_dot or ignore_cut_angle or base_cut_angle_accuracy >= 0.5
-		Scoreboard.note_cut(transform.origin, controller.swing_pre_ratio, cut_distance, with_the_arrow)
+		var kind := 0
+		if is_chain_head:
+			kind |= Scoreboard.NO_POST_SWING
+		if arc_head:
+			kind |= Scoreboard.FREE_POST_SWING
+		if arc_tail:
+			kind |= Scoreboard.FREE_PRE_SWING
+		Scoreboard.note_cut(transform.origin, controller.swing_pre_ratio, cut_distance, with_the_arrow, kind)
 		Harness.log_cut(beat, true, cut_angle_accuracy, cut_distance_accuracy, travel_distance_factor, beat_accuracy)
 		cutted.emit(true)
 		info.angle_acc = cut_angle_accuracy

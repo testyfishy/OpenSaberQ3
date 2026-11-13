@@ -101,6 +101,41 @@ func _scoreboard() -> void:
 	_check("a cut against the arrow hits but earns the accuracy part only", Scoreboard.points == 15 and Scoreboard.combo == 1, str(Scoreboard.points))
 	_check("... and still counts as a 115-point note", Scoreboard.max_points == 115)
 
+	# --- arcs and chain heads -----------------------------------------------------------------
+	Scoreboard.restart()
+	Scoreboard.note_cut(Vector3.ZERO, 1.0, 0.0, true, Scoreboard.NO_POST_SWING)
+	Scoreboard.finish_cut(Scoreboard.take_pending(), 1.0)
+	_check("a chain head has no follow-through: 85, and 85 is its maximum",
+		Scoreboard.points == 85 and Scoreboard.max_points == 85, "%d of %d" % [Scoreboard.points, Scoreboard.max_points])
+	Scoreboard.restart()
+	Scoreboard.note_cut(Vector3.ZERO, 1.0, 0.0, true, Scoreboard.FREE_POST_SWING)
+	Scoreboard.finish_cut(Scoreboard.take_pending(), 0.0)
+	_check("an arc head is given its follow-through: 115 with none measured", Scoreboard.points == 115, str(Scoreboard.points))
+	Scoreboard.restart()
+	Scoreboard.note_cut(Vector3.ZERO, 0.0, 0.0, true, Scoreboard.FREE_PRE_SWING)
+	Scoreboard.finish_cut(Scoreboard.take_pending(), 1.0)
+	_check("an arc tail is given its swing in: 115 with none measured", Scoreboard.points == 115, str(Scoreboard.points))
+
+	# --- energy ---------------------------------------------------------------------------------
+	Scoreboard.restart()
+	var fails: Array[int] = []
+	var on_fail := func() -> void: fails.append(1)
+	Scoreboard.failed.connect(on_fail)
+	_check("energy starts half full", is_equal_approx(Scoreboard.energy, 0.5))
+	_perfect_note()
+	_check("a good cut adds 1 %", is_equal_approx(Scoreboard.energy, 0.51))
+	Scoreboard.bad_cut(Vector3.ZERO)
+	_check("a bad cut costs 10 %", is_equal_approx(Scoreboard.energy, 0.41))
+	Scoreboard.reset_combo()
+	_check("a miss costs 15 %", is_equal_approx(Scoreboard.energy, 0.26))
+	Scoreboard.drain(Scoreboard.ENERGY_WALL_PER_SEC * 0.1)
+	_check("a tenth of a second in a wall costs 13 %", is_equal_approx(Scoreboard.energy, 0.13))
+	_check("not failed while any energy is left", fails.is_empty())
+	Scoreboard.reset_combo()
+	Scoreboard.reset_combo()
+	_check("energy reaching zero reports a fail, once", fails.size() == 1 and is_zero_approx(Scoreboard.energy), "signals=%d" % fails.size())
+	Scoreboard.failed.disconnect(on_fail)
+
 	# --- chain links --------------------------------------------------------------------------
 	Scoreboard.restart()
 	Scoreboard.chain_link_cut(Vector3.ZERO)
