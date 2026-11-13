@@ -81,7 +81,9 @@ func _ready() -> void:
 	
 	set_controls_from_settings()
 	_play_ui_sound_demo = true
+	_build_labs_rows()
 	_fit_scroll_area()
+	_polish_rows()
 	_add_scroll_slider()
 	_build_tabs()
 
@@ -210,6 +212,8 @@ func set_controls_from_settings() -> void:
 	audio_sfx_control.value = Settings.audio_sfx
 	spectator_view_control.button_pressed = Settings.spectator_view
 	spectator_hud_control.button_pressed = Settings.spectator_hud
+	if _hand_tracking_control != null:
+		_hand_tracking_control.set_pressed_no_signal(Settings.hand_tracking_enabled)
 	_set_up_performance_controls()
 
 # Builds the performance rows from what the current XR session actually offers, so a headset
@@ -498,7 +502,7 @@ func _populate_perf_preset() -> void:
 	var row := HBoxContainer.new()
 	row.name = "PerfPresetRow"
 	var label := Label.new()
-	label.text = "Performance:  "
+	label.text = "Preset  "
 	perf_control = OptionButton.new()
 	perf_control.add_item("Quality (sharpest)")
 	perf_control.add_item("Balanced")
@@ -507,56 +511,140 @@ func _populate_perf_preset() -> void:
 	perf_control.item_selected.connect(_on_perf_preset_selected)
 	row.add_child(label)
 	row.add_child(perf_control)
+	row.custom_minimum_size.y = ROW_MIN_HEIGHT
 	vbox.add_child(row)
-	if sky_style_control != null:
-		vbox.move_child(row, sky_style_control.get_index())
+	# Created after the tabs were built: slot it into its tab and apply the tab's visibility.
+	if not _tab_buttons.is_empty():
+		_order_rows()
+		_set_tab(_tab)
 
 func _on_perf_preset_selected(index: int) -> void:
 	Settings.perf_preset = index
 	Settings._apply_perf_preset(index)
 
 # --- Tabs (v4 FR-004/tabs) -----------------------------------------------------------------
-# The panel is one long list; the player asked for tabs. The advisor's layout: a top bar, five
-# tabs, and hidden rows simply not visible (a hidden Control gets no input, so the ray cannot hit
-# a control on another tab). Rows are hidden in place rather than rebuilt, so scroll positions and
-# control state survive a tab switch; the stick scroller keeps pointing at the same container.
-const TAB_NAMES := ["Audio", "Sabers", "Visuals", "Performance", "Debug"]
+# The panel is one long list in the scene; tabs show one group of rows at a time. Hidden rows
+# are hidden in place rather than rebuilt, so control state survives a tab switch, and a hidden
+# Control gets no input, so the ray cannot hit a control on another tab.
+#
+# 0.7.22 regrouping (owner: "convoluted ... cleaner, easier to find, better distributed"). The
+# rule for where a row lives is what the player is thinking about when they look for it:
+#   Gameplay     what happens to me and the map       Sabers       the thing in my hand
+#   Visuals      what the room looks like             Audio        what I hear
+#   Performance  smoothness versus sharpness          Labs         unfinished features, off by default
+#   Advanced     tools most players never need
+# Rows are also re-ordered to match these lists, so related rows sit together whatever order the
+# scene file happens to hold them in.
+const TAB_NAMES := ["Gameplay", "Sabers", "Visuals", "Audio", "Performance", "Labs", "Advanced"]
 const TAB_ROWS := {
-	0: ["audio", "hit_sound", "audio_ducking", "UI_VolumeRow"],
-	1: ["recenter", "cut_blocks", "bombs_enabled", "SaberThicknessRow", "SaberTypeRow",
-		"SaberColorsRow", "left_saber_offset", "right_saber_offset", "player_height_offset"],
-	2: ["d_background", "floor_light", "saber_halo", "mirror_reflections", "saber_tail",
-		"hit_flash", "floor_grid", "event_tint", "debris_shards", "debris_cap",
-		"environment_mode", "glow_mode", "sky_style", "disable_map_color"],
-	3: ["PerfHeader", "RefreshRateRow", "RenderScaleRow", "MSAARow", "FoveationRow", "PerfNote",
-		"PerfPresetRow"],
-	4: ["show_debug", "audio_analyser", "screenshot_trigger", "show_collisions", "spectator_view", "spectator_hud", "upload_server"],
+	0: ["recenter", "player_height_offset", "bombs_enabled", "disable_map_color", "screenshot_trigger"],
+	1: ["SaberTypeRow", "SaberColorsRow", "SaberThicknessRow", "saber_tail", "saber_halo",
+		"left_saber_offset", "right_saber_offset"],
+	2: ["environment_mode", "sky_style", "glow_mode", "d_background", "event_tint", "floor_light",
+		"floor_grid", "mirror_reflections", "hit_flash", "cut_blocks", "debris_shards", "debris_cap"],
+	3: ["audio", "UI_VolumeRow", "hit_sound", "audio_ducking"],
+	4: ["PerfPresetRow", "PerfHeader", "RefreshRateRow", "RenderScaleRow", "MSAARow", "FoveationRow",
+		"PerfNote"],
+	5: ["LabsNote", "hand_tracking", "spectator_view", "spectator_hud"],
+	6: ["upload_server", "show_debug", "audio_analyser", "show_collisions"],
 }
+const ROW_MIN_HEIGHT := 38.0
 
 var _tab_buttons: Array[Button] = []
-var _tab := 2
+var _tab := 0
+var _hand_tracking_control: CheckButton
+
+# Labs: features that work but are not finished. They are off by default and say so.
+func _build_labs_rows() -> void:
+	var vbox := %ScrollContainer/VBox
+	if vbox.has_node("LabsNote"):
+		return
+	var note := Label.new()
+	note.name = "LabsNote"
+	note.text = "Experimental features. They work, but they are unfinished and may change or be removed."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	note.modulate = Color(1.0, 1.0, 1.0, 0.7)
+	vbox.add_child(note)
+	_hand_tracking_control = CheckButton.new()
+	_hand_tracking_control.name = "hand_tracking"
+	_hand_tracking_control.text = "Hand Tracking"
+	_hand_tracking_control.tooltip_text = "Play without controllers: sabers follow your hands in a song, and you point and pinch in menus. Hold the two blades together to pause. Tracking only works while your hands are in front of you."
+	_hand_tracking_control.button_pressed = Settings.hand_tracking_enabled
+	_hand_tracking_control.toggled.connect(func(pressed: bool) -> void: Settings.hand_tracking_enabled = pressed)
+	vbox.add_child(_hand_tracking_control)
+
+# One look for every row: the panel's own font instead of a per-row theme, labels without the
+# trailing colon, the performance star moved to the end, and rows tall enough to point at.
+func _polish_rows() -> void:
+	var vbox := %ScrollContainer/VBox
+	for row in vbox.get_children():
+		if row is Control:
+			(row as Control).custom_minimum_size.y = maxf((row as Control).custom_minimum_size.y, ROW_MIN_HEIGHT)
+		if row is CheckButton or row is OptionButton:
+			(row as Control).theme = null
+		if row is HBoxContainer:
+			# Row captions and column captions lose the colon too, so every row reads the same.
+			for child in row.get_children():
+				if child is Label:
+					(child as Label).text = (child as Label).text.strip_edges().trim_suffix(":").strip_edges() + "  "
+		if row is CheckButton:
+			var check := row as CheckButton
+			var text := check.text.strip_edges().trim_suffix(":").strip_edges()
+			if text.begins_with("*"):
+				text = text.substr(1).strip_edges() + "  *"
+			check.text = text
+	var title := get_node_or_null("settings") as Label
+	if title != null:
+		title.text = "Settings"
+		title.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		title.position = Vector2(27, 10)
+		title.size = Vector2(400, 30)
+		title.add_theme_font_size_override("font_size", 22)
+	# The star's legend belongs with the buttons at the bottom, not on top of the tab bar.
+	var note := get_node_or_null("note") as Label
+	if note != null:
+		note.text = "*  costs performance"
+		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		note.position = Vector2(27, 516)
+		note.size = Vector2(320, 20)
+		note.add_theme_font_size_override("font_size", 14)
+		note.modulate = Color(1.0, 1.0, 1.0, 0.7)
 
 func _build_tabs() -> void:
 	if not _tab_buttons.is_empty():
 		return
 	var bar := HBoxContainer.new()
 	bar.name = "TabBar"
-	bar.position = Vector2(16, 46)
-	bar.size = Vector2(864, 34)
-	bar.add_theme_constant_override("separation", 6)
+	bar.position = Vector2(20, 48)
+	bar.size = Vector2(856, 36)
+	bar.add_theme_constant_override("separation", 4)
 	for i in TAB_NAMES.size():
 		var b := Button.new()
 		b.text = TAB_NAMES[i]
 		b.toggle_mode = true
-		b.custom_minimum_size = Vector2(160, 32)
+		b.custom_minimum_size = Vector2(118, 36)
+		b.add_theme_font_size_override("font_size", 15)
 		b.pressed.connect(_on_tab_pressed.bind(i))
 		bar.add_child(b)
 		_tab_buttons.append(b)
 	add_child(bar)
-	# Make room for the bar without touching the list's authored width.
+	# The list starts right under the bar.
 	var sc := %ScrollContainer as Control
-	sc.offset_top += 84
+	sc.offset_top = 96
+	_order_rows()
 	_set_tab(_tab)
+
+# Puts the rows in the order the tab lists give. Called again when a row is created late.
+func _order_rows() -> void:
+	var vbox := %ScrollContainer/VBox
+	var index := 0
+	for tab in TAB_NAMES.size():
+		for row_name: String in TAB_ROWS[tab]:
+			var row := vbox.get_node_or_null(NodePath(row_name))
+			if row != null:
+				vbox.move_child(row, index)
+				index += 1
 
 func _on_tab_pressed(index: int) -> void:
 	_set_tab(index)
@@ -573,6 +661,9 @@ func _set_tab(index: int) -> void:
 				(row as CanvasItem).visible = tab == _tab
 			elif row != null and "visible" in row:
 				row.visible = tab == _tab
+	# Debug builds only (set_controls_from_settings); a tab switch must not bring it back.
+	if show_collisions != null and not OS.is_debug_build():
+		show_collisions.visible = false
 	(%ScrollContainer as ScrollContainer).scroll_vertical = 0
 
 # --- Back (v4 FR-004) ----------------------------------------------------------------------

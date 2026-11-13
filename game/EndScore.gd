@@ -17,6 +17,11 @@ var _has_saved := false
 var _buttons_disabled := true
 
 func _ready() -> void:
+	# The ring is shared with the in-song HUD, where its label has room. On this board the word
+	# ACCURACY ran over the ring on both sides; shrink the label here only.
+	var ring_label := get_node_or_null("PercentIndicator/PercentLabel") as MeshInstance3D
+	if ring_label != null:
+		ring_label.scale = Vector3.ONE * 0.8
 	_apply_saved_state()
 	set_buttons_disabled(true)
 
@@ -42,7 +47,8 @@ func show_saved_as(player_name: String) -> void:
 	var label := $SavedViewport/SavedLabel as RichTextLabel
 	# RobotoMono advances roughly 0.6em per character, so shrink the font until the line
 	# fits the 256px viewport instead of clipping it. 16px is the legible floor.
-	var wanted := int(256.0 / (float(maxi(text.length(),1)) * 0.6))
+	# 236, not the full 256: at exactly the viewport width the last glyph was cut off.
+	var wanted := int(236.0 / (float(maxi(text.length(),1)) * 0.6))
 	label.add_theme_font_size_override("normal_font_size", clampi(wanted, 16, 32))
 	label.text = "[center]%s" % text
 	_has_saved = true
@@ -75,7 +81,9 @@ func show_score(score: int, record: int, percent: float, song_string: String, is
 	fc_label.visible = is_full_combo
 	nr_label.visible = is_new_record
 	name_label.text = song_string
-	details_mesh.text = "Your Score:\n%d\n\nRecord:\n%d" % [score,record]
+	# Four lines, no spacer: the profile line and its Switch button sit directly underneath,
+	# and the old five-line block ran straight through both of them.
+	details_mesh.text = "Score\n%d\nBest\n%d" % [score,record]
 	
 	if percent >= 0.98:
 		grade_label.text = "[center][rainbow freq=0.5 sat=0.7 val=2]S"

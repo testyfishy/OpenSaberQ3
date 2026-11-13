@@ -515,6 +515,9 @@ func _ready() -> void:
 	# Quick settings pinned at the top of the main menu. Values are set before connecting so a
 	# programmatic button_pressed change cannot write a different value back on load.
 	quick_hands_toggle.button_pressed = Settings.hand_tracking_enabled
+	# Hand tracking is a Labs feature since 0.7.22: its switch lives in Settings > Labs, not in
+	# the pinned panel. The node stays (and stays in sync) so the scene layout is untouched.
+	quick_hands_toggle.visible = false
 	quick_refresh_toggle.button_pressed = Settings.display_refresh_rate >= 120.0
 	quick_events_toggle.button_pressed = Settings.events
 	quick_hands_toggle.toggled.connect(_on_quick_hands_toggled)

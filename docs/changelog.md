@@ -4,6 +4,18 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.22 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
+
+- **Hand tracking is a Labs feature, off by default.** Its switch moved from the pinned menu panel
+  to Settings > Labs. Controllers are the default input again.
+- **Settings regrouped.** Seven tabs by what you are looking for (Gameplay, Sabers, Visuals, Audio,
+  Performance, Labs, Advanced) instead of five, rows ordered by topic, one font and one label
+  style, taller rows, and the performance-star legend moved out from under the tab bar.
+- **Results screen tidied.** The score block no longer runs through the "Saved as" line and the
+  Switch button, the profile line no longer clips, and ACCURACY fits inside its ring.
+- `tools/harness/screens_preview.tscn` renders the settings tabs and the results screen to images
+  on a PC, which is how these were checked.
+
 ## v0.7.21 - 2026-11-11 (built from `audit/fable-5.2`, untagged)
 
 **One rule for hands: sabers in a song, pointer everywhere else.**

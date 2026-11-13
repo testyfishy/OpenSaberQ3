@@ -183,6 +183,13 @@ swing put the saber out and re-lit it with its sound. Wanted: one clear line.
 - FR-022 still holds: a saber whose hand is not currently tracked is drawn where it was last seen
   and cuts nothing.
 
+Owner on 0.7.21: hand tracking is half-baked; give it a switch in settings, off by default, under
+a labs heading.
+
+- **FR-045** (0.7.22): `hand_tracking_enabled` defaults to **false**. Its switch is
+  Settings > Labs > Hand Tracking; the pinned quick-settings panel no longer shows it. An install
+  that never changed the setting gets the new default (defaults are not stored in config.ini).
+
 Measured from the owner's recording (`hand_capture.csv`, 0.7.18, 60 s, right hand tracked
 throughout, left hand 20 % of the time):
 
