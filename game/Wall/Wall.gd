@@ -191,7 +191,8 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	_apply_grow()
 	var mesh := _wall_mesh()
 	if mesh != null:
-		mesh.visible = not debug_hide_visuals
+		# _n_shown is false when a Noodle wall spawns at dissolve 0; a plain wall is always shown.
+		mesh.visible = _n_shown and not debug_hide_visuals
 
 func _wall_shape() -> CollisionShape3D:
 	return $WallMeshOrientation/WallArea/CollisionShape3D as CollisionShape3D

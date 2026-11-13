@@ -830,6 +830,14 @@ func _dissolve() -> void:
 	var plain_info := ObstacleInfo.new_v3({"b": 4.0, "d": 1.0, "x": 1, "y": 0, "w": 1, "h": 5})
 	wall._noodle_spawn(plain_info, 1.0)
 	_check("a reused wall is back at dissolve 1", wall._n_dissolve == 1.0 and param.call(mesh, &"dissolve") == 1.0)
+	# Through the real spawn(): its tail must not show a wall that spawned at dissolve 0.
+	var gone := ObstacleInfo.new_v3({"b": 4.0, "d": 1.0, "x": 1, "y": 0, "w": 1, "h": 5,
+		"customData": {"track": "f", "animation": {"dissolve": [0]}}})
+	T._resolve(gone.noodle)
+	wall.spawn(gone, 0.0)
+	_check("spawn() at dissolve 0: wall not drawn", not mesh.visible and wall.noodle != null)
+	wall.spawn(plain_info, 0.0)
+	_check("spawn() of a plain wall: drawn at dissolve 1", mesh.visible and wall._n_dissolve == 1.0)
 	wall.queue_free()
 	await get_tree().physics_frame
 	MapTimer.reset()
