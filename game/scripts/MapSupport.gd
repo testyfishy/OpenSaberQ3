@@ -11,11 +11,11 @@ class_name MapSupport
 # Static state, like Map: explicit reset() because it survives scene changes.
 
 static var unsupported_features := PackedStringArray()
-static var fakes_filtered := 0
+static var fake_objects := 0
 
 static func reset() -> void:
 	unsupported_features = PackedStringArray()
-	fakes_filtered = 0
+	fake_objects = 0
 
 static func is_fake_v3(entry: Dictionary) -> bool:
 	var cd := Utils.get_dict(entry, "customData", {})
@@ -36,11 +36,11 @@ static func detect_unsupported(map_data: Dictionary, info: MapInfo) -> void:
 		found.append("Chroma environment")
 	if cd.has("materials") or cd.has("_materials"):
 		found.append("Chroma geometry materials")
-	# Noodle keeps decorative notes in their own arrays; we never load them, which is the
-	# right outcome but has to show up in the diagnostic or the filter looks inert.
+	# Noodle v3 keeps decorative objects in their own arrays (drawn, never scored; MapData).
+	# v2 `_fake` objects are counted by the loader.
 	var cd_all := Utils.get_dict(map_data, "customData", {})
 	for key: String in ["fakeColorNotes", "fakeBombNotes", "fakeObstacles"]:
-		fakes_filtered += Utils.get_array(cd_all, key, []).size()
+		fake_objects += Utils.get_array(cd_all, key, []).size()
 	if info != null and info.custom_data.has("_assetBundle"):
 		found.append("custom Unity assets")
 	unsupported_features = found

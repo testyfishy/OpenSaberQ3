@@ -33,6 +33,9 @@ var noodle: NoodleObject = null
 # Beats earlier (positive) or later than the map's half jump this object spawns: its own Noodle
 # jump (step 5). 0 for every object of an ordinary map.
 var spawn_lead := 0.0
+# Noodle/Chroma decorative note (`fake` / `_fake`, or v3 `fakeColorNotes`): drawn and animated,
+# never hittable, missable or scored.
+var fake := false
 # Set only on maps where notes have their own jump (NoodleTracks.link_heads): such a note may
 # spawn in a different frame from the arc or chain it starts, so the link is made at load.
 # `spawned` is the cube drawing this note once it is spawned (runtime only).
@@ -101,6 +104,8 @@ static func _read_custom_position(note: ColorNoteInfo, note_dict: Dictionary) ->
 	var cd = note_dict.get("_customData", note_dict.get("customData", null))
 	if cd is not Dictionary:
 		return
+	var is_fake = cd.get("fake", cd.get("_fake", false))
+	note.fake = is_fake is bool and is_fake
 	var own_njs = cd.get("noteJumpMovementSpeed", cd.get("_noteJumpMovementSpeed", null))
 	if own_njs is float or own_njs is int:
 		note.custom_njs = maxf(float(own_njs), 0.0)

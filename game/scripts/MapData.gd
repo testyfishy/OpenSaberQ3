@@ -29,6 +29,9 @@ static var _chain_thread_0 := Thread.new()
 static var _chain_thread_1 := Thread.new()
 static var _event_thread_0 := Thread.new()
 static var _event_thread_1 := Thread.new()
+# v2 `_fake` notes and bombs, counted by the note loader (written once, by its own thread,
+# before load_v2 joins it).
+static var _v2_fake_count := 0
 
 static func reset() -> void:
 	# Join first: a thread that somehow outlived a load must finish before its stack is cleared.
@@ -59,6 +62,11 @@ static func load_v2(map_data: Dictionary) -> void:
 	Utils.custom_thread_wait_to_finish(_obstacle_thread_0)
 	Utils.custom_thread_wait_to_finish(_event_thread_0)
 	Utils.custom_thread_wait_to_finish(_arc_thread_0)
+	# Decorative objects are drawn now (never scored); the count is for the log.
+	MapSupport.fake_objects += _v2_fake_count
+	for wall in obstacle_stack:
+		if wall != null and wall.fake:
+			MapSupport.fake_objects += 1
 
 static func load_v3(map_data: Dictionary) -> void:
 	Utils.custom_thread_call(_note_thread_0, load_note_stack_v3, [Utils.get_array(map_data, "colorNotes", [])])
@@ -84,6 +92,56 @@ static func load_v3(map_data: Dictionary) -> void:
 	Utils.custom_thread_wait_to_finish(_arc_thread_0)
 	Utils.custom_thread_wait_to_finish(_chain_thread_0)
 	Utils.custom_thread_wait_to_finish(_event_thread_0)
+	_load_fakes_v3(map_data)
+
+## Noodle v3 decorative objects (`customData.fakeColorNotes` / `fakeBombNotes` /
+## `fakeObstacles`): parsed like the real ones, marked fake and merged into the stacks by beat.
+## A map without them returns at once and its stacks are untouched.
+static func _load_fakes_v3(map_data: Dictionary) -> void:
+	var cd := Utils.get_dict(map_data, "customData", {})
+	var notes := Utils.get_array(cd, "fakeColorNotes", [])
+	var bombs := Utils.get_array(cd, "fakeBombNotes", []) if Settings.bombs_enabled else []
+	var walls := Utils.get_array(cd, "fakeObstacles", [])
+	if notes.is_empty() and bombs.is_empty() and walls.is_empty():
+		return
+	var added := 0
+	for e: Variant in notes:
+		if e is Dictionary:
+			var n := ColorNoteInfo.new_v3(e as Dictionary)
+			n.fake = true
+			note_stack.append(n)
+			added += 1
+	if added > 0:
+		_sort_by_beat(note_stack)
+	added = 0
+	for e: Variant in bombs:
+		if e is Dictionary:
+			var b := BombInfo.new_v3(e as Dictionary)
+			b.fake = true
+			bomb_stack.append(b)
+			added += 1
+	if added > 0:
+		_sort_by_beat(bomb_stack)
+	added = 0
+	for e: Variant in walls:
+		if e is Dictionary:
+			var w := ObstacleInfo.new_v3(e as Dictionary)
+			w.fake = true
+			obstacle_stack.append(w)
+			added += 1
+	if added > 0:
+		_sort_by_beat(obstacle_stack)
+
+## Re-orders a reversed stack (next object at the back) by beat. Ties keep their order.
+static func _sort_by_beat(stack: Array) -> void:
+	var keyed: Array = []
+	for i in stack.size():
+		var info: Variant = stack[i]
+		keyed.append([INF if info == null else float(info.beat), i, info])
+	keyed.sort_custom(func(x: Array, y: Array) -> bool:
+		return x[0] > y[0] or (x[0] == y[0] and x[1] < y[1]))
+	for i in keyed.size():
+		stack[i] = keyed[i][2]
 
 # speed for the speed gods.  please forgive me for this.
 # - steve hocktail
@@ -91,6 +149,7 @@ static func load_note_stack_v2(note_data: Array) -> void:
 	var load_range := func(start: int, end: int) -> Array[Array]:
 		var note_array: Array[ColorNoteInfo] = []
 		var bomb_array: Array[BombInfo] = []
+		var fakes := 0
 		var i := start
 		while i < end:
 			if not note_data[i] is Dictionary:
@@ -101,18 +160,16 @@ static func load_note_stack_v2(note_data: Array) -> void:
 			@warning_ignore("unsafe_cast")
 			var note_dict := note_data[i] as Dictionary
 			var note_type := int(Utils.get_float(note_dict, "_type", -1.0))
+			# A Noodle/Chroma decorative object is loaded like any other and marked `fake` by
+			# its info class: drawn and animated, never hittable or scored.
 			if MapSupport.is_fake_v2(note_dict):
-				# FR-026: decorative note from Noodle/Chroma. Hidden and unscored, not a ghost:
-				# its real position depends on animation we do not implement.
-				MapSupport.fakes_filtered += 1
-				i += 1
-				continue
+				fakes += 1
 			if note_type == 3 and Settings.bombs_enabled:
 				bomb_array.append(BombInfo.new_v2(note_dict))
 			elif note_type == 0 or note_type == 1:
 				note_array.append(ColorNoteInfo.new_v2(note_dict))
 			i += 1
-		return [note_array, bomb_array]
+		return [note_array, bomb_array, [fakes]]
 	var midpoint := note_data.size() >> 1
 	#_note_thread_1.start(load_range.bind(0, midpoint))
 	Utils.custom_thread_call(_note_thread_1, load_range, [0, midpoint])
@@ -120,6 +177,7 @@ static func load_note_stack_v2(note_data: Array) -> void:
 	#var total_first_half : Array[Array] = _note_thread_1.wait_to_finish()
 	var total_first_half : Array[Array] = Utils.custom_thread_wait_to_finish(_note_thread_1)
 	note_stack = total_first_half[0] + total_second_half[0]
+	_v2_fake_count = int(total_first_half[2][0]) + int(total_second_half[2][0])
 	bomb_stack = total_first_half[1] + total_second_half[1]
 	note_stack.reverse()
 	bomb_stack.reverse()

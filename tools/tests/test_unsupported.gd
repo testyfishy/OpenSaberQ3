@@ -33,6 +33,6 @@ func _case(label: String, data: Dictionary, info: MapInfo, want: Array, want_fak
 	var got: Array = []
 	for f in MapSupport.unsupported_features:
 		got.append(String(f))
-	var good := got == want and MapSupport.fakes_filtered == want_fakes
-	print("%s: features=%s fakes=%d %s" % [label, str(got), MapSupport.fakes_filtered, "ok" if good else "FAIL"])
+	var good := got == want and MapSupport.fake_objects == want_fakes
+	print("%s: features=%s fakes=%d %s" % [label, str(got), MapSupport.fake_objects, "ok" if good else "FAIL"])
 	return good

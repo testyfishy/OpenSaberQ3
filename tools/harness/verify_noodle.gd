@@ -51,6 +51,7 @@ func _run() -> void:
 	_v4_custom_data()
 	_head_links()
 	_static_rotation()
+	await _fakes()
 	print("NOODLE checks=%d failed=%d" % [_checks, _fails])
 	print("NOODLE ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(0 if _fails == 0 else 1)
@@ -933,3 +934,93 @@ func _static_rotation() -> void:
 	_near3("a plain note respawned in that cube is upright", cube.transform.basis.orthonormalized() * Vector3.UP, Vector3.UP)
 	cube.queue_free()
 	Map.current_difficulty = null
+
+
+# Fake (decorative) objects are loaded, drawn and animated, and never hittable or missable.
+func _fakes() -> void:
+	var T := NoodleTracks
+	MapSupport.reset()
+	MapData.reset()
+	T.reset()
+	# v2: `_fake` notes and bombs stay in the stacks, marked.
+	var v2 := {"_version": "2.2.0", "_notes": [
+		{"_time": 1.0, "_lineIndex": 1.0, "_lineLayer": 0.0, "_type": 0.0, "_cutDirection": 1.0},
+		{"_time": 2.0, "_lineIndex": 1.0, "_lineLayer": 0.0, "_type": 1.0, "_cutDirection": 1.0, "_customData": {"_fake": true}},
+		{"_time": 3.0, "_lineIndex": 2.0, "_lineLayer": 0.0, "_type": 3.0, "_customData": {"_fake": true}},
+	], "_obstacles": [{"_time": 4.0, "_lineIndex": 0.0, "_type": 0.0, "_duration": 1.0, "_width": 1.0, "_customData": {"_fake": true}}]}
+	MapData.load_v2(v2)
+	var fake_notes := 0
+	for n in MapData.note_stack:
+		if n.fake:
+			fake_notes += 1
+	_check("v2: fake note loaded and marked", MapData.note_stack.size() == 2 and fake_notes == 1)
+	_check("v2: fake bomb loaded and marked", MapData.bomb_stack.size() == 1 and MapData.bomb_stack[0].fake)
+	_check("v2: fake wall kept and marked", MapData.obstacle_stack.size() == 1 and MapData.obstacle_stack[0].fake)
+	_check("v2: fakes counted", MapSupport.fake_objects == 3, str(MapSupport.fake_objects))
+	# v3: the customData arrays are merged into the stacks in beat order.
+	MapSupport.reset()
+	MapData.reset()
+	var v3 := {"version": "3.2.0", "colorNotes": [{"b": 1.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": 1.0}, {"b": 3.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": 1.0}],
+		"customData": {"fakeColorNotes": [{"b": 2.0, "x": 0.0, "y": 2.0, "c": 1.0, "d": 8.0}],
+			"fakeBombNotes": [{"b": 2.5, "x": 3.0, "y": 0.0}],
+			"fakeObstacles": [{"b": 0.5, "d": 1.0, "x": 0.0, "y": 0.0, "w": 1.0, "h": 5.0}]}}
+	MapSupport.detect_unsupported(v3, null)
+	MapData.load_v3(v3)
+	var beats := PackedFloat32Array()
+	for n in MapData.note_stack:
+		beats.append(n.beat)
+	_check("v3: fake notes merged in beat order (stack reversed)", beats == PackedFloat32Array([3.0, 2.0, 1.0]) and MapData.note_stack[1].fake and not MapData.note_stack[0].fake, str(beats))
+	_check("v3: fake bomb and wall loaded", MapData.bomb_stack.size() == 1 and MapData.bomb_stack[0].fake and MapData.obstacle_stack.size() == 1 and MapData.obstacle_stack[0].fake)
+	_check("v3: fakes counted", MapSupport.fake_objects == 3)
+	MapSupport.reset()
+	MapData.reset()
+	var plain := {"version": "3.2.0", "colorNotes": [{"b": 3.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": 1.0}, {"b": 1.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": 1.0}]}
+	MapData.load_v3(plain)
+	_check("v3 without fakes: stack order untouched", MapData.note_stack[0].beat == 1.0 and MapData.note_stack[1].beat == 3.0)
+	MapData.reset()
+
+	# Runtime: never hittable, never missed.
+	Map.current_difficulty = DifficultyInfo.new("ExpertPlus", 9, "x.dat", 16.0, 0.0, {}, "One")
+	var info := ColorNoteInfo.new_v3({"b": 1.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": 1.0, "customData": {"fake": true}})
+	_check("v3 per-object fake flag read", info.fake)
+	var cube := (load("res://game/BeepCube/BeepCube.tscn") as PackedScene).instantiate() as BeepCube
+	add_child(cube)
+	cube.set_physics_process(false)
+	cube.spawn(info, 0.0)
+	_check("fake note is drawn but not interactable", cube.mi.visible and cube.fake and not cube._n_can_hit)
+	var anim := _obj({"track": "fk", "animation": {"interactable": [1], "offsetPosition": [[0, 0, 0, 0], [0, 1, 0, 1]]}})
+	T.active = true
+	cube.speed = 10.0
+	cube.transform = Transform3D(Basis.IDENTITY, Vector3(0, 1, -10))
+	cube.noodle_spawn(anim, 1.0)
+	cube._noodle_tick(0.5)
+	_check("fake animated note stays not interactable", cube.noodle != null and not cube._n_can_hit)
+	cube.spawn(ColorNoteInfo.new_v3({"b": 1.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": 1.0}), 0.0)
+	_check("a real note reusing the cube is interactable", not cube.fake and cube._n_can_hit)
+	cube.queue_free()
+	var bomb := (load("res://game/Bomb/Bomb.tscn") as PackedScene).instantiate() as Bomb
+	add_child(bomb)
+	bomb.set_physics_process(false)
+	var bi := BombInfo.new_v3({"b": 1.0, "x": 1.0, "y": 0.0, "customData": {"fake": true}})
+	bomb.spawn(bi, 0.0)
+	_check("fake bomb is drawn but not interactable", bi.fake and bomb.visible and not bomb._n_can_hit)
+	bomb.queue_free()
+	var wall := (load("res://game/Wall/Wall.tscn") as PackedScene).instantiate() as Wall
+	add_child(wall)
+	wall.set_physics_process(false)
+	MapTimer.load_bpm_events({}, 120.0)
+	var wi := ObstacleInfo.new_v3({"b": 4.0, "d": 1.0, "x": 1.0, "y": 0.0, "w": 1.0, "h": 5.0, "customData": {"fake": true}})
+	wall.spawn(wi, 0.0)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_check("fake wall is drawn with no collision", wall.visible and wall._wall_mesh().visible and wall._wall_shape().disabled)
+	wall.spawn(ObstacleInfo.new_v3({"b": 4.0, "d": 1.0, "x": 1.0, "y": 0.0, "w": 1.0, "h": 5.0}), 0.0)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_check("a real wall reusing it is solid", not wall._wall_shape().disabled)
+	wall.queue_free()
+	await get_tree().physics_frame
+	Map.current_difficulty = null
+	MapTimer.reset()
+	MapSupport.reset()
+	T.reset()

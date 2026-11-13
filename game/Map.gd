@@ -186,7 +186,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 		NoteMotion.njs(), NoteMotion.spawn_beats(), NoteMotion.spawn_distance()])
 	_build_track_rotations(map_data)
 	MapSupport.detect_unsupported(map_data, info)
-	vr.log_info("MAP data: bpm_segments=%d fakes_filtered=%d unsupported=%s" % [bpm_segments, MapSupport.fakes_filtered, str(MapSupport.unsupported_features)])
+	vr.log_info("MAP data: bpm_segments=%d fakes=%d unsupported=%s" % [bpm_segments, MapSupport.fake_objects, str(MapSupport.unsupported_features)])
 	
 	MapData.reset()
 	# Before the loader threads start: they read the map's named point definitions.

@@ -164,7 +164,7 @@ static func link_heads() -> void:
 	heads_linked = true
 	var by_key := {}
 	for info: Variant in MapData.note_stack:
-		if info == null:
+		if info == null or info.fake:
 			continue
 		by_key[_note_key(info.beat, info.color, info.line_index, info.line_layer)] = info
 	for arc: ArcInfo in MapData.arc_stack:

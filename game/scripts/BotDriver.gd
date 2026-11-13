@@ -213,7 +213,7 @@ func _queue_notes() -> void:
 	var id := 0
 	for entry in stack:
 		var note := entry as ColorNoteInfo
-		if note == null:
+		if note == null or note.fake:
 			continue
 		var hand := 0 if note.color == 0 else 1
 		var t := Map.beat_to_seconds(note.beat)

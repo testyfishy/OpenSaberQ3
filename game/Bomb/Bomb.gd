@@ -62,6 +62,7 @@ func spawn(info: BombInfo, current_beat: float) -> void:
 	var anim_speed := Map.current_difficulty.note_jump_movement_speed / 9.0
 	anim.speed_scale = maxf(min_speed, anim_speed)
 	anim.play(&"Spawn")
+	fake = info.fake
 	noodle_spawn(info.noodle, _noodle_half_sec(info.noodle))
 
 func _noodle_set_shown(shown: bool) -> void:

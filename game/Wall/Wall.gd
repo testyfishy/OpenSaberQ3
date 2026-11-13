@@ -46,6 +46,8 @@ var _n_rot := Quaternion.IDENTITY
 var _n_half_sec := 1.0
 var _n_span_sec := 2.0
 var _n_can_hit := true
+# A decorative (fake) wall: drawn and animated, with no collision, so no energy drain or rumble.
+var _fake := false
 var _n_shown := true
 # The last Noodle dissolve written to the mesh (1 = fully drawn); reset to 1 on every spawn.
 var _n_dissolve := 1.0
@@ -201,9 +203,11 @@ func _wall_shape() -> CollisionShape3D:
 func _noodle_spawn(wall_info: ObstacleInfo, half_sec: float) -> void:
 	# A pooled wall may carry the last Noodle pose and switches; an ordinary wall's scale is 1.
 	scale = Vector3.ONE
-	if not _n_can_hit:
-		_wall_shape().set_deferred(&"disabled", false)
-	_n_can_hit = true
+	_fake = wall_info.fake
+	var can_hit := not _fake
+	if can_hit != _n_can_hit:
+		_wall_shape().set_deferred(&"disabled", not can_hit)
+	_n_can_hit = can_hit
 	_n_shown = true
 	if _n_dissolve != 1.0:
 		_set_dissolve(1.0)
@@ -228,7 +232,7 @@ func _noodle_tick(delta: float) -> float:
 	NoodleAnim.evaluate(noodle, life)
 	var pivot := NoodleAnim.compose(_n_base, _n_rot, Vector3.ONE)
 	transform = pivot * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, -_half_depth))
-	var can_hit := NoodleAnim.out_interactable >= 1.0
+	var can_hit := not _fake and NoodleAnim.out_interactable >= 1.0
 	if can_hit != _n_can_hit:
 		_n_can_hit = can_hit
 		# Deferred: the shape may be read by the physics step this tick runs in.

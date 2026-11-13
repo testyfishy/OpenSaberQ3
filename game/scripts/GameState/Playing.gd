@@ -131,6 +131,12 @@ func _process_map(game: BeepSaber_Game) -> void:
 	while not MapData.note_stack.is_empty() and MapData.note_stack[-1].beat - MapData.note_stack[-1].spawn_lead <= look_ahead:
 		var note := GlobalReferences.cube_pool.acquire() as BeepCube
 		var note_info := MapData.note_stack.pop_back() as ColorNoteInfo
+		if note_info.fake:
+			# Decorative: drawn and animated, but never an arc or chain end, never logged as a
+			# note to cut, and not the map's first note.
+			note.spawn(note_info, current_beat)
+			TrackLanes.place(note, note_info.beat)
+			continue
 		if Map.first_note_ms < 0.0:
 			Map.first_note_ms = (Time.get_ticks_usec() - Map.load_finished_usec) / 1000.0
 			Map.first_note_beat = note_info.beat
@@ -160,11 +166,8 @@ func _process_map(game: BeepSaber_Game) -> void:
 	
 	# spawn obstacles (walls)
 	while not MapData.obstacle_stack.is_empty() and MapData.obstacle_stack[-1].beat - MapData.obstacle_stack[-1].spawn_lead <= look_ahead:
-		# FR-026: a fake wall is decorative and must never block or score. Popped without
-		# acquiring, so the pool is not touched at all.
-		if MapData.obstacle_stack[-1].fake:
-			MapData.obstacle_stack.pop_back()
-			continue
+		# A fake wall is drawn but has no collision (Wall._noodle_spawn), so it never blocks,
+		# drains energy or scores.
 		if probe: Cost.objs_spawned += 1
 		# Pooled, not instantiated. The pool adds its scene to the track at creation, so the
 		# node is already in the tree and spawn() can apply its material immediately.

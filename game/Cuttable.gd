@@ -46,6 +46,9 @@ var _n_rot := Quaternion.IDENTITY
 var _n_scale := Vector3.ONE
 # False while the animation makes the object non-interactable: not hittable, not missable.
 var _n_can_hit := true
+# A decorative (fake) object: drawn and animated, never hittable or missable (it uses the
+# non-interactable path below), so it never reaches the scoreboard.
+var fake := false
 var _n_shown := true
 # The last Noodle dissolve / dissolveArrow handed to the subclass (1 = fully drawn). Pooled
 # objects reset both to 1 on every spawn so a value never carries into the next object.
@@ -190,7 +193,7 @@ static func _noodle_half_sec(obj: NoodleObject) -> float:
 ## Called at the end of a spawn. `info_noodle` is the object's Noodle data (or null); the
 ## transform the spawn wrote is the un-animated pose the animation starts from.
 func noodle_spawn(info_noodle: NoodleObject, half_sec: float) -> void:
-	_n_can_hit = true
+	_n_can_hit = not fake
 	_n_shown = true
 	if _n_dissolve != 1.0 or _n_dissolve_arrow != 1.0:
 		_n_dissolve = 1.0
@@ -216,7 +219,7 @@ func _noodle_tick(delta: float) -> float:
 	var life := 0.5 + (_n_base.z / speed) / (2.0 * _n_half_sec)
 	NoodleAnim.evaluate(noodle, life)
 	transform = NoodleAnim.compose(_n_base, _n_rot, _n_scale)
-	_n_can_hit = NoodleAnim.out_interactable >= 1.0
+	_n_can_hit = not fake and NoodleAnim.out_interactable >= 1.0
 	if not _n_can_hit and _collision_enabled:
 		set_collision_enabled(false)
 	# Dissolve is a fade in the object's shader; at 0 the object is not drawn at all.
