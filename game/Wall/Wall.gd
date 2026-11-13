@@ -178,7 +178,8 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 		transform.origin.x += wall_info.custom_position.x
 		transform.origin.y += wall_info.custom_position.y
 	if wall_info.has_custom_rotation:
-		rotation_degrees = wall_info.custom_euler
+		# World * local, converted to the Godot frame like the animated rotations.
+		quaternion = wall_info.custom_world * wall_info.custom_local
 	else:
 		rotation_degrees = Vector3.ZERO
 	

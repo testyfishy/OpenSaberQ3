@@ -50,6 +50,7 @@ func _run() -> void:
 	await _dissolve()
 	_v4_custom_data()
 	_head_links()
+	_static_rotation()
 	print("NOODLE checks=%d failed=%d" % [_checks, _fails])
 	print("NOODLE ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(0 if _fails == 0 else 1)
@@ -897,3 +898,38 @@ func _head_links() -> void:
 	MapData.reset()
 	NoodleTracks.reset()
 	_check("reset clears the link flag", not NoodleTracks.heads_linked)
+
+
+# Static Noodle rotation converted from Beat Saber's left-handed frame, against hand-computed
+# axes. In Beat Saber +z is away from the player and +x is right; in Godot away is -z.
+#  - localRotation [90, 0, 0]: Unity turns up (+y) to away (+z), so Godot up -> (0, 0, -1).
+#  - worldRotation [0, 90, 0]: Unity turns right (+x) to toward the player (-z), Godot (0, 0, 1).
+#  - both, cut direction 0: up -> away -> right, Godot (1, 0, 0).
+func _static_rotation() -> void:
+	var local := ColorNoteInfo.new_v3({"b": 1.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": 1.0, "customData": {"localRotation": [90, 0, 0]}})
+	_check("static localRotation read", local.has_custom_rotation and local.custom_world == Quaternion.IDENTITY)
+	_near3("localRotation x 90: up turns away from the player", Basis(local.custom_local) * Vector3.UP, Vector3(0, 0, -1))
+	var world := ColorNoteInfo.new_v3({"b": 1.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": 1.0, "customData": {"worldRotation": [0, 90, 0]}})
+	_near3("worldRotation y 90: right turns toward the player", Basis(world.custom_world) * Vector3.RIGHT, Vector3(0, 0, 1))
+	var v2 := ColorNoteInfo.new_v2({"_time": 1.0, "_lineIndex": 1.0, "_lineLayer": 0.0, "_type": 0.0, "_cutDirection": 1.0, "_customData": {"_rotation": 90.0}})
+	_near3("v2 _rotation as one number is a y turn", Basis(v2.custom_world) * Vector3.RIGHT, Vector3(0, 0, 1))
+	var wall := ObstacleInfo.new_v3({"b": 1.0, "d": 1.0, "x": 0.0, "y": 0.0, "w": 1.0, "h": 5.0, "customData": {"localRotation": [0, 0, 30]}})
+	_near3("wall z turn keeps its sign", Basis(wall.custom_local) * Vector3.RIGHT, Vector3(cos(PI / 6.0), sin(PI / 6.0), 0))
+	# Through BeepCube.spawn(): world * cut direction * local.
+	Map.current_difficulty = DifficultyInfo.new("ExpertPlus", 9, "x.dat", 16.0, 0.0, {}, "One")
+	var both := ColorNoteInfo.new_v3({"b": 1.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": 1.0, "customData": {"worldRotation": [0, 90, 0], "localRotation": [90, 0, 0]}})
+	var cube := (load("res://game/BeepCube/BeepCube.tscn") as PackedScene).instantiate() as BeepCube
+	add_child(cube)
+	cube.set_physics_process(false)
+	var d := 0
+	while d < Constants.CUBE_ROTATIONS.size() and absf(Constants.CUBE_ROTATIONS[d]) > 0.0001:
+		d += 1
+	both.cut_direction = d
+	cube.rotation = Vector3(0.7, 0.3, 0)  # a pooled cube's old turn must not survive
+	cube.spawn(both, 0.0)
+	_near3("spawned note: up -> away -> right", cube.transform.basis.orthonormalized() * Vector3.UP, Vector3(1, 0, 0))
+	var plain := ColorNoteInfo.new_v3({"b": 1.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": float(d)})
+	cube.spawn(plain, 0.0)
+	_near3("a plain note respawned in that cube is upright", cube.transform.basis.orthonormalized() * Vector3.UP, Vector3.UP)
+	cube.queue_free()
+	Map.current_difficulty = null

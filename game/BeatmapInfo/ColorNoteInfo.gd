@@ -18,9 +18,14 @@ var custom_color: Color = Color(0.0, 0.0, 0.0, 0.0)
 var custom_njs := 0.0
 var has_custom_position := false
 var custom_position := Vector2.ZERO
-# Noodle static transforms (specs/027 FR-007): world rotation in degrees and a scale multiplier.
+# Noodle static transforms (specs/027 FR-007): rotations and a scale multiplier. The rotations
+# are Godot-frame quaternions (converted from Beat Saber's left-handed frame like the animated
+# ones); the note's rotation is world * cut direction * local, as Heck composes it.
+# `custom_euler` keeps the map's raw degrees for the probes only.
 var has_custom_rotation := false
 var custom_euler := Vector3.ZERO
+var custom_world := Quaternion.IDENTITY
+var custom_local := Quaternion.IDENTITY
 var has_custom_scale := false
 var custom_scale := Vector3.ONE
 # Noodle Extensions tracks and animation (game/noodle); null for an object without any.
@@ -113,10 +118,18 @@ static func _read_custom_position(note: ColorNoteInfo, note_dict: Dictionary) ->
 	elif pos is Dictionary:
 		note.has_custom_position = true
 		note.custom_position = Vector2(float(pos.get("x", 0.0)), float(pos.get("y", 0.0)))
-	var rot = cd.get("localRotation", cd.get("_localRotation", cd.get("_rotation", cd.get("rotation", null))))
-	if rot is Array and rot.size() >= 3:
+	var world_raw = cd.get("worldRotation", cd.get("_rotation", cd.get("rotation", null)))
+	var local_raw = cd.get("localRotation", cd.get("_localRotation", null))
+	var world = NoodlePoints.static_rotation(world_raw, true)
+	var local = NoodlePoints.static_rotation(local_raw, false)
+	if world != null or local != null:
 		note.has_custom_rotation = true
-		note.custom_euler = Vector3(float(rot[0]), float(rot[1]), float(rot[2]))
+		var raw = local_raw if local != null else world_raw
+		note.custom_euler = Vector3(float(raw[0]), float(raw[1]), float(raw[2])) if raw is Array else Vector3(0.0, float(raw), 0.0)
+		if world != null:
+			note.custom_world = world
+		if local != null:
+			note.custom_local = local
 	var scl = cd.get("size", cd.get("_scale", cd.get("scale", null)))
 	if scl is Array and scl.size() >= 3:
 		note.has_custom_scale = true

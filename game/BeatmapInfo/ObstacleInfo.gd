@@ -13,8 +13,11 @@ var fake := false
 # Noodle static transforms (specs/027 FR-007).
 var has_custom_position := false
 var custom_position := Vector2.ZERO
+# Rotations as Godot-frame quaternions (see ColorNoteInfo); `custom_euler` is the raw degrees.
 var has_custom_rotation := false
 var custom_euler := Vector3.ZERO
+var custom_world := Quaternion.IDENTITY
+var custom_local := Quaternion.IDENTITY
 var has_custom_scale := false
 var custom_scale := Vector3.ONE
 # Noodle Extensions tracks and animation (game/noodle); null for an object without any.
@@ -93,10 +96,18 @@ static func _read_custom_transform(obstacle: ObstacleInfo, cd: Dictionary) -> vo
 	elif pos is Dictionary:
 		obstacle.has_custom_position = true
 		obstacle.custom_position = Vector2(float(pos.get("x", 0.0)), float(pos.get("y", 0.0)))
-	var rot = cd.get("localRotation", cd.get("_localRotation", cd.get("_rotation", cd.get("rotation", null))))
-	if rot is Array and rot.size() >= 3:
+	var world_raw = cd.get("worldRotation", cd.get("_rotation", cd.get("rotation", null)))
+	var local_raw = cd.get("localRotation", cd.get("_localRotation", null))
+	var world = NoodlePoints.static_rotation(world_raw, true)
+	var local = NoodlePoints.static_rotation(local_raw, false)
+	if world != null or local != null:
 		obstacle.has_custom_rotation = true
-		obstacle.custom_euler = Vector3(float(rot[0]), float(rot[1]), float(rot[2]))
+		var raw = local_raw if local != null else world_raw
+		obstacle.custom_euler = Vector3(float(raw[0]), float(raw[1]), float(raw[2])) if raw is Array else Vector3(0.0, float(raw), 0.0)
+		if world != null:
+			obstacle.custom_world = world
+		if local != null:
+			obstacle.custom_local = local
 	var scl = cd.get("size", cd.get("_scale", cd.get("scale", null)))
 	if scl is Array and scl.size() >= 3:
 		obstacle.has_custom_scale = true

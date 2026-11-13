@@ -113,9 +113,12 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 		transform.origin.y = Constants.LANE_DISTANCE * float(note_info.line_layer) + Constants.LAYER_ZERO_Y
 	transform.origin.z = -NoteMotion.distance_between(current_beat, note_info.beat, note_info.custom_njs)
 	
-	rotation.z = Constants.CUBE_ROTATIONS[note_info.cut_direction] + deg_to_rad(note_info.angle_offset)
+	# The whole rotation is written, so a pooled note never keeps a previous note's x/y turn.
+	rotation = Vector3(0.0, 0.0, Constants.CUBE_ROTATIONS[note_info.cut_direction] + deg_to_rad(note_info.angle_offset))
 	if note_info.has_custom_rotation:
-		rotation_degrees += note_info.custom_euler
+		# Heck: world rotation * the note's own (cut direction) rotation * local rotation, in the
+		# Godot frame. Adding the map's raw Euler degrees turned x and y the wrong way round.
+		quaternion = note_info.custom_world * quaternion * note_info.custom_local
 	if note_info.has_custom_scale:
 		scale = note_info.custom_scale
 	

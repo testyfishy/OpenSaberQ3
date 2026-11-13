@@ -61,6 +61,20 @@ static func euler_to_quat(x_deg: float, y_deg: float, z_deg: float) -> Quaternio
 	return Quaternion(-q.x, -q.y, q.z, q.w)
 
 
+## A Heck static rotation (`worldRotation` / `_rotation`, `localRotation` / `_localRotation`):
+## three Euler degrees, or for a world rotation a bare number (rotation about y). Returns the
+## Godot-frame quaternion, or null when the value is absent or malformed. Pure: thread-safe.
+static func static_rotation(value: Variant, allow_number: bool) -> Variant:
+	if value is Array and (value as Array).size() >= 3:
+		var a := value as Array
+		if (a[0] is float or a[0] is int) and (a[1] is float or a[1] is int) and (a[2] is float or a[2] is int):
+			return euler_to_quat(float(a[0]), float(a[1]), float(a[2]))
+		return null
+	if allow_number and (value is float or value is int):
+		return euler_to_quat(0.0, float(value), 0.0)
+	return null
+
+
 ## Parses a raw point definition. Returns null when it is empty, malformed or uses something
 ## this build does not support. Pure: safe to call from the loader threads.
 static func parse(raw: Variant, point_kind: int) -> NoodlePoints:
