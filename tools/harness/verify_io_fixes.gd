@@ -81,6 +81,24 @@ func _test_storage_delete() -> void:
 		panel.status_label.text)
 	if DirAccess.dir_exists_absolute(folder):
 		StorageTools.remove_map(folder)
+	# The panel's own cleanup action, on a probe folder with no Info.dat.
+	var leftover := StorageTools.songs_root() + "IoFixProbeLeftover/"
+	DirAccess.make_dir_recursive_absolute(leftover)
+	var others := StorageTools.incomplete_folders().size() - 1
+	if others == 0:
+		panel._refresh_cleanup_button()
+		_check("storage: the cleanup button appears when there is an incomplete download",
+			panel._cleanup_button.visible and panel._cleanup_button.text.contains("1 incomplete download"), panel._cleanup_button.text)
+		panel._on_cleanup_pressed()
+		_check("storage: the first press only asks", DirAccess.dir_exists_absolute(leftover) and panel._cleanup_button.text.begins_with("Sure?"))
+		panel._on_cleanup_pressed()
+		_check("storage: the second press removes it and hides the button",
+			not DirAccess.dir_exists_absolute(leftover) and not panel._cleanup_button.visible, panel.status_label.text)
+	else:
+		# A developer's own leftovers are present: do not run a real cleanup over them here.
+		print("IOFIX skip storage cleanup button (%d other incomplete folders in this library)" % others)
+	if DirAccess.dir_exists_absolute(leftover):
+		StorageTools.remove_map(leftover)
 	panel.queue_free()
 	await get_tree().process_frame
 

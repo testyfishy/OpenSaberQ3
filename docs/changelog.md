@@ -4,6 +4,14 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.25 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
+
+**Cleanup of incomplete downloads.** Folders under `Songs/` with no Info.dat, left by downloads
+that failed before 0.7.24, are not maps, so the library skipped them and nothing could remove
+them. The Storage panel now shows a **Clean up N incomplete downloads** button when there are any
+(two presses, like the deletes). The same cleanup can be requested from a PC by pushing a
+`cleanup_incomplete.flag` file next to `bench.flag`.
+
 ## v0.7.24 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 
 **Tier 1 gameplay mechanics.**

@@ -30,6 +30,8 @@ var _pending: Array = []
 var _pending_bytes := 0
 var _pending_button: Button = null
 var _confirm_timer: Timer
+var _cleanup_button: Button
+var _cleanup_armed := false
 
 func _ready() -> void:
 	UI_AudioEngine.attach_children(self)
@@ -44,6 +46,18 @@ func _ready() -> void:
 	delete_source_button.pressed.connect(_on_delete_source_pressed)
 	delete_button.pressed.connect(_on_delete_pressed)
 	back_button.pressed.connect(_on_back_pressed)
+	# Incomplete downloads are not maps, so they never appear in the list above. This button is
+	# the only way to see and remove them from inside the headset; it is hidden when there are
+	# none.
+	_cleanup_button = Button.new()
+	_cleanup_button.name = "CleanupButton"
+	_cleanup_button.visible = false
+	_cleanup_button.pressed.connect(_on_cleanup_pressed)
+	var footer := delete_button.get_parent()
+	footer.add_child(_cleanup_button)
+	footer.move_child(_cleanup_button, 0)
+	# Only this button: the footer's other buttons were attached with the rest of the panel.
+	UI_AudioEngine.attach_button(_cleanup_button)
 	_update_selected()
 
 ## Called by the game after the canvas is shown. The scan is deferred so the panel draws first.
@@ -72,6 +86,7 @@ func _load_maps() -> void:
 		total += int(entry["size"])
 		_add_row(entry)
 	total_label.text = "%d maps - %s" % [_entries.size(), StorageTools.format_bytes(total)]
+	_refresh_cleanup_button()
 	_update_source_picker()
 	_update_selected()
 	if _entries.is_empty():
@@ -244,7 +259,37 @@ func _execute(batch: Array) -> void:
 		main_menu_ref._on_LoadPlaylists_Button_pressed()
 	call_deferred("_load_maps")
 
+func _refresh_cleanup_button() -> void:
+	if _cleanup_button == null:
+		return
+	var count := StorageTools.incomplete_folders().size()
+	_cleanup_armed = false
+	_cleanup_button.visible = count > 0
+	_cleanup_button.text = "Clean up %d incomplete download%s" % [count, "" if count == 1 else "s"]
+
+# Same two-press confirmation as the deletes: the first press says what will go, the second
+# does it, and the confirm timer disarms it.
+func _on_cleanup_pressed() -> void:
+	var count := StorageTools.incomplete_folders().size()
+	if count == 0:
+		_refresh_cleanup_button()
+		return
+	if not _cleanup_armed:
+		_cleanup_armed = true
+		_cleanup_button.text = "Sure? Remove %d folder%s" % [count, "" if count == 1 else "s"]
+		_confirm_timer.start()
+		_canvas_input_update()
+		return
+	var removed := StorageTools.remove_incomplete_folders()
+	for path in removed:
+		vr.log_info("CLEANUP removed incomplete download: " + path)
+	status_label.text = "Removed %d of %d incomplete downloads." % [removed.size(), count]
+	_refresh_cleanup_button()
+	_canvas_input_update()
+
 func _reset_confirm() -> void:
+	if _cleanup_armed:
+		_refresh_cleanup_button()
 	_pending.clear()
 	_pending_bytes = 0
 	_pending_button = null
