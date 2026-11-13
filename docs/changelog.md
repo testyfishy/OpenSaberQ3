@@ -4,6 +4,15 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## Unreleased (on `audit/fable-5.2`, after 0.7.29)
+
+- **Noodle dissolve is a fade.** Notes and bombs dissolve through a noise pattern and walls fade
+  out, instead of popping off at half dissolve. An object at dissolve 0 is still not drawn.
+- **Noodle `dissolveArrow` is played**: it fades a note's arrow or dot, and the pause menu no
+  longer lists "arrow dissolve" as missing.
+- Ordinary maps draw exactly as before. Checked on a PC only; the look and the frame time of
+  the fade have not been seen on the headset.
+
 ## v0.7.29 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 
 **Noodle Extensions animation.** Maps that animate their notes, bombs and walls now play that

@@ -317,3 +317,81 @@ BOTRUN FAIL
    will do; the pause menu names whatever of it is not played. Avoid 4a2b3 "Turret Orchestra"
    as a first test: it is a Vivify map and sends its notes 60 m away at beat 320 on purpose,
    because Vivify draws them as something else.
+
+## Dissolve as a fade (after 0.7.29, 2026-11-13)
+
+Commit `bf6b050`. What Heck does (from its source, `CutoutManager.cs` and
+`NoteUpdateNoodlifier.cs`): dissolve 1 is fully drawn and 0 is gone. Heck passes `1 - dissolve`
+to Beat Saber's cutout effect, which is a noise cutout, not transparency. `dissolveArrow` drives
+a separate arrow cutout and applies to notes only, not bombs.
+
+What was done:
+
+- **Notes**: two new instance uniforms in `BeepCube.gdshader`, `note_dissolve` and
+  `note_dissolve_arrow` (default 1). Below 1, a pixel is discarded against object-space value
+  noise (`game/noodle/noodle_dissolve.gdshaderinc`). The note stays in the opaque pass with no
+  blending or sorting, and the pattern sticks to the note and matches in both eyes. The inside
+  faces (white, for cut pieces) are dropped while dissolving, or they show through the holes.
+  Chosen over alpha blending because blending would move every note into the transparent pass
+  and cost overdraw and sorting. The shader already contained a `discard`, so its pass
+  classification does not change.
+- **Note arrows**: the arrow and dot are the emission texture, so `dissolveArrow` scales that
+  texture term. The arrow fades as a glow rather than through noise, for one multiply. The pause
+  menu no longer reports "arrow dissolve".
+- **Bombs**: their two `StandardMaterial3D`s cannot hold a per-instance value. While a bomb's
+  dissolve is below 1, it swaps in shader copies of them (`game/Bomb/bomb_dissolve.gdshader`,
+  `bomb_rim_dissolve.gdshader`; shared by every bomb, value per instance). It gets the scene's
+  own materials back at 1 and on every spawn. An ordinary bomb never changes material.
+- **Walls**: a `dissolve` instance uniform multiplies the panel's alpha in `wall_shared.tres` and
+  `wall_depth.tres`, which already blend. The bench-only opaque wall material is swapped for the
+  blended one while a wall dissolves.
+- At dissolve 0 the object is still hidden (`visible = false`), so it is not drawn at all.
+  Interactable behaviour is unchanged. Values are written only when they change and reset to 1
+  when a pooled object is reused. Nothing is allocated per tick, and the shared materials are
+  never written (checked by the harness).
+
+Cost for maps without Noodle dissolve: no new draw calls and no material changes. Every note
+pixel now reads one instance uniform and tests it, which skips the noise. The arrow term gains
+one multiply by 1.0, and every wall pixel gains one multiply by 1.0. Both multiplies are exact,
+so rendering at dissolve 1 is unchanged.
+
+Differences from Beat Saber, left on purpose:
+
+- A note at dissolve 0 hides its arrow too, because the task asked for dissolve 0 to stay not
+  drawn. In Beat Saber the arrow has its own cutout, so dissolve 0 with dissolveArrow 1 shows a
+  floating arrow. Maps that use this arrow-only look show nothing here.
+- While a note is partly dissolved, its arrow is cut by the same noise as the body.
+- The floor reflection (the mirror pass) is not faded. Its colour shares an instance slot with
+  the note colour, so it cannot be scaled on its own. It disappears with the note at 0.
+- A dissolving note that is cut leaves full, undissolved pieces.
+- Walls fade by transparency rather than through noise, because they are already alpha-blended.
+
+Checked:
+
+- `check.ps1` ends `CHECKS PASS`.
+- `verify_noodle` passes 234 checks. The 21 new ones cover: the value reaching notes, bombs and
+  walls; dissolveArrow defaulting to 1 and multiplying; a second note keeping 1; the shared
+  note material staying untouched; pooled reuse resetting to 1; and a bomb getting its own
+  materials back.
+- The 3af66 `map_dump` is byte-identical before and after. Four of five baseline attempts hit
+  the known loader crash and were retried.
+- Headless runs do not compile shaders, so every changed shader was also compiled and drawn in a
+  window on the PC, with both the mobile and Forward+ renderers. There were no shader errors. A
+  PC screenshot showed the noise fade on a note and a bomb and the alpha fade on a wall.
+
+Not verified (needs the headset):
+
+- How the fade looks in the headset: the size of the noise cells, and whether it shimmers at
+  120 Hz.
+- The frame time on the Quest's GPU, for ordinary maps (the per-pixel uniform test) and for
+  dissolve-heavy maps (noise on every dissolving note).
+- A possible one-time hitch the first time a map dissolves a bomb, or swaps an opaque wall to
+  the blended material, while Godot builds that material's pipeline. The shader source is
+  compiled at load (`preload`), but the pipeline variant is built on first draw.
+- The new `.gdshader` and `.gdshaderinc` files have no `.uid` files yet. The editor creates them
+  the next time the project is opened, and loading by path works without them.
+
+What to look at first: a map whose notes dissolve in or out (many Noodle maps animate `dissolve`
+from 0 to 1 as notes approach). Check that notes fade in through the noise instead of popping in,
+and compare the frame time with the same map on 0.7.29. Then compare an ordinary map's frame time
+with 0.7.29, to confirm the per-pixel test costs nothing measurable.
