@@ -152,6 +152,13 @@ static func load_map_info(load_path: String) -> MapInfo:
 		vr.log_warning("%s is an unknown beatmap version" % load_path)
 		return null
 
+# Noodle Extensions (game/noodle): tracks, per-object jumps and custom events, once the loader
+# threads have joined; then what of it this build does not play goes to MapSupport.
+static func _finish_noodle(map_data: Dictionary) -> void:
+	NoodleTracks.finish_load(map_data)
+	MapSupport.note_noodle(NoodleEvents.ignored, NoodleEvents.unsupported_points,
+		NoodleEvents.unsupported_targets, NoodleEvents.unapplied)
+
 static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Dictionary, lightshow_data: Dictionary = {}, audio_data: Dictionary = {}) -> bool:
 	var load_start := Time.get_ticks_usec()
 	first_note_ms = -1.0
@@ -186,7 +193,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 	NoodleTracks.begin_load(map_data)
 	if map_data.has("_version"):
 		MapData.load_v2(map_data)
-		NoodleTracks.finish_load(map_data)
+		_finish_noodle(map_data)
 		current_info = info
 		current_difficulty = difficulty
 		Map.set_colors_from_custom_data()
@@ -196,7 +203,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 		var version := Utils.get_str(map_data, "version", "")
 		if version.begins_with("3."):
 			MapData.load_v3(map_data)
-			NoodleTracks.finish_load(map_data)
+			_finish_noodle(map_data)
 			current_info = info
 			current_difficulty = difficulty
 			Map.set_colors_from_custom_data()

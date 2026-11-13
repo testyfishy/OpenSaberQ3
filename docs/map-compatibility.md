@@ -28,7 +28,7 @@ The badge is computed from:
 A map that requires an unimplemented feature is Partial even if it happens to load; a map that
 merely suggests one is Supported with a warning.
 
-## Support matrix (0.7.6)
+## Support matrix (0.7.29)
 
 | Feature | State |
 |---|---|
@@ -36,13 +36,13 @@ merely suggests one is Supported with a warning.
 | Notes, bombs, walls, arcs, chains, BPM changes | Supported |
 | Fake notes / fake walls | Filtered as decorative, not scored |
 | Chroma per-note colour | Supported |
-| Noodle position/rotation/scale (static) | **Partial** (0.7.3): static transforms only; no animation, tracks or world rotation |
+| Noodle position/rotation/scale (static) | **Partial** (0.7.3): static transforms. Static rotation is applied without the left- to right-handed conversion the animated rotations use (see `docs/noodle-animation-report.md`) |
 | Mapping Extensions precision (positions, cut angles, wall widths/heights) | **Supported** (0.7.1) |
 | 90° / 360° rotation events | **Supported** (0.7.2, per-beat lanes; v4 per-object `r` since 0.7.24; notes judged in their own lane since 0.7.24). Not yet seen on a headset since the lane placement fix |
 | Map note jump speed and start offset | **Supported** (0.7.26); before that every map ran at a fixed 4 m per beat |
-| Noodle per-note speed | **Partial** (0.7.26): notes only; per-note spawn offset not yet |
-| Noodle animation tracks | **Not yet** |
-| Chroma per-event colours | **Supported**; Chroma environment objects not yet |
+| Noodle per-object jump | **Supported** (0.7.29): `noteJumpMovementSpeed` and `noteJumpStartBeatOffset` on notes, bombs and walls, spawning earlier or later by the object's own half jump. `disableNoteGravity` is read; this game has no note gravity. v4 maps drop bomb and wall customData, so it does not reach them there |
+| Noodle animation (tracks, point definitions, `AnimateTrack`, `AssignPathAnimation`, `AssignTrackParent`, `AssignPlayerToTrack`, object `animation`) | **Supported** (0.7.29) for notes, bombs and walls: offsetPosition, offsetWorldRotation, localRotation, scale, definitePosition, dissolve (drawn as visible/hidden), interactable / uninteractable (neither hittable nor missable). The player's track moves the world around the player rather than the player. Reported as not played: the `time` property, dissolveArrow, point bases and modifiers, Head/hand player targets, `worldPositionStays`, arcs and chains following animated notes, fake (decorative) objects |
+| Chroma per-event colours | **Supported**; Chroma environment objects, geometry materials, colour animation and `AnimateComponent` / fog events not yet (reported) |
 | v4/v3 box-group lighting | **Partial**: colour, brightness and transition (fade) at the event beat; extend events hold the previous one. No strobe, filters, distributions, rotation/translation boxes, fade-to-black or VFX. Group ids are environment-defined and folded modulo 5 onto the room's lights; when two folded groups land on the same beat and type, the on event wins. |
 | Vivify (Unity asset bundles) | **Not yet**; maps load as Visuals limited |
 | Cinema (background video) | **Not yet** |
@@ -64,8 +64,8 @@ Visuals-limited counts beside it. Only the harness result counts; hand-picked ex
 
 **Shipped:** Cards/depth-grow 0.7.0, ME precision 0.7.1, 360/90 lanes 0.7.2, Noodle static
 transforms and box-group colours 0.7.3, box-group fades/extends and group-id folding 0.7.4, wall
-grow/rim and lightshow performance 0.7.5, filled walls 0.7.6. Noodle animation and custom Chroma environment objects
-remain.
+grow/rim and lightshow performance 0.7.5, filled walls 0.7.6, Noodle animation and per-object jumps
+0.7.29. Custom Chroma environment objects remain.
 
 1. Corpus harness and classifier; publish the measured rate.
 2. Fix silent corruption: Mapping Extensions precision, enforce `_requirements` badges, apply

@@ -64,6 +64,10 @@ static var ignored := {}
 # how many AssignPlayerToTrack events targeted something other than the player's root.
 static var unsupported_points := 0
 static var unsupported_targets := 0
+# Event properties that were read but are not applied (time, dissolveArrow) or not known at all
+# (Chroma `color`...), name -> count.
+static var unapplied := {}
+const EVENT_KEYS := ["track", "duration", "easing", "repeat"]
 
 
 static func reset() -> void:
@@ -75,6 +79,7 @@ static func reset() -> void:
 	ignored = {}
 	unsupported_points = 0
 	unsupported_targets = 0
+	unapplied = {}
 
 
 ## Parses the map's custom events (v3 `customData.customEvents` {b, t, d}; v2
@@ -133,8 +138,12 @@ static func _parse(e: Dictionary, v2: bool) -> Event:
 			var names: Dictionary = NoodleTracks.V2_NAMES if v2 else NoodleTracks.V3_NAMES
 			for key: Variant in data:
 				if not names.has(key):
+					if not EVENT_KEYS.has(String(key).trim_prefix("_")):
+						unapplied[key] = int(unapplied.get(key, 0)) + 1
 					continue
 				var p := int(names[key])
+				if p == NoodleTracks.P_TIME or p == NoodleTracks.P_DISSOLVE_ARROW:
+					unapplied[key] = int(unapplied.get(key, 0)) + 1
 				if ev.type == ASSIGN_PATH_ANIMATION and p > NoodleTracks.P_DEFINITE_POSITION:
 					continue  # not a path property
 				if ev.type == ANIMATE_TRACK and p == NoodleTracks.P_DEFINITE_POSITION:

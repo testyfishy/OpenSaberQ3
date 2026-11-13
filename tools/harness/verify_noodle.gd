@@ -45,6 +45,7 @@ func _run() -> void:
 	_apply()
 	await _apply_nodes()
 	_jumps()
+	_support()
 	print("NOODLE checks=%d failed=%d" % [_checks, _fails])
 	print("NOODLE ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(0 if _fails == 0 else 1)
@@ -644,4 +645,59 @@ func _jumps() -> void:
 	MapData.reset()
 	NoodleTracks.reset()
 	NoteMotion.reset()
+	MapTimer.reset()
+
+
+# --- step 6: what is reported as missing -------------------------------------------------------
+func _support() -> void:
+	MapTimer.load_bpm_events({}, 120.0)
+	# v3: everything this build plays, nothing reported.
+	MapSupport.reset()
+	var played := {"version": "3.2.0", "customData": {"customEvents": [
+		{"b": 0, "t": "AnimateTrack", "d": {"track": "a", "duration": 1, "offsetPosition": [0, 1, 0], "dissolve": [1]}},
+		{"b": 0, "t": "AssignPathAnimation", "d": {"track": "a", "definitePosition": [0, 0, 1]}},
+		{"b": 0, "t": "AssignTrackParent", "d": {"childrenTracks": ["a"], "parentTrack": "p"}},
+		{"b": 0, "t": "AssignPlayerToTrack", "d": {"track": "p"}},
+	]}}
+	MapSupport.detect_unsupported(played, null)
+	NoodleTracks.begin_load(played)
+	Map._finish_noodle(played)
+	_check("v3: played features are not reported", MapSupport.unsupported_features.is_empty(), str(MapSupport.unsupported_features))
+	# v3: Vivify, Chroma components, bases, head target, time and colour animation are reported.
+	MapSupport.reset()
+	var missing := {"version": "3.2.0", "customData": {"environment": [], "customEvents": [
+		{"b": 0, "t": "InstantiatePrefab", "d": {}},
+		{"b": 0, "t": "AnimateComponent", "d": {}},
+		{"b": 0, "t": "SomethingNew", "d": {}},
+		{"b": 0, "t": "AnimateTrack", "d": {"track": "a", "offsetPosition": [[0, 0, 0, 0, "baseHeadPosition"]], "time": [[0, 0], [1, 1]], "color": [1, 0, 0, 1]}},
+		{"b": 0, "t": "AssignPlayerToTrack", "d": {"track": "a", "target": "Head"}},
+	]}}
+	MapSupport.detect_unsupported(missing, null)
+	NoodleTracks.begin_load(missing)
+	Map._finish_noodle(missing)
+	var f := MapSupport.unsupported_features
+	_check("v3: Chroma environment reported", f.has("Chroma environment"), str(f))
+	_check("v3: Vivify events reported", f.has("Vivify events"))
+	_check("v3: Chroma component events reported", f.has("Chroma component/fog events"))
+	_check("v3: unknown event types named", f.has("custom events SomethingNew"))
+	_check("v3: point bases reported", f.has("Heck point bases/modifiers"))
+	_check("v3: head target reported", f.has("player head/hand tracks"))
+	_check("v3: time and colour animation reported", f.has("track time animation") and f.has("Chroma colour animation"))
+	_check("no blanket 'Chroma/Noodle animation' any more", not f.has("Chroma/Noodle animation"))
+	# v2 spelling.
+	MapSupport.reset()
+	var v2 := {"_version": "2.2.0", "_customData": {"_customEvents": [
+		{"_time": 0, "_type": "AnimateTrack", "_data": {"_track": "a", "_position": [0, 1, 0], "_dissolveArrow": [0], "_color": [1, 1, 1, 1]}},
+		{"_time": 0, "_type": "AssignFogTrack", "_data": {"_track": "a"}},
+	]}}
+	MapSupport.detect_unsupported(v2, null)
+	NoodleTracks.begin_load(v2)
+	Map._finish_noodle(v2)
+	f = MapSupport.unsupported_features
+	_check("v2: arrow dissolve and colour reported", f.has("arrow dissolve") and f.has("Chroma colour animation"), str(f))
+	_check("v2: fog track reported", f.has("Chroma component/fog events"))
+	_check("v2: _position is played, not reported", not f.has("animated position"))
+	MapSupport.reset()
+	NoodleTracks.reset()
+	NoodleEvents.reset()
 	MapTimer.reset()
