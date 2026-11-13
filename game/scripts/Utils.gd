@@ -95,22 +95,38 @@ func remove_tree(path: String) -> void:
 
 var thread_finished : Array[Thread] = []
 var fake_thread_finished = {}
+# The map loader's worker threads start and join their own helper threads (MapData), so these
+# two collections are written from several threads at once. GDScript containers are not
+# thread-safe: unguarded, a find() and a remove_at() from two threads raced ("index 7 is out of
+# bounds") and corrupted the array, which crashed or truncated about one map load in three.
+# The lock covers only the bookkeeping, never a wait or a call, so it cannot deadlock.
+var _thread_lock := Mutex.new()
 
 func custom_thread_wait_to_finish(thread : Thread):
-	if thread in thread_finished:
-		var r = thread.wait_to_finish()
-		thread_finished.remove_at(thread_finished.find(thread))
-		return r
-	elif thread in fake_thread_finished:
-		var r = fake_thread_finished[thread]
+	_thread_lock.lock()
+	var started := thread_finished.has(thread)
+	if started:
+		thread_finished.erase(thread)
+	var faked: bool = fake_thread_finished.has(thread)
+	var r = fake_thread_finished.get(thread)
+	if faked:
 		fake_thread_finished.erase(thread)
+	_thread_lock.unlock()
+	if started:
+		return thread.wait_to_finish()
+	if faked:
 		return r
 	return null
 
 func custom_thread_call(thread : Thread, function : Callable, params := []):
 	if OS.get_name() == &"Web":
-		fake_thread_finished[thread] = function.callv(params)
+		var r = function.callv(params)
+		_thread_lock.lock()
+		fake_thread_finished[thread] = r
+		_thread_lock.unlock()
 		return 0
 	else:
+		_thread_lock.lock()
 		thread_finished.append(thread)
+		_thread_lock.unlock()
 		return thread.start(function.bindv(params))
