@@ -48,6 +48,7 @@ func _run() -> void:
 	_support()
 	await _zero_scale()
 	await _dissolve()
+	_v4_custom_data()
 	print("NOODLE checks=%d failed=%d" % [_checks, _fails])
 	print("NOODLE ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(0 if _fails == 0 else 1)
@@ -842,3 +843,16 @@ func _dissolve() -> void:
 	await get_tree().physics_frame
 	MapTimer.reset()
 	T.reset()
+
+
+# v4 maps: the expansion to v3 keeps bomb and wall customData, as it does for notes.
+func _v4_custom_data() -> void:
+	var bombs := MapData._v4_expand_bombs([{"b": 2.0, "i": 0.0, "customData": {"track": "vb"}}], [{"x": 1, "y": 0}])
+	_check("v4 bomb keeps customData", bombs.size() == 1 and (bombs[0]["customData"] as Dictionary).get("track") == "vb")
+	var walls := MapData._v4_expand_obstacles([{"b": 2.0, "i": 0.0, "customData": {"track": "vw"}}], [{"d": 1, "x": 0, "y": 0, "w": 1, "h": 5}])
+	_check("v4 wall keeps customData", walls.size() == 1 and (walls[0]["customData"] as Dictionary).get("track") == "vw")
+	var shared := MapData._v4_expand_bombs([{"b": 2.0, "i": 0.0}], [{"x": 1, "y": 0, "customData": {"track": "vd"}}])
+	_check("v4 bomb falls back to its data entry's customData", (shared[0]["customData"] as Dictionary).get("track") == "vd")
+	var b3 := BombInfo.new_v3(bombs[0])
+	var w3 := ObstacleInfo.new_v3(walls[0])
+	_check("v4 bomb and wall join their tracks", b3.noodle != null and w3.noodle != null and w3.noodle.track_names[0] == "vw")

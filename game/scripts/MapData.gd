@@ -379,6 +379,8 @@ static func _v4_expand_bombs(list: Array, data: Array) -> Array:
 			"b": Utils.get_float(entry, "b", 0.0),
 			"x": Utils.get_float(d, "x", 0.0),
 			"y": Utils.get_float(d, "y", 0.0),
+			# Noodle tracks, animation and jump overrides live here, as for notes.
+			"customData": entry.get("customData", d.get("customData", {})),
 		})
 	return out
 
@@ -400,6 +402,7 @@ static func _v4_expand_obstacles(list: Array, data: Array) -> Array:
 			"y": Utils.get_float(d, "y", 0.0),
 			"w": Utils.get_float(d, "w", 0.0),
 			"h": Utils.get_float(d, "h", 0.0),
+			"customData": entry.get("customData", d.get("customData", {})),
 		})
 	return out
 
