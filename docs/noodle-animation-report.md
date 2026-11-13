@@ -75,14 +75,16 @@ list), bare single points, all 32 Heck easings, `splineCatmullRom` for vectors; 
 - **Player Head / hand targets**: would move the player's own body parts; skipped and reported.
 - **Arcs and chains** do not follow an animated head note, and a head note with its own jump
   offset spawns in a different frame from its arc or chain, so the head lookup misses it.
+  *Second half superseded: heads are linked at load, see "Noodle fixes" below.*
 - **Fake (decorative) objects** are still not drawn, so maps that build scenery from fake notes
-  look emptier than in Beat Saber.
+  look emptier than in Beat Saber. *Superseded: drawn, see "Fake objects drawn" below.*
 - **v4 maps**: the v4-to-v3 expansion drops bomb and wall customData, so tracks, animation and
-  jump overrides do not reach v4 bombs and walls (notes keep theirs).
+  jump overrides do not reach v4 bombs and walls (notes keep theirs). *Superseded: fixed below.*
 - **Static Noodle rotation** (from 0.7.3, unchanged) adds the map's Euler angles directly, without
   the left- to right-handed conversion the animated rotations now use. A map that rotates an
   object both statically and by animation turns the static part the other way round. Left alone
-  because changing static transforms was out of scope; worth a follow-up.
+  because changing static transforms was out of scope; worth a follow-up. *Superseded: converted,
+  see "Noodle fixes" below.*
 - **Track parents in 360 maps**: the parent transform is applied inside the object's lane, not
   outside it. Noodle maps rarely use 360 lanes.
 - **Performance**: on the PC, Gloom (345 animated walls) runs with a p99 frame time of 14-15 ms
@@ -374,3 +376,123 @@ Not verified (needs the headset):
 
 What to look at first: a map whose notes dissolve in, comparing its frame time with 0.7.29, and
 then an ordinary map's frame time with 0.7.29.
+
+## Loader crash (after 0.7.29, 2026-11-13)
+
+Commit `6e427e1`. **Cause, proven:** MapData's loader threads start and join their own helper
+threads, so `Utils.thread_finished`, a plain GDScript Array, was appended to and removed from by
+several threads at once. GDScript containers are not thread-safe. The race showed directly as
+`The calculated index 7 is out of bounds (the array has 7 elements)` from `remove_at()` in
+`custom_thread_wait_to_finish`, called from `load_arc_stack_v3` on a worker thread. It also
+showed as crashes (exit codes 127 and 139) and truncated dumps.
+
+**Fix:** a Mutex around the two bookkeeping containers. It is never held across a wait or a
+call, so it cannot deadlock. Nothing else changed.
+
+**Rate:** `map_dump` run headless on 3af66, 32693 and d7fa, 40 times each.
+
+| | 3af66 | 32693 | d7fa | Total |
+|---|---|---|---|---|
+| Before | 20 of 40 failed | 23 of 40 | 3 of 40 | 46 of 120 (38 %) |
+| After | 0 of 40 | 0 of 40 | 0 of 40 | 0 of 120 |
+
+Every complete dump, before and after, is byte-identical for its map. The two silent
+`verify_noodle` runs from the night died while loading fixture maps, which fits this cause. I
+saw two more silent runs earlier today, before the fix. After it, every `verify_noodle` run I
+made printed its result (10 of 10 in a row at the final commit, 272 checks each).
+
+## Noodle fixes: v4 bombs and walls, arc/chain heads, static rotation (after 0.7.29)
+
+- **v4 bombs and walls** (`8a88ca0`): the v4-to-v3 expansion now copies their customData, from
+  the object entry or else its shared data entry, as it did for notes. Tracks, animation and jump
+  overrides reach them.
+- **Arc and chain heads across spawn frames** (`827efa2`): a note with its own jump spawns
+  earlier or later than its arc or chain, but the head was only looked up among notes spawned in
+  the same frame. Only on maps where notes have their own jumps, `NoodleTracks.link_heads` now
+  links each arc and chain to its head, and each arc to its tail, at load, by beat, colour and
+  grid position.
+  - An arc or chain whose head has not spawned yet waits and spawns with it, or spawns without a
+    head once its beat has passed.
+  - Other maps take exactly the old path.
+  - Arcs and chains still do not follow an animated head (out of scope).
+- **Static rotation** (`9344eda`, **changes how existing maps look**): world and local rotation
+  are now read separately and converted to the Godot frame with the same `euler_to_quat` as the
+  animated rotations.
+  - They are composed as Heck does: note = world × cut direction × local, wall = world × local.
+  - A world rotation given as one number is a y turn.
+  - x and y turns were mirrored before; z turns look the same.
+  - A pooled note also no longer keeps the previous note's x/y turn.
+  - Still not done: a static world rotation turns the object but not its path around the player,
+    as before.
+- Harness checks: 4 for v4, 10 for head links, and 7 for rotation. The rotation checks compare
+  against hand-computed axes, including one through `BeepCube.spawn()`.
+- **Dumps:** none of these three changes any fixture dump. No fixture is a v4 map with bomb or
+  wall customData; head links are runtime only; and the dump does not record rotation. The
+  fixtures whose data contains rotation keys (static or animated) are 1362d, 198f3, 1dcf4,
+  1e6ff, 210e3, 23f6b, 352d8, 3bbb0, 43a1f, 43a24, 43a25, 4968d, 4a2b3 and d7fa. Those with
+  static x/y turns now look different.
+
+## Fake objects drawn (after 0.7.29)
+
+Commit `7dc902a`. Fake notes, bombs and walls are loaded, drawn and animated. This covers `fake`
+/ `_fake`, and v3 `customData.fakeColorNotes` / `fakeBombNotes` / `fakeObstacles` merged into
+the stacks by beat.
+
+- They use the existing non-interactable path: never hittable, never missed, never scored, not
+  in max score or combo (both are counted on cut and miss events, which fakes never raise).
+- They are never an arc or chain end, and the bot skips them.
+- Fake walls have their collision disabled, so no energy drain and no rumble.
+- Maps without fakes: the v3 fake arrays return at once when absent, and the spawn loop gains
+  one boolean test per spawned note.
+- No settings key fits, so there is no toggle.
+- 16 harness checks.
+
+Fake objects per fixture (fake / all in the loaded stacks):
+
+| Map | Difficulty | Notes | Bombs | Walls |
+|---|---|---|---|---|
+| 1e6ff | ExpertStandard | 1651 / 2543 | 0 / 8 | 0 / 3746 |
+| 1e6ff | ExpertPlusLawless | 1771 / 2905 | 0 / 8 | 0 / 3530 |
+| 210e3 | ExpertPlusStandard | 1079 / 1338 | 60 / 80 | 0 / 0 |
+| 23f6b | ExpertPlusStandard | 827 / 1746 | 0 / 0 | 2386 / 2386 |
+| 352d8 | Hard, Expert, ExpertPlus | 0 / 687 | 0 / 0 | 2753 / 5612 |
+| 3bbb0 | ExpertPlusStandard | 51 / 1102 | 0 / 360 | 0 / 249 |
+| 43a24 | HardStandard | 0 / 32 | 1 / 9 | 0 / 0 |
+| 4968d | Expert, ExpertPlusLawless | 16 / 460, 16 / 719 | 0 | 0 |
+| 4a2b3 | 8 difficulties | 1 to 31 per difficulty (12 / 12 in its Lightshow) | 0 | 0 / 473 |
+
+Every other fixture has none.
+
+**Dumps that change:** 1e6ff, 210e3, 23f6b, 3bbb0, 4968d and 4a2b3, each gaining NOTE lines for
+their fake notes. Fake bombs are not dumped. Fake walls were already loaded (and skipped at
+spawn) and dumped with `fake=true`, so 352d8 does not change although it gains the most drawn
+objects. 3af66 is unchanged.
+
+**PC frame time** (the same bench flag as `botrun.ps1`, run headless on the PC, so CPU only):
+each map before (`9344eda`) and after (`7dc902a`), two 45 s runs each. The GPU cost of drawing
+the fakes on the headset is not measured.
+
+| Map (difficulty, 150 s from song start) | Fakes drawn in that span | Before p99 / p95 / mean (ms) | After p99 / p95 / mean (ms) |
+|---|---|---|---|
+| 352d8 Lend Me Your Voice (ExpertPlusStandard) | fake walls from 83 s; peak live walls 200 before, 270 after | 10.5 / 9.1 / 6.9 | 11.4 / 9.7 / 6.9 |
+| 1e6ff Somewhere Out There (ExpertPlusLawless), run 1 | fake notes from 50 s | 69.5 / 13.6 / 8.7 (a spiky run: max 167 ms) | 16.3 / 12.9 / 7.2 |
+| 1e6ff, run 2 | | 15.4 / 12.6 / 7.2 | 17.4 / 13.1 / 7.2 |
+
+So on the PC, p99 rises by about 1 ms on 352d8 and about 1-2 ms on 1e6ff (ignoring the spiky
+first 1e6ff run before). The mean is unchanged. The bot's wrong-note count did not rise (1e6ff
+202/196 before/after, 352d8 37/40), which fits the fakes never being scored.
+
+The first runs used 45 s and were discarded: neither map has a fake object in its first 45 s
+(352d8 starts at 83 s, 1e6ff at 50 s). For the runs, 352d8 was copied into the PC song folder
+and removed afterwards (1e6ff is already in the library). As before, the runs overwrote the PC
+user-data files `bench.csv`, `bench_meta.txt` and `audio_hits.csv`, and also updated
+`config.ini`, `highscores.json` and `play_count.json` there. No backups of those were taken.
+
+Not verified (needs the headset): how the fakes look, and what they cost on the Quest's GPU. For
+1e6ff that is about 1,800 extra notes; for 352d8, 2,753 extra walls, which are alpha-blended
+panels and so overdraw.
+
+What to look at first: 1e6ff "Somewhere Out There" ExpertPlusLawless, which is already in the
+library. Check that the decorative notes appear, cannot be hit and never break combo, and watch
+its frame time. Then a map with static x/y rotations (any fixture above), to judge the changed
+static turns.

@@ -12,6 +12,16 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
   longer lists "arrow dissolve" as missing.
 - Ordinary maps draw exactly as before. Checked on a PC only; the look and the frame time of
   the fade have not been seen on the headset.
+- **Map loading no longer crashes at random.** About one map load in three crashed or stopped
+  part way on the PC (a thread race in the loader's bookkeeping); 0 of 120 after the fix.
+- **Noodle fake objects are drawn.** Decorative notes, bombs and walls that maps use as scenery
+  now appear and animate. They can never be hit or missed, never score, and fake walls never
+  block you or drain energy.
+- **Changed look: static Noodle rotations.** Maps that turn notes or walls with a static
+  `localRotation` / `worldRotation` had their x and y turns mirrored; they now turn the same way
+  as in Beat Saber. Turns about z look the same as before.
+- **Noodle fixes**: v4 maps keep the tracks, animation and jumps of their bombs and walls, and an
+  arc or chain now finds its head note when that note has its own jump offset.
 
 ## v0.7.29 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 
