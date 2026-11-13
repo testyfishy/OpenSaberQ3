@@ -102,6 +102,7 @@ func _load_playlists() -> void:
 	@warning_ignore("return_value_discarded")
 	DirAccess.make_dir_recursive_absolute(songs_dir)
 	BundledDemo.cleanup(songs_dir)
+	StorageTools.run_requested_cleanup()
 	_discover_all_songs(songs_dir)
 	# specs/029: playlist membership from the manifest, cached size/date in the sidecar. The
 	# sidecar values are written once and then stay frozen, so the library scan does not repeat the

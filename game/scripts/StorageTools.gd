@@ -63,6 +63,55 @@ static func remove_map(path: String) -> bool:
 	Utils.remove_tree(path)
 	return not DirAccess.dir_exists_absolute(path)
 
+## Folders under Songs/ that hold no Info.dat: an interrupted download, or what is left of one.
+## They are not maps, so the library skips them and the Storage panel cannot list them.
+static func incomplete_folders() -> PackedStringArray:
+	var found := PackedStringArray()
+	var root := songs_root()
+	var dir := DirAccess.open(root)
+	if dir == null:
+		return found
+	for folder in dir.get_directories():
+		var path := root + folder + "/"
+		if not FileAccess.file_exists(path + "Info.dat") and not FileAccess.file_exists(path + "info.dat"):
+			found.append(path)
+	return found
+
+## Deletes every folder incomplete_folders() reports, through the same guarded delete as a map,
+## and returns the ones that are really gone.
+static func remove_incomplete_folders() -> PackedStringArray:
+	var removed := PackedStringArray()
+	for path in incomplete_folders():
+		if remove_map(path):
+			removed.append(path)
+	return removed
+
+## One-shot cleanup requested from outside the headset: the file `cleanup_incomplete.flag`,
+## pushed next to bench.flag (or placed in user://), removes the incomplete folders at the next
+## library scan and is then renamed to `.consumed`. Nothing is deleted without that file.
+const CLEANUP_FLAG := "cleanup_incomplete.flag"
+
+static func run_requested_cleanup() -> void:
+	var flag_dir := ""
+	var runner: Script = load("res://game/scripts/BenchmarkRunner.gd")
+	if runner != null:
+		var external := str(runner.call("_android_external_files_dir"))
+		if not external.is_empty() and FileAccess.file_exists(external.path_join(CLEANUP_FLAG)):
+			flag_dir = external
+	if flag_dir.is_empty() and FileAccess.file_exists("user://" + CLEANUP_FLAG):
+		flag_dir = "user://"
+	if flag_dir.is_empty():
+		return
+	var found := incomplete_folders()
+	var removed := remove_incomplete_folders()
+	for path in removed:
+		vr.log_info("CLEANUP removed incomplete download: " + path)
+	vr.log_info("CLEANUP done: %d of %d incomplete folders removed" % [removed.size(), found.size()])
+	var dir := DirAccess.open(flag_dir)
+	if dir != null:
+		@warning_ignore("return_value_discarded")
+		dir.rename(CLEANUP_FLAG, CLEANUP_FLAG + ".consumed")
+
 static func format_bytes(bytes: int) -> String:
 	if bytes < 1024:
 		return "%d B" % bytes

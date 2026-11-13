@@ -27,6 +27,7 @@ func _ready() -> void:
 func _run() -> void:
 	_test_unzip()
 	await _test_storage_delete()
+	_test_incomplete_cleanup()
 	await _test_pool()
 	await _test_uploader()
 	_test_v2_loader()
@@ -82,6 +83,31 @@ func _test_storage_delete() -> void:
 		StorageTools.remove_map(folder)
 	panel.queue_free()
 	await get_tree().process_frame
+
+
+# --- StorageTools: only folders without an Info.dat are treated as incomplete downloads --------
+func _test_incomplete_cleanup() -> void:
+	var root := StorageTools.songs_root()
+	var empty := root + "IoFixProbeIncomplete/"
+	var partial := root + "IoFixProbePartial/"
+	var real := root + "IoFixProbeReal/"
+	for path: String in [empty, partial, real]:
+		DirAccess.make_dir_recursive_absolute(path)
+	for file_path: String in [partial + "song.egg", real + "Info.dat"]:
+		var file := FileAccess.open(file_path, FileAccess.WRITE)
+		file.store_string("{}")
+		file.close()
+	var found := StorageTools.incomplete_folders()
+	_check("cleanup: a folder with no files and one with files but no Info.dat are incomplete",
+		found.has(empty) and found.has(partial))
+	_check("cleanup: a folder with an Info.dat is not", not found.has(real))
+	# Without the flag file nothing is touched.
+	StorageTools.run_requested_cleanup()
+	_check("cleanup: nothing is deleted without the request file", DirAccess.dir_exists_absolute(empty))
+	# Only the probe folders are removed here, so a developer's own leftovers are not touched.
+	_check("cleanup: an incomplete folder can be removed", StorageTools.remove_map(empty) and StorageTools.remove_map(partial))
+	_check("cleanup: the real map is still there", FileAccess.file_exists(real + "Info.dat"))
+	StorageTools.remove_map(real)
 
 
 # --- HTTPRequestPool: finished requests are freed, queued requests keep their token -------------
