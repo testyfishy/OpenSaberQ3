@@ -97,6 +97,12 @@ static func spawn_beats() -> float:
 	return _half_jump_beats if configured else LEGACY_SPAWN_BEATS
 
 
+## The map's half jump in seconds: how long before its beat an object appears (Noodle path
+## animation runs over twice this, see game/noodle/NoodleAnim.gd).
+static func half_jump_seconds() -> float:
+	return spawn_beats() * 60.0 / maxf(_base_bpm, 1.0)
+
+
 ## How far away an object is when it is spawned, in metres.
 static func spawn_distance() -> float:
 	if not configured:

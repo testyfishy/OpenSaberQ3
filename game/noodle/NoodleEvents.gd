@@ -220,7 +220,7 @@ static func dispatch(ev: Event, song_sec: float) -> void:
 					var pts := ev.points[j]
 					_stop(_path_tweens, track, p)
 					track.path_prev[p] = track.path_cur[p]
-					track.path_cur[p] = pts
+					track.set_path(p, pts)
 					track.path_blend[p] = 0.0
 					if pts == null or no_duration:
 						track.path_prev[p] = null

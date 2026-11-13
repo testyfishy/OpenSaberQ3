@@ -42,6 +42,8 @@ func _run() -> void:
 	_fixtures()
 	_events()
 	_fixture_events()
+	_apply()
+	await _apply_nodes()
 	print("NOODLE checks=%d failed=%d" % [_checks, _fails])
 	print("NOODLE ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(0 if _fails == 0 else 1)
@@ -436,3 +438,159 @@ func _fixture_events() -> void:
 func _fixture_data(folder: String, file: String) -> Dictionary:
 	var data: Variant = vr.load_json_file(_fixture_dir(folder) + file)
 	return data if data is Dictionary else {}
+
+
+# --- step 4: applying animation to objects --------------------------------------------------
+func _obj(cd: Dictionary) -> NoodleObject:
+	var o := NoodleObject.from_custom_data(cd)
+	NoodleTracks._resolve(o)
+	return o
+
+
+func _apply() -> void:
+	var T := NoodleTracks
+	var A := NoodleAnim
+	var P := NoodlePoints
+	# Object animation blocks and the interactable flags, both spellings.
+	var v3 := NoodleObject.from_custom_data({"animation": {"offsetPosition": [[0, 0, 0, 0], [2, 0, 0, 1]], "definitePosition": [0, 0, 1], "time": [0.5]}})
+	_check("v3 animation block read", v3 != null and v3.animated and v3.anim_mask == ((1 << T.P_OFFSET_POSITION) | (1 << T.P_DEFINITE_POSITION)))
+	var v2 := NoodleObject.from_custom_data({"_animation": {"_position": [[0, 0, 0, 0], [2, 0, 0, 1]], "_dissolve": [[0, 0], [1, 1]], "_rotation": [0, 90, 0]}})
+	_check("v2 _animation block read", v2 != null and v2.anim_mask == ((1 << T.P_OFFSET_POSITION) | (1 << T.P_DISSOLVE) | (1 << T.P_OFFSET_WORLD_ROTATION)))
+	_check("v3 uninteractable", NoodleObject.from_custom_data({"uninteractable": true}).uninteractable)
+	_check("v2 _interactable false", NoodleObject.from_custom_data({"_interactable": false}).uninteractable)
+	_check("_interactable true is nothing", NoodleObject.from_custom_data({"_interactable": true}) == null)
+
+	T.reset()
+	var a := T.get_track(T.index_of("a"))
+	var b := T.get_track(T.index_of("b"))
+	a.set_vec(T.P_OFFSET_POSITION, Vector3(1, 0, 0))
+	b.set_vec(T.P_OFFSET_POSITION, Vector3(0, 1, 0))
+	var ab := _obj({"track": ["a", "b"]})
+	A.evaluate(ab, 0.5)
+	_near3("offsets of several tracks add", A.out_offset, Vector3(1, 1, 0))
+	_near3("offset is in lanes", A.compose(Vector3(0, 1, -5), Quaternion.IDENTITY, Vector3.ONE).origin, Vector3(0.6, 1.6, -5))
+	# The object's own path replaces its tracks' path for that property; track values still add.
+	a.set_path(T.P_OFFSET_POSITION, P.parse([[0, 0, 0, 0], [0, 0, 10, 1]], P.KIND_POSITION))
+	var own := _obj({"track": "a", "animation": {"offsetPosition": [[0, 0, 0, 0], [2, 0, 0, 1]]}})
+	A.evaluate(own, 0.5)
+	_near3("own path replaces the track path", A.out_offset, Vector3(2, 0, 0))
+	var only_a := _obj({"track": "a"})
+	A.evaluate(only_a, 0.5)
+	_near3("track path plus track value", A.out_offset, Vector3(1, 0, -5))
+	a.set_path(T.P_OFFSET_POSITION, null)
+	# definitePosition keeps x/y, drops the travel, still takes offsetPosition.
+	var def := _obj({"track": "a", "animation": {"definitePosition": [[0, 0, 0, 0], [0, 0, 20, 1]]}})
+	A.evaluate(def, 0.5)
+	_near3("definitePosition", A.compose(Vector3(0.3, 1.0, -5), Quaternion.IDENTITY, Vector3.ONE).origin, Vector3(0.9, 1.0, -6))
+	# World rotation turns the position about the player; local rotations multiply.
+	var w := T.get_track(T.index_of("w"))
+	w.set_quat(T.P_OFFSET_WORLD_ROTATION, P.euler_to_quat(0, 90, 0))
+	var wo := _obj({"track": "w"})
+	A.evaluate(wo, 0.5)
+	var wx := A.compose(Vector3(0, 0, -10), Quaternion.IDENTITY, Vector3.ONE)
+	_near3("offsetWorldRotation turns the position", wx.origin, Vector3(10, 0, 0))
+	_near3("offsetWorldRotation turns the object", wx.basis * Vector3(0, 0, -1), Vector3(1, 0, 0))
+	var l := T.get_track(T.index_of("l"))
+	l.set_quat(T.P_LOCAL_ROTATION, P.euler_to_quat(0, 45, 0))
+	var lo := _obj({"track": "l", "animation": {"localRotation": [0, 45, 0]}})
+	A.evaluate(lo, 0.5)
+	var lx := A.compose(Vector3(0, 0, -10), Quaternion.IDENTITY, Vector3.ONE)
+	_near3("track and path localRotation multiply", lx.basis * Vector3(0, 0, -1), Vector3(1, 0, 0))
+	_near3("localRotation leaves the position", lx.origin, Vector3(0, 0, -10))
+	# Scale multiplies across tracks, path and the static scale.
+	var s1 := T.get_track(T.index_of("s1"))
+	var s2 := T.get_track(T.index_of("s2"))
+	s1.set_vec(T.P_SCALE, Vector3(2, 2, 2))
+	s2.set_vec(T.P_SCALE, Vector3(1, 3, 1))
+	var so := _obj({"track": ["s1", "s2"], "animation": {"scale": [[1, 1, 1, 0], [1, 1, 3, 1]]}})
+	A.evaluate(so, 0.5)
+	_near3("scale multiplies", A.out_scale, Vector3(2, 6, 4))
+	_near3("scale times the static scale", A.compose(Vector3.ZERO, Quaternion.IDENTITY, Vector3(0.5, 0.5, 0.5)).basis.get_scale(), Vector3(1, 3, 2))
+	# Dissolve and interactable multiply; the static flag wins.
+	a.set_float(T.P_DISSOLVE, 0.5)
+	var dz := _obj({"track": "a", "animation": {"dissolve": [[1, 0], [0, 1]]}})
+	A.evaluate(dz, 0.5)
+	_near("dissolve multiplies", A.out_dissolve, 0.25)
+	_near("interactable defaults to 1", A.out_interactable, 1.0)
+	var un := _obj({"track": "a", "uninteractable": true})
+	A.evaluate(un, 0.5)
+	_near("uninteractable object", A.out_interactable, 0.0)
+	a.set_float(T.P_INTERACTABLE, 0.0)
+	A.evaluate(only_a, 0.5)
+	_near("interactable from the track", A.out_interactable, 0.0)
+	# A track parent applies on top.
+	var par := T.get_track(T.index_of("par"))
+	var child := T.get_track(T.index_of("child"))
+	child.parent = T.find("par")
+	par.is_transform = true
+	par.xform = Transform3D(Basis.IDENTITY, Vector3(0, 10, 0))
+	var po := _obj({"track": "child"})
+	A.evaluate(po, 0.5)
+	_near3("parent transform applies", A.compose(Vector3(0, 0, -5), Quaternion.IDENTITY, Vector3.ONE).origin, Vector3(0, 10, -5))
+	# Allocation-free per tick: no new objects after thousands of evaluations.
+	var before := Performance.get_monitor(Performance.OBJECT_COUNT)
+	var sink := Vector3.ZERO
+	for i in 3000:
+		A.evaluate(so, float(i) / 3000.0)
+		sink += A.compose(Vector3(0, 0, -5), Quaternion.IDENTITY, Vector3.ONE).origin
+		A.evaluate(lo, 0.25)
+		A.evaluate(def, 0.75)
+	var after := Performance.get_monitor(Performance.OBJECT_COUNT)
+	_check("per-tick evaluation allocates no objects", after == before and sink.is_finite(), "%d -> %d" % [before, after])
+	T.reset()
+
+
+# Real nodes: a note-type Cuttable and a wall, driven through their own tick functions.
+func _apply_nodes() -> void:
+	var T := NoodleTracks
+	T.reset()
+	T.active = true
+	var c := Cuttable.new()
+	add_child(c)
+	c.set_physics_process(false)
+	c.speed = 10.0
+	c.transform = Transform3D(Basis.IDENTITY, Vector3(0.3, 1.1, -10))
+	var obj := _obj({"track": "x", "animation": {"interactable": [0], "offsetPosition": [[0, 0, 0, 0], [0, 2, 0, 1]]}})
+	c.noodle_spawn(obj, 1.0)
+	_near3("spawn pose: lifetime 0, no offset", c.transform.origin, Vector3(0.3, 1.1, -10))
+	c._noodle_tick(0.5)
+	# 0.5 s at 10 m/s: z = -5, lifetime 0.25, offset 0.5 lane up.
+	_near3("travel and path after half a second", c.transform.origin, Vector3(0.3, 1.4, -5))
+	_check("non-interactable note is not hittable", not c._n_can_hit)
+	c._noodle_tick(0.5)
+	_near("lifetime 0.5 at the hit plane", c.transform.origin.z, 0.0)
+	var plain := Cuttable.new()
+	add_child(plain)
+	plain.set_physics_process(false)
+	plain.noodle_spawn(null, 1.0)
+	_check("plain object takes no Noodle path", plain.noodle == null and plain._n_can_hit)
+	c.queue_free()
+	plain.queue_free()
+
+	var wall := (load("res://game/Wall/Wall.tscn") as PackedScene).instantiate() as Wall
+	add_child(wall)
+	wall.set_physics_process(false)
+	MapTimer.load_bpm_events({}, 120.0)
+	var info := ObstacleInfo.new_v3({"b": 4.0, "d": 1.0, "x": 1, "y": 0, "w": 1, "h": 5,
+		"customData": {"track": "x", "uninteractable": true, "animation": {"offsetPosition": [[0, 0, 0, 0], [0, 5, 0, 1]]}}})
+	T._resolve(info.noodle)
+	wall.speed = 10.0
+	wall._half_depth = 0.5
+	wall.transform = Transform3D(Basis.IDENTITY, Vector3(0, 1.5, -10.5))
+	wall._noodle_spawn(info, 1.0)
+	_check("animated wall takes the Noodle path", wall.noodle != null)
+	var centre := wall._noodle_tick(0.5)
+	# Front at -5 after 0.5 s; lifetime (-0.5 + 1) / (2 + 0.5) = 0.2, offset 1 lane up.
+	_near("wall travel (centre)", centre, -5.5)
+	_near3("wall pose", wall.transform.origin, Vector3(0, 2.1, -5.5))
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_check("uninteractable wall has no collision", wall._wall_shape().disabled)
+	var plain_info := ObstacleInfo.new_v3({"b": 4.0, "d": 1.0, "x": 1, "y": 0, "w": 1, "h": 5})
+	wall._noodle_spawn(plain_info, 1.0)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_check("a respawned plain wall is solid and unscaled", wall.noodle == null and not wall._wall_shape().disabled and wall.scale == Vector3.ONE)
+	wall.queue_free()
+	MapTimer.reset()
+	T.reset()

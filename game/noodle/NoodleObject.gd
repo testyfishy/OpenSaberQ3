@@ -12,16 +12,49 @@ class_name NoodleObject
 var track_names := PackedStringArray()
 # Indices into NoodleTracks.tracks, filled by NoodleTracks.resolve_objects().
 var tracks := PackedInt32Array()
+# The object's own path animation (`animation` / `_animation`): points per path property, empty
+# when it has none, and a bit per property it animates. It replaces the tracks' path for those
+# properties (Heck AnimationHelper).
+var anim: Array[NoodlePoints] = []
+var anim_mask := 0
+# v3 `uninteractable: true` / v2 `_interactable: false`: never hittable, never missed.
+var uninteractable := false
+# True when the object needs the per-tick animation path at all.
+var animated := false
 
 
 ## `cd` is the object's customData / _customData dictionary (either spelling is read, as the
 ## static parse already does). Returns null when the object uses none of these features.
 static func from_custom_data(cd: Dictionary) -> NoodleObject:
 	var names := NoodleTracks.names_from(cd.get("track", cd.get("_track", null)))
-	if names.is_empty():
+	var block: Variant = cd.get("animation", null)
+	var block_names: Dictionary = NoodleTracks.V3_NAMES
+	if not (block is Dictionary):
+		block = cd.get("_animation", null)
+		block_names = NoodleTracks.V2_NAMES
+	var v3_flag: Variant = cd.get("uninteractable", null)
+	var v2_flag: Variant = cd.get("_interactable", null)
+	var uninteractable: bool = (v3_flag is bool and v3_flag) or (v2_flag is bool and not v2_flag)
+	if names.is_empty() and not (block is Dictionary) and not uninteractable:
 		return null
 	var obj := NoodleObject.new()
 	obj.track_names = names
+	obj.uninteractable = uninteractable
+	if block is Dictionary:
+		for key: Variant in block as Dictionary:
+			if not block_names.has(key):
+				continue
+			var p := int(block_names[key])
+			if p > NoodleTracks.P_DEFINITE_POSITION:
+				continue  # not a path property
+			var pts := NoodlePoints.from_value((block as Dictionary)[key], NoodleTracks.KINDS[p], NoodleTracks.named)
+			if pts == null or pts.unsupported != "":
+				continue
+			if obj.anim.is_empty():
+				obj.anim.resize(NoodleTracks.P_COUNT)
+			obj.anim[p] = pts
+			obj.anim_mask |= 1 << p
+	obj.animated = not names.is_empty() or obj.anim_mask != 0 or uninteractable
 	return obj
 
 

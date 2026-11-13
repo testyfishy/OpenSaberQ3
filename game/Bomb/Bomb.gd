@@ -36,6 +36,9 @@ func spawn(info: BombInfo, current_beat: float) -> void:
 	beat = info.beat
 	
 	
+	# A pooled bomb may carry the last Noodle pose; a plain bomb's basis is always identity.
+	transform.basis = Basis.IDENTITY
+	$BombAnimation.visible = true
 	transform.origin.x = Constants.LANE_DISTANCE * float(info.line_index) + Constants.LANE_ZERO_X
 	transform.origin.y = Constants.LANE_DISTANCE * float(info.line_layer) + Constants.LAYER_ZERO_Y
 	transform.origin.z = -NoteMotion.distance_between(current_beat, info.beat)
@@ -44,8 +47,14 @@ func spawn(info: BombInfo, current_beat: float) -> void:
 	var anim_speed := Map.current_difficulty.note_jump_movement_speed / 9.0
 	anim.speed_scale = maxf(min_speed, anim_speed)
 	anim.play(&"Spawn")
+	noodle_spawn(info.noodle, NoteMotion.half_jump_seconds())
 
+func _noodle_set_shown(shown: bool) -> void:
+	$BombAnimation.visible = shown
 
+func _noodle_vanish() -> void:
+	_unregister_hit()
+	_despawn()
 
 func hide_bomb() -> void:
 	visible = false

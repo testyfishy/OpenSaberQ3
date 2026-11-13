@@ -24,6 +24,10 @@ var path_cur: Array[NoodlePoints] = []
 var path_prev: Array[NoodlePoints] = []
 var path_blend := PackedFloat32Array()
 var has_path := false
+# Bit p set when property p has a value (vmask) or a path (pmask), so an object can skip every
+# property none of its tracks animate.
+var vmask := 0
+var pmask := 0
 
 # AssignTrackParent: the track this track's objects are parented to (-1 for none), and whether
 # this track drives a transform (it is a parent or the player's track).
@@ -52,21 +56,34 @@ func _init(track_name: String = "") -> void:
 
 func clear_value(p: int) -> void:
 	has[p] = 0
+	vmask &= ~(1 << p)
 
 
 func set_vec(p: int, v: Vector3) -> void:
 	vec[p] = v
 	has[p] = 1
+	vmask |= 1 << p
 
 
 func set_quat(p: int, q: Quaternion) -> void:
 	quat[p] = q
 	has[p] = 1
+	vmask |= 1 << p
 
 
 func set_float(p: int, f: float) -> void:
 	flt[p] = f
 	has[p] = 1
+	vmask |= 1 << p
+
+
+## Assigns (or with null, erases) the path of property `p`.
+func set_path(p: int, points: NoodlePoints) -> void:
+	path_cur[p] = points
+	if points != null:
+		pmask |= 1 << p
+	else:
+		pmask &= ~(1 << p)
 
 
 ## Writes the value of `points` at time `t` into property `p`, by the property's kind.

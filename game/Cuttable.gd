@@ -37,6 +37,17 @@ func track_blade_distance(d: float) -> void:
 # Note: serves no purpose for bombs
 var _piece_death_count := 0
 
+# Noodle Extensions animation (game/noodle/NoodleAnim.gd). `noodle` is null for an object
+# without tracks or an animation block, and then nothing below is touched per tick.
+var noodle: NoodleObject = null
+var _n_half_sec := 1.0
+var _n_base := Vector3.ZERO
+var _n_rot := Quaternion.IDENTITY
+var _n_scale := Vector3.ONE
+# False while the animation makes the object non-interactable: not hittable, not missable.
+var _n_can_hit := true
+var _n_shown := true
+
 var _collision_enabled := false
 var _enable_once := -1  # -1 = not read yet, 0 = legacy, 1 = enable once
 
@@ -144,20 +155,68 @@ func _physics_process(delta: float) -> void:
 	# walks up the tree and touches the transform cache once per access, and this runs twice
 	# per live note per tick. With 8 notes live at 120 Hz that is ~2 000 extra transform
 	# reads a second, on the exact path that gets slower as the map gets denser.
-	transform.origin.z += speed * delta
-	var z := transform.origin.z
+	var z: float
+	if noodle == null:
+		transform.origin.z += speed * delta
+		z = transform.origin.z
+	else:
+		z = _noodle_tick(delta)
 	
 	# enable collisions when cuttable gets close enough to player
 	# (this is also the hit window: see _register_hit)
 	if z > ENABLE_Z:
-		set_collision_enabled(true)
+		set_collision_enabled(_n_can_hit)
 	
 	# remove children that go to far
 	if z > Constants.MISS_Z:
-		on_miss()
+		if _n_can_hit:
+			on_miss()
+		else:
+			_noodle_vanish()
 	
 	if probe:
 		Cost.cuttable_usec += Time.get_ticks_usec() - t0
+
+## Called at the end of a spawn. `info_noodle` is the object's Noodle data (or null); the
+## transform the spawn wrote is the un-animated pose the animation starts from.
+func noodle_spawn(info_noodle: NoodleObject, half_sec: float) -> void:
+	_n_can_hit = true
+	_n_shown = true
+	if info_noodle == null or not info_noodle.animated or not NoodleTracks.active:
+		noodle = null
+		return
+	noodle = info_noodle
+	_n_half_sec = maxf(half_sec, 0.001)
+	_n_base = transform.origin
+	_n_rot = transform.basis.get_rotation_quaternion()
+	_n_scale = transform.basis.get_scale()
+	_noodle_tick(0.0)
+
+# One animated tick. The object's travel is integrated exactly as an un-animated one (so it is
+# as smooth), and its lifetime follows from how far it has come: 0.5 at the hit plane, and the
+# half jump either side. Returns the travel z, which decides the hit window and the miss.
+func _noodle_tick(delta: float) -> float:
+	_n_base.z += speed * delta
+	var life := 0.5 + (_n_base.z / speed) / (2.0 * _n_half_sec)
+	NoodleAnim.evaluate(noodle, life)
+	transform = NoodleAnim.compose(_n_base, _n_rot, _n_scale)
+	_n_can_hit = NoodleAnim.out_interactable >= 1.0
+	if not _n_can_hit and _collision_enabled:
+		set_collision_enabled(false)
+	var shown := NoodleAnim.out_dissolve >= 0.5
+	if shown != _n_shown:
+		_n_shown = shown
+		_noodle_set_shown(shown)
+	return _n_base.z
+
+# Dissolve is drawn as visibility: hidden below one half. Overridden by notes and bombs.
+@warning_ignore("unused_parameter")
+func _noodle_set_shown(shown: bool) -> void:
+	return
+
+# Leaves without a miss: a non-interactable object that reached the end of its travel.
+func _noodle_vanish() -> void:
+	release()
 
 ## specs/027 FR-019: the visual cut angle in the object's own frame. Noodle x/y rotation and 360
 ## lane yaw change the Euler decomposition of z, so subtracting `global_rotation.z` splits the

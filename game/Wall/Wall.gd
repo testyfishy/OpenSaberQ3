@@ -36,6 +36,18 @@ var _camera: Camera3D
 var despawn_z: float
 var speed: float
 
+# Noodle Extensions animation (game/noodle/NoodleAnim.gd); null for an ordinary wall, which then
+# runs exactly the code it always ran. The animated pose pivots on the wall's front face (Beat
+# Saber's obstacle origin); `_n_front` is that face's travel z.
+var noodle: NoodleObject = null
+var _n_front := 0.0
+var _n_base := Vector3.ZERO
+var _n_rot := Quaternion.IDENTITY
+var _n_half_sec := 1.0
+var _n_span_sec := 2.0
+var _n_can_hit := true
+var _n_shown := true
+
 # specs/029/027: depth-based grow. Height is a function of the wall's own z, so every wall at the
 # same depth has the same height and a wall surface stays continuous; the 0.6.5 age-based version
 # staggered the columns and made wall art look torn.
@@ -53,7 +65,7 @@ var _half_depth := 0.0
 var _grow_settled := false
 
 func _apply_grow() -> void:
-	var front_z := transform.origin.z + _half_depth
+	var front_z := _n_front if noodle != null else transform.origin.z + _half_depth
 	# The grow runs over the far half of the approach. Those were fixed at 16 m and 8 m when
 	# every map spawned 16 m out; they follow the map's spawn distance now (same numbers at 16 m).
 	var grow_start := -NoteMotion.spawn_distance()
@@ -78,13 +90,18 @@ func _physics_process(delta: float) -> void:
 	if Scoreboard.paused: return
 	var t0 := Time.get_ticks_usec() if Cost.enabled else 0
 	_update_inside_fade()
-	transform.origin.z += speed * delta
+	var z: float
+	if noodle == null:
+		transform.origin.z += speed * delta
+		z = transform.origin.z
+	else:
+		z = _noodle_tick(delta)
 	_apply_grow()
 	
 	# remove children that go to far
 	if Cost.enabled:
 		Cost.wall_usec += Time.get_ticks_usec() - t0
-	if transform.origin.z > despawn_z:
+	if z > despawn_z:
 		if Cost.enabled: Cost.objs_freed += 1
 		# Pooled, not freed. A wall map can spawn ~74 walls a second; instantiating and freeing a
 		# whole Mesh + Area3D + AnimationPlayer tree at that rate was the single largest cost. The
@@ -163,11 +180,56 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 		rotation_degrees = Vector3.ZERO
 	
 	speed = NoteMotion.speed_at(wall_info.beat)
+	_noodle_spawn(wall_info, NoteMotion.half_jump_seconds())
 	# specs/029: the depth-based grow sets the initial height from the spawn z.
 	_apply_grow()
 	var mesh := _wall_mesh()
 	if mesh != null:
 		mesh.visible = not debug_hide_visuals
+
+func _wall_shape() -> CollisionShape3D:
+	return $WallMeshOrientation/WallArea/CollisionShape3D as CollisionShape3D
+
+func _noodle_spawn(wall_info: ObstacleInfo, half_sec: float) -> void:
+	# A pooled wall may carry the last Noodle pose and switches; an ordinary wall's scale is 1.
+	scale = Vector3.ONE
+	if not _n_can_hit:
+		_wall_shape().set_deferred(&"disabled", false)
+	_n_can_hit = true
+	_n_shown = true
+	var info_noodle := wall_info.noodle
+	if info_noodle == null or not info_noodle.animated or not NoodleTracks.active:
+		noodle = null
+		return
+	noodle = info_noodle
+	_n_front = transform.origin.z + _half_depth
+	_n_base = Vector3(transform.origin.x, transform.origin.y, _n_front)
+	_n_rot = transform.basis.get_rotation_quaternion()
+	_n_half_sec = maxf(half_sec, 0.001)
+	var dur_sec := Map.beat_to_seconds(wall_info.beat + wall_info.duration) - Map.beat_to_seconds(wall_info.beat)
+	# Heck ObstacleUpdateNoodlifier: lifetime over the jump plus the wall's own duration.
+	_n_span_sec = maxf(2.0 * _n_half_sec + maxf(dur_sec, 0.0), 0.001)
+	_noodle_tick(0.0)
+
+func _noodle_tick(delta: float) -> float:
+	_n_front += speed * delta
+	_n_base.z = _n_front
+	var life := clampf(((_n_front / speed) + _n_half_sec) / _n_span_sec, 0.0, 1.0)
+	NoodleAnim.evaluate(noodle, life)
+	var pivot := NoodleAnim.compose(_n_base, _n_rot, Vector3.ONE)
+	transform = pivot * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, -_half_depth))
+	var can_hit := NoodleAnim.out_interactable >= 1.0
+	if can_hit != _n_can_hit:
+		_n_can_hit = can_hit
+		# Deferred: the shape may be read by the physics step this tick runs in.
+		_wall_shape().set_deferred(&"disabled", not can_hit)
+	var shown := NoodleAnim.out_dissolve >= 0.5
+	if shown != _n_shown:
+		_n_shown = shown
+		var mesh := _wall_mesh()
+		if mesh != null:
+			mesh.visible = shown and not debug_hide_visuals
+	return _n_front - _half_depth
 
 func _wall_mesh() -> MeshInstance3D:
 	if _mesh_cache == null:

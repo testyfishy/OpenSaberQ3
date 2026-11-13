@@ -156,6 +156,7 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	
 	mi.visible = true
 	_set_mirror_pass(Settings.mirror_reflections)
+	noodle_spawn(note_info.noodle, NoteMotion.half_jump_seconds())
 
 # FR-047 / 007 rule 2: the mirrored copy is a second pass on the shared note material, so
 # this is one write for the whole pool, and `null` when the setting is off so the pass costs
@@ -195,6 +196,13 @@ func make_chain_head() -> void:
 	mi.set_instance_shader_parameter(&"note_chain_head", 1.0)
 	piece_left.set_chain_head(true)
 	piece_right.set_chain_head(true)
+
+func _noodle_set_shown(shown: bool) -> void:
+	mi.visible = shown and not debug_hide_visuals
+
+func _noodle_vanish() -> void:
+	hide_cube()
+	release()
 
 func on_miss() -> void:
 	if HitResolver.miss_probe():

@@ -160,8 +160,9 @@ func _process_map(game: BeepSaber_Game) -> void:
 	# running animations, and draw the world relative to the player's track if there is one.
 	# Skipped entirely for a map without tracks or custom events.
 	if NoodleTracks.active:
-		NoodleEvents.dispatch_until(current_beat, song_position)
-		NoodleEvents.update(song_position)
+		NoodleAnim.advance(song_position, game.get_physics_process_delta_time())
+		NoodleEvents.dispatch_until(current_beat, NoodleAnim.song_sec)
+		NoodleEvents.update(NoodleAnim.song_sec)
 		game.track.transform = NoodleEvents.root_xform
 	var coalesced := {}
 	var uncoalesced: Array[EventInfo] = []
