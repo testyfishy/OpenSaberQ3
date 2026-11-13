@@ -415,13 +415,27 @@ made printed its result (10 of 10 in a row at the final commit, 272 checks each)
     head once its beat has passed.
   - Other maps take exactly the old path.
   - Arcs and chains still do not follow an animated head (out of scope).
-- **Static rotation** (`9344eda`, **changes how existing maps look**): world and local rotation
+  - Exercised at runtime by the bench on 43a25 "Lifelike" NormalStandard (47 linked arcs, 10
+    linked chains, 57 heads with their own jump; copied into the PC song folder for the runs and
+    removed afterwards). The runs had 0 script errors, and the arcs attached to their head cubes
+    (the `ARC head off` probe, which needs a head cube, fired; before this change it never did).
+    The bot's result is noise on this Vivify map: 20-42 right notes in three runs before the
+    change, 20-39 in three runs after. ODDS ExpertPlus (no Noodle, 45 s) at the final code gave
+    49 hits / 3 wrong with 0 script errors (baseline 46-48 / 4-6). Fixtures that link heads:
+    3bbb0, 43a1f, 43a25 and 4a2b3.
+- **Static rotation** (`9344eda` and `3251e0f`, **changes how existing maps look**): world and local rotation
   are now read separately and converted to the Godot frame with the same `euler_to_quat` as the
   animated rotations.
-  - They are composed as Heck does: note = world × cut direction × local, wall = world × local.
+  - They are composed as Heck does: note = world × local × cut direction, wall = world × local.
   - A world rotation given as one number is a y turn.
   - x and y turns were mirrored before; z turns look the same.
   - A pooled note also no longer keeps the previous note's x/y turn.
+  - The order follows Heck's source: `NoteInitNoodlifier` sets the note root to world × local,
+    and Beat Saber turns the cut direction on a child (`3251e0f`; `9344eda` first had it the
+    other way). A check with cut direction 3 tells the two orders apart.
+  - Follow-up, not changed: `NoodleAnim` composes animated rotation as offsetWorldRotation ×
+    (static rotation including the cut) × localRotation, so an animated localRotation also sits
+    inside the cut turn. By the same source it should sit outside.
   - Still not done: a static world rotation turns the object but not its path around the player,
     as before.
 - Harness checks: 4 for v4, 10 for head links, and 7 for rotation. The rotation checks compare
@@ -445,6 +459,11 @@ the stacks by beat.
 - Maps without fakes: the v3 fake arrays return at once when absent, and the spawn loop gains
   one boolean test per spawned note.
 - No settings key fits, so there is no toggle.
+- Not read: v4 maps' fake arrays (the v4 expansion does not look for them).
+- The harness checks that a fake object is not interactable, which is the flag the miss path
+  tests (`_n_can_hit`). It does not drive an object past the miss line.
+- Pool growth: 352d8 peaked at 270 live walls in its first 150 s, above the wall pool's presize
+  of 256, so the pool grows during that map (its fake walls run to 300 s).
 - 16 harness checks.
 
 Fake objects per fixture (fake / all in the loaded stacks):
