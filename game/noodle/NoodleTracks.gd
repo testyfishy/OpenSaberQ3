@@ -87,6 +87,7 @@ static func begin_load(map_data: Dictionary) -> void:
 ## Called by Map.load_beatmap after the loader threads joined.
 static func finish_load(map_data: Dictionary) -> void:
 	resolve_objects()
+	apply_jumps()
 	NoodleEvents.load_events(map_data)
 
 
@@ -134,6 +135,48 @@ static func resolve_objects() -> void:
 	for info in MapData.obstacle_stack:
 		if info != null and info.noodle != null:
 			_resolve(info.noodle)
+
+
+## Per-object jumps (Noodle `noteJumpMovementSpeed` / `noteJumpStartBeatOffset`): works out each
+## such object's half jump and how much earlier or later than the map's it must spawn, and
+## re-sorts a stack by spawn beat when any lead is not zero. Main thread, after the joins and
+## after NoteMotion.configure().
+static func apply_jumps() -> void:
+	if not NoteMotion.configured:
+		return
+	_jump_stack(MapData.note_stack)
+	_jump_stack(MapData.bomb_stack)
+	_jump_stack(MapData.obstacle_stack)
+
+
+static func _jump_stack(stack: Array) -> void:
+	var map_beats := NoteMotion.spawn_beats()
+	var map_sec := NoteMotion.half_jump_seconds()
+	var any := false
+	for info: Variant in stack:
+		if info == null or info.noodle == null:
+			continue
+		var obj: NoodleObject = info.noodle
+		if obj.njs <= 0.0 and not obj.has_jump_offset:
+			continue
+		var beats := NoteMotion.object_half_jump_beats(obj.njs, obj.has_jump_offset, obj.jump_offset)
+		obj.half_sec = map_sec * beats / map_beats
+		info.spawn_lead = beats - map_beats
+		if info.spawn_lead != 0.0:
+			any = true
+	if not any:
+		return
+	# Spawn order is beat - lead. The stack is reversed (next to spawn at the back); the original
+	# position breaks ties so objects on one beat keep their order (sort_custom is not stable).
+	var keyed: Array = []
+	for i in stack.size():
+		var info: Variant = stack[i]
+		var at: float = INF if info == null else float(info.beat) - float(info.spawn_lead)
+		keyed.append([at, i, info])
+	keyed.sort_custom(func(x: Array, y: Array) -> bool:
+		return x[0] > y[0] or (x[0] == y[0] and x[1] < y[1]))
+	for i in keyed.size():
+		stack[i] = keyed[i][2]
 
 
 static func _resolve(obj: NoodleObject) -> void:

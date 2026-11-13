@@ -156,7 +156,7 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	
 	mi.visible = true
 	_set_mirror_pass(Settings.mirror_reflections)
-	noodle_spawn(note_info.noodle, NoteMotion.half_jump_seconds())
+	noodle_spawn(note_info.noodle, _noodle_half_sec(note_info.noodle))
 
 # FR-047 / 007 rule 2: the mirrored copy is a second pass on the shared note material, so
 # this is one write for the whole pool, and `null` when the setting is off so the pass costs

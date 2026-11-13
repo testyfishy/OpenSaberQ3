@@ -32,7 +32,8 @@ func on_miss() -> void:
 func spawn(info: BombInfo, current_beat: float) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = true
-	speed = NoteMotion.speed_at(info.beat)
+	var own_njs := info.noodle.njs if info.noodle != null else 0.0
+	speed = NoteMotion.speed_at(info.beat, own_njs)
 	beat = info.beat
 	
 	
@@ -41,13 +42,13 @@ func spawn(info: BombInfo, current_beat: float) -> void:
 	$BombAnimation.visible = true
 	transform.origin.x = Constants.LANE_DISTANCE * float(info.line_index) + Constants.LANE_ZERO_X
 	transform.origin.y = Constants.LANE_DISTANCE * float(info.line_layer) + Constants.LAYER_ZERO_Y
-	transform.origin.z = -NoteMotion.distance_between(current_beat, info.beat)
+	transform.origin.z = -NoteMotion.distance_between(current_beat, info.beat, own_njs)
 
 	var anim := $AnimationPlayer as AnimationPlayer
 	var anim_speed := Map.current_difficulty.note_jump_movement_speed / 9.0
 	anim.speed_scale = maxf(min_speed, anim_speed)
 	anim.play(&"Spawn")
-	noodle_spawn(info.noodle, NoteMotion.half_jump_seconds())
+	noodle_spawn(info.noodle, _noodle_half_sec(info.noodle))
 
 func _noodle_set_shown(shown: bool) -> void:
 	$BombAnimation.visible = shown

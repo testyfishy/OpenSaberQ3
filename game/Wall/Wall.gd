@@ -132,7 +132,8 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	
 	var x_size := maxf(wall_info.width * Constants.LANE_DISTANCE, 0.01)
 	var y_size := maxf(wall_info.height * Constants.LANE_DISTANCE, 0.01)
-	var z_size := maxf(NoteMotion.distance_between(wall_info.beat, wall_info.beat + wall_info.duration), 0.01)
+	var own_njs := wall_info.noodle.njs if wall_info.noodle != null else 0.0
+	var z_size := maxf(NoteMotion.distance_between(wall_info.beat, wall_info.beat + wall_info.duration, own_njs), 0.01)
 	if wall_info.has_custom_scale:
 		x_size *= absf(wall_info.custom_scale.x)
 		y_size *= absf(wall_info.custom_scale.y)
@@ -170,7 +171,7 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	
 	transform.origin.x = (0.5 * wall_info.width + wall_info.line_index - 2) * Constants.LANE_DISTANCE
 	transform.origin.y = (0.5 * wall_info.height + wall_info.line_layer) * Constants.LANE_DISTANCE
-	transform.origin.z = -NoteMotion.distance_between(current_beat, wall_info.beat) - depth
+	transform.origin.z = -NoteMotion.distance_between(current_beat, wall_info.beat, own_njs) - depth
 	if wall_info.has_custom_position:
 		transform.origin.x += wall_info.custom_position.x
 		transform.origin.y += wall_info.custom_position.y
@@ -179,8 +180,11 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	else:
 		rotation_degrees = Vector3.ZERO
 	
-	speed = NoteMotion.speed_at(wall_info.beat)
-	_noodle_spawn(wall_info, NoteMotion.half_jump_seconds())
+	speed = NoteMotion.speed_at(wall_info.beat, own_njs)
+	var half_sec := NoteMotion.half_jump_seconds()
+	if wall_info.noodle != null and wall_info.noodle.half_sec > 0.0:
+		half_sec = wall_info.noodle.half_sec
+	_noodle_spawn(wall_info, half_sec)
 	# specs/029: the depth-based grow sets the initial height from the spawn z.
 	_apply_grow()
 	var mesh := _wall_mesh()

@@ -19,6 +19,9 @@ var has_custom_scale := false
 var custom_scale := Vector3.ONE
 # Noodle Extensions tracks and animation (game/noodle); null for an object without any.
 var noodle: NoodleObject = null
+# Beats earlier (positive) or later than the map's half jump this object spawns: its own Noodle
+# jump (step 5). 0 for every object of an ordinary map.
+var spawn_lead := 0.0
 
 @warning_ignore("shadowed_variable")
 func _init(beat: float, duration: float, line_index: float, line_layer: float, width: float, height: float) -> void:

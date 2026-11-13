@@ -177,6 +177,12 @@ func _physics_process(delta: float) -> void:
 	if probe:
 		Cost.cuttable_usec += Time.get_ticks_usec() - t0
 
+## The half jump (seconds) an object's lifetime runs over: its own when it has a Noodle jump.
+static func _noodle_half_sec(obj: NoodleObject) -> float:
+	if obj != null and obj.half_sec > 0.0:
+		return obj.half_sec
+	return NoteMotion.half_jump_seconds()
+
 ## Called at the end of a spawn. `info_noodle` is the object's Noodle data (or null); the
 ## transform the spawn wrote is the un-animated pose the animation starts from.
 func noodle_spawn(info_noodle: NoodleObject, half_sec: float) -> void:

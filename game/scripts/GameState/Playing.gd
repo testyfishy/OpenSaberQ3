@@ -69,7 +69,9 @@ func _process_map(game: BeepSaber_Game) -> void:
 	var cube_refs: Array[BeepCube] = []
 	
 	# spawn notes
-	while not MapData.note_stack.is_empty() and MapData.note_stack[-1].beat <= look_ahead:
+	# `spawn_lead` is 0 for every object of an ordinary map; a Noodle object with a longer own
+	# half jump spawns that many beats earlier (game/noodle/NoodleTracks.apply_jumps).
+	while not MapData.note_stack.is_empty() and MapData.note_stack[-1].beat - MapData.note_stack[-1].spawn_lead <= look_ahead:
 		var note := GlobalReferences.cube_pool.acquire() as BeepCube
 		var note_info := MapData.note_stack.pop_back() as ColorNoteInfo
 		if Map.first_note_ms < 0.0:
@@ -83,7 +85,7 @@ func _process_map(game: BeepSaber_Game) -> void:
 		cube_refs.append(note)
 	
 	# spawn bombs
-	while not MapData.bomb_stack.is_empty() and MapData.bomb_stack[-1].beat <= look_ahead:
+	while not MapData.bomb_stack.is_empty() and MapData.bomb_stack[-1].beat - MapData.bomb_stack[-1].spawn_lead <= look_ahead:
 		if debug_skip_bombs:
 			MapData.bomb_stack.pop_back()
 			continue
@@ -94,7 +96,7 @@ func _process_map(game: BeepSaber_Game) -> void:
 		TrackLanes.place(bomb, bomb_info.beat)
 	
 	# spawn obstacles (walls)
-	while not MapData.obstacle_stack.is_empty() and MapData.obstacle_stack[-1].beat <= look_ahead:
+	while not MapData.obstacle_stack.is_empty() and MapData.obstacle_stack[-1].beat - MapData.obstacle_stack[-1].spawn_lead <= look_ahead:
 		# FR-026: a fake wall is decorative and must never block or score. Popped without
 		# acquiring, so the pool is not touched at all.
 		if MapData.obstacle_stack[-1].fake:

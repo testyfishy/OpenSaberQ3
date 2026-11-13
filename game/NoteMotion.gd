@@ -31,6 +31,10 @@ static var configured := false
 static var _njs := 0.0
 static var _half_jump_beats := LEGACY_SPAWN_BEATS
 static var _base_bpm := 120.0
+# The map's own NJS (before the Note Speed setting) and start beat offset, for objects that
+# override one of them (Noodle Extensions, see object_half_jump_beats).
+static var _map_njs := 10.0
+static var _map_offset := 0.0
 
 
 static func reset() -> void:
@@ -47,6 +51,8 @@ static func configure(njs: float, start_beat_offset: float, base_bpm: float, dif
 		speed_scale: float = 1.0) -> void:
 	_base_bpm = maxf(base_bpm, 1.0)
 	var map_njs := njs if njs > 0.0 else default_njs(difficulty_rank)
+	_map_njs = map_njs
+	_map_offset = start_beat_offset
 	_half_jump_beats = half_jump_beats(map_njs, start_beat_offset, _base_bpm)
 	_njs = map_njs * clampf(speed_scale, 0.25, 1.0)
 	configured = true
@@ -95,6 +101,14 @@ static func distance_between(from_beat: float, to_beat: float, object_njs: float
 ## How many beats ahead of the song an object is spawned.
 static func spawn_beats() -> float:
 	return _half_jump_beats if configured else LEGACY_SPAWN_BEATS
+
+
+## The half jump of an object with its own Noodle `noteJumpMovementSpeed` (0 = the map's) and/or
+## `noteJumpStartBeatOffset` (used when `has_offset`), worked out with the map's rule.
+static func object_half_jump_beats(own_njs: float, has_offset: bool, own_offset: float) -> float:
+	var object_njs := own_njs if own_njs > 0.0 else _map_njs
+	var offset := own_offset if has_offset else _map_offset
+	return half_jump_beats(object_njs, offset, _base_bpm)
 
 
 ## The map's half jump in seconds: how long before its beat an object appears (Noodle path

@@ -44,6 +44,7 @@ func _run() -> void:
 	_fixture_events()
 	_apply()
 	await _apply_nodes()
+	_jumps()
 	print("NOODLE checks=%d failed=%d" % [_checks, _fails])
 	print("NOODLE ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(0 if _fails == 0 else 1)
@@ -594,3 +595,53 @@ func _apply_nodes() -> void:
 	wall.queue_free()
 	MapTimer.reset()
 	T.reset()
+
+
+# --- step 5: per-object jump -------------------------------------------------------------------
+# Map: NJS 10 at 120 BPM (0.5 s a beat). Half jump: 4 beats would cover 20 m (> 18), so 2 beats.
+func _jumps() -> void:
+	MapTimer.load_bpm_events({}, 120.0)
+	NoteMotion.configure(10.0, 0.0, 120.0, 7, 1.0)
+	_near("map half jump", NoteMotion.spawn_beats(), 2.0)
+	_near("map half jump in seconds", NoteMotion.half_jump_seconds(), 1.0)
+	# Own NJS 20: 4 beats = 40 m, 2 = 20 m, 1 = 10 m -> 1 beat.
+	_near("own NJS shortens the jump", NoteMotion.object_half_jump_beats(20.0, false, 0.0), 1.0)
+	_near("own offset lengthens it", NoteMotion.object_half_jump_beats(0.0, true, 1.0), 3.0)
+	_near("both", NoteMotion.object_half_jump_beats(20.0, true, 0.5), 1.5)
+	_near("never under a quarter beat", NoteMotion.object_half_jump_beats(20.0, true, -5.0), 0.25)
+
+	# Parsed in both spellings, for every object type.
+	var n3 := ColorNoteInfo.new_v3({"b": 10.5, "x": 1, "y": 0, "c": 0, "d": 1, "customData": {"noteJumpStartBeatOffset": 1.0, "disableNoteGravity": true}})
+	var n2 := ColorNoteInfo.new_v2({"_time": 11.0, "_lineIndex": 1, "_lineLayer": 0, "_type": 1, "_cutDirection": 1, "_customData": {"_noteJumpMovementSpeed": 20.0, "_disableNoteGravity": true}})
+	var plain := ColorNoteInfo.new_v3({"b": 10.0, "x": 1, "y": 0, "c": 0, "d": 1})
+	_check("v3 note jump offset read", n3.noodle != null and n3.noodle.has_jump_offset and is_equal_approx(n3.noodle.jump_offset, 1.0) and n3.noodle.disable_gravity)
+	_check("v2 note jump speed read", n2.noodle != null and is_equal_approx(n2.noodle.njs, 20.0) and n2.noodle.disable_gravity and is_equal_approx(n2.custom_njs, 20.0))
+	_check("jump data alone does not animate", not n3.noodle.animated and not n2.noodle.animated)
+	var b3 := BombInfo.new_v3({"b": 9.0, "x": 0, "y": 0, "customData": {"noteJumpMovementSpeed": 20.0, "noteJumpStartBeatOffset": 0.5}})
+	var b2 := BombInfo.new_v2({"_time": 9.0, "_lineIndex": 0, "_lineLayer": 0, "_type": 3, "_customData": {"_noteJumpStartBeatOffset": 1.0}})
+	_check("bombs read NJS and offset (v3, v2)", is_equal_approx(b3.noodle.njs, 20.0) and is_equal_approx(b3.noodle.jump_offset, 0.5) and b2.noodle.has_jump_offset)
+	var w3 := ObstacleInfo.new_v3({"b": 9.0, "d": 1.0, "x": 0, "y": 0, "w": 1, "h": 5, "customData": {"noteJumpMovementSpeed": 20.0}})
+	var w2 := ObstacleInfo.new_v2({"_time": 9.0, "_duration": 1.0, "_lineIndex": 0, "_type": 0, "_width": 1, "_customData": {"_noteJumpStartBeatOffset": -1.0}})
+	_check("walls read NJS and offset (v3, v2)", is_equal_approx(w3.noodle.njs, 20.0) and w2.noodle.has_jump_offset and is_equal_approx(w2.noodle.jump_offset, -1.0))
+
+	# Leads and spawn order. Stacks are spawn order reversed (the next object at the back).
+	NoodleTracks.reset()
+	MapData.reset()
+	MapData.note_stack = [n2, n3, plain]
+	MapData.bomb_stack = [b3, b2]
+	MapData.obstacle_stack = [w2]
+	NoodleTracks.apply_jumps()
+	_near("longer own jump spawns earlier", n3.spawn_lead, 1.0)
+	_near("shorter own jump spawns later", n2.spawn_lead, -1.0)
+	_near("plain note keeps the map lead", plain.spawn_lead, 0.0)
+	_near("own half jump in seconds", n3.noodle.half_sec, 1.5)
+	_near("bomb with both", b3.spawn_lead, -0.5)
+	_near("wall with a negative offset", w2.spawn_lead, -1.0)
+	# Spawn beats: n3 10.5 - 1 = 9.5, plain 10, n2 11 + 1 = 12 -> order n3, plain, n2.
+	_check("note stack re-sorted by spawn beat", MapData.note_stack[-1] == n3 and MapData.note_stack[-2] == plain and MapData.note_stack[0] == n2)
+	# Bombs: b3 at 9.5, b2 at 9 - 1 = 8 -> b2 first.
+	_check("bomb stack re-sorted", MapData.bomb_stack[-1] == b2)
+	MapData.reset()
+	NoodleTracks.reset()
+	NoteMotion.reset()
+	MapTimer.reset()

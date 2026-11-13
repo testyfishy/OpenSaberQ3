@@ -21,6 +21,13 @@ var anim_mask := 0
 var uninteractable := false
 # True when the object needs the per-tick animation path at all.
 var animated := false
+# Per-object jump (step 5): `noteJumpMovementSpeed` (0 = the map's), `noteJumpStartBeatOffset`,
+# `disableNoteGravity`, and the resulting half jump in seconds (0 = the map's; set at load).
+var njs := 0.0
+var jump_offset := 0.0
+var has_jump_offset := false
+var disable_gravity := false
+var half_sec := 0.0
 
 
 ## `cd` is the object's customData / _customData dictionary (either spelling is read, as the
@@ -35,9 +42,22 @@ static func from_custom_data(cd: Dictionary) -> NoodleObject:
 	var v3_flag: Variant = cd.get("uninteractable", null)
 	var v2_flag: Variant = cd.get("_interactable", null)
 	var uninteractable: bool = (v3_flag is bool and v3_flag) or (v2_flag is bool and not v2_flag)
-	if names.is_empty() and not (block is Dictionary) and not uninteractable:
+	var own_njs: Variant = cd.get("noteJumpMovementSpeed", cd.get("_noteJumpMovementSpeed", null))
+	var own_offset: Variant = cd.get("noteJumpStartBeatOffset", cd.get("_noteJumpStartBeatOffset", null))
+	var gravity: Variant = cd.get("disableNoteGravity", cd.get("_disableNoteGravity", null))
+	var has_njs := (own_njs is float or own_njs is int) and float(own_njs) > 0.0
+	var has_offset := own_offset is float or own_offset is int
+	var no_gravity: bool = gravity is bool and gravity
+	var jump_only := has_njs or has_offset or no_gravity
+	if names.is_empty() and not (block is Dictionary) and not uninteractable and not jump_only:
 		return null
 	var obj := NoodleObject.new()
+	if has_njs:
+		obj.njs = float(own_njs)
+	if has_offset:
+		obj.has_jump_offset = true
+		obj.jump_offset = float(own_offset)
+	obj.disable_gravity = no_gravity
 	obj.track_names = names
 	obj.uninteractable = uninteractable
 	if block is Dictionary:
