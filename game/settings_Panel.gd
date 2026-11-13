@@ -216,6 +216,7 @@ func set_controls_from_settings() -> void:
 		_hand_tracking_control.set_pressed_no_signal(Settings.hand_tracking_enabled)
 		_strict_cuts_control.set_pressed_no_signal(Settings.strict_cuts)
 		_no_fail_control.set_pressed_no_signal(Settings.no_fail)
+		_note_speed_control.select(maxi(0, NOTE_SPEED_CHOICES.find(Settings.note_speed_percent)))
 	_set_up_performance_controls()
 
 # Builds the performance rows from what the current XR session actually offers, so a headset
@@ -539,7 +540,7 @@ func _on_perf_preset_selected(index: int) -> void:
 # scene file happens to hold them in.
 const TAB_NAMES := ["Gameplay", "Sabers", "Visuals", "Audio", "Performance", "Labs", "Advanced"]
 const TAB_ROWS := {
-	0: ["recenter", "player_height_offset", "strict_cuts", "no_fail", "bombs_enabled", "disable_map_color",
+	0: ["recenter", "player_height_offset", "NoteSpeedRow", "strict_cuts", "no_fail", "bombs_enabled", "disable_map_color",
 		"screenshot_trigger"],
 	1: ["SaberTypeRow", "SaberColorsRow", "SaberThicknessRow", "saber_tail", "saber_halo",
 		"left_saber_offset", "right_saber_offset"],
@@ -558,6 +559,8 @@ var _tab := 0
 var _hand_tracking_control: CheckButton
 var _strict_cuts_control: CheckButton
 var _no_fail_control: CheckButton
+var _note_speed_control: OptionButton
+const NOTE_SPEED_CHOICES: Array[int] = [100, 90, 80, 70, 60, 50]
 
 # Labs: features that work but are not finished. They are off by default and say so.
 func _build_labs_rows() -> void:
@@ -592,6 +595,20 @@ func _build_labs_rows() -> void:
 	_no_fail_control.button_pressed = Settings.no_fail
 	_no_fail_control.toggled.connect(func(pressed: bool) -> void: Settings.no_fail = pressed)
 	vbox.add_child(_no_fail_control)
+	var speed_row := HBoxContainer.new()
+	speed_row.name = "NoteSpeedRow"
+	var speed_label := Label.new()
+	speed_label.text = "Note Speed"
+	speed_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_note_speed_control = OptionButton.new()
+	_note_speed_control.tooltip_text = "How fast notes approach. Map speed is what the mapper set. Lower values slow the approach without changing the song, the timing or the score."
+	for percent in NOTE_SPEED_CHOICES:
+		_note_speed_control.add_item("Map speed" if percent == 100 else "%d%% of map speed" % percent)
+	_note_speed_control.select(maxi(0, NOTE_SPEED_CHOICES.find(Settings.note_speed_percent)))
+	_note_speed_control.item_selected.connect(func(index: int) -> void: Settings.note_speed_percent = NOTE_SPEED_CHOICES[index])
+	speed_row.add_child(speed_label)
+	speed_row.add_child(_note_speed_control)
+	vbox.add_child(speed_row)
 
 # One look for every row: the panel's own font instead of a per-row theme, labels without the
 # trailing colon, the performance star moved to the end, and rows tall enough to point at.

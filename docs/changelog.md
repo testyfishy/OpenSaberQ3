@@ -4,6 +4,14 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.27 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
+
+- **Note Speed** (Settings > Gameplay): Map speed, or 90 to 50 % of it. Lower values slow the
+  approach without changing the song, the timing or the score. The default stays at map speed,
+  which is what each mapper set and what Beat Saber plays.
+- `tools/dev/`: local scripts for the whole check, build, install and bot-run loop, so those
+  steps no longer need an assistant session. See `tools/dev/README.md`.
+
 ## v0.7.26 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 
 **Notes move at the map's own speed.** Until now every object travelled 4 metres per beat and

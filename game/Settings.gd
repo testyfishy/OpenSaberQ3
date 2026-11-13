@@ -92,6 +92,14 @@ var no_fail: bool:
 	set(value):
 		no_fail = value
 		set_and_emit(&"no_fail", value)
+# How fast notes approach, as a percentage of the map's own note jump speed. 100 is what the
+# mapper set. Lower values slow the approach without changing when a note has to be hit, so the
+# song, the timing and the score are unaffected; notes simply appear closer and arrive slower.
+var note_speed_percent: int:
+	set(value):
+		value = clamp_to_schema(&"note_speed_percent", value)
+		note_speed_percent = value
+		set_and_emit(&"note_speed_percent", value)
 var disable_map_color: bool:
 	set(value):
 		disable_map_color = value
@@ -434,6 +442,7 @@ const SCHEMA := {
 	"hand_tracking_enabled": {"default": false},
 	"strict_cuts": {"default": true},
 	"no_fail": {"default": true},
+	"note_speed_percent": {"default": 100, "min": 50, "max": 100, "step": 5},
 }
 
 # Derived view for the loader, the panel and the tests. The platform patch in _ready() writes

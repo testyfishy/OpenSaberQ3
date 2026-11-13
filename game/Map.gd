@@ -174,7 +174,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 	bpm_segments = MapTimer.segment_count()
 	# After the tempo map: object distances are worked out in seconds.
 	NoteMotion.configure(difficulty.note_jump_movement_speed, difficulty.note_jump_start_beat_offset,
-		info.beats_per_minute, difficulty.difficulty_rank)
+		info.beats_per_minute, difficulty.difficulty_rank, float(Settings.note_speed_percent) / 100.0)
 	vr.log_info("MAP motion: njs=%.1f m/s spawn=%.2f beats ahead, %.1f m away" % [
 		NoteMotion.njs(), NoteMotion.spawn_beats(), NoteMotion.spawn_distance()])
 	_build_track_rotations(map_data)

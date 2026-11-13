@@ -40,10 +40,15 @@ static func reset() -> void:
 
 
 ## Called when a map is loaded. `difficulty_rank` is Beat Saber's 1/3/5/7/9.
-static func configure(njs: float, start_beat_offset: float, base_bpm: float, difficulty_rank: int = 5) -> void:
+## `speed_scale` is the player's Note Speed setting (1.0 = the map's speed). The spawn lead is
+## worked out from the map's own speed, so slowing notes down leaves the time a note is visible
+## for unchanged: it starts closer and approaches slower.
+static func configure(njs: float, start_beat_offset: float, base_bpm: float, difficulty_rank: int = 5,
+		speed_scale: float = 1.0) -> void:
 	_base_bpm = maxf(base_bpm, 1.0)
-	_njs = njs if njs > 0.0 else default_njs(difficulty_rank)
-	_half_jump_beats = half_jump_beats(_njs, start_beat_offset, _base_bpm)
+	var map_njs := njs if njs > 0.0 else default_njs(difficulty_rank)
+	_half_jump_beats = half_jump_beats(map_njs, start_beat_offset, _base_bpm)
+	_njs = map_njs * clampf(speed_scale, 0.25, 1.0)
 	configured = true
 
 

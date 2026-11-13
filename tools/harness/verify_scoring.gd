@@ -167,6 +167,10 @@ func _motion() -> void:
 		"%.2f beats, %.1f m" % [NoteMotion.spawn_beats(), NoteMotion.spawn_distance()])
 	_check("a per-note speed overrides the map's for that note",
 		is_equal_approx(NoteMotion.speed_at(3.0, 20.0), 20.0) and is_equal_approx(NoteMotion.distance_between(0.0, 1.0, 20.0), 20.0))
+	NoteMotion.configure(12.0, 0.0, 60.0, 7, 0.5)
+	_check("Note Speed 50 %: half the speed, half the spawn distance, same lead time",
+		is_equal_approx(NoteMotion.njs(), 6.0) and is_equal_approx(NoteMotion.spawn_distance(), 6.0)
+		and is_equal_approx(NoteMotion.spawn_beats(), 1.0))
 	NoteMotion.configure(0.0, 0.0, 120.0, 9)
 	_check("NJS 0 in the map falls back to the Expert+ default", is_equal_approx(NoteMotion.njs(), 16.0))
 	NoteMotion.reset()
