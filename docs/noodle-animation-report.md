@@ -34,7 +34,9 @@ v2 and v3 spellings, plus three real fixture maps).
 
 ## What now works, against the census
 
-Census of the 45 fixture maps (`python tools/dev/census.py`), Noodle-related rows:
+Census of the 45 fixture maps (`python tools/dev/census.py`), Noodle-related rows. "Works"
+means checked against Heck's formulas in `verify_noodle` and run through the real game loop
+headless on the PC; no animated map has been seen on the headset yet (see Device testing).
 
 | Census feature (maps) | State |
 |---|---|
@@ -118,6 +120,21 @@ list), bare single points, all 32 Heck easings, `splineCatmullRom` for vectors; 
 14. **Device testing substitute**: when the headset could not complete a bot run (below), the same
     bench flag was run headless on the PC, at HEAD and at the pre-Noodle commit `43ba035`.
 15. Version numbers: 0.7.28 after step 3, 0.7.29 after step 6 (two `-Bump` builds).
+16. **Build tab stopped before `BUILD apk` printed.** Both exports wrote the APK and then the Godot
+    process did not exit, so the script never reached its `BUILD apk` line. The task said to stop
+    the tab after that line. I stopped it once the APK file existed and had stopped growing, then
+    ran the script's own remaining steps by hand: `aapt2` manifest check for version and hand
+    tracking, `adb install -r`, and `dumpsys package` to confirm the version.
+17. **Actions on the headset beyond `botrun.ps1`:**
+    - power-key and wake key events over ADB to wake it before each attempt;
+    - one `logcat -G 16M`, which enlarges the log buffer and was not reset;
+    - deleting my own unconsumed `bench.flag`;
+    - a force-stop of the game and the proximity-override release at the end.
+    No settings, no user data and no song files were touched.
+18. **PC user-data files overwritten** by the substitute benches, in
+    `%APPDATA%\Godot\app_userdata\Open Saber Q3\`: `bench.flag` (removed afterwards), and
+    `bench.csv`, `bench_meta.txt` and `audio_hits.csv`, which now hold the last PC run. 4a2b3 was
+    copied into that folder's `Songs` and removed again.
 
 ## Device testing
 
@@ -134,14 +151,17 @@ evidence, from logcat and the bench files:
   never resumed.
 - `botrun.ps1` prints whatever `bench_meta.txt` holds. The scores it printed in the failed runs
   are stale: 52 hits / 0 wrong from another session's 21:17 run, then 0 / 0 from 23:00.
-- **The 0-hit run.** At 22:57, just after the 0.7.28 install, a bench did run and recorded 0 hits
-  (`bench_meta.txt` at 23:00). Its metadata shows the display at 72 Hz with physics at 72
-  (`refresh_rate_after=72.0`, `physics_ticks_effective=72`) instead of the 120 Hz the game
-  requests. That is what it reports when the headset is not in an active, focused session, and
-  the headset was asleep around it. ODDS has no Noodle data, so none of the new code runs on it.
-  The same bench on the PC at the same code scores like the pre-Noodle commit (below). This
-  run is not explained beyond that. It should be repeated with the headset on a head, or with
-  the Guardian dialog dismissed.
+- **The 0-hit run is not a gameplay result.** At 22:57, just after the 0.7.28 install, a bench
+  started and wrote 0 hits (`bench_meta.txt`, 23:00). The bench never played. Its
+  `bench.csv` has 99 frames over 0.88 s (`elapsed_s=0.878`), and the metadata gives the reason:
+  `exit_reason=song_end`, `song_stream=null`, `song_playing=false`, `first_note_ms=-1.0` (no note
+  was ever spawned), with the display at 72 Hz instead of the 120 Hz requested. The headset was
+  not in a focused session, so the song never loaded. The bench saw no song and stopped at once.
+  For comparison, the 21:17 full run's `bench.csv` was 664 KB, against 12 KB here. ODDS has no
+  Noodle data either way.
+- **0.7.29 itself boots on the headset**: at the final launch the log shows
+  `OnGodotMainLoopStarted`, the palette and perf-panel startup lines, and no script or parse
+  errors. The APK contains `game/noodle/*.gdc`.
 - My unconsumed `bench.flag` was removed from the headset afterwards, so the next normal launch
   does not start a bot run. The game was force-stopped and the proximity override released.
   Nothing else on the headset was changed and no user data was touched.
@@ -159,6 +179,59 @@ The bot's numbers vary between runs, so ranges are given:
 4a2b3 was copied into the PC's song folder for this run and removed afterwards. On the PC, the
 Gloom frame time is p99 14.1-15.5 ms at HEAD against 12.2 ms at 43ba035, and the run gets 1.4 %
 fewer frames. ODDS and 4a2b3 show no difference worth naming.
+
+## All 16 Noodle fixtures
+
+Two checks over every Noodle fixture map (all 16, every difficulty), run headless on the PC
+after the final commit of code:
+
+- **Loading**: `map_dump` at HEAD and at `43ba035` (the commit before this work). All 16 dumps
+  are byte-identical, so the static parse of these maps is unchanged, and there were 0 script
+  errors. The dump tool segfaulted once on the *old* code (d7fa, retried), the known crash.
+- **Animation sweep** (a temporary scene, not committed): each difficulty loaded through
+  `Map.load_beatmap`, every custom event dispatched and animated at half-beat steps through the
+  song, then every animated object evaluated at three lifetimes. 0 non-finite transforms and 0
+  script errors in all 35 difficulties. Unknown event properties such as `height`, `startY` and
+  `attenuation` come from Chroma fog animation on v2 maps. Per difficulty: events, animated
+  objects, tracks, bad values, and what the pause menu will report:
+
+```
+1362d HardStandard.dat events=0 animated_objects=1598 tracks=0 bad=0 unsupported=[]
+198f3 ExpertPlus.dat events=7 animated_objects=1675 tracks=7 bad=0 unsupported=["Chroma environment"]
+1e6ff ExpertStandard.dat events=16867 animated_objects=4646 tracks=4013 bad=0 unsupported=["Chroma environment", "Chroma component/fog events", "arrow dissolve", "Chroma colour animation", "animated height", "animated startY", "animated attenuation"]
+1e6ff ExpertPlusLawless.dat events=16868 animated_objects=4672 tracks=3797 bad=0 unsupported=["Chroma environment", "Chroma component/fog events", "arrow dissolve", "Chroma colour animation", "animated height", "animated startY", "animated attenuation"]
+210e3 ExpertPlusStandard.dat events=448 animated_objects=279 tracks=360 bad=0 unsupported=["Chroma environment"]
+23f6b ExpertPlusStandard.dat events=17311 animated_objects=3305 tracks=1650 bad=0 unsupported=["Chroma environment", "Chroma component/fog events", "Chroma colour animation", "animated startY"]
+352d8 HardStandard.dat events=2 animated_objects=5332 tracks=4 bad=0 unsupported=["Chroma environment"]
+352d8 ExpertStandard.dat events=13 animated_objects=5332 tracks=4 bad=0 unsupported=["Chroma environment"]
+352d8 ExpertPlusStandard.dat events=16 animated_objects=5332 tracks=4 bad=0 unsupported=["Chroma environment"]
+3bbb0 ExpertPlusStandard.dat events=9923 animated_objects=69 tracks=2995 bad=0 unsupported=["Chroma environment", "Chroma geometry materials", "Chroma component/fog events", "player head/hand tracks", "arrow dissolve", "Chroma colour animation"]
+43a1f NormalStandard.dat events=868 animated_objects=160 tracks=98 bad=0 unsupported=["Chroma environment", "custom Unity assets", "Vivify events", "player head/hand tracks", "arrow dissolve"]
+43a1f HardStandard.dat events=868 animated_objects=160 tracks=98 bad=0 unsupported=["Chroma environment", "custom Unity assets", "Vivify events", "player head/hand tracks", "arrow dissolve"]
+43a24 HardStandard.dat events=129 animated_objects=40 tracks=243 bad=0 unsupported=["Chroma environment", "custom Unity assets", "Vivify events", "Heck point bases/modifiers", "player head/hand tracks"]
+43a25 EasyStandard.dat events=43 animated_objects=123 tracks=20 bad=0 unsupported=["Chroma environment", "Chroma geometry materials", "custom Unity assets", "Vivify events"]
+43a25 NormalStandard.dat events=43 animated_objects=145 tracks=20 bad=0 unsupported=["Chroma environment", "Chroma geometry materials", "custom Unity assets", "Vivify events"]
+4968d ExpertStandard.dat events=1342 animated_objects=444 tracks=165 bad=0 unsupported=["Chroma environment", "custom Unity assets", "Vivify events", "arrow dissolve", "track time animation"]
+4968d ExpertPlusLawless.dat events=2045 animated_objects=703 tracks=226 bad=0 unsupported=["Chroma environment", "custom Unity assets", "Vivify events", "arrow dissolve", "track time animation"]
+4a2b3 HardStandard.dat events=17 animated_objects=107 tracks=4 bad=0 unsupported=["Chroma environment", "custom Unity assets", "Vivify events"]
+4a2b3 ExpertStandard.dat events=17 animated_objects=149 tracks=4 bad=0 unsupported=["Chroma environment", "custom Unity assets", "Vivify events"]
+4a2b3 ExpertPlusStandard.dat events=17 animated_objects=714 tracks=4 bad=0 unsupported=["Chroma environment", "custom Unity assets", "Vivify events"]
+4a2b3 ExpertOneSaber.dat events=18 animated_objects=131 tracks=5 bad=0 unsupported=["Chroma environment", "custom Unity assets", "Vivify events"]
+4a2b3 ExpertPlusOneSaber.dat events=18 animated_objects=612 tracks=5 bad=0 unsupported=["Chroma environment", "custom Unity assets", "Vivify events"]
+4a2b3 EasyLawless.dat events=0 animated_objects=111 tracks=2 bad=0 unsupported=["custom Unity assets"]
+4a2b3 NormalLawless.dat events=1 animated_objects=130 tracks=3 bad=0 unsupported=["custom Unity assets"]
+4a2b3 HardLawless.dat events=0 animated_objects=153 tracks=2 bad=0 unsupported=["custom Unity assets"]
+4a2b3 ExpertLawless.dat events=1 animated_objects=611 tracks=3 bad=0 unsupported=["custom Unity assets"]
+4a2b3 ExpertPlusLawless.dat events=0 animated_objects=734 tracks=2 bad=0 unsupported=["custom Unity assets"]
+4a2b3 ExpertPlusLightshow.dat events=19 animated_objects=0 tracks=6 bad=0 unsupported=["Chroma environment", "custom Unity assets", "Vivify events"]
+5587c ExpertPlusStandard.dat events=0 animated_objects=0 tracks=0 bad=0 unsupported=[]
+5587e ExpertPlusStandard.dat events=0 animated_objects=0 tracks=0 bad=0 unsupported=[]
+L-55820 ExpertPlusStandard.dat events=0 animated_objects=0 tracks=0 bad=0 unsupported=[]
+d7fa EasyStandard.dat events=0 animated_objects=610 tracks=0 bad=0 unsupported=[]
+d7fa HardStandard.dat events=0 animated_objects=610 tracks=0 bad=0 unsupported=[]
+d7fa ExpertStandard.dat events=0 animated_objects=610 tracks=0 bad=0 unsupported=[]
+d7fa ExpertPlusStandard.dat events=0 animated_objects=345 tracks=0 bad=0 unsupported=[]
+```
 
 ## Final check.ps1 output
 
@@ -194,9 +267,11 @@ NOODLE checks=213 failed=0
 NOODLE PASS
 ```
 
-Observed twice in about 40 runs of the harness during the night: a run that printed nothing at
-all (once inside `check.ps1` after step 2, once standalone after the final check). Neither
-reproduced on immediate reruns (6 of 6 and 6 of 6 passed); the first coincided with a script
+Twice in about 40 harness runs during the night, a run did not produce its `NOODLE PASS` line:
+once inside `check.ps1` after step 2, and once standalone right after the final check. Both
+outputs had been filtered, so it is not known whether the process printed nothing or died part
+way, for example while loading a fixture map, like the known `map_dump` crash. Neither
+reproduced on immediate reruns (6 of 6 and 6 of 6 passed). The first coincided with a script
 being written mid-run. If `check.ps1` ever reports `verify_noodle` as FAIL with no NOODLE FAIL
 lines under it, rerun it once before investigating.
 

@@ -22,6 +22,8 @@ memory; details and limits in [noodle-animation-report.md](noodle-animation-repo
 - The pause menu now names only what a map uses that is still missing (Chroma environment,
   Vivify, colour animation, ...), instead of "Chroma/Noodle animation" for every such map.
 - Maps without Noodle data play exactly as before.
+- Checked headless on a PC only. The overnight bot run on the headset could not complete
+  (Guardian dialog), so no animated map has been seen on the headset yet.
 
 ## v0.7.28 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 
