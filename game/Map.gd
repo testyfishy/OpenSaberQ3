@@ -156,6 +156,9 @@ static func load_map_info(load_path: String) -> MapInfo:
 # threads have joined; then what of it this build does not play goes to MapSupport.
 static func _finish_noodle(map_data: Dictionary) -> void:
 	NoodleTracks.finish_load(map_data)
+	# After the load: v2 fake objects are only counted by the loader.
+	if MapSupport.fake_objects > 0:
+		vr.log_info("MAP fakes: %d decorative objects drawn, never scored" % MapSupport.fake_objects)
 	MapSupport.note_noodle(NoodleEvents.ignored, NoodleEvents.unsupported_points,
 		NoodleEvents.unsupported_targets, NoodleEvents.unapplied)
 
@@ -186,7 +189,7 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 		NoteMotion.njs(), NoteMotion.spawn_beats(), NoteMotion.spawn_distance()])
 	_build_track_rotations(map_data)
 	MapSupport.detect_unsupported(map_data, info)
-	vr.log_info("MAP data: bpm_segments=%d fakes=%d unsupported=%s" % [bpm_segments, MapSupport.fake_objects, str(MapSupport.unsupported_features)])
+	vr.log_info("MAP data: bpm_segments=%d unsupported=%s" % [bpm_segments, str(MapSupport.unsupported_features)])
 	
 	MapData.reset()
 	# Before the loader threads start: they read the map's named point definitions.

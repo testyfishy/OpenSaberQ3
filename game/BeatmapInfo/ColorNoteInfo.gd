@@ -20,7 +20,7 @@ var has_custom_position := false
 var custom_position := Vector2.ZERO
 # Noodle static transforms (specs/027 FR-007): rotations and a scale multiplier. The rotations
 # are Godot-frame quaternions (converted from Beat Saber's left-handed frame like the animated
-# ones); the note's rotation is world * cut direction * local, as Heck composes it.
+# ones); the note's rotation is world * local * cut direction, as Heck composes it.
 # `custom_euler` keeps the map's raw degrees for the probes only.
 var has_custom_rotation := false
 var custom_euler := Vector3.ZERO

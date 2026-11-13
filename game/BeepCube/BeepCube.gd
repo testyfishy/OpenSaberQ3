@@ -116,9 +116,10 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	# The whole rotation is written, so a pooled note never keeps a previous note's x/y turn.
 	rotation = Vector3(0.0, 0.0, Constants.CUBE_ROTATIONS[note_info.cut_direction] + deg_to_rad(note_info.angle_offset))
 	if note_info.has_custom_rotation:
-		# Heck: world rotation * the note's own (cut direction) rotation * local rotation, in the
-		# Godot frame. Adding the map's raw Euler degrees turned x and y the wrong way round.
-		quaternion = note_info.custom_world * quaternion * note_info.custom_local
+		# Heck (NoteInitNoodlifier) sets the note's root to world * local rotation; Beat Saber turns
+		# the cut direction on a child, so it applies innermost: world * local * cut, in the Godot
+		# frame. Adding the map's raw Euler degrees turned x and y the wrong way round.
+		quaternion = note_info.custom_world * note_info.custom_local * quaternion
 	if note_info.has_custom_scale:
 		scale = note_info.custom_scale
 	

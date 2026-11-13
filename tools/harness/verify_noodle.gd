@@ -932,6 +932,12 @@ func _static_rotation() -> void:
 	var plain := ColorNoteInfo.new_v3({"b": 1.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": float(d)})
 	cube.spawn(plain, 0.0)
 	_near3("a plain note respawned in that cube is upright", cube.transform.basis.orthonormalized() * Vector3.UP, Vector3.UP)
+	# Cut direction 3 turns +90 about z. Local x 90 must apply outside it (Heck: world * local *
+	# cut): up -> (-1, 0, 0) by the cut, which the x turn leaves alone. The other order would
+	# give (0, 0, -1).
+	var turned := ColorNoteInfo.new_v3({"b": 1.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": 3.0, "customData": {"localRotation": [90, 0, 0]}})
+	cube.spawn(turned, 0.0)
+	_near3("local rotation applies outside the cut direction", cube.transform.basis.orthonormalized() * Vector3.UP, Vector3(-1, 0, 0))
 	cube.queue_free()
 	Map.current_difficulty = null
 
