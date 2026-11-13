@@ -71,9 +71,11 @@ func _check_chain(label: String, hx: float, hy: float, tx: float, ty: float, cut
 	for i in links.size():
 		if i < cut.size():
 			_check(cut[i] == links[i], "%s: link %d cut in order" % [label, i + 1])
+	# The standard ladder: hit 1 at x1, hits 2-5 at x2, 6-13 at x4, the rest at x8.
 	var want_points := 0
 	for i in cut.size():
-		want_points += 20 * mini(1 + i / 10, 8)
+		var mult := 1 if i < 1 else (2 if i < 5 else (4 if i < 13 else 8))
+		want_points += 20 * mult
 	_check(Scoreboard.points == want_points, "%s: score %d (want %d)" % [label, Scoreboard.points, want_points])
 
 	for link in links:

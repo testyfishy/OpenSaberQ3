@@ -75,6 +75,9 @@ var hand_driven := false
 var _last_hand_origin := Vector3.ZERO
 
 var movement_aabb := AABB()
+# Set by this controller's saber just before it cuts a note: how much of a full swing led into
+# the cut, 0..1 (Scoreboard.PRE_SWING_FULL_DEG is 1.0). The note reads it when it scores.
+var swing_pre_ratio := 0.0
 
 func ax_pressed() -> bool:
 	return ax

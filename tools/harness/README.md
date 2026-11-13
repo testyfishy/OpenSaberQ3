@@ -50,6 +50,18 @@ blade, the Hands setting, the tracking-source gate and the return to controllers
 `HANDPATH PASS`. The "controller asleep" state is simulated by the `left_hand` tracker not
 existing; it is not a recording of the headset.
 
+## Scoring
+
+`verify_scoring.tscn` checks the standard scoring model: the 70/30/15 split, the x1/x2/x4/x8
+ladder, what a miss, a bomb and a wrong-way cut do, accuracy against the best possible score, and
+that a real `LightSaber` measures the swing in and the follow-through in degrees. Prints
+`SCORING PASS`.
+
+## Screens
+
+`screens_preview.tscn` renders every settings tab and the results screen to PNG. It needs a real
+renderer, so run it without `--headless`: `godot --path . res://tools/harness/screens_preview.tscn -- <folder>`.
+
 ## I/O regressions
 
 `verify_io_fixes.tscn` covers zip extraction (subfolders, `../` entries), the Storage panel's

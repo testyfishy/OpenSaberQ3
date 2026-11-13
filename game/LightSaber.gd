@@ -219,6 +219,7 @@ func _physics_process(delta: float) -> void:
 	var blade_tip := blade_xf * _swing_cast.target_position
 	last_blade_base = blade_base
 	last_blade_tip = blade_tip
+	_record_swing(blade_base, blade_tip, delta)
 	# A parked blade resolves nothing (see _handle_cuttable). Its pose does not change while
 	# parked, so the previous sample stays valid and a hand that was only occluded mid-swing
 	# still sweeps the gap when it reappears.
@@ -269,6 +270,8 @@ func set_saber(saber_path: String) -> void:
 		saber_visual.set_side(type)
 
 func set_swingcast_enabled(value: bool) -> void:
+	if not value:
+		finish_swings()
 	_hit_enabled = value
 	# With hands this is also what puts the blade out or away (see _apply_blade).
 	_apply_blade()
@@ -326,9 +329,118 @@ func _handle_cuttable(cut_object: Node3D) -> void:
 	# The cut scores the hit and hands back the components it computed, so the
 	# hit sound is driven by the real numbers instead of a second copy of the
 	# maths. `note` is not touched after this call (it may go back to the pool).
+	controller.swing_pre_ratio = pre_swing_ratio()
 	var info := note.cut(type, controller_speed, cutplane, controller)
+	# A scored note leaves a ticket: its follow-through is measured over the next ticks and
+	# the points are added when the swing ends (see _advance_follow).
+	var ticket := Scoreboard.take_pending()
+	if not ticket.is_empty():
+		var axis := _swing_axis()
+		if axis == Vector3.ZERO:
+			Scoreboard.finish_cut(ticket, 0.0)
+		else:
+			_follow.append({"ticket": ticket, "axis": axis, "angle": 0.0, "age": 0.0})
 	saber_visual.hit(time_offset, info)
 	controller.simple_rumble(0.75, 0.1)
+
+# --- Swing measurement (standard scoring) ----------------------------------------------------
+#
+# A cut scores for the swing that led into it and the swing that follows it, both measured as
+# degrees of blade rotation about the axis the blade is turning on at the moment of the cut.
+# The blade's direction is recorded every physics tick; the pre-swing is read back out of that
+# history, the follow-through is accumulated forward until the swing reverses, stops or times
+# out. Only direction matters here, so the measurement is the same for controllers and hands.
+const SWING_HISTORY_TICKS := 72
+const SWING_STILL_RAD := 0.0005
+# A step counts as part of the same swing while its axis stays within ~70 degrees of the cut's.
+const SWING_SAME_AXIS_DOT := 0.34
+const FOLLOW_TIMEOUT_SEC := 0.4
+# Ticks without motion after which the swing is over. Not one or two: a pose source slower than
+# the physics rate (hand tracking, or a controller at 72 Hz under 120 Hz physics) repeats its
+# last pose for several ticks in the middle of a perfectly good swing.
+const SWING_REST_TICKS := 8
+# Blade directions of the swing in progress, oldest first. Only ticks where the blade moved are
+# recorded, so consecutive entries always differ.
+var _blade_dirs: Array[Vector3] = []
+var _still_ticks := 0
+var _follow: Array[Dictionary] = []
+
+func _record_swing(blade_base: Vector3, blade_tip: Vector3, delta: float) -> void:
+	var along := blade_tip - blade_base
+	if along.length() < 0.05:
+		# Retracted: there is no blade to swing.
+		_blade_dirs.clear()
+		_still_ticks = 0
+		finish_swings()
+		return
+	var dir := along.normalized()
+	if _blade_dirs.is_empty():
+		_blade_dirs.append(dir)
+		return
+	var previous := _blade_dirs[-1]
+	if previous.angle_to(dir) < SWING_STILL_RAD:
+		_still_ticks += 1
+		_advance_follow(previous, previous, delta)
+		if _still_ticks > SWING_REST_TICKS:
+			# The blade has come to rest: whatever comes next is a new swing.
+			_blade_dirs = [dir]
+		return
+	_still_ticks = 0
+	_advance_follow(previous, dir, delta)
+	_blade_dirs.append(dir)
+	if _blade_dirs.size() > SWING_HISTORY_TICKS:
+		_blade_dirs.pop_front()
+
+# The axis the blade is turning about in the swing in progress, or ZERO when it is at rest.
+func _swing_axis() -> Vector3:
+	var n := _blade_dirs.size()
+	if n < 2:
+		return Vector3.ZERO
+	var axis := _blade_dirs[n - 2].cross(_blade_dirs[n - 1])
+	return axis.normalized() if axis.length() > 0.00001 else Vector3.ZERO
+
+## How much of a full swing (Scoreboard.PRE_SWING_FULL_DEG) led up to this tick, 0..1.
+func pre_swing_ratio() -> float:
+	var axis := _swing_axis()
+	if axis == Vector3.ZERO:
+		return 0.0
+	var full := deg_to_rad(Scoreboard.PRE_SWING_FULL_DEG)
+	var angle := 0.0
+	for i in range(_blade_dirs.size() - 1, 0, -1):
+		if _blade_dirs[i - 1].cross(_blade_dirs[i]).normalized().dot(axis) < SWING_SAME_AXIS_DOT:
+			break
+		angle += _blade_dirs[i - 1].angle_to(_blade_dirs[i])
+		if angle >= full:
+			return 1.0
+	return clampf(angle / full, 0.0, 1.0)
+
+func _advance_follow(previous: Vector3, current: Vector3, delta: float) -> void:
+	if _follow.is_empty():
+		return
+	var step_angle := previous.angle_to(current)
+	var step_axis := previous.cross(current)
+	var full := deg_to_rad(Scoreboard.POST_SWING_FULL_DEG)
+	var keep: Array[Dictionary] = []
+	for entry in _follow:
+		var done := false
+		if step_angle >= SWING_STILL_RAD:
+			if step_axis.normalized().dot(entry["axis"] as Vector3) < SWING_SAME_AXIS_DOT:
+				done = true
+			else:
+				entry["angle"] = float(entry["angle"]) + step_angle
+		entry["age"] = float(entry["age"]) + delta
+		if done or float(entry["angle"]) >= full or float(entry["age"]) >= FOLLOW_TIMEOUT_SEC:
+			Scoreboard.finish_cut(entry["ticket"] as Dictionary, float(entry["angle"]) / full)
+		else:
+			keep.append(entry)
+	_follow = keep
+
+## Settles every cut whose follow-through is still being measured, with what it has so far.
+func finish_swings() -> void:
+	var full := deg_to_rad(Scoreboard.POST_SWING_FULL_DEG)
+	for entry in _follow:
+		Scoreboard.finish_cut(entry["ticket"] as Dictionary, float(entry["angle"]) / full)
+	_follow.clear()
 
 func _on_AnimationPlayer_animation_started(_anim_name: StringName) -> void:
 	_swing_cast.adjust_segments = true

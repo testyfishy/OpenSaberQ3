@@ -13,7 +13,8 @@ func set_collision_disabled(value: bool) -> void:
 @warning_ignore("unused_parameter")
 func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: BeepSaberController) -> HitInfo:
 	_unregister_hit()
-	Scoreboard.bad_cut(transform.origin)
+	# A bomb was never worth points, so it does not raise the best possible score.
+	Scoreboard.bad_cut(transform.origin, 0)
 	var info := HitInfo.new()
 	info.kind = HitInfo.Kind.BAD
 	info.speed_len = cut_speed.length()

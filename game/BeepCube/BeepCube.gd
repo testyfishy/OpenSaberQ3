@@ -220,7 +220,12 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 		travel_distance_factor = clampf((travel_distance_factor-0.5)/0.5, 0.0, 1.0)
 		# allows a bit of save margin where the beat is considered 100% correct
 		var beat_accuracy := clampf((1.0 - absf(global_transform.origin.z)) / 0.5, 0.0, 1.0)
-		Scoreboard.note_cut(transform.origin, beat_accuracy, cut_angle_accuracy, cut_distance_accuracy, travel_distance_factor)
+		# Standard model (see Scoreboard): the swing into the note, measured by the saber, and
+		# how close the cut passed to the centre. A cut more than 60 degrees off the arrow
+		# still hits, as it always has here, but earns the accuracy part only. The four
+		# numbers above are still computed because the hit sound and the replay log use them.
+		var with_the_arrow := is_dot or ignore_cut_angle or base_cut_angle_accuracy >= 0.5
+		Scoreboard.note_cut(transform.origin, controller.swing_pre_ratio, cut_distance, with_the_arrow)
 		Harness.log_cut(beat, true, cut_angle_accuracy, cut_distance_accuracy, travel_distance_factor, beat_accuracy)
 		cutted.emit(true)
 		info.angle_acc = cut_angle_accuracy

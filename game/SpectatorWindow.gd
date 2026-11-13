@@ -45,11 +45,7 @@ func reposition_ui_elements() -> void:
 func on_scoreboard_update() -> void:
 	if not visible: return
 	
-	var hit_rate: float
-	if Scoreboard.right_notes+Scoreboard.wrong_notes > 0:
-		hit_rate = Scoreboard.right_notes/(Scoreboard.right_notes+Scoreboard.wrong_notes)
-	else:
-		hit_rate = 1.0
+	var hit_rate := Scoreboard.accuracy()
 	
 	(point_label.mesh as TextMesh).text = "Score: %6d" % Scoreboard.points
 	(multiplier_label.mesh as TextMesh).text = " x %d\n Combo %d" % [Scoreboard.multiplier, Scoreboard.combo]

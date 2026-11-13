@@ -85,20 +85,21 @@ func show_score(score: int, record: int, percent: float, song_string: String, is
 	# and the old five-line block ran straight through both of them.
 	details_mesh.text = "Score\n%d\nBest\n%d" % [score,record]
 	
-	if percent >= 0.98:
-		grade_label.text = "[center][rainbow freq=0.5 sat=0.7 val=2]S"
-	elif percent >= 0.90:
-		grade_label.text = "[center]A"
+	# The standard rank bands for score / best possible score.
+	if percent >= 0.90:
+		grade_label.text = "[center][rainbow freq=0.5 sat=0.7 val=2]SS"
 	elif percent >= 0.80:
-		grade_label.text = "[center]B"
-	elif percent >= 0.70:
-		grade_label.text = "[center]C"
-	elif percent >= 0.60:
-		grade_label.text = "[center]D"
+		grade_label.text = "[center]S"
+	elif percent >= 0.65:
+		grade_label.text = "[center]A"
 	elif percent >= 0.50:
-		grade_label.text = "[center]E"
+		grade_label.text = "[center]B"
+	elif percent >= 0.35:
+		grade_label.text = "[center]C"
+	elif percent >= 0.20:
+		grade_label.text = "[center]D"
 	else:
-		grade_label.text = "[center]F"
+		grade_label.text = "[center]E"
 	
 	var tw := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tw.tween_property(self,^"animated_percent",percent,3.0).from(0.0)

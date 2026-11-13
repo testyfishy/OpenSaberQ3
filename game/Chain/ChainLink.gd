@@ -172,7 +172,7 @@ func cut(saber_type: int, _cut_speed: Vector3, cut_plane: Plane, _controller: Be
 	if saber_type == which_saber:
 		Scoreboard.chain_link_cut(transform.origin)
 	else:
-		Scoreboard.bad_cut(transform.origin)
+		Scoreboard.bad_cut(transform.origin, Scoreboard.LINK_POINTS)
 	
 	hide_cube()
 	if Settings.cube_cuts_falloff:
@@ -185,7 +185,7 @@ func cut(saber_type: int, _cut_speed: Vector3, cut_plane: Plane, _controller: Be
 	return null
 
 func on_miss() -> void:
-	Scoreboard.reset_combo()
+	Scoreboard.reset_combo(Scoreboard.LINK_POINTS)
 	hide_cube()
 	release()
 

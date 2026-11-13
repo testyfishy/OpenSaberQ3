@@ -715,11 +715,10 @@ func _clear_track() -> void:
 			track.remove_child(c)
 			c.queue_free()
 
-# Share of the scored notes that were hit. A run with nothing scored yet reads as 100 %, on the
-# HUD and on the end screen alike (the end screen used to divide 0 by 0 and show NaN).
+# Score as a share of the best possible score so far (Scoreboard.accuracy). A run with nothing
+# judged yet reads as 100 %, on the HUD and on the end screen alike.
 func _hit_rate() -> float:
-	var scored := Scoreboard.right_notes + Scoreboard.wrong_notes
-	return Scoreboard.right_notes / scored if scored > 0.0 else 1.0
+	return Scoreboard.accuracy()
 
 func _display_points() -> void:
 	var hit_rate := _hit_rate()
@@ -792,6 +791,9 @@ func _recover_audio_after_idle() -> void:
 
 func _on_song_ended() -> void:
 	song_player.stop()
+	# Cuts whose follow-through was still being measured are settled before the total is read.
+	left_saber.finish_swings()
+	right_saber.finish_swings()
 	PlayCount.increment_play_count(Map.current_info,Map.current_difficulty.difficulty_rank)
 	
 	var new_record := false

@@ -4,6 +4,25 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.23 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
+
+**Standard scoring.** Scores now follow the Beat Saber model, so they mean the same thing here as
+on BeatLeader.
+
+- A note is worth up to **115**: 70 for the swing into it (full marks at 100 degrees), 30 for the
+  follow-through (full marks at 60 degrees), 15 for cutting through the centre. A chain link is 20.
+- Multiplier **x1 / x2 / x4 / x8**: x2 after 2 hits, x4 after 4 more, x8 after 8 more. A miss, a
+  wrong-colour cut or a bomb drops it one step instead of back to x1.
+- **Accuracy** is your score divided by the best possible score so far. It used to compare the
+  running total with a fixed number and read 100 % after a couple of cuts.
+- Ranks: SS 90 %, S 80 %, A 65 %, B 50 %, C 35 %, D 20 %.
+- Gone: points for timing, and the "travel" bonus that could double a note.
+- A cut against the arrow still hits, as before, but earns only the 15 accuracy points.
+- **Existing local high scores were made under the old rules and are not comparable.** They are
+  left in place.
+
+`tools/harness/verify_scoring.tscn` checks the point values, the ladder and the swing measurement.
+
 ## v0.7.22 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 
 - **Hand tracking is a Labs feature, off by default.** Its switch moved from the pinned menu panel
