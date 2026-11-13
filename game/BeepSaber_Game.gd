@@ -168,6 +168,8 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 	percent_indicator.start_map()
 	
 	_clear_track()
+	# A Noodle player track moves the track root (GameStatePlaying); every map starts square.
+	track.transform = Transform3D.IDENTITY
 	_transition_game_state(gamestate_playing)
 
 # This function will transitioning the game from it's current state into

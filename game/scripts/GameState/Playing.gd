@@ -156,6 +156,13 @@ func _process_map(game: BeepSaber_Game) -> void:
 			ChainLink.construct_chain(chain_info, current_beat, note_info_refs, cube_refs)
 	
 	var event_t0 := Time.get_ticks_usec() if probe else 0
+	# Noodle Extensions custom events (game/noodle): start the ones that are due, advance the
+	# running animations, and draw the world relative to the player's track if there is one.
+	# Skipped entirely for a map without tracks or custom events.
+	if NoodleTracks.active:
+		NoodleEvents.dispatch_until(current_beat, song_position)
+		NoodleEvents.update(song_position)
+		game.track.transform = NoodleEvents.root_xform
 	var coalesced := {}
 	var uncoalesced: Array[EventInfo] = []
 	while not MapData.event_stack.is_empty() and MapData.event_stack[-1].beat <= current_beat:

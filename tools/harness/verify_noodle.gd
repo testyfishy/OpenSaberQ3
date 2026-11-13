@@ -9,6 +9,7 @@ extends Node
 # Run: godot --headless --path . res://tools/harness/verify_noodle.tscn
 
 const EPS := 0.0005
+const MapTimer := preload("res://game/scripts/MapTimer.gd")
 
 var _fails := 0
 var _checks := 0
@@ -39,6 +40,8 @@ func _run() -> void:
 	_named()
 	_tracks()
 	_fixtures()
+	_events()
+	_fixture_events()
 	print("NOODLE checks=%d failed=%d" % [_checks, _fails])
 	print("NOODLE ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(0 if _fails == 0 else 1)
@@ -255,3 +258,181 @@ func _first_dat(folder: String) -> String:
 	if info == null or info.difficulty_beatmaps.is_empty():
 		return "-"
 	return info.difficulty_beatmaps[0].beatmap_filename
+
+
+# --- step 3: custom events ------------------------------------------------------------------
+# A fixed tempo of 120 BPM makes one beat half a second, so durations are easy to check.
+func _events_setup(map_data: Dictionary) -> void:
+	MapTimer.load_bpm_events({}, 120.0)
+	NoodleTracks.begin_load(map_data)
+	NoodleEvents.reset()
+	NoodleEvents.load_events(map_data)
+
+
+func _tr(track_name: String) -> NoodleTrack:
+	return NoodleTracks.tracks[NoodleTracks.find(track_name)]
+
+
+func _events() -> void:
+	var T := NoodleTracks
+	var E := NoodleEvents
+	# v3 spelling.
+	_events_setup({"version": "3.2.0", "customData": {"customEvents": [
+		{"b": 2, "t": "AnimateTrack", "d": {"track": "a", "duration": 4, "offsetPosition": [[0, 0, 0, 0], [8, 0, 0, 1]]}},
+		{"b": 2, "t": "AnimateTrack", "d": {"track": ["a", "b"], "duration": 0, "scale": [[1, 1, 1, 0], [2, 2, 2, 1]]}},
+		{"b": 1, "t": "AssignPathAnimation", "d": {"track": "a", "dissolve": [[0, 0], [1, 1]]}},
+		{"b": 0, "t": "Blit", "d": {}},
+		{"b": 0, "t": "AnimateTrack", "d": {"track": "r", "duration": 2, "repeat": 1, "easing": "easeInQuad", "dissolve": [[0, 0], [1, 1]]}},
+		{"b": 3, "t": "AnimateTrack", "d": {"track": "s", "scale": [3, 3, 3]}},
+		{"b": 3, "t": "AnimateTrack", "d": {"track": "s", "scale": [4, 4, 4]}},
+	]}})
+	_check("v3: unknown types counted, not queued", E.stack.size() == 6 and int(E.ignored.get("Blit", 0)) == 1)
+	_check("v3: stack is in beat order", E.stack[-1].beat == 0.0 and E.stack[0].beat == 3.0)
+	_check("v3: events create their tracks", T.find("a") >= 0 and T.find("b") >= 0 and T.find("r") >= 0 and T.active)
+	E.dispatch_until(2.0, 1.0)
+	_check("v3: dispatch stops at the current beat", E.stack.size() == 2)
+	_near3("v3: animation starts at its own time", _tr("a").vec[T.P_OFFSET_POSITION], Vector3.ZERO)
+	_near3("v3: duration 0 sets the last point", _tr("a").vec[T.P_SCALE], Vector3(2, 2, 2))
+	_near3("v3: one event, several tracks", _tr("b").vec[T.P_SCALE], Vector3(2, 2, 2))
+	_check("v3: path assigned", _tr("a").has_path_for(T.P_DISSOLVE))
+	_near("v3: path evaluated at object time", _tr("a").path_float(T.P_DISSOLVE, 0.25), 0.25)
+	# "r": 2 beats = 1 s per play, easeInQuad, played twice from t = 0. Dispatched late (at 1 s)
+	# it is already in its second play, which started at 1 s.
+	E.update(1.5)
+	_near("v3: repeat restarts the animation, eased", _tr("r").flt[T.P_DISSOLVE], 0.25)
+	_near3("v3: 4 beats = 2 s, a quarter after 0.5 s", _tr("a").vec[T.P_OFFSET_POSITION], Vector3(2, 0, 0))
+	E.update(2.0)
+	_near3("v3: half way after 1 s", _tr("a").vec[T.P_OFFSET_POSITION], Vector3(4, 0, 0))
+	_near("v3: repeat ends on the last point", _tr("r").flt[T.P_DISSOLVE], 1.0)
+	E.update(3.5)
+	_near3("v3: finished animation holds the end", _tr("a").vec[T.P_OFFSET_POSITION], Vector3(8, 0, 0))
+	_check("v3: finished tweens are dropped", E._tweens.is_empty())
+	E.dispatch_until(3.0, 1.5)
+	_near3("v3: same beat, last in the file wins", _tr("s").vec[T.P_SCALE], Vector3(4, 4, 4))
+
+	# Overwrite, null, events already in the past, path transitions.
+	_events_setup({"version": "3.2.0", "customData": {"customEvents": [
+		{"b": 0, "t": "AnimateTrack", "d": {"track": "o", "duration": 8, "offsetPosition": [[0, 0, 0, 0], [8, 0, 0, 1]]}},
+		{"b": 2, "t": "AnimateTrack", "d": {"track": "o", "offsetPosition": [1, 1, 1]}},
+		{"b": 0, "t": "AssignPathAnimation", "d": {"track": "p", "offsetPosition": [[0, 0, 0, 0], [2, 0, 0, 1]]}},
+		{"b": 0, "t": "AssignPathAnimation", "d": {"track": "p", "duration": 2, "offsetPosition": [[0, 0, 0, 0], [0, 4, 0, 1]]}},
+		{"b": 0, "t": "AnimateTrack", "d": {"track": "late", "duration": 2, "dissolve": [[0, 0], [1, 1]]}},
+	]}})
+	E.dispatch_until(0.0, 0.0)
+	_near3("transition starts on the old path", _tr("p").path_vec(T.P_OFFSET_POSITION, 0.5), Vector3(1, 0, 0))
+	E.update(0.5)
+	_near3("transition half way", _tr("p").path_vec(T.P_OFFSET_POSITION, 0.5), Vector3(0.5, 1, 0))
+	E.update(1.0)
+	_near3("transition done", _tr("p").path_vec(T.P_OFFSET_POSITION, 0.5), Vector3(0, 2, 0))
+	_check("transition drops the old path", _tr("p").path_prev[T.P_OFFSET_POSITION] == null)
+	E.dispatch_until(2.0, 1.0)
+	_near3("a new animation of a property stops the old one", _tr("o").vec[T.P_OFFSET_POSITION], Vector3(1, 1, -1))
+	E.update(2.0)
+	_near3("the stopped animation stays stopped", _tr("o").vec[T.P_OFFSET_POSITION], Vector3(1, 1, -1))
+	var nulled := E._parse({"b": 3, "t": "AnimateTrack", "d": {"track": "o", "offsetPosition": null}}, false)
+	E.dispatch(nulled, 1.5)
+	_check("null erases a property", _tr("o").has[T.P_OFFSET_POSITION] == 0)
+	var past := E._parse({"b": 0, "t": "AnimateTrack", "d": {"track": "late", "duration": 2, "dissolve": [[0, 0], [1, 1]]}}, false)
+	E.dispatch(past, 10.0)
+	_near("an event entirely in the past sets its end at once", _tr("late").flt[T.P_DISSOLVE], 1.0)
+
+	# Parents and the player's track (v3 units: metres).
+	_events_setup({"version": "3.2.0", "customData": {"customEvents": [
+		{"b": 0, "t": "AssignTrackParent", "d": {"childrenTracks": ["c"], "parentTrack": "par"}},
+		{"b": 0, "t": "AnimateTrack", "d": {"track": "par", "localPosition": [0, 10, 0], "localRotation": [0, 90, 0]}},
+		{"b": 0, "t": "AssignTrackParent", "d": {"childrenTracks": ["par"], "parentTrack": "gp"}},
+		{"b": 0, "t": "AnimateTrack", "d": {"track": "gp", "position": [1, 0, 0]}},
+		{"b": 0, "t": "AssignPlayerToTrack", "d": {"track": "par"}},
+		{"b": 0, "t": "AssignPlayerToTrack", "d": {"track": "gp", "target": "Head"}},
+		{"b": 0, "t": "AssignTrackParent", "d": {"childrenTracks": ["self"], "parentTrack": "self"}},
+	]}})
+	E.dispatch_until(0.0, 0.0)
+	E.update(0.0)
+	_check("v3: child points at its parent", _tr("c").parent == T.find("par") and _tr("par").is_transform)
+	_near3("v3: parent position in metres, chained to its own parent", _tr("par").xform.origin, Vector3(1, 10, 0))
+	_near3("v3: parent rotation", _tr("par").xform.basis * Vector3(0, 0, -1), Vector3(1, 0, 0))
+	_check("v3: player on the parent track", E.player_track == T.find("par"))
+	_near3("v3: the world is drawn relative to the player", E.root_xform * Vector3(1, 10, 0), Vector3.ZERO)
+	_check("v3: head target not applied", E.unsupported_targets == 1)
+	_check("v3: a track cannot parent itself", _tr("self").parent == -1)
+
+	# v2 spelling: `_position` on a parent is in lanes and turned by `_rotation`.
+	_events_setup({"_version": "2.2.0", "_customData": {
+		"_pointDefinitions": [{"_name": "up", "_points": [[0, 0, 0, 0], [0, 2, 0, 1]]}],
+		"_customEvents": [
+			{"_time": 2, "_type": "AnimateTrack", "_data": {"_track": "a", "_duration": 4, "_position": [[0, 0, 0, 0], [8, 0, 0, 1]]}},
+			{"_time": 2, "_type": "AnimateTrack", "_data": {"_track": "n", "_duration": 2, "_position": "up"}},
+			{"_time": 1, "_type": "AssignPathAnimation", "_data": {"_track": "a", "_dissolve": [[0, 0], [1, 1]], "_definitePosition": [[0, 0, 0, 0], [0, 0, 10, 1]]}},
+			{"_time": 0, "_type": "AssignTrackParent", "_data": {"_childrenTracks": ["c"], "_parentTrack": "par"}},
+			{"_time": 0, "_type": "AnimateTrack", "_data": {"_track": "par", "_position": [0, 0, 1], "_rotation": [0, 90, 0]}},
+			{"_time": 0, "_type": "AssignPlayerToTrack", "_data": {"_track": "par"}},
+		]}})
+	_check("v2: events parsed and sorted", E.stack.size() == 6 and E.stack[-1].beat == 0.0)
+	E.dispatch_until(2.0, 1.0)
+	E.update(1.5)
+	_near3("v2: named point definition", _tr("n").vec[T.P_OFFSET_POSITION], Vector3(0, 1, 0))
+	E.update(2.0)
+	_near3("v2: _position is offsetPosition", _tr("a").vec[T.P_OFFSET_POSITION], Vector3(4, 0, 0))
+	_near("v2: _dissolve path", _tr("a").path_float(T.P_DISSOLVE, 0.5), 0.5)
+	_near3("v2: _definitePosition path", _tr("a").path_vec(T.P_DEFINITE_POSITION, 0.5), Vector3(0, 0, -5))
+	_check("v2: parent assigned", _tr("c").parent == T.find("par"))
+	_near3("v2: parent position in lanes, turned by _rotation", _tr("par").xform.origin, Vector3(0.6, 0, 0))
+	_near3("v2: player track inverse", E.root_xform * Vector3(0.6, 0, 0), Vector3.ZERO)
+	E.reset()
+	T.reset()
+	MapTimer.reset()
+
+
+# The fixture maps, run through every event: nothing may produce a non-finite transform, and in
+# 4a2b3 the notes' parent track and the player's track are the same rising track, so a note on
+# `move` must stay where the player sees it however high the elevator goes.
+func _fixture_events() -> void:
+	if _load_fixture("4a2b3", "HardStandard.dat"):
+		NoodleEvents.reset()
+		NoodleEvents.load_events(_fixture_data("4a2b3", "HardStandard.dat"))
+		var move := NoodleTracks.find("move")
+		var helo := NoodleTracks.find("helo")
+		var worst := 0.0
+		var finite := true
+		var beat := 0.0
+		while beat < 520.0:
+			var sec := Map.beat_to_seconds(beat)
+			NoodleEvents.dispatch_until(beat, sec)
+			NoodleEvents.update(sec)
+			if beat > 200.0 and beat < 201.0:
+				_check("4a2b3: the elevator has risen", NoodleTracks.tracks[helo].xform.origin.y > 50.0, "y=%.1f" % NoodleTracks.tracks[helo].xform.origin.y)
+			var parent := NoodleTracks.tracks[move].parent
+			if parent >= 0:
+				var seen := NoodleEvents.root_xform * NoodleTracks.tracks[parent].xform
+				worst = maxf(worst, seen.origin.length())
+			finite = finite and NoodleEvents.root_xform.origin.is_finite()
+			beat += 0.25
+		_check("4a2b3: move is parented to helo", NoodleTracks.tracks[move].parent == helo)
+		_check("4a2b3: player rides helo", NoodleEvents.player_track == helo)
+		_check("4a2b3: transforms stay finite", finite)
+		_near("4a2b3: notes stay put relative to the player", worst, 0.0)
+	if _load_fixture("198f3", "ExpertPlus.dat"):
+		NoodleEvents.reset()
+		NoodleEvents.load_events(_fixture_data("198f3", "ExpertPlus.dat"))
+		var n := NoodleEvents.stack.size()
+		var finite := true
+		var beat := 0.0
+		while not NoodleEvents.stack.is_empty() and beat < 2000.0:
+			var sec := Map.beat_to_seconds(beat)
+			NoodleEvents.dispatch_until(beat, sec)
+			NoodleEvents.update(sec)
+			for t in NoodleTracks.tracks:
+				for p in NoodleTracks.P_COUNT:
+					if t.has[p] and not (t.vec[p].is_finite() and is_finite(t.flt[p])):
+						finite = false
+			beat += 1.0
+		_check("198f3 (v2): every event dispatched", NoodleEvents.stack.is_empty() and n > 0, "%d events" % n)
+		_check("198f3 (v2): values stay finite", finite)
+	NoodleEvents.reset()
+	MapData.reset()
+	NoodleTracks.reset()
+
+
+func _fixture_data(folder: String, file: String) -> Dictionary:
+	var data: Variant = vr.load_json_file(_fixture_dir(folder) + file)
+	return data if data is Dictionary else {}

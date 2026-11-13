@@ -78,13 +78,15 @@ static func reset() -> void:
 ## Called by Map.load_beatmap before the loader threads start.
 static func begin_load(map_data: Dictionary) -> void:
 	reset()
+	NoodleEvents.reset()
 	is_v2 = map_data.has("_version")
 	named = NoodlePoints.named_definitions(map_data)
 
 
 ## Called by Map.load_beatmap after the loader threads joined.
-static func finish_load(_map_data: Dictionary) -> void:
+static func finish_load(map_data: Dictionary) -> void:
 	resolve_objects()
+	NoodleEvents.load_events(map_data)
 
 
 ## The index of track `track_name`, creating it if needed. Main thread only.
