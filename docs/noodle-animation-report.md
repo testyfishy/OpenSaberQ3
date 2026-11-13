@@ -54,7 +54,7 @@ headless on the PC; no animated map has been seen on the headset yet (see Device
 | object scale / localRotation / position / rotation / coordinates / worldRotation / size | Static, as before this work (0.7.3); animated scale multiplies the static scale |
 | object fake (4) | Still filtered: decorative objects are not drawn |
 | definitePosition (in object animation and paths) | **Works** (keeps x/y, replaces the travel, still offset by offsetPosition) |
-| dissolve | Drawn as visibility: hidden below 0.5 (no fade shader) |
+| dissolve | Drawn as visibility: hidden below 0.5 (no fade shader). *Superseded: now a fade, see "Dissolve as a fade" below* |
 | event AnimateComponent (2), AssignFogTrack (2) | Not done (Chroma; out of scope), reported |
 | Vivify events (AssignObjectPrefab, InstantiatePrefab, DestroyObject, Blit, SetMaterialProperty, SetCameraProperty, SetRenderingSettings, CreateScreenTexture, SetGlobalProperty) | Not done (out of scope), reported as "Vivify events" |
 | chroma environment objects (12) | Not done (out of scope), reported as "Chroma environment" |
@@ -68,8 +68,8 @@ list), bare single points, all 32 Heck easings, `splineCatmullRom` for vectors; 
 - **The `time` property** (AnimateTrack): it re-times an object's whole lifetime, which needs the
   hit window and the miss to follow the animated time; not attempted in this pass. Reported.
 - **dissolveArrow**: the arrow is drawn inside the note shader, with no separate visibility.
-  Reported.
-- **Dissolve as a fade**: notes are shown or hidden at 0.5, not faded.
+  Reported. *Superseded: now played, see "Dissolve as a fade" below.*
+- **Dissolve as a fade**: notes are shown or hidden at 0.5, not faded. *Superseded: see below.*
 - **Point bases and modifiers** (`baseHeadPosition`, `opAdd` ...): the definition is skipped and
   reported.
 - **Player Head / hand targets**: would move the player's own body parts; skipped and reported.
@@ -98,7 +98,7 @@ list), bare single points, all 32 Heck easings, `splineCatmullRom` for vectors; 
    the harness checks they stay put relative to the player while the elevator rises 160 units.
 2. **interactable < 1 means neither hittable nor missable**, as the brief asks, although Heck
    only disables cutting.
-3. **Dissolve is visibility** with a threshold of 0.5.
+3. **Dissolve is visibility** with a threshold of 0.5. *Superseded by the fade below.*
 4. **Easings are Heck's formulas**, not easings.net's (several differ); unknown easing names are
    linear (Heck would throw).
 5. **Malformed or unsupported point definitions are skipped**, never an error.
@@ -320,78 +320,57 @@ BOTRUN FAIL
 
 ## Dissolve as a fade (after 0.7.29, 2026-11-13)
 
-Commit `bf6b050`. What Heck does (from its source, `CutoutManager.cs` and
-`NoteUpdateNoodlifier.cs`): dissolve 1 is fully drawn and 0 is gone. Heck passes `1 - dissolve`
-to Beat Saber's cutout effect, which is a noise cutout, not transparency. `dissolveArrow` drives
-a separate arrow cutout and applies to notes only, not bombs.
+Commits `bf6b050`, `49efb23`. Heck's source (`CutoutManager.cs`, `NoteUpdateNoodlifier.cs`):
+dissolve 1 is fully drawn and 0 is gone. Heck passes `1 - dissolve` to Beat Saber's noise
+cutout, not to transparency. `dissolveArrow` is a separate cutout for note arrows (not bombs).
 
 What was done:
 
-- **Notes**: two new instance uniforms in `BeepCube.gdshader`, `note_dissolve` and
-  `note_dissolve_arrow` (default 1). Below 1, a pixel is discarded against object-space value
-  noise (`game/noodle/noodle_dissolve.gdshaderinc`). The note stays in the opaque pass with no
-  blending or sorting, and the pattern sticks to the note and matches in both eyes. The inside
-  faces (white, for cut pieces) are dropped while dissolving, or they show through the holes.
-  Chosen over alpha blending because blending would move every note into the transparent pass
-  and cost overdraw and sorting. The shader already contained a `discard`, so its pass
-  classification does not change.
-- **Note arrows**: the arrow and dot are the emission texture, so `dissolveArrow` scales that
-  texture term. The arrow fades as a glow rather than through noise, for one multiply. The pause
-  menu no longer reports "arrow dissolve".
-- **Bombs**: their two `StandardMaterial3D`s cannot hold a per-instance value. While a bomb's
-  dissolve is below 1, it swaps in shader copies of them (`game/Bomb/bomb_dissolve.gdshader`,
-  `bomb_rim_dissolve.gdshader`; shared by every bomb, value per instance). It gets the scene's
-  own materials back at 1 and on every spawn. An ordinary bomb never changes material.
-- **Walls**: a `dissolve` instance uniform multiplies the panel's alpha in `wall_shared.tres` and
-  `wall_depth.tres`, which already blend. The bench-only opaque wall material is swapped for the
-  blended one while a wall dissolves.
-- At dissolve 0 the object is still hidden (`visible = false`), so it is not drawn at all.
-  Interactable behaviour is unchanged. Values are written only when they change and reset to 1
-  when a pooled object is reused. Nothing is allocated per tick, and the shared materials are
-  never written (checked by the harness).
+- **Notes**: new instance uniforms `note_dissolve` and `note_dissolve_arrow` (default 1) in
+  `BeepCube.gdshader`. Below 1, pixels are discarded against object-space noise
+  (`game/noodle/noodle_dissolve.gdshaderinc`) and the white inside faces are dropped.
+  `dissolveArrow` scales the arrow/dot emission texture. A discard keeps notes in the opaque
+  pass; alpha blending would move every note to the transparent pass, with overdraw and sorting.
+  The shader already had a discard.
+- **Bombs**: shader copies of the two `StandardMaterial3D`s (`game/Bomb/bomb_*dissolve.gdshader`)
+  are swapped in only while dissolve is below 1, and the originals come back at 1 and on spawn.
+- **Walls**: a `dissolve` instance uniform scales the alpha of the already-blended wall
+  materials. The bench-only opaque material swaps to the blended one while a wall dissolves.
+- At dissolve 0 the object is hidden, as before. Interactable behaviour is unchanged. Values are
+  written only on change and reset on pooled reuse, with no per-tick allocation and no writes to
+  shared materials. Also fixed: a wall that spawned at dissolve 0 was drawn until its next tick.
+- Cost for ordinary maps: no new draw calls or materials. Each note pixel gains one instance
+  uniform test, and the note arrow and wall alpha each gain a multiply by exactly 1.0, so the
+  picture is unchanged.
 
-Cost for maps without Noodle dissolve: no new draw calls and no material changes. Every note
-pixel now reads one instance uniform and tests it, which skips the noise. The arrow term gains
-one multiply by 1.0, and every wall pixel gains one multiply by 1.0. Both multiplies are exact,
-so rendering at dissolve 1 is unchanged.
+Differences from Beat Saber, on purpose:
 
-Differences from Beat Saber, left on purpose:
+- A note at dissolve 0 hides its arrow too; Beat Saber can show an arrow alone.
+- A partly dissolved note's arrow is cut by the body's noise.
+- The floor reflection is not faded (its colour shares an instance slot with the note colour).
+- Cut pieces of a dissolving note are whole.
+- Walls fade by transparency.
+- Chain links take no Noodle data, as before.
 
-- A note at dissolve 0 hides its arrow too, because the task asked for dissolve 0 to stay not
-  drawn. In Beat Saber the arrow has its own cutout, so dissolve 0 with dissolveArrow 1 shows a
-  floating arrow. Maps that use this arrow-only look show nothing here.
-- While a note is partly dissolved, its arrow is cut by the same noise as the body.
-- The floor reflection (the mirror pass) is not faded. Its colour shares an instance slot with
-  the note colour, so it cannot be scaled on its own. It disappears with the note at 0.
-- A dissolving note that is cut leaves full, undissolved pieces.
-- Walls fade by transparency rather than through noise, because they are already alpha-blended.
-
-Checked:
+Checked on the PC:
 
 - `check.ps1` ends `CHECKS PASS`.
-- `verify_noodle` passes 234 checks. The 21 new ones cover: the value reaching notes, bombs and
-  walls; dissolveArrow defaulting to 1 and multiplying; a second note keeping 1; the shared
-  note material staying untouched; pooled reuse resetting to 1; and a bomb getting its own
-  materials back.
-- The 3af66 `map_dump` is byte-identical before and after. Four of five baseline attempts hit
-  the known loader crash and were retried.
-- Headless runs do not compile shaders, so every changed shader was also compiled and drawn in a
-  window on the PC, with both the mobile and Forward+ renderers. There were no shader errors. A
-  PC screenshot showed the noise fade on a note and a bomb and the alpha fade on a wall.
+- `verify_noodle` passes 236 checks (23 new). They cover the value reaching each object type,
+  the defaults of 1, reuse, the shared material, and spawn() at dissolve 0.
+- The 3af66 `map_dump` is byte-identical.
+- The changed shaders and the real note and bomb scenes (mirror pass on) were drawn in a window
+  with the mobile renderer, with no shader errors. Notes showed the fade and the arrow fade.
+- The new include ships because every export preset uses `all_resources`.
+- `verify_noodle` died part way through fixture loading in 2 of 7 runs, before the new checks.
+  This matches the known intermittent loader crash.
 
 Not verified (needs the headset):
 
-- How the fade looks in the headset: the size of the noise cells, and whether it shimmers at
-  120 Hz.
-- The frame time on the Quest's GPU, for ordinary maps (the per-pixel uniform test) and for
-  dissolve-heavy maps (noise on every dissolving note).
-- A possible one-time hitch the first time a map dissolves a bomb, or swaps an opaque wall to
-  the blended material, while Godot builds that material's pipeline. The shader source is
-  compiled at load (`preload`), but the pipeline variant is built on first draw.
-- The new `.gdshader` and `.gdshaderinc` files have no `.uid` files yet. The editor creates them
-  the next time the project is opened, and loading by path works without them.
+- How the fade looks at 120 Hz, including noise cell size and shimmer.
+- GPU frame time for ordinary and dissolve-heavy maps.
+- Whether the bomb pops visibly when it swaps material at 1.
+- A possible one-time pipeline hitch the first time a bomb dissolves.
+- The new shader files have no `.uid` yet; the editor adds them.
 
-What to look at first: a map whose notes dissolve in or out (many Noodle maps animate `dissolve`
-from 0 to 1 as notes approach). Check that notes fade in through the noise instead of popping in,
-and compare the frame time with the same map on 0.7.29. Then compare an ordinary map's frame time
-with 0.7.29, to confirm the per-pixel test costs nothing measurable.
+What to look at first: a map whose notes dissolve in, comparing its frame time with 0.7.29, and
+then an ordinary map's frame time with 0.7.29.
