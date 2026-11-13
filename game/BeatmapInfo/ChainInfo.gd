@@ -11,6 +11,8 @@ var tail_line_index: float
 var tail_line_layer: float
 var slice_count: int
 var squish_factor: float
+# The head note, linked at load on maps with per-note jumps (see ArcInfo.head_info).
+var head_info: ColorNoteInfo = null
 
 @warning_ignore("shadowed_variable")
 func _init(

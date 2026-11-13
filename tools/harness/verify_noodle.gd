@@ -49,6 +49,7 @@ func _run() -> void:
 	await _zero_scale()
 	await _dissolve()
 	_v4_custom_data()
+	_head_links()
 	print("NOODLE checks=%d failed=%d" % [_checks, _fails])
 	print("NOODLE ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(0 if _fails == 0 else 1)
@@ -856,3 +857,43 @@ func _v4_custom_data() -> void:
 	var b3 := BombInfo.new_v3(bombs[0])
 	var w3 := ObstacleInfo.new_v3(walls[0])
 	_check("v4 bomb and wall join their tracks", b3.noodle != null and w3.noodle != null and w3.noodle.track_names[0] == "vw")
+
+
+# Arcs and chains find a head note that spawned in a different frame (its own jump offset):
+# the link is made at load by beat, colour and grid position.
+func _head_links() -> void:
+	MapData.reset()
+	NoodleTracks.reset()
+	var head := ColorNoteInfo.new_v3({"b": 4.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": 1.0})
+	var tail := ColorNoteInfo.new_v3({"b": 5.0, "x": 2.0, "y": 0.0, "c": 0.0, "d": 1.0})
+	var twin := ColorNoteInfo.new_v3({"b": 4.0, "x": 1.0, "y": 0.0, "c": 1.0, "d": 1.0})
+	var stray := ColorNoteInfo.new_v3({"b": 7.0, "x": 0.0, "y": 0.0, "c": 0.0, "d": 1.0})
+	MapData.note_stack.assign([stray, tail, twin, head])
+	var arc := ArcInfo.new_v3({"c": 0.0, "b": 4.0, "x": 1.0, "y": 0.0, "d": 1.0, "tb": 5.0, "tx": 2.0, "ty": 0.0, "tc": 0.0})
+	var lone := ArcInfo.new_v3({"c": 0.0, "b": 9.0, "x": 3.0, "y": 2.0, "d": 1.0, "tb": 9.5, "tx": 3.0, "ty": 1.0, "tc": 0.0})
+	MapData.arc_stack.assign([lone, arc])
+	var chain := ChainInfo.new_v3({"c": 1.0, "b": 4.0, "x": 1.0, "y": 0.0, "d": 1.0, "tb": 4.5, "tx": 1.0, "ty": 2.0, "sc": 4.0, "s": 1.0})
+	MapData.chain_stack.assign([chain])
+	NoodleTracks.link_heads()
+	_check("heads linked", NoodleTracks.heads_linked)
+	_check("arc head linked by beat, colour and position", arc.head_info == head)
+	_check("arc tail linked", arc.tail_linked and tail.arc_tail_link and not head.arc_tail_link)
+	_check("chain head linked to the note of its own colour", chain.head_info == twin)
+	_check("an arc with no such note stays unlinked", lone.head_info == null and not lone.tail_linked)
+	_check("an unspawned head has no cube", GameStatePlaying.linked_head(head) == null)
+	var cube := (load("res://game/BeepCube/BeepCube.tscn") as PackedScene).instantiate() as BeepCube
+	add_child(cube)
+	cube.set_physics_process(false)
+	cube.beat = 4.0
+	cube._is_released = false
+	head.spawned = cube
+	_check("a head spawned in an earlier frame is found", GameStatePlaying.linked_head(head) == cube)
+	cube._is_released = true
+	_check("a head back in the pool is not used", GameStatePlaying.linked_head(head) == null)
+	cube._is_released = false
+	cube.beat = 6.0
+	_check("a pooled cube reused for another note is not used", GameStatePlaying.linked_head(head) == null)
+	cube.queue_free()
+	MapData.reset()
+	NoodleTracks.reset()
+	_check("reset clears the link flag", not NoodleTracks.heads_linked)

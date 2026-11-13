@@ -28,6 +28,11 @@ var noodle: NoodleObject = null
 # Beats earlier (positive) or later than the map's half jump this object spawns: its own Noodle
 # jump (step 5). 0 for every object of an ordinary map.
 var spawn_lead := 0.0
+# Set only on maps where notes have their own jump (NoodleTracks.link_heads): such a note may
+# spawn in a different frame from the arc or chain it starts, so the link is made at load.
+# `spawned` is the cube drawing this note once it is spawned (runtime only).
+var spawned: Node3D = null
+var arc_tail_link := false
 
 @warning_ignore("shadowed_variable")
 func _init(beat: float, line_index: float, line_layer: float, color: int, cut_direction: int, angle_offset: int) -> void:

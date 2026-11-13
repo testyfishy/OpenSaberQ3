@@ -17,6 +17,11 @@ var tail_line_layer: float
 var tail_cut_direction: int
 var tail_control_point_length_multiplier: float
 var mid_anchor_mode: int
+# The head note, linked at load on maps with per-note jumps (NoodleTracks.link_heads); null
+# otherwise, and then the head is looked up among the notes spawned in the same frame.
+var head_info: ColorNoteInfo = null
+# True when the tail note was linked at load (it is then marked when it spawns).
+var tail_linked := false
 
 @warning_ignore("shadowed_variable")
 func _init(

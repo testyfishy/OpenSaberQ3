@@ -11,6 +11,8 @@ func _ready(game) -> void:
 	game.show_MapSourceDialogs(false)
 	if not game.resuming_from_pause:
 		_arc_tails.clear()
+		_arcs_waiting.clear()
+		_chains_waiting.clear()
 	game.resuming_from_pause = false
 	_set_sabers(game, true, true)
 	_set_hud(game, true, true, false)
@@ -46,6 +48,61 @@ func _mark_arc_tail(note: BeepCube) -> void:
 			note.arc_tail = true
 			_arc_tails.remove_at(i)
 
+# Maps where notes have their own jumps link arcs and chains to their head notes at load
+# (NoodleTracks.link_heads), because the head may spawn in an earlier or a later frame. An arc or
+# chain whose head is still to spawn waits here and spawns with it.
+var _arcs_waiting: Array[ArcInfo] = []
+var _chains_waiting: Array[ChainInfo] = []
+var _one_info: Array[ColorNoteInfo] = [null]
+var _one_cube: Array[BeepCube] = [null]
+var _no_infos: Array[ColorNoteInfo] = []
+var _no_cubes: Array[BeepCube] = []
+
+## The live cube drawing `info`, or null if it was never spawned or has gone back to the pool.
+static func linked_head(info: ColorNoteInfo) -> BeepCube:
+	var cube := info.spawned as BeepCube
+	if cube == null or cube.is_released() or cube.beat != info.beat:
+		return null
+	return cube
+
+func _spawn_arc(game: BeepSaber_Game, arc_info: ArcInfo, cube: BeepCube, current_beat: float, cube_refs: Array[BeepCube]) -> void:
+	var arc := Arc.acquire() as Arc
+	if cube != null:
+		cube.arc_head = true
+	# The tail note is later in the map: usually not spawned yet, sometimes in this same
+	# pass. Remember the arc so the note can be marked when it appears, and check the
+	# notes of this pass now. A tail linked at load is marked by the note itself.
+	if not arc_info.tail_linked:
+		_arc_tails.append(arc_info)
+		for spawned in cube_refs:
+			_mark_arc_tail(spawned)
+	arc.spawn(arc_info, current_beat, cube)
+	game.track.add_child(arc)
+	TrackLanes.place(arc, arc_info.head_beat)
+
+func _construct_linked_chain(chain_info: ChainInfo, current_beat: float) -> void:
+	var cube := linked_head(chain_info.head_info)
+	if cube == null:
+		ChainLink.construct_chain(chain_info, current_beat, _no_infos, _no_cubes)
+		return
+	_one_info[0] = chain_info.head_info
+	_one_cube[0] = cube
+	ChainLink.construct_chain(chain_info, current_beat, _one_info, _one_cube)
+
+# Arcs and chains waiting for a head note that spawns later: they spawn with it, or without a
+# head once their beat has passed.
+func _spawn_waiting(game: BeepSaber_Game, current_beat: float) -> void:
+	for i in range(_arcs_waiting.size() - 1, -1, -1):
+		var arc_info := _arcs_waiting[i]
+		if arc_info.head_info.spawned != null or arc_info.head_beat < current_beat:
+			_arcs_waiting.remove_at(i)
+			_spawn_arc(game, arc_info, linked_head(arc_info.head_info), current_beat, _no_cubes)
+	for i in range(_chains_waiting.size() - 1, -1, -1):
+		var chain_info := _chains_waiting[i]
+		if chain_info.head_info.spawned != null or chain_info.head_beat < current_beat:
+			_chains_waiting.remove_at(i)
+			_construct_linked_chain(chain_info, current_beat)
+
 const Cost := preload("res://game/scripts/CostProbe.gd")
 
 func _process_map(game: BeepSaber_Game) -> void:
@@ -78,11 +135,17 @@ func _process_map(game: BeepSaber_Game) -> void:
 			Map.first_note_ms = (Time.get_ticks_usec() - Map.load_finished_usec) / 1000.0
 			Map.first_note_beat = note_info.beat
 		note.spawn(note_info, current_beat)
+		if NoodleTracks.heads_linked:
+			note_info.spawned = note
+			if note_info.arc_tail_link:
+				note.arc_tail = true
 		_mark_arc_tail(note)
 		TrackLanes.place(note, note_info.beat)
 		Harness.log_spawn(note_info)
 		note_info_refs.append(note_info)
 		cube_refs.append(note)
+	if not _arcs_waiting.is_empty() or not _chains_waiting.is_empty():
+		_spawn_waiting(game, current_beat)
 	
 	# spawn bombs
 	while not MapData.bomb_stack.is_empty() and MapData.bomb_stack[-1].beat - MapData.bomb_stack[-1].spawn_lead <= look_ahead:
@@ -120,8 +183,14 @@ func _process_map(game: BeepSaber_Game) -> void:
 		if not Arc.spawn_enabled:
 			MapData.arc_stack.pop_back()
 			continue
-		var arc := Arc.acquire() as Arc
 		var arc_info := MapData.arc_stack.pop_back() as ArcInfo
+		if arc_info.head_info != null:
+			# Linked at load: the head may have spawned in an earlier frame, or not yet.
+			if arc_info.head_info.spawned == null:
+				_arcs_waiting.append(arc_info)
+			else:
+				_spawn_arc(game, arc_info, linked_head(arc_info.head_info), current_beat, cube_refs)
+			continue
 		
 		# Find the arc's head note: beat within a tolerance, plus colour AND grid position.
 		# The old check compared beat and colour only, so with two same-colour notes on one beat
@@ -140,22 +209,17 @@ func _process_map(game: BeepSaber_Game) -> void:
 					break
 			cube_id -= 1
 		
-		if cube != null:
-			cube.arc_head = true
-		# The tail note is later in the map: usually not spawned yet, sometimes in this same
-		# pass. Remember the arc so the note can be marked when it appears, and check the
-		# notes of this pass now.
-		_arc_tails.append(arc_info)
-		for spawned in cube_refs:
-			_mark_arc_tail(spawned)
-		arc.spawn(arc_info, current_beat, cube)
-		game.track.add_child(arc)
-		TrackLanes.place(arc, arc_info.head_beat)
+		_spawn_arc(game, arc_info, cube, current_beat, cube_refs)
 	
 	while not MapData.chain_stack.is_empty() and MapData.chain_stack[-1].head_beat <= look_ahead:
 		var chain_info := MapData.chain_stack.pop_back() as ChainInfo
 		if chain_info.slice_count > 1: # skip if the chain doesn't have any links
-			ChainLink.construct_chain(chain_info, current_beat, note_info_refs, cube_refs)
+			if chain_info.head_info == null:
+				ChainLink.construct_chain(chain_info, current_beat, note_info_refs, cube_refs)
+			elif chain_info.head_info.spawned == null:
+				_chains_waiting.append(chain_info)
+			else:
+				_construct_linked_chain(chain_info, current_beat)
 	
 	var event_t0 := Time.get_ticks_usec() if probe else 0
 	# Noodle Extensions custom events (game/noodle): start the ones that are due, advance the

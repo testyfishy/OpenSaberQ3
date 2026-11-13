@@ -65,6 +65,9 @@ static var is_v2 := false
 # True once any object or event of the loaded map uses tracks or animation. Everything per tick
 # is skipped while this is false, so a map without Noodle data runs the code it always ran.
 static var active := false
+# True when the loaded map's notes have their own jumps and arcs/chains were linked to their
+# head notes at load (link_heads). False for every other map.
+static var heads_linked := false
 
 
 static func reset() -> void:
@@ -73,6 +76,7 @@ static func reset() -> void:
 	named = {}
 	is_v2 = false
 	active = false
+	heads_linked = false
 
 
 ## Called by Map.load_beatmap before the loader threads start.
@@ -144,12 +148,45 @@ static func resolve_objects() -> void:
 static func apply_jumps() -> void:
 	if not NoteMotion.configured:
 		return
-	_jump_stack(MapData.note_stack)
+	heads_linked = false
+	var notes_lead := _jump_stack(MapData.note_stack)
 	_jump_stack(MapData.bomb_stack)
 	_jump_stack(MapData.obstacle_stack)
+	if notes_lead:
+		link_heads()
 
 
-static func _jump_stack(stack: Array) -> void:
+## Links each arc and chain to its head note (and each arc to its tail note) by beat, colour and
+## grid position. Only needed when notes have their own jumps: a note spawned earlier or later
+## than the map's half jump is no longer in the same spawn frame as its arc or chain, which is
+## where Playing looks for it otherwise. Main thread, at load.
+static func link_heads() -> void:
+	heads_linked = true
+	var by_key := {}
+	for info: Variant in MapData.note_stack:
+		if info == null:
+			continue
+		by_key[_note_key(info.beat, info.color, info.line_index, info.line_layer)] = info
+	for arc: ArcInfo in MapData.arc_stack:
+		if arc == null:
+			continue
+		arc.head_info = by_key.get(_note_key(arc.head_beat, arc.color, arc.head_line_index, arc.head_line_layer))
+		var tail: ColorNoteInfo = by_key.get(_note_key(arc.tail_beat, arc.color, arc.tail_line_index, arc.tail_line_layer))
+		arc.tail_linked = tail != null
+		if tail != null:
+			tail.arc_tail_link = true
+	for chain: ChainInfo in MapData.chain_stack:
+		if chain == null:
+			continue
+		chain.head_info = by_key.get(_note_key(chain.head_beat, chain.color, chain.head_line_index, chain.head_line_layer))
+
+
+static func _note_key(beat: float, color: int, x: float, y: float) -> String:
+	return "%d|%d|%.3f|%.3f" % [roundi(beat * 1000.0), color, x, y]
+
+
+## Returns whether any object of `stack` spawns earlier or later than the map's half jump.
+static func _jump_stack(stack: Array) -> bool:
 	var map_beats := NoteMotion.spawn_beats()
 	var map_sec := NoteMotion.half_jump_seconds()
 	var any := false
@@ -165,7 +202,7 @@ static func _jump_stack(stack: Array) -> void:
 		if info.spawn_lead != 0.0:
 			any = true
 	if not any:
-		return
+		return false
 	# Spawn order is beat - lead. The stack is reversed (next to spawn at the back); the original
 	# position breaks ties so objects on one beat keep their order (sort_custom is not stable).
 	var keyed: Array = []
@@ -177,6 +214,7 @@ static func _jump_stack(stack: Array) -> void:
 		return x[0] > y[0] or (x[0] == y[0] and x[1] < y[1]))
 	for i in keyed.size():
 		stack[i] = keyed[i][2]
+	return true
 
 
 static func _resolve(obj: NoodleObject) -> void:
