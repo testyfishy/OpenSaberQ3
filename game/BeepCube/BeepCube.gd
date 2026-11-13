@@ -200,6 +200,14 @@ func make_chain_head() -> void:
 func _noodle_set_shown(shown: bool) -> void:
 	mi.visible = shown and not debug_hide_visuals
 
+# Instance uniforms on the shared note material, so one note's dissolve never reaches another.
+# The arrow/dot is the emission texture, so dissolveArrow fades it in the same shader. The
+# mirrored copy is not faded (its colour shares an instance slot with `note_color`); it goes
+# with the note at dissolve 0.
+func _noodle_set_dissolve(dissolve: float, dissolve_arrow: float) -> void:
+	mi.set_instance_shader_parameter(&"note_dissolve", dissolve)
+	mi.set_instance_shader_parameter(&"note_dissolve_arrow", dissolve_arrow)
+
 func _noodle_vanish() -> void:
 	hide_cube()
 	release()

@@ -17,6 +17,9 @@ instance uniform vec4 wall_color : source_color = vec4(1.0, 0.08, 0.08, 1.0);
 instance uniform vec3 size = vec3(1.0);
 instance uniform float fade = 1.0;
 instance uniform float rim = 1.0;
+// Noodle `dissolve` (1 = drawn). The panel already blends, so it scales ALPHA only; at 1 the
+// product is exact. Not `fade`: that also dims the colour and belongs to the inside-wall dim.
+instance uniform float dissolve = 1.0;
 
 const float RIM_M = 0.015;
 
@@ -60,7 +63,7 @@ void fragment() {
 	// No near fade: it punched transparent patches into a wall beside the player, which is what
 	// made the fill look half-painted as the head moved. The inside-wall dim uses `fade`.
 	ALBEDO = col * fade;
-	ALPHA = clamp(fade * (0.55 + 0.45 * rim_mask), 0.0, 1.0);
+	ALPHA = clamp(fade * (0.55 + 0.45 * rim_mask), 0.0, 1.0) * dissolve;
 }
 "
 

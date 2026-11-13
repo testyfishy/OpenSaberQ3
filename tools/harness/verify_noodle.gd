@@ -47,6 +47,7 @@ func _run() -> void:
 	_jumps()
 	_support()
 	await _zero_scale()
+	await _dissolve()
 	print("NOODLE checks=%d failed=%d" % [_checks, _fails])
 	print("NOODLE ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(0 if _fails == 0 else 1)
@@ -695,7 +696,8 @@ func _support() -> void:
 	NoodleTracks.begin_load(v2)
 	Map._finish_noodle(v2)
 	f = MapSupport.unsupported_features
-	_check("v2: arrow dissolve and colour reported", f.has("arrow dissolve") and f.has("Chroma colour animation"), str(f))
+	_check("v2: colour reported", f.has("Chroma colour animation"), str(f))
+	_check("v2: _dissolveArrow is played, not reported", not f.has("arrow dissolve"), str(f))
 	_check("v2: fog track reported", f.has("Chroma component/fog events"))
 	_check("v2: _position is played, not reported", not f.has("animated position"))
 	MapSupport.reset()
@@ -735,6 +737,99 @@ func _zero_scale() -> void:
 	wall._noodle_tick(0.1)
 	wall._update_inside_fade()
 	_check("animated scale 0: invertible wall", absf(wall.transform.basis.determinant()) > 0.0 and wall.transform.affine_inverse().origin.is_finite())
+	wall.queue_free()
+	await get_tree().physics_frame
+	MapTimer.reset()
+	T.reset()
+
+
+# Dissolve is a fade: the value reaches each object's own shader, resets when a pooled object is
+# reused, defaults to 1, and never touches the shared materials.
+func _dissolve() -> void:
+	var T := NoodleTracks
+	var A := NoodleAnim
+	T.reset()
+	T.active = true
+	# Evaluation: dissolveArrow defaults to 1 and multiplies like dissolve.
+	var none := _obj({"track": "plainx"})
+	A.evaluate(none, 0.5)
+	_near("dissolve defaults to 1", A.out_dissolve, 1.0)
+	_near("dissolveArrow defaults to 1", A.out_dissolve_arrow, 1.0)
+	T.get_track(T.index_of("arr")).set_float(T.P_DISSOLVE_ARROW, 0.5)
+	var arr := _obj({"track": "arr", "animation": {"dissolveArrow": [[1, 0], [0, 1]]}})
+	A.evaluate(arr, 0.5)
+	_near("dissolveArrow multiplies", A.out_dissolve_arrow, 0.25)
+	_near("dissolveArrow leaves dissolve alone", A.out_dissolve, 1.0)
+
+	var fade := {"track": "f", "animation": {"dissolve": [[0, 0], [1, 1]], "dissolveArrow": [0.5]}}
+	var note := (load("res://game/BeepCube/BeepCube.tscn") as PackedScene).instantiate() as BeepCube
+	var other := (load("res://game/BeepCube/BeepCube.tscn") as PackedScene).instantiate() as BeepCube
+	add_child(note)
+	add_child(other)
+	note.set_physics_process(false)
+	other.set_physics_process(false)
+	var param := func(mi: GeometryInstance3D, key: StringName) -> float:
+		var v: Variant = mi.get_instance_shader_parameter(key)
+		return 1.0 if v == null else float(v)
+	_check("a fresh note is at dissolve 1", note._n_dissolve == 1.0 and note._n_dissolve_arrow == 1.0
+		and param.call(note.mi, &"note_dissolve") == 1.0 and param.call(note.mi, &"note_dissolve_arrow") == 1.0)
+	note.speed = 10.0
+	note.transform = Transform3D(Basis.IDENTITY, Vector3(0, 1, -10))
+	note.mi.visible = true
+	note.noodle_spawn(_obj(fade), 1.0)
+	_check("dissolve 0 at lifetime 0: note not drawn", not note.mi.visible)
+	note._noodle_tick(0.5)
+	_near("note dissolve reaches the shader", param.call(note.mi, &"note_dissolve"), 0.25)
+	_near("note dissolveArrow reaches the shader", param.call(note.mi, &"note_dissolve_arrow"), 0.5)
+	_check("a partly dissolved note is drawn", note.mi.visible)
+	_check("another note keeps dissolve 1", param.call(other.mi, &"note_dissolve") == 1.0 and other._n_dissolve == 1.0)
+	_check("the shared note material is not written", note._mat.get_shader_parameter(&"note_dissolve") == null
+		and note.mi.material_override == other.mi.material_override)
+	note.mi.visible = true
+	note.noodle_spawn(null, 1.0)
+	_check("a reused note is back at dissolve 1", note._n_dissolve == 1.0 and param.call(note.mi, &"note_dissolve") == 1.0
+		and param.call(note.mi, &"note_dissolve_arrow") == 1.0)
+	note.queue_free()
+	other.queue_free()
+
+	var bomb := (load("res://game/Bomb/Bomb.tscn") as PackedScene).instantiate() as Bomb
+	add_child(bomb)
+	bomb.set_physics_process(false)
+	var body := bomb.get_node(^"BombAnimation/Mesh/Icosphere") as MeshInstance3D
+	var rim := bomb.get_node(^"BombAnimation/Mesh/Icosphere2") as MeshInstance3D
+	var body_mat := body.material_override
+	var rim_mat := rim.material_override
+	bomb.speed = 10.0
+	bomb.transform = Transform3D(Basis.IDENTITY, Vector3(0, 1, -10))
+	bomb.noodle_spawn(_obj(fade), 1.0)
+	bomb._noodle_tick(0.5)
+	_near("bomb dissolve reaches the shader", param.call(body, &"bomb_dissolve"), 0.25)
+	_check("a dissolving bomb uses the dissolve shaders", body.material_override is ShaderMaterial and rim.material_override is ShaderMaterial)
+	bomb.noodle_spawn(null, 1.0)
+	_check("a reused bomb gets its own materials back", body.material_override == body_mat and rim.material_override == rim_mat and bomb._n_dissolve == 1.0)
+	bomb.queue_free()
+
+	var wall := (load("res://game/Wall/Wall.tscn") as PackedScene).instantiate() as Wall
+	add_child(wall)
+	wall.set_physics_process(false)
+	MapTimer.load_bpm_events({}, 120.0)
+	var info := ObstacleInfo.new_v3({"b": 4.0, "d": 1.0, "x": 1, "y": 0, "w": 1, "h": 5,
+		"customData": {"track": "f", "animation": {"dissolve": [[0, 0], [1, 1]]}}})
+	T._resolve(info.noodle)
+	var mesh := wall._wall_mesh()
+	_check("a fresh wall is at dissolve 1", wall._n_dissolve == 1.0 and param.call(mesh, &"dissolve") == 1.0)
+	wall.speed = 10.0
+	wall._half_depth = 0.5
+	wall.transform = Transform3D(Basis.IDENTITY, Vector3(0, 1.5, -10.5))
+	wall._noodle_spawn(info, 1.0)
+	_check("dissolve 0: wall not drawn", not mesh.visible)
+	wall._noodle_tick(0.5)
+	# Lifetime (-0.5 + 1) / 2.5 = 0.2.
+	_near("wall dissolve reaches the shader", param.call(mesh, &"dissolve"), 0.2)
+	_check("a partly dissolved wall is drawn", mesh.visible)
+	var plain_info := ObstacleInfo.new_v3({"b": 4.0, "d": 1.0, "x": 1, "y": 0, "w": 1, "h": 5})
+	wall._noodle_spawn(plain_info, 1.0)
+	_check("a reused wall is back at dissolve 1", wall._n_dissolve == 1.0 and param.call(mesh, &"dissolve") == 1.0)
 	wall.queue_free()
 	await get_tree().physics_frame
 	MapTimer.reset()

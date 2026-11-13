@@ -67,7 +67,7 @@ static var ignored := {}
 # how many AssignPlayerToTrack events targeted something other than the player's root.
 static var unsupported_points := 0
 static var unsupported_targets := 0
-# Event properties that were read but are not applied (time, dissolveArrow) or not known at all
+# Event properties that were read but are not applied (time) or not known at all
 # (Chroma `color`...), name -> count.
 static var unapplied := {}
 const EVENT_KEYS := ["track", "duration", "easing", "repeat"]
@@ -146,7 +146,7 @@ static func _parse(e: Dictionary, v2: bool) -> Event:
 						unapplied[key] = int(unapplied.get(key, 0)) + 1
 					continue
 				var p := int(names[key])
-				if p == NoodleTracks.P_TIME or p == NoodleTracks.P_DISSOLVE_ARROW:
+				if p == NoodleTracks.P_TIME:
 					unapplied[key] = int(unapplied.get(key, 0)) + 1
 				if ev.type == ASSIGN_PATH_ANIMATION and p > NoodleTracks.P_DEFINITE_POSITION:
 					continue  # not a path property

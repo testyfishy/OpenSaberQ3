@@ -21,6 +21,12 @@ instance uniform float note_is_dot = 0.0;
 instance uniform float note_chain_head = 0.0;
 // Half the mesh AABB in mesh space; set once per instance in _ready().
 instance uniform vec3 note_half_extent = vec3(0.5, 0.5, 0.5);
+// Noodle `dissolve` / `dissolveArrow` (1 = drawn, the default). Declared after the uniforms
+// above so their instance slots do not move: the mirror pass shares this instance and reads slot 0.
+instance uniform float note_dissolve = 1.0;
+instance uniform float note_dissolve_arrow = 1.0;
+
+#include "res://game/noodle/noodle_dissolve.gdshaderinc"
 
 uniform sampler2D texture_emission : hint_default_black;
 
@@ -78,13 +84,18 @@ void fragment() {
 	) {
 		discard;
 	}
+	// Noodle dissolve. A per-instance test, so every note at 1 skips the noise. The inside faces
+	// (white, for a cut) are dropped while dissolving, or they would show through the holes.
+	if (note_dissolve < 1.0 && (!FRONT_FACING || noodle_dissolved(local_pos / max(note_half_extent, vec3(1e-4)) * 2.5, note_dissolve))) {
+		discard;
+	}
 
 	ALBEDO = note_color.rgb;
 	METALLIC = metallic;
 	ROUGHNESS = roughness;
 	if (FRONT_FACING) {
 		vec2 dot_uv = vec2(UV.x+0.5, UV.y);
-		EMISSION = (note_color.rgb * sub_emission_energy) + texture(texture_emission, note_is_dot > 0.5 ? dot_uv : UV).rgb;
+		EMISSION = (note_color.rgb * sub_emission_energy) + texture(texture_emission, note_is_dot > 0.5 ? dot_uv : UV).rgb * note_dissolve_arrow;
 
 		if (note_chain_head > 0.5) {
 			EMISSION += vec3( smoothstep(cut_white_margin+0.01,cut_white_margin,chain_interp) );

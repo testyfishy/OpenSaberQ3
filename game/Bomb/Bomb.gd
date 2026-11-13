@@ -7,6 +7,20 @@ class_name Bomb
 @export var min_speed := 0.5
 @onready var collision_shape := $Area3D/CollisionShape3D as CollisionShape3D
 
+# Noodle dissolve. The scene's two StandardMaterial3Ds cannot take a per-instance value, so a bomb
+# whose dissolve is below 1 swaps in shader copies of them (shared by every bomb, the value is an
+# instance uniform) and swaps the scene's own back at 1 and on every spawn. An ordinary bomb never
+# touches any of this.
+const DISSOLVE_BODY_SHADER := preload("res://game/Bomb/bomb_dissolve.gdshader")
+const DISSOLVE_RIM_SHADER := preload("res://game/Bomb/bomb_rim_dissolve.gdshader")
+static var _dissolve_body_mat: ShaderMaterial
+static var _dissolve_rim_mat: ShaderMaterial
+var _body_mesh: MeshInstance3D
+var _rim_mesh: MeshInstance3D
+var _body_mat: Material
+var _rim_mat: Material
+var _dissolve_swapped := false
+
 func set_collision_disabled(value: bool) -> void:
 	collision_shape.disabled = value
 
@@ -52,6 +66,37 @@ func spawn(info: BombInfo, current_beat: float) -> void:
 
 func _noodle_set_shown(shown: bool) -> void:
 	$BombAnimation.visible = shown
+
+func _noodle_set_dissolve(dissolve: float, _dissolve_arrow: float) -> void:
+	if _body_mesh == null:
+		_body_mesh = get_node_or_null(^"BombAnimation/Mesh/Icosphere") as MeshInstance3D
+		_rim_mesh = get_node_or_null(^"BombAnimation/Mesh/Icosphere2") as MeshInstance3D
+		if _body_mesh == null or _rim_mesh == null:
+			return
+		_body_mat = _body_mesh.material_override
+		_rim_mat = _rim_mesh.material_override
+	var swap := dissolve < 1.0
+	if swap and _dissolve_body_mat == null:
+		_dissolve_body_mat = _dissolve_material(DISSOLVE_BODY_SHADER, _body_mat)
+		_dissolve_rim_mat = _dissolve_material(DISSOLVE_RIM_SHADER, _rim_mat)
+	_body_mesh.set_instance_shader_parameter(&"bomb_dissolve", dissolve)
+	_rim_mesh.set_instance_shader_parameter(&"bomb_dissolve", dissolve)
+	if swap != _dissolve_swapped:
+		_dissolve_swapped = swap
+		_body_mesh.material_override = _dissolve_body_mat if swap else _body_mat
+		_rim_mesh.material_override = _dissolve_rim_mat if swap else _rim_mat
+
+# Built once, the first time any bomb dissolves; the colour comes from the scene's material so
+# the two cannot drift apart.
+static func _dissolve_material(shader: Shader, original: Material) -> ShaderMaterial:
+	var mat := ShaderMaterial.new()
+	mat.shader = shader
+	var std := original as BaseMaterial3D
+	if std != null:
+		mat.set_shader_parameter(&"albedo", std.albedo_color)
+		if std.grow:
+			mat.set_shader_parameter(&"grow", std.grow_amount)
+	return mat
 
 func _noodle_vanish() -> void:
 	_unregister_hit()

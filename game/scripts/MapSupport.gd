@@ -55,7 +55,6 @@ const VIVIFY_EVENTS := ["AssignObjectPrefab", "InstantiatePrefab", "DestroyObjec
 const CHROMA_EVENTS := ["AnimateComponent", "AssignFogTrack"]
 const PROPERTY_NAMES := {
 	"time": "track time animation", "_time": "track time animation",
-	"dissolveArrow": "arrow dissolve", "_dissolveArrow": "arrow dissolve",
 	"color": "Chroma colour animation", "_color": "Chroma colour animation",
 }
 

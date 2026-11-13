@@ -47,6 +47,10 @@ var _n_scale := Vector3.ONE
 # False while the animation makes the object non-interactable: not hittable, not missable.
 var _n_can_hit := true
 var _n_shown := true
+# The last Noodle dissolve / dissolveArrow handed to the subclass (1 = fully drawn). Pooled
+# objects reset both to 1 on every spawn so a value never carries into the next object.
+var _n_dissolve := 1.0
+var _n_dissolve_arrow := 1.0
 
 var _collision_enabled := false
 var _enable_once := -1  # -1 = not read yet, 0 = legacy, 1 = enable once
@@ -188,6 +192,10 @@ static func _noodle_half_sec(obj: NoodleObject) -> float:
 func noodle_spawn(info_noodle: NoodleObject, half_sec: float) -> void:
 	_n_can_hit = true
 	_n_shown = true
+	if _n_dissolve != 1.0 or _n_dissolve_arrow != 1.0:
+		_n_dissolve = 1.0
+		_n_dissolve_arrow = 1.0
+		_noodle_set_dissolve(1.0, 1.0)
 	if info_noodle == null or not info_noodle.animated or not NoodleTracks.active:
 		noodle = null
 		return
@@ -211,15 +219,28 @@ func _noodle_tick(delta: float) -> float:
 	_n_can_hit = NoodleAnim.out_interactable >= 1.0
 	if not _n_can_hit and _collision_enabled:
 		set_collision_enabled(false)
-	var shown := NoodleAnim.out_dissolve >= 0.5
+	# Dissolve is a fade in the object's shader; at 0 the object is not drawn at all.
+	var d := clampf(NoodleAnim.out_dissolve, 0.0, 1.0)
+	var da := clampf(NoodleAnim.out_dissolve_arrow, 0.0, 1.0)
+	if d != _n_dissolve or da != _n_dissolve_arrow:
+		_n_dissolve = d
+		_n_dissolve_arrow = da
+		_noodle_set_dissolve(d, da)
+	var shown := d > 0.0
 	if shown != _n_shown:
 		_n_shown = shown
 		_noodle_set_shown(shown)
 	return _n_base.z
 
-# Dissolve is drawn as visibility: hidden below one half. Overridden by notes and bombs.
+# Hides or shows the object's meshes (dissolve 0). Overridden by notes and bombs.
 @warning_ignore("unused_parameter")
 func _noodle_set_shown(shown: bool) -> void:
+	return
+
+# Hands the object's dissolve (0..1) and arrow dissolve to its shader. Called only when a value
+# changes, and with (1, 1) on a spawn that follows a dissolved life. Overridden by notes and bombs.
+@warning_ignore("unused_parameter")
+func _noodle_set_dissolve(dissolve: float, dissolve_arrow: float) -> void:
 	return
 
 # Leaves without a miss: a non-interactable object that reached the end of its travel.

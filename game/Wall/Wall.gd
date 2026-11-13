@@ -47,6 +47,8 @@ var _n_half_sec := 1.0
 var _n_span_sec := 2.0
 var _n_can_hit := true
 var _n_shown := true
+# The last Noodle dissolve written to the mesh (1 = fully drawn); reset to 1 on every spawn.
+var _n_dissolve := 1.0
 
 # specs/029/027: depth-based grow. Height is a function of the wall's own z, so every wall at the
 # same depth has the same height and a wall surface stays continuous; the 0.6.5 age-based version
@@ -201,6 +203,8 @@ func _noodle_spawn(wall_info: ObstacleInfo, half_sec: float) -> void:
 		_wall_shape().set_deferred(&"disabled", false)
 	_n_can_hit = true
 	_n_shown = true
+	if _n_dissolve != 1.0:
+		_set_dissolve(1.0)
 	var info_noodle := wall_info.noodle
 	if info_noodle == null or not info_noodle.animated or not NoodleTracks.active:
 		noodle = null
@@ -227,13 +231,30 @@ func _noodle_tick(delta: float) -> float:
 		_n_can_hit = can_hit
 		# Deferred: the shape may be read by the physics step this tick runs in.
 		_wall_shape().set_deferred(&"disabled", not can_hit)
-	var shown := NoodleAnim.out_dissolve >= 0.5
+	var d := clampf(NoodleAnim.out_dissolve, 0.0, 1.0)
+	if d != _n_dissolve:
+		_set_dissolve(d)
+	var shown := d > 0.0
 	if shown != _n_shown:
 		_n_shown = shown
 		var mesh := _wall_mesh()
 		if mesh != null:
 			mesh.visible = shown and not debug_hide_visuals
 	return _n_front - _half_depth
+
+# Noodle dissolve as a fade: an instance uniform that scales the panel's alpha (the wall
+# materials already blend). The bench-only opaque material has no alpha, so a dissolving wall
+# uses the blended one until it is back at 1. At 0 the mesh is hidden by the caller.
+func _set_dissolve(d: float) -> void:
+	_n_dissolve = d
+	var mesh := _wall_mesh()
+	if mesh == null:
+		return
+	mesh.set_instance_shader_parameter(&"dissolve", d)
+	if opaque_walls and _base_mat != null:
+		var mat: Material = WALL_MATERIAL if d < 1.0 else _base_mat
+		if mesh.material_override != mat:
+			mesh.material_override = mat
 
 func _wall_mesh() -> MeshInstance3D:
 	if _mesh_cache == null:

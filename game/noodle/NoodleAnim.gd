@@ -30,6 +30,7 @@ static var out_world := Quaternion.IDENTITY
 static var out_local := Quaternion.IDENTITY
 static var out_scale := Vector3.ONE
 static var out_dissolve := 1.0
+static var out_dissolve_arrow := 1.0
 static var out_interactable := 1.0
 static var out_has_definite := false
 static var out_definite := Vector3.ZERO
@@ -107,6 +108,7 @@ static func evaluate(obj: NoodleObject, life: float) -> void:
 	out_scale = scl
 
 	out_dissolve = _float(obj, P.P_DISSOLVE, life, am, pm, vm)
+	out_dissolve_arrow = _float(obj, P.P_DISSOLVE_ARROW, life, am, pm, vm)
 	out_interactable = 0.0 if obj.uninteractable else _float(obj, P.P_INTERACTABLE, life, am, pm, vm)
 
 	# definitePosition: path only, sum.
