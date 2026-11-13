@@ -4,6 +4,19 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.26 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
+
+**Notes move at the map's own speed.** Until now every object travelled 4 metres per beat and
+appeared 4 beats ahead, whatever the map said. The game now uses each difficulty's note jump
+speed and start-beat offset, as Beat Saber does: fast maps come at you fast, slow maps slowly,
+and the distance notes appear at follows from the map (it is capped at 18 m).
+
+- A map that leaves the speed at 0 gets the standard default for its difficulty (10, 12 or 16).
+- Walls, bombs, arcs and chains use the same speed, so everything stays aligned.
+- Noodle Extensions per-note speed is honoured for notes. Animated Noodle movement is still not
+  implemented.
+- **Every map will feel different from 0.7.25**, most of them faster.
+
 ## v0.7.25 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 
 **Cleanup of incomplete downloads.** Folders under `Songs/` with no Info.dat, left by downloads

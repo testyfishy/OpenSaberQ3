@@ -148,6 +148,7 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 		return
 	
 	_apply_map_colours()
+	Arc.apply_spawn_distance()
 	if MapData.event_stack.is_empty():
 		event_driver.set_all_on(MapPalette.env_left, MapPalette.env_right)
 	else:

@@ -34,6 +34,16 @@ really fly down one. See [the audit report](../../docs/audit-fable-5.2.md), G-1 
   difficulty's beatmap file followed by its lightshow file. Verified equal to BeatSaver's hash
   for map `55878`.
 
+## Scoped change on `audit/fable-5.2`: map note jump speed (0.7.26, owner decision)
+
+`NoteMotion` is now Beat Saber's model. Objects travel at the difficulty's note jump speed and
+appear a half jump duration ahead (4 beats, halved until it covers under 18 m, plus the map's
+start-beat offset, minimum a quarter beat); a map with speed 0 gets the difficulty default.
+Distances are computed in seconds so tempo changes do not bend them. Every spawn site (notes,
+bombs, walls, arcs, chains), the spawn look-ahead, the arc fade distance and the wall grow use it.
+An unconfigured `NoteMotion` keeps the old 4 m per beat so tools that spawn objects without
+loading a map are unchanged. Per-note `noteJumpMovementSpeed` (Noodle) is read for notes.
+
 ## Context and evidence
 
 - Public policy already published: `README.md` → "Map compatibility", `docs/map-compatibility.md`.

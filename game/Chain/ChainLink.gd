@@ -81,7 +81,7 @@ static func chain_point(chain_info: ChainInfo, head_pos: Vector2, mid_pos: Vecto
 	var q1 := mid_pos.lerp(tail_pos, t)
 	var xy := q0.lerp(q1, t)
 	var beat := lerpf(chain_info.head_beat, chain_info.tail_beat, t)
-	return Vector3(xy.x, xy.y, -(beat - current_beat) * Constants.BEAT_DISTANCE)
+	return Vector3(xy.x, xy.y, -NoteMotion.distance_between(current_beat, beat))
 
 # The segment link_index occupies: link 1 spans head -> first slice point, the last spans the
 # previous point -> the tail point. Both t values are inside 0..squish.

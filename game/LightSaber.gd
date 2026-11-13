@@ -335,8 +335,8 @@ func _handle_cuttable(cut_object: Node3D) -> void:
 	var controller_speed: Vector3 = (saber_end - saber_end_past) / last_dt
 	if controller_speed.length() <= TIP_MOVING_MPS and _recent_tip_age <= SWING_REST_TICKS:
 		controller_speed = _recent_tip_velocity
-	const BEAT_DISTANCE := 4.0
-	var cutplane := Plane(o, saber_end, saber_end_past + Vector3(0, 0, BEAT_DISTANCE * Map.bpm_at_beat(note.beat) * last_dt / 30)) # Account for relative position to track speed
+	# Account for the note's own motion toward the player: two ticks of its travel.
+	var cutplane := Plane(o, saber_end, saber_end_past + Vector3(0, 0, 2.0 * NoteMotion.speed_at(note.beat) * last_dt))
 	# The cut scores the hit and hands back the components it computed, so the
 	# hit sound is driven by the real numbers instead of a second copy of the
 	# maths. `note` is not touched after this call (it may go back to the pool).

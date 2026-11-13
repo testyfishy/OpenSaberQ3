@@ -45,6 +45,7 @@ func _perfect_note() -> void:
 
 func _run() -> void:
 	_scoreboard()
+	_motion()
 	await _swing()
 	Scoreboard.restart()
 	print("SCORING ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
@@ -141,6 +142,34 @@ func _scoreboard() -> void:
 	Scoreboard.chain_link_cut(Vector3.ZERO)
 	Scoreboard.chain_link_cut(Vector3.ZERO)
 	_check("chain links are 20 each and climb the ladder", Scoreboard.points == 20 + 40 and Scoreboard.max_points == 60, str(Scoreboard.points))
+
+
+# --- note motion: the map's jump speed decides how fast and from how far ------------------------
+func _motion() -> void:
+	NoteMotion.reset()
+	_check("with no map loaded, the old fixed model still applies (4 m per beat, 4 beats ahead)",
+		is_equal_approx(NoteMotion.distance_between(0.0, 4.0), 16.0) and is_equal_approx(NoteMotion.spawn_beats(), 4.0))
+	_check("half jump at NJS 16, 120 BPM is 2 beats (4 beats would be 32 m)",
+		is_equal_approx(NoteMotion.half_jump_beats(16.0, 0.0, 120.0), 2.0))
+	_check("half jump at NJS 10, 100 BPM is 2 beats", is_equal_approx(NoteMotion.half_jump_beats(10.0, 0.0, 100.0), 2.0))
+	_check("a start offset of -0.5 shortens it to 1.5 beats", is_equal_approx(NoteMotion.half_jump_beats(16.0, -0.5, 120.0), 1.5))
+	_check("it never goes below a quarter beat", is_equal_approx(NoteMotion.half_jump_beats(16.0, -9.0, 120.0), 0.25))
+	_check("a map with no NJS gets the difficulty's default (10 / 12 / 16)",
+		is_equal_approx(NoteMotion.default_njs(5), 10.0) and is_equal_approx(NoteMotion.default_njs(7), 12.0)
+		and is_equal_approx(NoteMotion.default_njs(9), 16.0))
+	# The tempo map in a harness run is the default single 60 BPM segment.
+	NoteMotion.configure(12.0, 0.0, 60.0, 7)
+	_check("configured: objects move at the map's NJS", is_equal_approx(NoteMotion.speed_at(3.0), 12.0))
+	_check("configured: an object 2 beats away at 60 BPM is 2 s x 12 m/s = 24 m out",
+		is_equal_approx(NoteMotion.distance_between(0.0, 2.0), 24.0), "%.2f" % NoteMotion.distance_between(0.0, 2.0))
+	_check("configured: spawn is 1 beat ahead, 12 m away",
+		is_equal_approx(NoteMotion.spawn_beats(), 1.0) and is_equal_approx(NoteMotion.spawn_distance(), 12.0),
+		"%.2f beats, %.1f m" % [NoteMotion.spawn_beats(), NoteMotion.spawn_distance()])
+	_check("a per-note speed overrides the map's for that note",
+		is_equal_approx(NoteMotion.speed_at(3.0, 20.0), 20.0) and is_equal_approx(NoteMotion.distance_between(0.0, 1.0, 20.0), 20.0))
+	NoteMotion.configure(0.0, 0.0, 120.0, 9)
+	_check("NJS 0 in the map falls back to the Expert+ default", is_equal_approx(NoteMotion.njs(), 16.0))
+	NoteMotion.reset()
 
 
 func _swing_and_wait(total_deg: float, per_tick_deg: float) -> void:

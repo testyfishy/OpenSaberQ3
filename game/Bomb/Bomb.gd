@@ -35,11 +35,10 @@ func spawn(info: BombInfo, current_beat: float) -> void:
 	speed = NoteMotion.speed_at(info.beat)
 	beat = info.beat
 	
-	var distance: float = info.beat - current_beat
 	
 	transform.origin.x = Constants.LANE_DISTANCE * float(info.line_index) + Constants.LANE_ZERO_X
 	transform.origin.y = Constants.LANE_DISTANCE * float(info.line_layer) + Constants.LAYER_ZERO_Y
-	transform.origin.z = -distance * Constants.BEAT_DISTANCE
+	transform.origin.z = -NoteMotion.distance_between(current_beat, info.beat)
 
 	var anim := $AnimationPlayer as AnimationPlayer
 	var anim_speed := Map.current_difficulty.note_jump_movement_speed / 9.0

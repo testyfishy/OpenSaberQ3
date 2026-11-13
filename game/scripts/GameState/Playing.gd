@@ -29,7 +29,6 @@ func _physics_process(game: BeepSaber_Game) -> void:
 		if game.song_player.get_playback_position() < 0.5:
 			game._audio_synced_after_restart = true
 
-const BEATS_AHEAD := 4.0
 
 # Arcs whose tail note has not been spawned yet.
 var _arc_tails: Array[ArcInfo] = []
@@ -60,7 +59,7 @@ func _process_map(game: BeepSaber_Game) -> void:
 	Harness.tick()
 	var song_position := Harness.song_time() if Harness.replay else game.song_player.get_playback_position()
 	var current_beat := Map.seconds_to_beat(song_position)
-	var look_ahead := current_beat + BEATS_AHEAD
+	var look_ahead := current_beat + NoteMotion.spawn_beats()
 	
 	# chains connect to a regular colornote and modify it, so we have to keep
 	# track of what notes were spawned this frame, in case any become the head

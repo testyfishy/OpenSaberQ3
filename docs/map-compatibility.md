@@ -39,7 +39,9 @@ merely suggests one is Supported with a warning.
 | Noodle position/rotation/scale (static) | **Partial** (0.7.3): static transforms only; no animation, tracks or world rotation |
 | Mapping Extensions precision (positions, cut angles, wall widths/heights) | **Supported** (0.7.1) |
 | 90° / 360° rotation events | **Supported** (0.7.2, per-beat lanes; v4 per-object `r` since 0.7.24; notes judged in their own lane since 0.7.24). Not yet seen on a headset since the lane placement fix |
-| Noodle animation tracks, per-object speed/offset | **Not yet** |
+| Map note jump speed and start offset | **Supported** (0.7.26); before that every map ran at a fixed 4 m per beat |
+| Noodle per-note speed | **Partial** (0.7.26): notes only; per-note spawn offset not yet |
+| Noodle animation tracks | **Not yet** |
 | Chroma per-event colours | **Supported**; Chroma environment objects not yet |
 | v4/v3 box-group lighting | **Partial**: colour, brightness and transition (fade) at the event beat; extend events hold the previous one. No strobe, filters, distributions, rotation/translation boxes, fade-to-black or VFX. Group ids are environment-defined and folded modulo 5 onto the room's lights; when two folded groups land on the same beat and type, the on event wins. |
 | Vivify (Unity asset bundles) | **Not yet**; maps load as Visuals limited |

@@ -85,7 +85,7 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	if Settings.note_map_colors and not Settings.disable_map_color and note_info.custom_color.a > 0.0:
 		color = note_info.custom_color
 	_cut_color = color
-	speed = NoteMotion.speed_at(note_info.beat)
+	speed = NoteMotion.speed_at(note_info.beat, note_info.custom_njs)
 	beat = note_info.beat
 	which_saber = note_info.color
 	is_dot = note_info.cut_direction == 8
@@ -111,7 +111,7 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	else:
 		transform.origin.x = Constants.LANE_DISTANCE * float(note_info.line_index) + Constants.LANE_ZERO_X
 		transform.origin.y = Constants.LANE_DISTANCE * float(note_info.line_layer) + Constants.LAYER_ZERO_Y
-	transform.origin.z = -(note_info.beat - current_beat) * Constants.BEAT_DISTANCE
+	transform.origin.z = -NoteMotion.distance_between(current_beat, note_info.beat, note_info.custom_njs)
 	
 	rotation.z = Constants.CUBE_ROTATIONS[note_info.cut_direction] + deg_to_rad(note_info.angle_offset)
 	if note_info.has_custom_rotation:

@@ -55,6 +55,15 @@ static func _configure_fades() -> void:
 		material.set_shader_parameter(&"emission", 2.2)
 		material.set_shader_parameter(&"noise_mult", 3.2)
 
+## The ribbon fades in over the last FADE_IN_M before the distance notes spawn at, and that
+## distance now depends on the map's note jump speed. Called when a map is loaded.
+static func apply_spawn_distance() -> void:
+	_configure_fades()
+	var far := NoteMotion.spawn_distance()
+	for material: ShaderMaterial in [left_material, right_material, left_material_magnet, right_material_magnet]:
+		material.set_shader_parameter(&"distance_fade_min", far)
+		material.set_shader_parameter(&"distance_fade_max", maxf(far - FADE_IN_M, far * 0.5))
+
 static func acquire() -> Arc:
 	_configure_fades()
 	if _pool.is_empty():
@@ -97,7 +106,7 @@ func spawn(info: ArcInfo, current_beat: float, _activator_cube: BeepCube = null)
 	var head_pos := Vector3(
 		Constants.LANE_DISTANCE * float(info.head_line_index) + Constants.LANE_ZERO_X,
 		Constants.LANE_DISTANCE * float(info.head_line_layer) + Constants.LAYER_ZERO_Y,
-		-(info.head_beat - current_beat) * Constants.BEAT_DISTANCE
+		-NoteMotion.distance_between(current_beat, info.head_beat)
 	)
 	# specs/027 FR-021 (0.7.5): use the spawned head note's own position when it exists. The lane
 	# formula and the note must place the head at the same point; Noodle position, precision lanes
@@ -116,7 +125,7 @@ func spawn(info: ArcInfo, current_beat: float, _activator_cube: BeepCube = null)
 	var tail_pos := Vector3(
 		Constants.LANE_DISTANCE * float(info.tail_line_index) + Constants.LANE_ZERO_X,
 		Constants.LANE_DISTANCE * float(info.tail_line_layer) + Constants.LAYER_ZERO_Y,
-		-(info.tail_beat - current_beat) * Constants.BEAT_DISTANCE
+		-NoteMotion.distance_between(current_beat, info.tail_beat)
 	)
 	despawn_z = Constants.MISS_Z - tail_pos.z
 

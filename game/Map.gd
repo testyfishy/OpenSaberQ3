@@ -172,6 +172,11 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 	MapData.expand_box_group_colors(map_data, lightshow_data)
 	MapTimer.load_bpm_events(map_data, info.beats_per_minute, audio_data)
 	bpm_segments = MapTimer.segment_count()
+	# After the tempo map: object distances are worked out in seconds.
+	NoteMotion.configure(difficulty.note_jump_movement_speed, difficulty.note_jump_start_beat_offset,
+		info.beats_per_minute, difficulty.difficulty_rank)
+	vr.log_info("MAP motion: njs=%.1f m/s spawn=%.2f beats ahead, %.1f m away" % [
+		NoteMotion.njs(), NoteMotion.spawn_beats(), NoteMotion.spawn_distance()])
 	_build_track_rotations(map_data)
 	MapSupport.detect_unsupported(map_data, info)
 	vr.log_info("MAP data: bpm_segments=%d fakes_filtered=%d unsupported=%s" % [bpm_segments, MapSupport.fakes_filtered, str(MapSupport.unsupported_features)])

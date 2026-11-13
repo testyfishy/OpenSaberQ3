@@ -14,6 +14,8 @@ var ignore_cut_angle := false
 var custom_color: Color = Color(0.0, 0.0, 0.0, 0.0)
 # Noodle Extensions can place a note anywhere instead of on the lane grid. When a map supplies
 # coordinates we use them; otherwise the lane formula is untouched.
+# Noodle Extensions per-note jump speed (`noteJumpMovementSpeed`); 0 means the map's own.
+var custom_njs := 0.0
 var has_custom_position := false
 var custom_position := Vector2.ZERO
 # Noodle static transforms (specs/027 FR-007): world rotation in degrees and a scale multiplier.
@@ -82,6 +84,9 @@ static func _read_custom_position(note: ColorNoteInfo, note_dict: Dictionary) ->
 	var cd = note_dict.get("_customData", note_dict.get("customData", null))
 	if cd is not Dictionary:
 		return
+	var own_njs = cd.get("noteJumpMovementSpeed", cd.get("_noteJumpMovementSpeed", null))
+	if own_njs is float or own_njs is int:
+		note.custom_njs = maxf(float(own_njs), 0.0)
 	var coords = cd.get("_coordinates", cd.get("coordinates", null))
 	if coords is Dictionary:
 		note.has_custom_position = true
