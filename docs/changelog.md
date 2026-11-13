@@ -4,6 +4,30 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.29 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
+
+**Noodle Extensions animation.** Maps that animate their notes, bombs and walls now play that
+animation instead of showing everything frozen in place. Built from Heck's own source, not from
+memory; details and limits in [noodle-animation-report.md](noodle-animation-report.md).
+
+- Tracks, point definitions (named and inline, every Heck easing, Catmull-Rom splines) and the
+  custom events `AnimateTrack`, `AssignPathAnimation`, `AssignTrackParent` and
+  `AssignPlayerToTrack`, in v2 and v3 spelling.
+- Per object: offset position, world and local rotation, scale, `definitePosition`, the
+  object's own `animation` block, dissolve (shown or hidden), and `interactable` /
+  `uninteractable` (such an object can be neither hit nor missed).
+- Per-object `noteJumpStartBeatOffset` for notes, bombs and walls and `noteJumpMovementSpeed`
+  for bombs and walls: an object with a longer jump appears earlier.
+- The player's track moves the world around you; your view itself is never moved.
+- The pause menu now names only what a map uses that is still missing (Chroma environment,
+  Vivify, colour animation, ...), instead of "Chroma/Noodle animation" for every such map.
+- Maps without Noodle data play exactly as before.
+
+## v0.7.28 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
+
+Intermediate device build during the Noodle work (point definitions, tracks and custom events
+parsed and advanced; objects did not move with them yet). No change a player could see.
+
 ## v0.7.27 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 
 - **Note Speed** (Settings > Gameplay): Map speed, or 90 to 50 % of it. Lower values slow the
