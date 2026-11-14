@@ -64,6 +64,7 @@ static func evaluate(obj: NoodleObject, life: float) -> void:
 	var parent := -1
 	for ti in obj.tracks:
 		var t := tracks[ti]
+		NoodleEvents.sync(t)
 		vm |= t.vmask
 		pm |= t.pmask
 		if t.parent >= 0:
@@ -128,7 +129,7 @@ static func evaluate(obj: NoodleObject, life: float) -> void:
 
 	out_has_parent = parent >= 0
 	if out_has_parent:
-		out_parent = tracks[parent].xform
+		out_parent = NoodleEvents.track_xform(tracks[parent])
 
 
 static func _quat(obj: NoodleObject, p: int, life: float, am: int, pm: int, vm: int) -> Quaternion:

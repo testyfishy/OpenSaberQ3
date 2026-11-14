@@ -34,9 +34,22 @@ var pmask := 0
 var parent := -1
 var is_transform := false
 # The transform this track applies to its children: `local` from its own properties, `xform`
-# with its parents' chained on. Both refreshed by NoodleEvents.update().
+# with its parents' chained on. Both computed when read (NoodleEvents.track_xform).
 var local := Transform3D.IDENTITY
 var xform := Transform3D.IDENTITY
+
+# Lazy evaluation (NoodleEvents.sync): the running AnimateTrack (`tw`) and AssignPathAnimation
+# (`ptw`) tween of each property, null when none (a new one replaces the old, as Heck stops it),
+# sized on this track's first tween. They are stepped only when something reads the track, at
+# most once per tick: `synced`, `local_tick` and `xform_tick` are the NoodleEvents tick the
+# values, `local` and `xform` were last brought up to date in.
+var tw: Array = []
+var ptw: Array = []
+var tw_count := 0
+var busy := false
+var synced := -1
+var local_tick := -1
+var xform_tick := -1
 
 
 func _init(track_name: String = "") -> void:

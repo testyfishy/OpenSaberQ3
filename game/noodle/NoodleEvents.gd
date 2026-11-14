@@ -3,8 +3,11 @@ class_name NoodleEvents
 
 # Heck / Noodle Extensions custom events: AnimateTrack, AssignPathAnimation, AssignTrackParent
 # and AssignPlayerToTrack. Parsed once at load into a stack sorted by beat (spawn order, like
-# MapData's stacks), dispatched by GameStatePlaying when the song reaches them, and advanced
-# every tick by update().
+# MapData's stacks), dispatched by GameStatePlaying when the song reaches them, and evaluated
+# lazily: a track's running animations are stepped only when something reads the track (sync(),
+# track_xform()), at most once per tick, so a map with thousands of tracks and long animations
+# pays only for the tracks its live objects, parents and player actually use. The values read
+# are the same as stepping every animation every tick (see sync() for why).
 #
 # Timing follows Heck's CoroutineEventManager: an event's duration is in beats, converted to
 # seconds with the BPM at the event's own beat; its start is the event's time, not the frame it
@@ -51,16 +54,19 @@ class Anim extends RefCounted:
 
 # Spawn-order stack: the next event is at the back.
 static var stack: Array[Event] = []
-static var _tweens: Array[Anim] = []
-# Path transitions reuse Anim: `points` is unused, the track's path_blend is driven instead.
-static var _path_tweens: Array[Anim] = []
+# Running animations live on their track (NoodleTrack.tw / ptw, one per property). Path
+# transitions reuse Anim: `points` is unused, the track's path_blend is driven instead.
+# Every track that ever had one (each once), for the catch-up before time goes backwards.
+static var _busy: Array[NoodleTrack] = []
+# How many animations are running (value and path), for the bench probe.
+static var _live := 0
+# The update() count and the song time of the last update(): what a read brings a track to.
+static var _tick := 0
+static var _now := -INF
 # The track the player is assigned to (-1 for none) and the transform the game's track root
 # takes so the world is drawn relative to that player (see update()).
 static var player_track := -1
 static var root_xform := Transform3D.IDENTITY
-# The tracks that drive a transform (parents and the player's track), so the per-tick refresh
-# does not walk every track of a map with hundreds of them.
-static var _transform_tracks: Array[NoodleTrack] = []
 # Custom event type -> count, for every type this build does not act on.
 static var ignored := {}
 # How many event properties used point features that are not evaluated (bases, modifiers), and
@@ -75,11 +81,12 @@ const EVENT_KEYS := ["track", "duration", "easing", "repeat"]
 
 static func reset() -> void:
 	stack.clear()
-	_tweens.clear()
-	_path_tweens.clear()
+	_busy.clear()
+	_live = 0
+	_tick += 1
+	_now = -INF
 	player_track = -1
 	root_xform = Transform3D.IDENTITY
-	_transform_tracks.clear()
 	ignored = {}
 	unsupported_points = 0
 	unsupported_targets = 0
@@ -198,6 +205,8 @@ static func dispatch_until(current_beat: float, song_sec: float) -> void:
 
 
 static func dispatch(ev: Event, song_sec: float) -> void:
+	if song_sec < _now:
+		_catch_up(song_sec)
 	var start := Map.beat_to_seconds(ev.beat)
 	var duration := 60.0 * ev.duration / maxf(Map.bpm_at_beat(ev.beat), 1.0)
 	var no_duration := duration <= 0.0 or start + duration * float(ev.repeat + 1) < song_sec
@@ -205,10 +214,14 @@ static func dispatch(ev: Event, song_sec: float) -> void:
 		ANIMATE_TRACK:
 			for ti in ev.tracks:
 				var track := NoodleTracks.tracks[ti]
+				# Bring the track's other animations to the last update first: a read before the
+				# next update sees them there and this one at `song_sec`, as when every animation
+				# was stepped every tick.
+				sync(track)
 				for j in ev.props.size():
 					var p := ev.props[j]
 					var pts := ev.points[j]
-					_stop(_tweens, track, p)
+					_stop(track, p, false)
 					if pts == null:
 						track.clear_value(p)
 					elif no_duration or pts.count() <= 1:
@@ -222,16 +235,18 @@ static func dispatch(ev: Event, song_sec: float) -> void:
 						tw.duration = duration
 						tw.easing = ev.easing
 						tw.repeat = ev.repeat
-						_tweens.append(tw)
+						_start(track, p, tw, false)
 						_step_value(tw, song_sec)
+				track.synced = _tick
 		ASSIGN_PATH_ANIMATION:
 			for ti in ev.tracks:
 				var track := NoodleTracks.tracks[ti]
+				sync(track)
 				track.has_path = true
 				for j in ev.props.size():
 					var p := ev.props[j]
 					var pts := ev.points[j]
-					_stop(_path_tweens, track, p)
+					_stop(track, p, true)
 					track.path_prev[p] = track.path_cur[p]
 					track.set_path(p, pts)
 					track.path_blend[p] = 0.0
@@ -245,8 +260,9 @@ static func dispatch(ev: Event, song_sec: float) -> void:
 						tw.start = start
 						tw.duration = duration
 						tw.easing = ev.easing
-						_path_tweens.append(tw)
+						_start(track, p, tw, true)
 						_step_path(tw, song_sec)
+				track.synced = _tick
 		ASSIGN_TRACK_PARENT:
 			_mark_transform(NoodleTracks.tracks[ev.parent])
 			for ti in ev.tracks:
@@ -257,15 +273,76 @@ static func dispatch(ev: Event, song_sec: float) -> void:
 
 
 static func _mark_transform(t: NoodleTrack) -> void:
-	if not t.is_transform:
-		t.is_transform = true
-		_transform_tracks.append(t)
+	t.is_transform = true
 
 
-static func _stop(list: Array[Anim], track: NoodleTrack, p: int) -> void:
-	for i in range(list.size() - 1, -1, -1):
-		if list[i].track == track and list[i].prop == p:
-			list.remove_at(i)
+static func _start(track: NoodleTrack, p: int, tw: Anim, path: bool) -> void:
+	if track.tw.is_empty():
+		track.tw.resize(NoodleTracks.P_COUNT)
+		track.ptw.resize(NoodleTracks.P_COUNT)
+	if path:
+		track.ptw[p] = tw
+	else:
+		track.tw[p] = tw
+	track.tw_count += 1
+	_live += 1
+	if not track.busy:
+		track.busy = true
+		_busy.append(track)
+
+
+# Stops the running animation of property `p` (Heck: a new animation of a property stops the
+# old one). O(1): there is at most one per track and property.
+static func _stop(track: NoodleTrack, p: int, path: bool) -> void:
+	if track.tw_count == 0:
+		return
+	var list := track.ptw if path else track.tw
+	if list[p] != null:
+		list[p] = null
+		track.tw_count -= 1
+		_live -= 1
+
+
+## Brings `track`'s running animations to the song time of the last update(), once per tick.
+## Every reader of track values calls this first (NoodleAnim.evaluate, track_xform).
+##
+## Why stepping late gives the same values: an animation's value depends only on the time it is
+## stepped at and on how many repeats earlier steps used up. While time only moves forward, one
+## step at the latest time uses up the same repeats, in the same order of float additions, as
+## stepping at every tick on the way. A finished animation leaves its end value whenever it is
+## stepped. A new animation of the same property replaces the old one's value entirely, so the
+## old one's unobserved steps never mattered. Time going backwards (a seek, an audio stall
+## snap) is the one case where the ticks in between matter; _catch_up() steps everything at the
+## old time first, as every tick would have.
+static func sync(track: NoodleTrack) -> void:
+	if track.tw_count == 0 or track.synced == _tick:
+		return
+	track.synced = _tick
+	_step_track(track, _now)
+
+
+static func _step_track(track: NoodleTrack, song_sec: float) -> void:
+	for p in NoodleTracks.P_COUNT:
+		var tw: Anim = track.tw[p]
+		if tw != null and _step_value(tw, song_sec):
+			track.tw[p] = null
+			track.tw_count -= 1
+			_live -= 1
+		tw = track.ptw[p]
+		if tw != null and _step_path(tw, song_sec):
+			track.ptw[p] = null
+			track.tw_count -= 1
+			_live -= 1
+
+
+# Time is about to go back from `_now` to `song_sec`: step every running animation at `_now`
+# first (what the ticks before this one did when every animation was stepped every tick).
+static func _catch_up(song_sec: float) -> void:
+	for t in _busy:
+		if t.tw_count > 0:
+			_step_track(t, _now)
+		t.synced = _tick
+	_now = song_sec
 
 
 # Writes the tween's value for `song_sec`; true when it has finished (no repeats left).
@@ -291,38 +368,51 @@ static func _step_path(tw: Anim, song_sec: float) -> bool:
 	return false
 
 
-## Advances every running animation to `song_sec` and refreshes the transform tracks (parents
-## and the player's track). Allocation-free: tweens are created at dispatch, not here.
+## Moves the song time the tracks are read at to `song_sec` and refreshes the player's track
+## (the world is drawn relative to it). Running animations are stepped when read, not here.
+## Allocation-free: tweens are created at dispatch, not here.
 static func update(song_sec: float) -> void:
-	for i in range(_tweens.size() - 1, -1, -1):
-		if _step_value(_tweens[i], song_sec):
-			_tweens.remove_at(i)
-	for i in range(_path_tweens.size() - 1, -1, -1):
-		if _step_path(_path_tweens[i], song_sec):
-			_path_tweens.remove_at(i)
-	_update_transforms()
-
-
-static func _update_transforms() -> void:
-	var list := NoodleTracks.tracks
-	var v2 := NoodleTracks.is_v2
-	for t in _transform_tracks:
-		t.local = _local_xform(t, v2)
-	# Chain parents (a parent track can itself be a child of another), always from the local
-	# transforms so the order the tracks are visited in does not matter. Depth-limited so a
-	# cycle in a broken map cannot hang the game.
-	for t in _transform_tracks:
-		var world := t.local
-		var up := t.parent
-		var depth := 0
-		while up >= 0 and depth < 8:
-			world = list[up].local * world
-			up = list[up].parent
-			depth += 1
-		t.xform = world
+	if song_sec < _now:
+		_catch_up(song_sec)
+	_tick += 1
+	_now = song_sec
 	root_xform = Transform3D.IDENTITY
 	if player_track >= 0:
-		root_xform = list[player_track].xform.affine_inverse()
+		root_xform = track_xform(NoodleTracks.tracks[player_track]).affine_inverse()
+
+
+## Running animations (value and path), for the bench probe.
+static func live_tweens() -> int:
+	return _live
+
+
+## The transform track `t` applies to its children (parents and the player's track): its own
+## `local` with its parents' chained on, as of the last update(). Computed when read, once per
+## tick per track.
+static func track_xform(t: NoodleTrack) -> Transform3D:
+	if t.xform_tick == _tick:
+		return t.xform
+	# Chain parents (a parent track can itself be a child of another), always from the local
+	# transforms. Depth-limited so a cycle in a broken map cannot hang the game.
+	var list := NoodleTracks.tracks
+	var world := _local_of(t)
+	var up := t.parent
+	var depth := 0
+	while up >= 0 and depth < 8:
+		world = _local_of(list[up]) * world
+		up = list[up].parent
+		depth += 1
+	t.xform = world
+	t.xform_tick = _tick
+	return world
+
+
+static func _local_of(t: NoodleTrack) -> Transform3D:
+	if t.local_tick != _tick:
+		sync(t)
+		t.local = _local_xform(t, NoodleTracks.is_v2)
+		t.local_tick = _tick
+	return t.local
 
 
 ## The transform a parent or player track applies. v3 (TransformController): localPosition or

@@ -42,6 +42,7 @@ func _run() -> void:
 	_fixtures()
 	_events()
 	_fixture_events()
+	_lazy_matches_eager()
 	_apply()
 	await _apply_nodes()
 	_jumps()
@@ -279,8 +280,13 @@ func _events_setup(map_data: Dictionary) -> void:
 	NoodleEvents.load_events(map_data)
 
 
+# A track brought up to date for reading: running animations are stepped when read (lazy), and
+# its transform is computed when read.
 func _tr(track_name: String) -> NoodleTrack:
-	return NoodleTracks.tracks[NoodleTracks.find(track_name)]
+	var t := NoodleTracks.tracks[NoodleTracks.find(track_name)]
+	NoodleEvents.sync(t)
+	NoodleEvents.track_xform(t)
+	return t
 
 
 func _events() -> void:
@@ -316,7 +322,7 @@ func _events() -> void:
 	_near("v3: repeat ends on the last point", _tr("r").flt[T.P_DISSOLVE], 1.0)
 	E.update(3.5)
 	_near3("v3: finished animation holds the end", _tr("a").vec[T.P_OFFSET_POSITION], Vector3(8, 0, 0))
-	_check("v3: finished tweens are dropped", E._tweens.is_empty())
+	_check("v3: finished tweens are dropped", E.live_tweens() == 0)
 	E.dispatch_until(3.0, 1.5)
 	_near3("v3: same beat, last in the file wins", _tr("s").vec[T.P_SCALE], Vector3(4, 4, 4))
 
@@ -410,10 +416,10 @@ func _fixture_events() -> void:
 			NoodleEvents.dispatch_until(beat, sec)
 			NoodleEvents.update(sec)
 			if beat > 200.0 and beat < 201.0:
-				_check("4a2b3: the elevator has risen", NoodleTracks.tracks[helo].xform.origin.y > 50.0, "y=%.1f" % NoodleTracks.tracks[helo].xform.origin.y)
+				_check("4a2b3: the elevator has risen", NoodleEvents.track_xform(NoodleTracks.tracks[helo]).origin.y > 50.0, "y=%.1f" % NoodleEvents.track_xform(NoodleTracks.tracks[helo]).origin.y)
 			var parent := NoodleTracks.tracks[move].parent
 			if parent >= 0:
-				var seen := NoodleEvents.root_xform * NoodleTracks.tracks[parent].xform
+				var seen := NoodleEvents.root_xform * NoodleEvents.track_xform(NoodleTracks.tracks[parent])
 				worst = maxf(worst, seen.origin.length())
 			finite = finite and NoodleEvents.root_xform.origin.is_finite()
 			beat += 0.25
@@ -432,6 +438,7 @@ func _fixture_events() -> void:
 			NoodleEvents.dispatch_until(beat, sec)
 			NoodleEvents.update(sec)
 			for t in NoodleTracks.tracks:
+				NoodleEvents.sync(t)
 				for p in NoodleTracks.P_COUNT:
 					if t.has[p] and not (t.vec[p].is_finite() and is_finite(t.flt[p])):
 						finite = false
@@ -531,7 +538,7 @@ func _apply() -> void:
 	var child := T.get_track(T.index_of("child"))
 	child.parent = T.find("par")
 	par.is_transform = true
-	par.xform = Transform3D(Basis.IDENTITY, Vector3(0, 10, 0))
+	par.set_vec(T.P_LOCAL_POSITION, Vector3(0, 10, 0))
 	var po := _obj({"track": "child"})
 	A.evaluate(po, 0.5)
 	_near3("parent transform applies", A.compose(Vector3(0, 0, -5), Quaternion.IDENTITY, Vector3.ONE).origin, Vector3(0, 10, -5))
@@ -1030,3 +1037,127 @@ func _fakes() -> void:
 	MapTimer.reset()
 	MapSupport.reset()
 	T.reset()
+
+
+# Lazy evaluation reads the same values as stepping everything every tick. Each fixture is run
+# twice over the same uneven ticks (with two jumps back in time): once through the 0.7.30 eager
+# reference (noodle_eager_ref.gd), once through NoodleEvents. At every third tick a few random
+# tracks are read (most tracks stay unread for long stretches, as in the game) and every value,
+# path, transform and the player's root are recorded; the two records must be identical.
+const EagerRef := preload("res://tools/harness/noodle_eager_ref.gd")
+const LIFE := 0.37
+
+
+func _lazy_matches_eager() -> void:
+	for fx: Array in [["1e6ff", "ExpertPlusLawless.dat"], ["4a2b3", "HardStandard.dat"], ["198f3", "ExpertPlus.dat"], ["23f6b", "ExpertPlusStandard.dat"], ["352d8", _first_dat("352d8")]]:
+		var eager := _record_run(fx[0], fx[1], true)
+		if eager.is_empty():
+			continue
+		var lazy := _record_run(fx[0], fx[1], false)
+		var diffs := 0
+		var worst := 0.0
+		if lazy.size() == eager.size():
+			for i in eager.size():
+				if lazy[i] != eager[i]:
+					diffs += 1
+					worst = maxf(worst, absf(lazy[i] - eager[i]))
+		_check("%s: lazy reads equal eager stepping" % fx[0], lazy.size() == eager.size() and diffs == 0,
+			"%d values, %d differ, worst %.6f, sizes %d/%d" % [eager.size(), diffs, worst, eager.size(), lazy.size()])
+	NoodleEvents.reset()
+	EagerRef.reset()
+	MapData.reset()
+	NoodleTracks.reset()
+
+
+func _record_run(folder: String, file: String, eager: bool) -> PackedFloat64Array:
+	var out := PackedFloat64Array()
+	if not _load_fixture(folder, file):
+		return out
+	var events: Array[NoodleEvents.Event] = NoodleEvents.stack.duplicate()
+	NoodleEvents.reset()
+	EagerRef.reset()
+	NoodleEvents.stack = events.duplicate()
+	var tracks := NoodleTracks.tracks
+	# To the last event or the last object, whichever is first (some maps park end markers far
+	# past the song), plus 64 beats so the last animations finish.
+	var end_beat := events[0].beat if not events.is_empty() else 0.0
+	var last_object := 0.0
+	for stack: Array in [MapData.note_stack, MapData.obstacle_stack]:
+		if not stack.is_empty() and stack[0] != null:
+			last_object = maxf(last_object, stack[0].beat)
+	end_beat = minf(end_beat, last_object) + 64.0
+	var steps := RandomNumberGenerator.new()
+	steps.seed = 7
+	var pick := RandomNumberGenerator.new()
+	pick.seed = 11
+	var beat := 0.0
+	var tick := 0
+	var t0 := Time.get_ticks_msec()
+	while beat < end_beat:
+		var sec := Map.beat_to_seconds(beat)
+		if eager:
+			while not NoodleEvents.stack.is_empty() and NoodleEvents.stack[-1].beat <= beat:
+				EagerRef.dispatch(NoodleEvents.stack.pop_back(), sec)
+			EagerRef.update(sec)
+		else:
+			NoodleEvents.dispatch_until(beat, sec)
+			NoodleEvents.update(sec)
+		if tick % 3 == 0 and not tracks.is_empty():
+			var root := EagerRef.root_xform if eager else NoodleEvents.root_xform
+			_append_xform(out, root)
+			for k in 6:
+				_record_track(out, tracks[pick.randi_range(0, tracks.size() - 1)], eager)
+		# Every track right after each jump back (what a missed catch-up would get wrong) and
+		# now and then.
+		if tick == 701 or tick == 1901 or tick % 500 == 250:
+			for t in tracks:
+				_record_track(out, t, eager)
+		tick += 1
+		# Mostly game-like ticks, sometimes long gaps; twice the time jumps back 3 beats.
+		if tick == 700 or tick == 1900:
+			beat -= 3.0
+		else:
+			beat += [0.03, 0.05, 0.12, 0.4][steps.randi_range(0, 3)]
+	print("NOODLE %s %s: %d ticks in %d ms" % [folder, "eager" if eager else "lazy", tick, Time.get_ticks_msec() - t0])
+	return out
+
+
+func _record_track(out: PackedFloat64Array, t: NoodleTrack, eager: bool) -> void:
+	if not eager:
+		NoodleEvents.sync(t)
+	out.append(t.vmask)
+	out.append(t.pmask)
+	for p in NoodleTracks.P_COUNT:
+		out.append(t.has[p])
+		if t.has[p]:
+			match NoodleTracks.KINDS[p]:
+				NoodlePoints.KIND_FLOAT:
+					out.append(t.flt[p])
+				NoodlePoints.KIND_ROTATION:
+					var q := t.quat[p]
+					out.append_array([q.x, q.y, q.z, q.w])
+				_:
+					var v := t.vec[p]
+					out.append_array([v.x, v.y, v.z])
+		out.append(t.path_blend[p])
+		out.append(1.0 if t.path_prev[p] != null else 0.0)
+		if t.path_cur[p] != null:
+			match NoodleTracks.KINDS[p]:
+				NoodlePoints.KIND_FLOAT:
+					out.append(t.path_float(p, LIFE))
+				NoodlePoints.KIND_ROTATION:
+					var q := t.path_quat(p, LIFE)
+					out.append_array([q.x, q.y, q.z, q.w])
+				_:
+					var v := t.path_vec(p, LIFE)
+					out.append_array([v.x, v.y, v.z])
+	out.append(t.parent)
+	if t.is_transform:
+		_append_xform(out, t.xform if eager else NoodleEvents.track_xform(t))
+
+
+func _append_xform(out: PackedFloat64Array, x: Transform3D) -> void:
+	for c in 3:
+		var col := x.basis[c]
+		out.append_array([col.x, col.y, col.z])
+	out.append_array([x.origin.x, x.origin.y, x.origin.z])
