@@ -83,6 +83,7 @@ static func reset() -> void:
 static func begin_load(map_data: Dictionary) -> void:
 	reset()
 	NoodleEvents.reset()
+	NoodleFrame.reset()
 	NoodleAnim.reset()
 	is_v2 = map_data.has("_version")
 	named = NoodlePoints.named_definitions(map_data)

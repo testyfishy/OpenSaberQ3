@@ -239,6 +239,11 @@ func _check_and_update_saber(controller: BeepSaberController, saber: LightSaber)
 			controller.simple_rumble(0.0, 0.1)
 
 
+# The once-per-frame Noodle pass (game/noodle/NoodleFrame.gd): after the frame's last physics
+# tick, before it is drawn. Returns at once on a map without Noodle animation.
+func _process(_delta: float) -> void:
+	NoodleFrame.flush()
+
 func _physics_process(_dt: float) -> void:
 	if debug_info_label.visible:
 		var dbg_text := "FPS: %d\nCube Pool: %d free of %d\nLink Pool: %d free of %d" % [

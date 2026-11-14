@@ -51,6 +51,10 @@ var _fake := false
 var _n_shown := true
 # The last Noodle dissolve written to the mesh (1 = fully drawn); reset to 1 on every spawn.
 var _n_dissolve := 1.0
+# A physics tick moved the wall since the last frame pass (it is on NoodleFrame's list), and
+# whether the pose has been worked out for the current front (see _noodle_frame).
+var _n_ticked := false
+var _n_posed := false
 
 # specs/029/027: depth-based grow. Height is a function of the wall's own z, so every wall at the
 # same depth has the same height and a wall surface stays continuous; the 0.6.5 age-based version
@@ -93,14 +97,19 @@ func _apply_grow() -> void:
 func _physics_process(delta: float) -> void:
 	if Scoreboard.paused: return
 	var t0 := Time.get_ticks_usec() if Cost.enabled else 0
-	_update_inside_fade()
 	var z: float
 	if noodle == null:
+		_update_inside_fade()
 		transform.origin.z += speed * delta
 		z = transform.origin.z
+		_apply_grow()
 	else:
-		z = _noodle_tick(delta)
-	_apply_grow()
+		# A Noodle wall travels every tick (its front decides the despawn); its animated pose is
+		# only drawn once per frame, so it is worked out in the frame pass (_noodle_frame), except
+		# where the collision box must follow every tick (see _needs_tick_pose).
+		z = _noodle_travel(delta)
+		if _needs_tick_pose():
+			_noodle_pose()
 	
 	# remove children that go to far
 	if Cost.enabled:
@@ -111,6 +120,46 @@ func _physics_process(delta: float) -> void:
 		# whole Mesh + Area3D + AnimationPlayer tree at that rate was the single largest cost. The
 		# measured across the map matrix (Gloom: 92.9 fps, 24% dropped; Empires, no walls: 120).
 		_despawn()
+
+# Once per drawn frame, for a Noodle wall that ticked (NoodleFrame.flush): the inside fade, pose,
+# dissolve and grow the frame shows, from the state the frame's last physics tick left. When a
+# frame runs several physics ticks (the catch-up after a slow frame) this is done once, not once
+# per tick.
+func _noodle_frame() -> void:
+	if not _n_ticked:
+		return
+	_n_ticked = false
+	if noodle == null or is_released():
+		return
+	_update_inside_fade()
+	if not _n_posed:
+		_noodle_pose()
+	_apply_grow()
+
+# A hittable wall near the player's head is posed every physics tick: the head-in-wall check
+# (PlayerHead's Area3D against the wall's) runs in the physics step and must see where the wall is
+# that tick. A wall more than POSE_NEAR_M from the head (its centre minus its half diagonal) cannot
+# travel there within one frame (8 catch-up ticks at 120 Hz is 67 ms, 1.7 m at 25 m/s), and a
+# wall that is not hittable has no collision at all, so neither needs its pose before the frame is
+# drawn. The distance uses the last pose and the head in track space, worked out once per tick.
+const POSE_NEAR_M := 4.0
+static var _head_tick := -1
+static var _head_local := Vector3.ZERO
+
+func _needs_tick_pose() -> bool:
+	if not _n_can_hit:
+		return false
+	var tick := Engine.get_physics_frames()
+	if tick != _head_tick:
+		_head_tick = tick
+		if _camera == null or not is_instance_valid(_camera):
+			_camera = get_viewport().get_camera_3d() as Camera3D
+		var parent := get_parent() as Node3D
+		if _camera == null or parent == null:
+			return true
+		_head_local = parent.global_transform.affine_inverse() * _camera.global_position
+	var extent := (transform.basis * (_size * 0.5)).length()
+	return transform.origin.distance_to(_head_local) - extent < POSE_NEAR_M
 
 func hide_wall() -> void:
 	visible = false
@@ -225,9 +274,27 @@ func _noodle_spawn(wall_info: ObstacleInfo, half_sec: float) -> void:
 	_n_span_sec = maxf(2.0 * _n_half_sec + maxf(dur_sec, 0.0), 0.001)
 	_noodle_tick(0.0)
 
+# Travel and pose in one step (spawn, tools). The game ticks _noodle_travel every physics tick and
+# _noodle_pose once per drawn frame (or every tick where collision needs it).
 func _noodle_tick(delta: float) -> float:
+	var z := _noodle_travel(delta)
+	_noodle_pose()
+	return z
+
+# The wall's front moves on exactly as an un-animated wall's would. Returns the back's travel z,
+# which decides the despawn.
+func _noodle_travel(delta: float) -> float:
 	_n_front += speed * delta
 	_n_base.z = _n_front
+	_n_posed = false
+	if not _n_ticked:
+		_n_ticked = true
+		NoodleFrame.walls.append(self)
+	return _n_front - _half_depth
+
+# The animated pose for the current front and song time: transform, hittable, dissolve, shown.
+func _noodle_pose() -> void:
+	_n_posed = true
 	var life := clampf(((_n_front / speed) + _n_half_sec) / _n_span_sec, 0.0, 1.0)
 	NoodleAnim.evaluate(noodle, life)
 	var pivot := NoodleAnim.compose(_n_base, _n_rot, Vector3.ONE)
@@ -246,7 +313,6 @@ func _noodle_tick(delta: float) -> float:
 		var mesh := _wall_mesh()
 		if mesh != null:
 			mesh.visible = shown and not debug_hide_visuals
-	return _n_front - _half_depth
 
 # Noodle dissolve as a fade: an instance uniform that scales the panel's alpha (the wall
 # materials already blend). The bench-only opaque material has no alpha, so a dissolving wall

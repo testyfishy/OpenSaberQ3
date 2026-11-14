@@ -54,6 +54,9 @@ var _n_shown := true
 # objects reset both to 1 on every spawn so a value never carries into the next object.
 var _n_dissolve := 1.0
 var _n_dissolve_arrow := 1.0
+# On NoodleFrame's list for this frame, and posed for the current travel (see _noodle_frame).
+var _n_ticked := false
+var _n_posed := false
 
 var _collision_enabled := false
 var _enable_once := -1  # -1 = not read yet, 0 = legacy, 1 = enable once
@@ -167,7 +170,11 @@ func _physics_process(delta: float) -> void:
 		transform.origin.z += speed * delta
 		z = transform.origin.z
 	else:
-		z = _noodle_tick(delta)
+		# The animated pose is only drawn once per frame (NoodleFrame), but from the hit window on
+		# (and while collision is on) sabers and the miss check need it every tick.
+		z = _noodle_travel(delta)
+		if z > ENABLE_Z or _collision_enabled:
+			_noodle_pose()
 	
 	# enable collisions when cuttable gets close enough to player
 	# (this is also the hit window: see _register_hit)
@@ -215,7 +222,32 @@ func noodle_spawn(info_noodle: NoodleObject, half_sec: float) -> void:
 # as smooth), and its lifetime follows from how far it has come: 0.5 at the hit plane, and the
 # half jump either side. Returns the travel z, which decides the hit window and the miss.
 func _noodle_tick(delta: float) -> float:
+	var z := _noodle_travel(delta)
+	_noodle_pose()
+	return z
+
+# The travel, integrated exactly as an un-animated object's. Returns the travel z.
+func _noodle_travel(delta: float) -> float:
 	_n_base.z += speed * delta
+	_n_posed = false
+	if not _n_ticked:
+		_n_ticked = true
+		NoodleFrame.cubes.append(self)
+	return _n_base.z
+
+# Once per drawn frame for a Noodle object that ticked (NoodleFrame.flush): its pose, unless the
+# tick already worked it out.
+func _noodle_frame() -> void:
+	if not _n_ticked:
+		return
+	_n_ticked = false
+	if noodle == null or is_released() or _n_posed:
+		return
+	_noodle_pose()
+
+# The animated pose for the current travel and song time: transform, hittable, dissolve, shown.
+func _noodle_pose() -> void:
+	_n_posed = true
 	var life := 0.5 + (_n_base.z / speed) / (2.0 * _n_half_sec)
 	NoodleAnim.evaluate(noodle, life)
 	transform = NoodleAnim.compose(_n_base, _n_rot, _n_scale)
@@ -233,7 +265,6 @@ func _noodle_tick(delta: float) -> float:
 	if shown != _n_shown:
 		_n_shown = shown
 		_noodle_set_shown(shown)
-	return _n_base.z
 
 # Hides or shows the object's meshes (dissolve 0). Overridden by notes and bombs.
 @warning_ignore("unused_parameter")

@@ -48,6 +48,7 @@ func _run() -> void:
 	_environment_replacement()
 	_apply()
 	await _apply_nodes()
+	_frame_pass()
 	_jumps()
 	_support()
 	await _zero_scale()
@@ -1348,3 +1349,99 @@ func _environment_replacement() -> void:
 	driver.set_room_hidden(false)
 	_check("room restored, reference gone", not driver.is_room_hidden() and level.visible and level.can_process() and not ref.visible)
 	driver.queue_free()
+
+
+# The once-per-frame Noodle pass (NoodleFrame): an object ticked several times in one frame and
+# posed once at the end of it draws exactly what posing it on every tick draws, and the poses
+# gameplay needs every tick (notes in the hit window, hittable walls near the head) still happen
+# every tick.
+func _frame_pass() -> void:
+	var T := NoodleTracks
+	T.reset()
+	T.active = true
+	NoodleFrame.reset()
+	var anim := {"track": "fp", "animation": {
+		"offsetPosition": [[0, 0, 0, 0], [1, 3, 0, 0.6, "easeInOutQuad"], [0, 1, 0, 1]],
+		"localRotation": [[0, 0, 0, 0], [90, 30, 0, 1]], "dissolve": [[0, 0], [1, 0.5]]}}
+	var dt := 1.0 / 120.0
+	var frames: Array[int] = [1, 3, 8, 2, 8, 1, 5, 8, 8, 4, 8, 8, 2]
+	# Notes: `every` is posed on every tick (0.7.33), `split` goes through the frame pass.
+	var every := Cuttable.new()
+	var split := Cuttable.new()
+	for c: Cuttable in [every, split]:
+		add_child(c)
+		c.set_physics_process(false)
+		c._is_released = false  # as if acquired from its pool: the frame pass skips released nodes
+		c.speed = 10.0
+		c.transform = Transform3D(Basis.IDENTITY, Vector3(0.3, 1.1, -6.0))
+		c.noodle_spawn(_obj(anim), 1.0)
+	var drawn_same := true
+	var window_posed := true
+	var deferred := 0
+	for n in frames:
+		for k in n:
+			every._noodle_tick(dt)
+			var z := split._noodle_travel(dt)
+			if z > Cuttable.ENABLE_Z or split._collision_enabled:
+				split._noodle_pose()
+			elif not split._n_posed:
+				deferred += 1
+			if z > Cuttable.ENABLE_Z and not split._n_posed:
+				window_posed = false
+		NoodleFrame.flush()
+		drawn_same = drawn_same and every.transform == split.transform and every._n_dissolve == split._n_dissolve and every._n_can_hit == split._n_can_hit
+	_check("note: posed once per frame draws what posing every tick draws", drawn_same and deferred > 0, "%d ticks deferred" % deferred)
+	_check("note: posed every tick inside the hit window", window_posed and split._n_base.z > Cuttable.ENABLE_Z, "z=%.2f" % split._n_base.z)
+	every.queue_free()
+	split.queue_free()
+
+	# Walls, uninteractable so nothing forces a per-tick pose.
+	MapTimer.load_bpm_events({}, 120.0)
+	var holder := Node3D.new()
+	add_child(holder)
+	var walls: Array[Wall] = []
+	for i in 2:
+		var w := (load("res://game/Wall/Wall.tscn") as PackedScene).instantiate() as Wall
+		holder.add_child(w)
+		w.set_physics_process(false)
+		w._is_released = false
+		var info := ObstacleInfo.new_v3({"b": 4.0, "d": 1.0, "x": 1, "y": 0, "w": 1, "h": 5,
+			"customData": {"track": "fp", "uninteractable": true, "animation": anim["animation"]}})
+		T._resolve(info.noodle)
+		w.speed = 10.0
+		w._half_depth = 0.5
+		w.transform = Transform3D(Basis.IDENTITY, Vector3(0, 1.5, -10.5))
+		w._noodle_spawn(info, 1.0)
+		walls.append(w)
+	drawn_same = true
+	deferred = 0
+	for n in frames:
+		for k in n:
+			walls[0]._noodle_tick(dt)
+			walls[1]._noodle_travel(dt)
+			if walls[1]._needs_tick_pose():
+				walls[1]._noodle_pose()
+			else:
+				deferred += 1
+		NoodleFrame.flush()
+		drawn_same = drawn_same and walls[0].transform == walls[1].transform and walls[0]._n_dissolve == walls[1]._n_dissolve
+	_check("wall: posed once per frame draws what posing every tick draws", drawn_same and deferred > 0, "%d ticks deferred" % deferred)
+	# A hittable wall is posed every tick only near the head.
+	var cam := Camera3D.new()
+	holder.add_child(cam)
+	cam.current = true
+	cam.position = Vector3(0, 1.7, 0)
+	var w := walls[1]
+	w._n_can_hit = true
+	Wall._head_tick = -1
+	w.transform = Transform3D(Basis.IDENTITY, Vector3(0, 1.5, -30.0))
+	var far := w._needs_tick_pose()
+	w.transform = Transform3D(Basis.IDENTITY, Vector3(0, 1.5, -3.0))
+	var near := w._needs_tick_pose()
+	w._n_can_hit = false
+	var near_unhittable := w._needs_tick_pose()
+	_check("wall: a hittable wall is posed every tick near the head, not far away", near and not far and not near_unhittable)
+	holder.queue_free()
+	NoodleFrame.reset()
+	MapTimer.reset()
+	T.reset()
