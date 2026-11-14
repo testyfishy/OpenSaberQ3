@@ -222,17 +222,21 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	)
 	_apply_material(Vector3(x_size, y_size, z_size), wall_info.custom_color, rim_enabled)
 	
-	transform.origin.x = (0.5 * wall_info.width + wall_info.line_index - 2) * Constants.LANE_DISTANCE
-	transform.origin.y = (0.5 * wall_info.height + wall_info.line_layer) * Constants.LANE_DISTANCE
-	transform.origin.z = -NoteMotion.distance_between(current_beat, wall_info.beat, own_njs) - depth
+	# One transform write: each write notifies the mesh and collision children and moves the
+	# wall's Area3D in the physics server, and this used to write it four times (x, y, z, rotation)
+	# before _noodle_spawn reset the scale and posed it again.
+	var origin := Vector3(
+		(0.5 * wall_info.width + wall_info.line_index - 2) * Constants.LANE_DISTANCE,
+		(0.5 * wall_info.height + wall_info.line_layer) * Constants.LANE_DISTANCE,
+		-NoteMotion.distance_between(current_beat, wall_info.beat, own_njs) - depth)
 	if wall_info.has_custom_position:
-		transform.origin.x += wall_info.custom_position.x
-		transform.origin.y += wall_info.custom_position.y
+		origin.x += wall_info.custom_position.x
+		origin.y += wall_info.custom_position.y
+	var basis := Basis.IDENTITY
 	if wall_info.has_custom_rotation:
 		# World * local, converted to the Godot frame like the animated rotations.
-		quaternion = wall_info.custom_world * wall_info.custom_local
-	else:
-		rotation_degrees = Vector3.ZERO
+		basis = Basis(wall_info.custom_world * wall_info.custom_local)
+	transform = Transform3D(basis, origin)
 	
 	speed = NoteMotion.speed_at(wall_info.beat, own_njs)
 	var half_sec := NoteMotion.half_jump_seconds()
@@ -250,10 +254,15 @@ func _wall_shape() -> CollisionShape3D:
 	return $WallMeshOrientation/WallArea/CollisionShape3D as CollisionShape3D
 
 func _noodle_spawn(wall_info: ObstacleInfo, half_sec: float) -> void:
-	# A pooled wall may carry the last Noodle pose and switches; an ordinary wall's scale is 1.
-	scale = Vector3.ONE
+	# A pooled wall may carry the last Noodle pose and switches; an ordinary wall's scale is 1
+	# (spawn() has just written a transform without scale, so this only writes for tools that
+	# call this directly).
+	if scale != Vector3.ONE:
+		scale = Vector3.ONE
 	_fake = wall_info.fake
-	var can_hit := not _fake
+	# Hittable unless fake or marked uninteractable; an animated `interactable` is applied by the
+	# first pose.
+	var can_hit := not _fake and (wall_info.noodle == null or not wall_info.noodle.uninteractable)
 	if can_hit != _n_can_hit:
 		_wall_shape().set_deferred(&"disabled", not can_hit)
 	_n_can_hit = can_hit
@@ -272,7 +281,11 @@ func _noodle_spawn(wall_info: ObstacleInfo, half_sec: float) -> void:
 	var dur_sec := Map.beat_to_seconds(wall_info.beat + wall_info.duration) - Map.beat_to_seconds(wall_info.beat)
 	# Heck ObstacleUpdateNoodlifier: lifetime over the jump plus the wall's own duration.
 	_n_span_sec = maxf(2.0 * _n_half_sec + maxf(dur_sec, 0.0), 0.001)
-	_noodle_tick(0.0)
+	# The pose waits for the frame pass, like every later one, unless the wall may be hittable
+	# near the head (its interactable animation is not known until it is posed).
+	_noodle_travel(0.0)
+	if _needs_tick_pose():
+		_noodle_pose()
 
 # Travel and pose in one step (spawn, tools). The game ticks _noodle_travel every physics tick and
 # _noodle_pose once per drawn frame (or every tick where collision needs it).

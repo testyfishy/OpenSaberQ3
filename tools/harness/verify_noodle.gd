@@ -850,7 +850,9 @@ func _dissolve() -> void:
 	var gone := ObstacleInfo.new_v3({"b": 4.0, "d": 1.0, "x": 1, "y": 0, "w": 1, "h": 5,
 		"customData": {"track": "f", "animation": {"dissolve": [0]}}})
 	T._resolve(gone.noodle)
+	wall._is_released = false
 	wall.spawn(gone, 0.0)
+	NoodleFrame.flush()  # what is drawn: the frame pass poses it before the frame
 	_check("spawn() at dissolve 0: wall not drawn", not mesh.visible and wall.noodle != null)
 	wall.spawn(plain_info, 0.0)
 	_check("spawn() of a plain wall: drawn at dissolve 1", mesh.visible and wall._n_dissolve == 1.0)
@@ -1443,6 +1445,7 @@ func _frame_pass() -> void:
 	var near_unhittable := w._needs_tick_pose()
 	_check("wall: a hittable wall is posed every tick near the head, not far away", near and not far and not near_unhittable)
 	holder.queue_free()
+	Wall._head_tick = -1
 	NoodleFrame.reset()
 	MapTimer.reset()
 	T.reset()
