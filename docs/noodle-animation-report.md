@@ -515,3 +515,119 @@ What to look at first: 1e6ff "Somewhere Out There" ExpertPlusLawless, which is a
 library. Check that the decorative notes appear, cannot be hit and never break combo, and watch
 its frame time. Then a map with static x/y rotations (any fixture above), to judge the changed
 static turns.
+
+## Noodle CPU cost on 1e6ff (after 0.7.30)
+
+Commits `e112ae2` (probe columns), `016dacb` (lazy evaluation) and `9915127` (evaluators).
+Nothing looks different: every value read is the same as before, bit for bit (checked below),
+and every fixture dump is byte-identical before and after.
+
+**What the cost was, measured before changing anything.** `event_usec` on 1e6ff
+ExpertPlusLawless is almost all `NoodleEvents.update()`: the new `noodle_update_usec` column is
+within 2 % of `event_usec`, so lighting events are not the cost. The new `noodle_tweens` column
+peaks at 516-522 animations running at once in the first 50 s. On the PC, update() took about
+5.8-7.5 ms per physics tick. That is more than half the 8.3 ms a tick has at 120 Hz, so the game
+fell into running 8 ticks per frame (`phys_ticks` 8.0), which is the spiral seen on the headset.
+1e6ff has 16,869 events over 3,349 tracks, but its live notes use only a few of those tracks.
+
+**1. Lazy evaluation** (`016dacb`). A running animation now sits on its track, at most one per
+property, so stopping one is O(1) instead of a scan of every animation. It is stepped only when
+something reads the track (an object's evaluate(), a parent chain, the player's track), at most
+once per tick. Parent and player transforms are also computed only when read. update() now
+only moves the clock and refreshes the player's root.
+
+Why the values are identical: an animation's value depends only on the time it is stepped at
+and on how many repeats earlier steps used up. While time moves forward, one late step uses up
+the same repeats, with the same float additions in the same order. A finished animation leaves
+its end value whenever it is stepped. A new animation of a property overwrites the old one's
+value completely. When time goes backwards (an audio stall snap or a seek), every running
+animation is first stepped at the old time, as the ticks in between would have done.
+
+**2. Per-object cost** (`9915127`). The direction suggested caching objects whose tracks and
+paths hold constant values. The data shows that would rarely hit on 1e6ff: 2,910 of its 2,913
+notes and all 3,530 walls have their own 2-4-point `_animation` paths, which change with
+lifetime every tick. Measured on the PC, a note's tick was about 40-60 us. evaluate() was most
+of that; track syncing was about 2 us, and compose and the transform write about 2-4 us each.
+The evaluate() cost was GDScript call overhead: five calls per animated value. The point
+evaluators are now written out inline (same arithmetic, same order), linear easing skips its
+call, and evaluate() skips rotations, dissolves and interactable when nothing sets them. A
+1e6ff-like note with six animated properties went from about 34 to 18 us per evaluate() in a
+PC microbenchmark.
+
+**3. Ordinary maps.** Nothing changed for them: all of this is behind `NoodleTracks.active`, as
+before.
+
+**Checks** (verify_noodle, now 296):
+- 5 checks run the 0.7.30 eager stepping (kept as `tools/harness/noodle_eager_ref.gd`) and the
+  lazy one over the same uneven ticks. The fixtures are 1e6ff, 4a2b3, 198f3, 23f6b and 352d8,
+  with two jumps back in time. At every third tick a few random tracks are read, and every
+  track is read after each jump and every 500 ticks.
+- Every value, path value, parent, transform and the player's root must be identical. On 1e6ff
+  that is 2.9 million values, 0 different.
+- A deliberately broken catch-up made the 1e6ff check fail (3 values different), so the check
+  can catch that kind of bug.
+- 4 checks compare the inlined evaluators with the 0.7.30 ones, bit for bit, on every point list
+  of four fixtures: 6.1 million values, 0 different.
+
+**PC bench.** 1e6ff ExpertPlusLawless (difficulty_index 1), 110 s from song start, run headless
+with the bot (CPU only). "Before" is 0.7.30 code plus the probe columns; "after" is `9915127`.
+Each was run twice, interleaved. The PC had about 77 % CPU load from unrelated processes
+throughout, so single runs are noisy, and the before runs differ a lot from each other. Each
+cell gives event / cuttable / wall (us per frame); frame p50 / p95 / p99 (ms); physics ticks per
+frame.
+
+| Song time | Before, run 1 | After, run 1 |
+|---|---|---|
+| 0-10 s | 15911 / 1371 / 1851; 7.4 / 99.7 / 109.7; 2.5 | 624 / 233 / 408; 6.9 / 10.1 / 11.1; 0.8 |
+| 10-20 s | 62045 / 5387 / 8160; 93.9 / 103.4 / 111.4; 8.0 | 619 / 256 / 520; 6.9 / 10.4 / 11.1; 0.8 |
+| 20-30 s | 59884 / 5005 / 7686; 88.7 / 104.5 / 118.7; 8.0 | 636 / 260 / 539; 6.9 / 10.4 / 11.1; 0.8 |
+| 30-40 s | 62601 / 5593 / 8819; 94.3 / 103.0 / 108.0; 8.0 | 621 / 258 / 535; 6.9 / 10.3 / 11.2; 0.8 |
+| 40-50 s | 60963 / 5879 / 7987; 92.4 / 102.8 / 104.7; 8.0 | 595 / 299 / 500; 6.9 / 10.3 / 11.1; 0.8 |
+| 50-60 s | 2083 / 1366 / 2156; 7.7 / 17.1 / 32.4; 1.0 | 692 / 991 / 1744; 7.1 / 13.0 / 15.5; 0.9 |
+| 60-70 s | 2102 / 1413 / 3127; 8.1 / 19.6 / 60.1; 1.2 | 662 / 947 / 2204; 7.1 / 13.4 / 16.3; 0.9 |
+| 70-80 s | 1620 / 1442 / 1190; 7.3 / 13.9 / 17.0; 0.9 | 904 / 2019 / 1956; 7.8 / 16.7 / 26.2; 1.0 |
+| 80-90 s | 1801 / 2139 / 993; 7.7 / 15.5 / 18.2; 0.9 | 871 / 2464 / 1558; 7.6 / 15.4 / 58.4; 1.0 |
+| 90-100 s | 3681 / 3801 / 1762; 7.8 / 67.7 / 80.0; 1.6 | 656 / 1449 / 829; 6.9 / 12.5 / 14.0; 0.8 |
+| 100-110 s | 1839 / 537 / 476; 7.0 / 12.3 / 14.9; 0.8 | 642 / 444 / 350; 6.9 / 10.2 / 11.4; 0.8 |
+| whole run | mean 14.2; 7.6 / 87.1 / 99.9 | mean 7.2; 7.0 / 12.0 / 16.4 |
+
+| Song time | Before, run 2 | After, run 2 |
+|---|---|---|
+| 0-10 s | 8204 / 502 / 691; 8.2 / 41.6 / 65.6; 1.7 | 731 / 278 / 475; 6.8 / 10.7 / 11.6; 0.8 |
+| 10-20 s | 12409 / 728 / 1145; 9.5 / 59.4 / 77.2; 2.1 | 669 / 276 / 558; 6.8 / 10.6 / 11.3; 0.8 |
+| 20-30 s | 56267 / 4324 / 6876; 84.5 / 108.3 / 113.6; 7.7 | 709 / 289 / 598; 6.9 / 10.9 / 11.7; 0.8 |
+| 30-40 s | 67335 / 6543 / 10099; 97.1 / 138.8 / 174.6; 8.0 | 761 / 320 / 656; 6.9 / 11.2 / 12.2; 0.8 |
+| 40-50 s | 60869 / 5736 / 7810; 91.2 / 108.2 / 116.6; 8.0 | 764 / 419 / 709; 6.9 / 11.6 / 12.9; 0.8 |
+| 50-60 s | 5056 / 3373 / 5405; 8.7 / 74.0 / 96.3; 2.2 | 1867 / 3037 / 5682; 7.6 / 70.4 / 85.8; 2.0 |
+| 60-70 s | 17668 / 14748 / 32424; 86.0 / 102.7 / 111.6; 8.0 | 8076 / 15954 / 37267; 84.7 / 102.5 / 105.0; 8.0 |
+| 70-80 s | 4250 / 4081 / 3635; 8.4 / 78.3 / 92.8; 1.9 | 5948 / 14882 / 16109; 66.4 / 88.5 / 102.2; 5.7 |
+| 80-90 s | 5547 / 7274 / 3401; 8.5 / 79.4 / 90.4; 2.5 | 6893 / 24326 / 15193; 67.2 / 85.8 / 97.6; 7.4 |
+| 90-100 s | 2197 / 2027 / 933; 7.5 / 17.5 / 41.0; 1.0 | 1785 / 4544 / 2632; 7.8 / 69.4 / 80.8; 1.7 |
+| 100-110 s | 1845 / 530 / 464; 7.0 / 12.1 / 16.7; 0.9 | 859 / 677 / 493; 6.9 / 11.4 / 13.6; 0.8 |
+| whole run | mean 19.0; 8.1 / 87.6 / 107.1 | mean 10.7; 7.0 / 51.5 / 83.9 |
+
+What this shows:
+- **First 50 s** (no fake notes yet), where the headset spent 6.4-11.7 ms per frame in events:
+  event time drops from 8-67 ms per frame to 0.6-0.8 ms, the spiral is gone in both after runs,
+  and frame p99 falls from 65-175 ms to 11-13 ms.
+- **50-90 s**: frame time is now set by the objects. Walls take about 1.5-4 ms per tick and notes
+  about 2 ms; Noodle events are about 0.9 ms. In after run 2 this stretch still fell into the
+  8-ticks-per-frame spiral, at the same per-tick cost as run 1. With the PC loaded as it was,
+  this is where the tick budget runs out.
+- **Whole run**: mean frame 14.2 / 19.0 ms before, 7.2 / 10.7 ms after; p99 100 / 107 ms before,
+  16 / 84 ms after.
+
+**Not verified:**
+- The headset, where the owner's target is about 100 fps. Scaling the headset's 0.7.30 numbers,
+  the 0-50 s event cost should drop from 6.4-11.7 ms per frame to under 1 ms. Whether the
+  50-110 s part, now dominated by walls, holds 100 fps on the Quest is not known.
+- The wall tick: its cost is evaluate() plus the transform write and the dissolve uniform
+  write. It was sped up only through the shared evaluate(); it was not profiled separately.
+
+**Notes:**
+- `e112ae2` does not build on its own: its Playing.gd calls `NoodleEvents.live_tweens()`, which
+  arrives in `016dacb`. Bisect over the pair.
+- `noodle_tweens` now also counts animations that ended while no one read their track, until
+  the track is next read, so after the change it reads 520-710.
+- The bench runs again overwrote `bench.csv`, `bench_meta.txt`, `audio_hits.csv`, `config.ini`,
+  `highscores.json` and `play_count.json` in the PC user data.

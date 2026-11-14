@@ -22,6 +22,10 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
   as in Beat Saber. Turns about z look the same as before.
 - **Noodle fixes**: v4 maps keep the tracks, animation and jumps of their bombs and walls, and an
   arc or chain now finds its head note when that note has its own jump offset.
+- **Heavy Noodle maps cost far less CPU.** A track's animations are now worked out only when a
+  visible object, parent or the player uses that track, and the per-object animation maths is
+  cheaper. On "Somewhere Out There" (1e6ff) the event cost per frame fell from 8-67 ms to under
+  1 ms on the PC. Nothing looks different. Not yet measured on the headset.
 
 ## v0.7.29 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 
