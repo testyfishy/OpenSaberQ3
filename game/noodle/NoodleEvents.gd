@@ -174,6 +174,12 @@ static func load_events(map_data: Dictionary) -> void:
 	_beat_tick.resize(_beats.size())
 	globals.reverse()
 	stack = globals
+	# Parent and player assignments at beat 0 or before set fields only, so they are applied here
+	# at load rather than in the song's first tick (1e6ff has 835 at beat 0, part of a 66 ms
+	# first frame on the headset). Objects spawned in that first tick now see their parents from
+	# their first frame instead of one frame later.
+	while not stack.is_empty() and stack[-1].beat <= 0.0:
+		dispatch(stack.pop_back(), 0.0)
 	if not all_events.is_empty():
 		NoodleTracks.active = true
 

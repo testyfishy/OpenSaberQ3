@@ -81,7 +81,9 @@ static func dispatch(ev: NoodleEvents.Event, song_sec: float) -> void:
 
 
 static func _mark(t: NoodleTrack) -> void:
-	if not t.is_transform:
+	# Its own list, not the track's flag: the loaded map may already have flagged the track (beat 0
+	# parent and player assignments are applied at load since 0.7.35).
+	if not transform_tracks.has(t):
 		t.is_transform = true
 		transform_tracks.append(t)
 
