@@ -14,8 +14,13 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
   - The song's start no longer applies its 835 track links in its first frame; they are set while
     the map loads.
   - Nothing looks different.
+- **No more 30 ms hitches when your sabers touch.** Every saber clash built its spark effect from
+  scratch; on the headset each clash cost about 27 ms, a stutter that also hit maps without
+  Noodle. The sparks are now prepared once at startup and reused, and arcs are ready at map load,
+  so nothing is created during a song. Clashes look the same.
 - **Benchmark runs measure each frame.** The bench file gains per-frame physics and process
-  timings (`step_max_usec`, `step_total_usec`, `step_script_usec`, `proc_span_usec`). The older
+  timings (`step_max_usec`, `step_total_usec`, `step_script_usec`, `proc_span_usec`) and count scenes created during play (`instantiated`,
+  which should be 0). The older
   `physics_usec` and `process_usec` columns are Godot's once-a-second maximum, not the frame's
   own cost.
 

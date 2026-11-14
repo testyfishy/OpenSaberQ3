@@ -993,8 +993,9 @@ game cost.**
 - **On the PC** (loaded by other processes) no 3 s cadence shows. The longest steps are the
   spawn frames (C) and load-induced preemption.
 
-**B, and A with it: a baseline hitch that predates the Noodle work; documented, not pinned
-down.**
+**B, and A with it: a baseline hitch that predates the Noodle work. Pinned down and fixed after
+this section was first written (`2a52a15`); see "The baseline hitch: saber clash sparks" below.
+The text that follows is what was known before the headset runs.**
 - **ODDS&ENDS ExpertPlus** (no Noodle) on 0.7.34 on the Quest, 200 s bot run: mean 8.4 ms, p99
   11.3 ms, max 41.4 ms, 51 frames over 25 ms (delta 31-40 ms, 1-2 ticks). 20 of them are
   clustered at 12.8-17.8 s, about 0.6 s apart. In those frames every script probe is tiny
@@ -1130,8 +1131,9 @@ Also:
   materials, and their look at 0.99 against 1.0 has not been compared in the headset. Unverified.
 - **Bursts of spawns:** 309.3 s of 1e6ff spawns and poses 292 walls in one frame (C above).
 - **Busy stretches** of 1e6ff average about 9.3-9.5 ms on the headset (D above).
-- **About 100 hitch frames of about 30 ms** on the headset, cause unknown (B above). ODDS on 0.7.30
-  also had a 41 ms maximum, so part of this may be baseline.
+- **About 100 hitch frames of about 30 ms** on the headset: fixed in `2a52a15` (saber clash
+  sparks were built on every clash; see "The baseline hitch" below). Not yet confirmed on the
+  headset.
 - **Inside fade:** in a frame of several physics ticks, a wall's fade when the camera is inside it
   can switch one tick early (0.7.34).
 - **Teleported walls:** a hittable wall that an animation moves more than 4 m into the head within
@@ -1142,14 +1144,14 @@ Also:
   absolute numbers vary between runs. Comparisons were run back to back.
 
 **Checks:**
-- verify_noodle: 324 checks, including the eager-vs-lazy reference on five fixtures and a
-  synthetic map, the frame pass, both caches and pool sizing.
+- verify_noodle: 328 checks, including the eager-vs-lazy reference on five fixtures and a
+  synthetic map, the frame pass, both caches, pool sizing and no instancing during play.
 - check.ps1: CHECKS PASS.
 - Every fixture dump is byte-identical with 0.7.33.
 
 **What to look at first in the headset:**
-1. **Hitch frames:** 1e6ff and ODDS full-song bot runs with the 0.7.35 bench, reading the four new
-   columns on the hitch frames (A, B).
+1. **Hitch frames:** ODDS (60 s, bot on) and 1e6ff full-song bot runs with the 0.7.35 bench: the
+   clash hitches should be gone, and `instantiated` should be 0 throughout.
 2. **The spawn burst:** 1e6ff at 5:09 (309 s, the 292-wall spawn) and the busy stretches at 2:00-2:40
    and 3:40-4:20, for frame time.
 3. **Dissolve:** a bomb dissolving in 1e6ff around 3:25 (205 s): no red inside, no visible pop when
@@ -1158,3 +1160,48 @@ Also:
    floor is the right amount of reference.
 5. **Static rotation:** maps with static x/y rotations (any of the fixtures listed under "Noodle
    fixes"), to judge the turns changed in 0.7.30.
+
+## The baseline hitch: saber clash sparks (0.7.35)
+
+Commit `2a52a15`.
+
+**Evidence** (three ODDS ExpertPlus 60 s runs on the Quest with the 0.7.35 frame-split columns):
+- **Bot on** and **bot on with `no_audio`:** 23 hitches each, at the same song times, about
+  0.6 s apart at 12.8-17.8 s and 22.8-27.8 s. Over the hitch frames: delta 35.2 ms,
+  `step_script_usec` 27.6 ms, `step_max_usec` 27.7 ms, `proc_span_usec` 0.8 ms. So each is one
+  physics tick's script callbacks. Audio is not involved.
+- **Bot off:** 0 hitches in 7,170 frames.
+- In every hitch frame `track_children` went up by one, while every per-path probe stayed tiny.
+- Reading: something added a child under the track, only when the bot plays, in a physics
+  callback.
+
+**Cause:** `BeepSaber_Game._check_saber_clash` (a physics callback) sees the two blades touch,
+which the bot's swings do. `_spawn_clash_sparks` then built a new `CPUParticles3D` with its own
+`SphereMesh` and `StandardMaterial3D` under the track, freed again 0.49 s later. Timed with the
+mobile renderer on the PC:
+- The first clash of a launch: 6-39 ms to build, plus up to 405 ms the next frame (shader and
+  pipeline first use).
+- Every later clash: 0.7-1.2 ms to build. The Quest is several times slower, and its 27.6 ms per
+  clash tick fits.
+
+**Fix:**
+- **Spark pool:** six emitters with the same settings, sharing one mesh and one material
+  (`ClashSparks`), built at startup with one burst drawn during the existing warm-up. A clash
+  restarts the next emitter round-robin: 42-71 us on the PC, and no node added. The 90 ms clash
+  cooldown and the 0.34 s burst keep at most six alive. The pool survives a track clear.
+- **Arcs:** the arc pool started empty, so the first arcs of a map were also instantiated
+  mid-song (2 in ODDS). It is now filled at map load from the map's peak of live arcs.
+
+**Measured:**
+- **New column** `instantiated`: scenes created during play (pool growth or arcs), which should
+  be 0.
+- **ODDS** (60 s, bot, PC): 0 for the whole run. It was 2 before the arc prewarm.
+
+**Checks** (verify_noodle, 328):
+- 30 clash bursts after warm-up add no node.
+- The sparks survive a track clear.
+- A presized pool instantiates nothing, and its growth is counted.
+- Arc peaks are sized from head to tail.
+
+**Not verified:** on the headset. The clash sparks look the same by construction (same settings),
+but a burst reuses an emitter instead of a fresh one.
