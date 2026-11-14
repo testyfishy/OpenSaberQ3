@@ -54,6 +54,13 @@ var xform_tick := -1
 # applied (NoodleEvents applies the due ones when the track is read).
 var events: Array = []
 var next_ev := 0
+# Change stamps (NoodleEvents.track_xform): `changed` is the clock value of this track's last value
+# or parent change; `local_at` / `xform_at` the clock when `local` / `xform` were last computed.
+# A transform is only recomputed when something it depends on changed since.
+static var clock := 0
+var changed := 0
+var local_at := -1
+var xform_at := -1
 
 
 func _init(track_name: String = "") -> void:
@@ -71,24 +78,33 @@ func _init(track_name: String = "") -> void:
 		path_blend[i] = 1.0
 
 
+func touch() -> void:
+	clock += 1
+	changed = clock
+
+
 func clear_value(p: int) -> void:
+	touch()
 	has[p] = 0
 	vmask &= ~(1 << p)
 
 
 func set_vec(p: int, v: Vector3) -> void:
+	touch()
 	vec[p] = v
 	has[p] = 1
 	vmask |= 1 << p
 
 
 func set_quat(p: int, q: Quaternion) -> void:
+	touch()
 	quat[p] = q
 	has[p] = 1
 	vmask |= 1 << p
 
 
 func set_float(p: int, f: float) -> void:
+	touch()
 	flt[p] = f
 	has[p] = 1
 	vmask |= 1 << p
