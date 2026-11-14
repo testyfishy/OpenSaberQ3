@@ -397,6 +397,13 @@ Beat Saber has no penalty for turning strict rules off (it has no such option).
 - **`verify_scoring`'s Note Speed check** was updated to the new rule (same distance, twice the
   lead time).
 
+**On the headset** (0.7.38 built from `ef43696`; bot run, ODDS&ENDS ExpertPlus, 60 s, at the
+owner's 80 % Note Speed default):
+
+- `MAP motion: njs=13.6 m/s spawn=2.23 beats ahead, 9.5 m away, fly-in 0.50 s from 109.5 m`.
+  0.7.37 gave 7.6 m at the same setting, so the distance rule works on the device.
+- Mean 8.35 ms, p99 10.4 ms; 114 hits, 0 wrong; 0 script errors.
+
 ## The Note Speed setting (0.7.37 analysis; changed in 0.7.38)
 
 `note_speed_percent` (50-100 %) scales NJS and keeps the map's half jump time
