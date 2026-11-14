@@ -832,7 +832,7 @@ map. MapSupport still lists "Chroma environment" as not drawn.
 choice (a code-built row, like the Labs rows), default on. Settings key `hide_room_custom_env` at
 the end of the schema.
 
-**Checks** (verify_noodle, 312):
+**Checks** (verify_noodle, 311):
 - The removal count on v2 and v3 samples, including geometry and plain tweaks.
 - One short of the threshold, and at it.
 - The hide rule.
