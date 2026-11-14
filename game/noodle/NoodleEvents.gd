@@ -498,22 +498,20 @@ static func live_tweens() -> int:
 
 ## The transform track `t` applies to its children (parents and the player's track): its own
 ## `local` with its parents' chained on, as of the last update(). Computed when read, once per
-## tick per track.
+## tick per track, as its parent's chained transform times its own local one, so a parent chain
+## shared by many tracks (1e6ff: tunnels of tracks four or five deep, one wall each) is built once
+## per tick, not once per child. This multiplies in a different order than chaining every local
+## from the child up (0.7.33 and before), which can change the last bits of the result (accepted
+## by the owner; verify_noodle compares these transforms with a tolerance).
 static func track_xform(t: NoodleTrack) -> Transform3D:
 	if t.xform_tick == _tick:
 		return t.xform
-	# Chain parents (a parent track can itself be a child of another), always from the local
-	# transforms. Depth-limited so a cycle in a broken map cannot hang the game.
-	var list := NoodleTracks.tracks
-	var world := _local_of(t)
-	var up := t.parent
-	var depth := 0
-	while up >= 0 and depth < 8:
-		world = _local_of(list[up]) * world
-		up = list[up].parent
-		depth += 1
-	t.xform = world
+	# Marked first: a cycle in a broken map then reads the previous value instead of recursing.
 	t.xform_tick = _tick
+	var world := _local_of(t)
+	if t.parent >= 0:
+		world = track_xform(NoodleTracks.tracks[t.parent]) * world
+	t.xform = world
 	return world
 
 

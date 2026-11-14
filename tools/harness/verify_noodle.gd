@@ -1057,9 +1057,11 @@ func _lazy_matches_eager() -> void:
 	for fx: Array in runs:
 		var synthetic: Dictionary = fx[2] if fx.size() > 2 else {}
 		var eager := _record_run(fx[0], fx[1], true, synthetic)
+		var eager_xf := _xf_out
 		if eager.is_empty():
 			continue
 		var lazy := _record_run(fx[0], fx[1], false, synthetic)
+		var lazy_xf := _xf_out
 		var diffs := 0
 		var worst := 0.0
 		if lazy.size() == eager.size():
@@ -1069,14 +1071,33 @@ func _lazy_matches_eager() -> void:
 					worst = maxf(worst, absf(lazy[i] - eager[i]))
 		_check("%s: lazy reads equal eager stepping" % fx[0], lazy.size() == eager.size() and diffs == 0,
 			"%d values, %d differ, worst %.6f, sizes %d/%d" % [eager.size(), diffs, worst, eager.size(), lazy.size()])
+		# Parent and player transforms are chained parent-first since 0.7.34 (each parent's chain
+		# shared by its children), a different multiplication order than the reference: equal to
+		# XF_TOL relative (absolute near zero), not bit for bit.
+		var xf_bad := 0
+		var xf_worst := 0.0
+		if lazy_xf.size() == eager_xf.size():
+			for i in eager_xf.size():
+				var err := absf(lazy_xf[i] - eager_xf[i]) / maxf(1.0, absf(eager_xf[i]))
+				xf_worst = maxf(xf_worst, err)
+				if err > XF_TOL:
+					xf_bad += 1
+		_check("%s: transforms within 1e-4 relative of eager" % fx[0], lazy_xf.size() == eager_xf.size() and xf_bad == 0,
+			"%d values, %d outside, worst relative %.9f" % [eager_xf.size(), xf_bad, xf_worst])
 	NoodleEvents.reset()
 	EagerRef.reset()
 	MapData.reset()
 	NoodleTracks.reset()
 
 
+const XF_TOL := 1e-4
+# Transform values of the current _record_run, compared with XF_TOL instead of exactly.
+var _xf_out := PackedFloat64Array()
+
+
 func _record_run(folder: String, file: String, eager: bool, synthetic: Dictionary = {}) -> PackedFloat64Array:
 	var out := PackedFloat64Array()
+	_xf_out = PackedFloat64Array()
 	if not synthetic.is_empty():
 		MapData.reset()
 		_events_setup(synthetic)
@@ -1172,11 +1193,12 @@ func _record_track(out: PackedFloat64Array, t: NoodleTrack, eager: bool) -> void
 		_append_xform(out, t.xform if eager else NoodleEvents.track_xform(t))
 
 
-func _append_xform(out: PackedFloat64Array, x: Transform3D) -> void:
+# Into _xf_out, not `out`: transforms are compared with a tolerance (see _lazy_matches_eager).
+func _append_xform(_out: PackedFloat64Array, x: Transform3D) -> void:
 	for c in 3:
 		var col := x.basis[c]
-		out.append_array([col.x, col.y, col.z])
-	out.append_array([x.origin.x, x.origin.y, x.origin.z])
+		_xf_out.append_array([col.x, col.y, col.z])
+	_xf_out.append_array([x.origin.x, x.origin.y, x.origin.z])
 
 
 # The inlined point evaluators give the 0.7.30 values bit for bit: every property path and
