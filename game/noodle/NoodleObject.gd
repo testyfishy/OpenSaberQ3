@@ -46,6 +46,11 @@ var c_interactable := 1.0
 var c_has_definite := false
 var c_definite := Vector3.ZERO
 var c_parent := -1
+# The float group (dissolve, dissolveArrow, interactable) is cached on its own range and stamp.
+var f_ok := false
+var f_lo := 0.0
+var f_hi := 0.0
+var f_at := 0
 
 
 ## `cd` is the object's customData / _customData dictionary (either spelling is read, as the

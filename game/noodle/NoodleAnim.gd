@@ -57,8 +57,15 @@ static func advance(playback_sec: float, delta: float) -> void:
 
 
 ## Evaluates every animated property of `obj` at lifetime `life`.
+##
+## Two groups of outputs are cached on the object separately: the pose (offset, rotations, scale,
+## definite position) and the floats (dissolve, dissolveArrow, interactable). A group's last
+## outputs are reused while the object's own animations of that group are constant at `life` (before
+## the first point or after the last of each list) and none of its tracks changed a value, path or
+## parent since (NoodleTrack.changed). So a note whose position has settled while its dissolve still
+## fades recomputes only the floats. The parent transform is always fetched fresh. Never cached
+## when a track has a path (paths follow the lifetime).
 static func evaluate(obj: NoodleObject, life: float) -> void:
-	var P := NoodleTracks
 	var tracks := NoodleTracks.tracks
 	# Bit p set: some track of this object has a value (vm) or a path (pm) for property p.
 	var vm := 0
@@ -74,25 +81,40 @@ static func evaluate(obj: NoodleObject, life: float) -> void:
 			parent = t.parent
 		if t.changed > latest:
 			latest = t.changed
-	# Nothing this object depends on changed since its last evaluation: the same outputs.
-	if obj.c_ok and life >= obj.c_lo and life <= obj.c_hi and latest <= obj.c_at and cache_enabled:
+	var pose_hit := cache_enabled and obj.c_ok and life >= obj.c_lo and life <= obj.c_hi and latest <= obj.c_at
+	var float_hit := cache_enabled and obj.f_ok and life >= obj.f_lo and life <= obj.f_hi and latest <= obj.f_at
+	if pose_hit:
 		out_offset = obj.c_offset
 		out_world = obj.c_world
 		out_local = obj.c_local
 		out_scale = obj.c_scale
+		out_has_definite = obj.c_has_definite
+		out_definite = obj.c_definite
+	else:
+		_eval_pose(obj, life, obj.anim_mask, pm, vm)
+	if float_hit:
 		out_dissolve = obj.c_dissolve
 		out_dissolve_arrow = obj.c_dissolve_arrow
 		out_interactable = obj.c_interactable
-		out_has_definite = obj.c_has_definite
-		out_definite = obj.c_definite
-		out_has_parent = obj.c_parent >= 0
-		if out_has_parent:
-			out_parent = NoodleEvents.track_xform(tracks[obj.c_parent])
-		return
-	var am := obj.anim_mask
-	# Properties nothing animates keep their neutral value without a call (identity, 1).
-	var used := am | pm | vm
+	else:
+		_eval_floats(obj, life, obj.anim_mask, pm, vm)
+	out_has_parent = parent >= 0
+	if out_has_parent:
+		out_parent = NoodleEvents.track_xform(tracks[parent])
+	if cache_enabled and pm == 0:
+		if not pose_hit:
+			_store_pose(obj, life)
+		if not float_hit:
+			_store_floats(obj, life)
+	elif cache_enabled:
+		obj.c_ok = false
+		obj.f_ok = false
 
+
+static func _eval_pose(obj: NoodleObject, life: float, am: int, pm: int, vm: int) -> void:
+	var P := NoodleTracks
+	var tracks := NoodleTracks.tracks
+	var used := am | pm | vm
 	# offsetPosition: sum.
 	var off := Vector3.ZERO
 	var bit := 1 << P.P_OFFSET_POSITION
@@ -110,6 +132,7 @@ static func evaluate(obj: NoodleObject, life: float) -> void:
 				off += t.vec[P.P_OFFSET_POSITION]
 	out_offset = off
 
+	# Properties nothing animates keep their neutral value without a call (identity, 1).
 	out_world = Quaternion.IDENTITY
 	if used & (1 << P.P_OFFSET_WORLD_ROTATION):
 		out_world = _quat(obj, P.P_OFFSET_WORLD_ROTATION, life, am, pm, vm)
@@ -134,18 +157,6 @@ static func evaluate(obj: NoodleObject, life: float) -> void:
 				scl *= t.vec[P.P_SCALE]
 	out_scale = scl
 
-	out_dissolve = 1.0
-	if used & (1 << P.P_DISSOLVE):
-		out_dissolve = _float(obj, P.P_DISSOLVE, life, am, pm, vm)
-	out_dissolve_arrow = 1.0
-	if used & (1 << P.P_DISSOLVE_ARROW):
-		out_dissolve_arrow = _float(obj, P.P_DISSOLVE_ARROW, life, am, pm, vm)
-	out_interactable = 1.0
-	if obj.uninteractable:
-		out_interactable = 0.0
-	elif used & (1 << P.P_INTERACTABLE):
-		out_interactable = _float(obj, P.P_INTERACTABLE, life, am, pm, vm)
-
 	# definitePosition: path only, sum.
 	bit = 1 << P.P_DEFINITE_POSITION
 	out_has_definite = false
@@ -161,27 +172,40 @@ static func evaluate(obj: NoodleObject, life: float) -> void:
 		out_has_definite = true
 		out_definite = d
 
-	out_has_parent = parent >= 0
-	if out_has_parent:
-		out_parent = NoodleEvents.track_xform(tracks[parent])
-	_store(obj, life, pm, parent)
+
+static func _eval_floats(obj: NoodleObject, life: float, am: int, pm: int, vm: int) -> void:
+	var P := NoodleTracks
+	var used := am | pm | vm
+	out_dissolve = 1.0
+	if used & (1 << P.P_DISSOLVE):
+		out_dissolve = _float(obj, P.P_DISSOLVE, life, am, pm, vm)
+	out_dissolve_arrow = 1.0
+	if used & (1 << P.P_DISSOLVE_ARROW):
+		out_dissolve_arrow = _float(obj, P.P_DISSOLVE_ARROW, life, am, pm, vm)
+	out_interactable = 1.0
+	if obj.uninteractable:
+		out_interactable = 0.0
+	elif used & (1 << P.P_INTERACTABLE):
+		out_interactable = _float(obj, P.P_INTERACTABLE, life, am, pm, vm)
 
 
-# Keeps this evaluation on the object when its own animations are constant around `life` (before
-# the first point or after the last of every list) and no track path is involved.
-static func _store(obj: NoodleObject, life: float, pm: int, parent: int) -> void:
-	if not cache_enabled:
-		return
-	obj.c_ok = false
-	if pm != 0:
-		return
+const POSE_PROPS: Array[int] = [0, 1, 2, 3, 7]  # offset, world, local rotation, scale, definite
+const FLOAT_PROPS: Array[int] = [4, 5, 6]  # dissolve, dissolveArrow, interactable
+
+
+# Whether the object's own animations of `props` hold their value around `life`, and the lifetime
+# range over which they do (into _range_lo / _range_hi). No allocation: this runs per tick.
+static var _range_lo := 0.0
+static var _range_hi := 0.0
+
+static func _constant_range(obj: NoodleObject, life: float, props: Array[int]) -> bool:
 	var lo := -INF
 	var hi := INF
 	if obj.anim_mask != 0:
-		for pts in obj.anim:
-			if pts == null:
+		for p in props:
+			if not (obj.anim_mask & (1 << p)):
 				continue
-			var times := pts.times
+			var times := obj.anim[p].times
 			var n := times.size()
 			if n <= 1:
 				continue
@@ -190,21 +214,37 @@ static func _store(obj: NoodleObject, life: float, pm: int, parent: int) -> void
 			elif life <= times[0]:
 				hi = minf(hi, times[0])
 			else:
-				return
-	obj.c_ok = true
-	obj.c_lo = lo
-	obj.c_hi = hi
+				return false
+	_range_lo = lo
+	_range_hi = hi
+	return true
+
+
+static func _store_pose(obj: NoodleObject, life: float) -> void:
+	obj.c_ok = _constant_range(obj, life, POSE_PROPS)
+	if not obj.c_ok:
+		return
+	obj.c_lo = _range_lo
+	obj.c_hi = _range_hi
 	obj.c_at = NoodleTrack.clock
 	obj.c_offset = out_offset
 	obj.c_world = out_world
 	obj.c_local = out_local
 	obj.c_scale = out_scale
+	obj.c_has_definite = out_has_definite
+	obj.c_definite = out_definite
+
+
+static func _store_floats(obj: NoodleObject, life: float) -> void:
+	obj.f_ok = _constant_range(obj, life, FLOAT_PROPS)
+	if not obj.f_ok:
+		return
+	obj.f_lo = _range_lo
+	obj.f_hi = _range_hi
+	obj.f_at = NoodleTrack.clock
 	obj.c_dissolve = out_dissolve
 	obj.c_dissolve_arrow = out_dissolve_arrow
 	obj.c_interactable = out_interactable
-	obj.c_has_definite = out_has_definite
-	obj.c_definite = out_definite
-	obj.c_parent = parent
 
 
 static func _quat(obj: NoodleObject, p: int, life: float, am: int, pm: int, vm: int) -> Quaternion:

@@ -1483,7 +1483,7 @@ func _evaluate_cache() -> void:
 			if life < -0.2 or life > 1.2:
 				continue
 			var o := objs[i]
-			var was_ok := o.c_ok and life >= o.c_lo and life <= o.c_hi
+			var was_ok := (o.c_ok and life >= o.c_lo and life <= o.c_hi) or (o.f_ok and life >= o.f_lo and life <= o.f_hi)
 			A.cache_enabled = true
 			A.evaluate(o, life)
 			var cached := [A.out_offset, A.out_world, A.out_local, A.out_scale, A.out_dissolve, A.out_dissolve_arrow,
@@ -1502,7 +1502,7 @@ func _evaluate_cache() -> void:
 				differ += 1
 		beat += 0.05
 	_check("evaluate cache: reused outputs equal a fresh evaluation (1e6ff)", differ == 0 and hits > 0 and compared > 0,
-		"%d evaluations, %d from the cache, %d differ" % [compared, hits, differ])
+		"%d evaluations, %d with a group from the cache, %d differ" % [compared, hits, differ])
 	NoodleEvents.reset()
 	MapData.reset()
 	NoodleTracks.reset()
