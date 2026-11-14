@@ -245,11 +245,11 @@ func cut(saber_type: int, cut_speed: Vector3, cut_plane: Plane, controller: Beep
 	info.speed_len = cut_speed.length()
 	info.note_pos = global_position
 	
-	# Strict rules (Settings.strict_cuts): a cut more than 60 degrees off the arrow, or made
+	# Strict rules (the song's Strict cuts modifier): a cut more than 60 degrees off the arrow, or made
 	# with the blade moving slower than 2 m/s, is a bad cut even with the right saber.
 	var with_the_arrow := is_dot or ignore_cut_angle or base_cut_angle_accuracy >= 0.5
 	var too_slow := cut_speed.length() < STRICT_MIN_SPEED_MPS
-	var rejected := Settings.strict_cuts and (not with_the_arrow or too_slow)
+	var rejected := SongModifiers.strict_cuts and (not with_the_arrow or too_slow)
 	if saber_type == which_saber and not rejected:
 		var cut_angle_accuracy := clampf((base_cut_angle_accuracy-0.7)/0.3, 0.0, 1.0)
 		if is_dot or ignore_cut_angle: #ignore angle if is a dot or any-direction note

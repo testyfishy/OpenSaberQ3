@@ -144,6 +144,11 @@ func load_highscores(map_info: MapInfo, diff_rank: int):
 		new_row.get_child(0).text = "%d." % idx
 		new_row.get_child(1).text = record.player_name
 		new_row.get_child(2).text = str(record.score)
+		# A score set with modifiers that lowered it (SongModifiers, 0.7.38) names its multiplier;
+		# older records carry no multiplier and were set unmodified.
+		var mult := float(record.get("multiplier", 1.0))
+		if mult < 0.9995:
+			new_row.get_child(2).text += " (%s)" % SongModifiers.multiplier_text(mult)
 
 		_highscore_list.add_child(new_row)
 		idx += 1

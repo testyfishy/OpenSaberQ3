@@ -305,7 +305,99 @@ Example map: the owner's ODDS&ENDS Standard Hard. NJS 14, offset -1.714 beats, 1
 
 Nothing above was changed except the fly-in and the spawn pop; the owner decides the rest.
 
-## The Note Speed setting (not changed)
+## Per-song modifiers (0.7.38)
+
+The owner asked for these on the song itself rather than in Settings: you select a song and change
+its defaults (speed, cut strictness), as subjective variables that reduce the score when they make
+the song easier.
+
+**Where they are.**
+
+- **The song panel's Modifiers row.** It sits in the bottom-right strip between Play and Exit,
+  styled like the pinned quick settings; nothing else moved. It has:
+  - Note Speed, a button that cycles 100 → 90 → … → 50 %, the existing choices;
+  - Strict, a toggle;
+  - No Fail, a toggle;
+  - the resulting multiplier, "Score x0.70".
+- **Controller and hand pointers** work through `UI_AudioEngine.attach_button`, like the
+  neighbouring buttons.
+- **Remembered per song,** keyed like the high scores (`MapInfo.get_key()`), in
+  `user://song_modifiers.json` (`game/scripts/SongModifiers.gd`). Each change is saved at once.
+- **Defaults.** A song with no saved choice uses the Settings keys `note_speed_percent` (100),
+  `strict_cuts` (on) and `no_fail` (on), which are unchanged. Their rows are gone from Settings >
+  Gameplay, so there is one place to change them. The schema and `EXPECTED_ORDER` are untouched.
+- **When they apply.** `Map.load_beatmap` activates the song's choices before the motion is
+  configured, so the menu, Repeat and bench runs all play with them. Gameplay reads
+  `SongModifiers.strict_cuts` / `no_fail` / `note_speed_percent` instead of the Settings keys.
+
+**Note Speed keeps the map's spawn distance** (`NoteMotion.configure`):
+
+- The half jump lasts `1 / speed` times as long at `NJS x speed`, so a slower note starts its jump
+  at the same distance and is seen for longer. On ODDS&ENDS Hard at 50 %: NJS 7, still 10.0 m,
+  1.43 s instead of 0.71 s.
+- The fly-in is the same 0.5 s from 100 m beyond the jump start.
+- A Noodle object at the map's NJS stretches the same way; one with its own NJS keeps its own
+  speed and jump.
+
+**Score multiplier** (constants in `SongModifiers`):
+
+| Choice | Effect |
+|---|---|
+| Note Speed | -0.10 per 5 % below 100 % (90 % x0.80, 85 % x0.70, 50 % 1 - 1.00 → floor) |
+| Strict cuts off | -0.15 |
+| No Fail | -0.50, only if energy actually reached zero during the song (`Scoreboard.energy_emptied`) |
+| Combined | 1 + the sum of the penalties, never under x0.10 |
+
+- The modified score is `floor(points x multiplier)`.
+- It is what the HUD shows during the song (the No Fail penalty appears the moment energy runs
+  out) and what the results screen shows. The results screen also names the modifiers on one
+  line, for example "Note Speed 80/100, Strict cuts off: score x0.45".
+- Accuracy and rank are computed from the unmodified points as before. The accuracy ring already
+  says so by showing the unmodified percentage; there was no room on the results panel for a
+  longer note.
+
+**High scores.**
+
+- A record stores the modified `score` (what is ranked and shown) plus `raw_score`, `multiplier`
+  and `modifiers` (speed, strict, no_fail, no_fail_used).
+- Older records have none of these fields and read as unmodified. The file format only gains
+  fields.
+- Moving a record to another profile keeps them.
+- The local high-score rows show "(x0.70)" after a modified score.
+- The BeatLeader tab is read-only and unchanged.
+
+**Beat Saber's own rules, checked:**
+
+| Rule | Source | Our numbers |
+|---|---|---|
+| Multipliers add: `1 + sum(multiplier)`, floored at **0** | Beat Saber 1.8 decompile, `GameplayModifiersModelSO.GetTotalMultiplier` | add; floor **x0.10** (owner's choice) |
+| Modified score = `floor(raw x multiplier)` | 1.8 `ScoreModel.GetModifiedScoreForGameplayModifiersScoreMultiplier` | same |
+| No Fail -0.50, only after energy reached 0 (since 1.13.2) | [BSMG ranking guide](https://bsmg.wiki/ranking-guide.html) (in 1.8 code, No Fail stops energy changing at all) | same |
+| Slower Song (85 %) -0.30 | BSMG ranking guide | 85 % gives -0.30; Beat Saber has only that one slow step, we have 90-50 % in 10 % steps at -0.10 per 5 % |
+| Strict cuts | Beat Saber has no "lenient cuts" modifier (its "Strict Angles" is 0.00 and makes cuts stricter) | ours: -0.15 for turning strict rules off |
+
+Two places where Beat Saber differs, both kept as asked: the floor is 0 in Beat Saber, and
+Beat Saber has no penalty for turning strict rules off (it has no such option).
+
+**Checks.**
+
+- **`tools/harness/verify_modifiers.tscn`** (new, in `check.ps1`): 40 checks, MODIFIERS PASS.
+  - multiplier arithmetic and the floor;
+  - modified-score rounding;
+  - the results line;
+  - per-song persistence round trip, in a file of its own, and the player's file is untouched;
+  - defaults from Settings;
+  - No Fail penalty only after energy ran out;
+  - stored record fields, kept on a profile move;
+  - an old record reads as unmodified;
+  - Note Speed 50 % keeps the 10.0 m and doubles the time;
+  - the Settings rows are gone.
+- **Previews** in `%TEMP%\opensaber_previews\`: `songlist_modifiers.png` (the row at 80 %, strict
+  off: Score x0.45) and `results_modifiers.png`.
+- **`verify_scoring`'s Note Speed check** was updated to the new rule (same distance, twice the
+  lead time).
+
+## The Note Speed setting (0.7.37 analysis; changed in 0.7.38)
 
 `note_speed_percent` (50-100 %) scales NJS and keeps the map's half jump time
 (`NoteMotion.configure`). Slower notes therefore appear closer: at 50 % on the owner's map the jump

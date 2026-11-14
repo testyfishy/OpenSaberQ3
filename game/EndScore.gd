@@ -64,7 +64,9 @@ func _apply_saved_state() -> void:
 	# a hidden Area3D keeps colliding, so the shape has to go too
 	($Switch/Collision as CollisionShape3D).disabled = _buttons_disabled or not _has_saved
 
-func show_score(score: int, record: int, percent: float, song_string: String, is_full_combo: bool, is_new_record: bool) -> void:
+## `modifiers` names the song modifiers that lowered the score ("" when none did); the score is
+## the modified one, the percent and grade come from the unmodified points.
+func show_score(score: int, record: int, percent: float, song_string: String, is_full_combo: bool, is_new_record: bool, modifiers: String = "") -> void:
 	var details_mesh := ($Details as MeshInstance3D).mesh as TextMesh
 	var details_material := ($Details as MeshInstance3D).material_override as StandardMaterial3D
 	var percent_indicator := $PercentIndicator as PercentIndicator
@@ -81,6 +83,8 @@ func show_score(score: int, record: int, percent: float, song_string: String, is
 	fc_label.visible = is_full_combo
 	nr_label.visible = is_new_record
 	name_label.text = song_string
+	if modifiers != "":
+		name_label.text += "\n" + modifiers
 	# Four lines, no spacer: the profile line and its Switch button sit directly underneath,
 	# and the old five-line block ran straight through both of them.
 	details_mesh.text = "Score\n%d\nBest\n%d" % [score,record]

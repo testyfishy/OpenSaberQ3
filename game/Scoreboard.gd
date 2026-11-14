@@ -103,6 +103,12 @@ func _change_energy(amount: float) -> void:
 		failed.emit()
 
 
+## Whether energy reached zero during this song (with No Fail the song goes on; the No Fail
+## score penalty applies only then, see SongModifiers).
+func energy_emptied() -> bool:
+	return _failed
+
+
 ## Energy lost over time, for standing in a wall.
 func drain(amount: float) -> void:
 	_change_energy(-amount)

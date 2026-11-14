@@ -6,7 +6,8 @@ extends Node3D
 #
 #   godot --path . res://tools/harness/screens_preview.tscn -- <output-folder>
 #
-# Writes settings_<tab>.png, results_new_record.png, results_plain.png and the song list in each
+# Writes settings_<tab>.png, results_new_record.png, results_plain.png, results_modifiers.png,
+# songlist_modifiers.png (the song panel's Modifiers row) and the song list in each
 # map filter state (songlist_all.png, songlist_standard.png, songlist_animated.png, and
 # songlist_animated_empty.png for a view with no animated map), then quits. The song list shows
 # this PC's own library; the filter is set directly, so the saved setting is not changed.
@@ -69,10 +70,13 @@ func _results() -> void:
 	for shot in [
 		["results_new_record.png", 123456, 123456, 0.94, true, true],
 		["results_plain.png", 45210, 98765, 0.71, false, false],
+		["results_modifiers.png", 31647, 31647, 0.88, false, true],
 	]:
 		end.show_saved_as("Player") if shot[5] else end.hide_saved()
+		# The third shot: a song played at 80 % with strict cuts off (x0.45 of 70 327 points).
+		var mods := SongModifiers.results_text(80, false, true, false) if str(shot[0]) == "results_modifiers.png" else ""
 		end.show_score(int(shot[1]), int(shot[2]), float(shot[3]),
-			"Song Title Goes Here By Some Artist\nExpertPlus     Map author: A Mapper", bool(shot[4]), bool(shot[5]))
+			"Song Title Goes Here By Some Artist\nExpertPlus     Map author: A Mapper", bool(shot[4]), bool(shot[5]), mods)
 		# show_score animates for about five seconds of real time before everything is in place.
 		await get_tree().create_timer(6.5).timeout
 		await RenderingServer.frame_post_draw
@@ -123,6 +127,17 @@ func _song_list() -> void:
 		await RenderingServer.frame_post_draw
 		viewport.get_texture().get_image().save_png(_out + str(shot[0]))
 		print("SCREENS saved ", shot[0], " maps=", menu._currently_selected_songlist_ref.size())
+	# The song panel's Modifiers row with choices that lower the score, set on screen only (nothing
+	# is saved for the song).
+	menu._mods = {"note_speed_percent": 80, "strict_cuts": false, "no_fail": true}
+	menu._strict_toggle.set_pressed_no_signal(false)
+	menu._no_fail_toggle.set_pressed_no_signal(true)
+	menu._refresh_modifier_row()
+	for f in 6:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	viewport.get_texture().get_image().save_png(_out + "songlist_modifiers.png")
+	print("SCREENS saved songlist_modifiers.png")
 	menu._all_songs.assign(everything)
 	canvas.queue_free()
 	keyboard.queue_free()

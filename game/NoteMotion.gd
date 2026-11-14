@@ -50,26 +50,32 @@ static var _base_bpm := 120.0
 # override one of them (Noodle Extensions, see object_half_jump_beats).
 static var _map_njs := 10.0
 static var _map_offset := 0.0
+# The song's Note Speed (SongModifiers), 1.0 = the map's speed.
+static var _speed_scale := 1.0
 
 
 static func reset() -> void:
 	configured = false
 	_njs = 0.0
 	_half_jump_beats = LEGACY_SPAWN_BEATS
+	_speed_scale = 1.0
 
 
 ## Called when a map is loaded. `difficulty_rank` is Beat Saber's 1/3/5/7/9.
-## `speed_scale` is the player's Note Speed setting (1.0 = the map's speed). The spawn lead is
-## worked out from the map's own speed, so slowing notes down leaves the time a note is visible
-## for unchanged: it starts closer and approaches slower.
+## `speed_scale` is the song's Note Speed modifier (1.0 = the map's speed, SongModifiers). Slower
+## notes keep the map's jump distance (and so its jump start and fly-in, which is 100 m beyond the
+## jump start either way): the half jump lasts 1 / speed_scale times as long, so a slower note is
+## seen from as far away and for longer, as with Beat Saber's longer reaction time. Before 0.7.38
+## the half jump time was kept, so a slower note started closer.
 static func configure(njs: float, start_beat_offset: float, base_bpm: float, difficulty_rank: int = 5,
 		speed_scale: float = 1.0) -> void:
 	_base_bpm = maxf(base_bpm, 1.0)
 	var map_njs := njs if njs > 0.0 else default_njs(difficulty_rank)
 	_map_njs = map_njs
 	_map_offset = start_beat_offset
-	_half_jump_beats = half_jump_beats(map_njs, start_beat_offset, _base_bpm)
-	_njs = map_njs * clampf(speed_scale, 0.25, 1.0)
+	_speed_scale = clampf(speed_scale, 0.25, 1.0)
+	_half_jump_beats = half_jump_beats(map_njs, start_beat_offset, _base_bpm) / _speed_scale
+	_njs = map_njs * _speed_scale
 	configured = true
 
 
@@ -119,11 +125,14 @@ static func spawn_beats() -> float:
 
 
 ## The half jump of an object with its own Noodle `noteJumpMovementSpeed` (0 = the map's) and/or
-## `noteJumpStartBeatOffset` (used when `has_offset`), worked out with the map's rule.
+## `noteJumpStartBeatOffset` (used when `has_offset`), worked out with the map's rule. An object at
+## the map's NJS is slowed by Note Speed like the map, so its half jump stretches the same way; an
+## object with its own NJS keeps that speed and its jump.
 static func object_half_jump_beats(own_njs: float, has_offset: bool, own_offset: float) -> float:
 	var object_njs := own_njs if own_njs > 0.0 else _map_njs
 	var offset := own_offset if has_offset else _map_offset
-	return half_jump_beats(object_njs, offset, _base_bpm)
+	var beats := half_jump_beats(object_njs, offset, _base_bpm)
+	return beats if own_njs > 0.0 else beats / _speed_scale
 
 
 ## The map's half jump in seconds: how long before its beat an object appears (Noodle path

@@ -3,6 +3,8 @@ class_name HighscoreTable
 
 # location to store the highscores on filesystem
 const HIGHSCORES_FILEPATH := "user://highscores.json"
+# Tests point this elsewhere.
+var file_path := HIGHSCORES_FILEPATH
 
 # maximum records to store in each song's record table. once list
 # grows past this length, the lowest ranking score will get bumped.
@@ -53,13 +55,16 @@ func is_new_highscore(map_info: MapInfo, diff_rank: int, score: int) -> bool:
 # user_id : profile id the score belongs to ("" for records without a profile)
 #
 # return : the stored record, or {} when the score did not make the table
-func add_highscore(map_info: MapInfo, diff_rank: int ,player_name: String, score: int, user_id: String = "") -> Dictionary:
+# extra : more fields for the record (SongModifiers.record_fields: raw_score, multiplier,
+#         modifiers). A record without them was set unmodified.
+func add_highscore(map_info: MapInfo, diff_rank: int ,player_name: String, score: int, user_id: String = "", extra: Dictionary = {}) -> Dictionary:
 	# get existing records for song + difficulty
 	var hs_key := map_info.get_key()
 	var records := _get_records(hs_key,diff_rank)
 	
 	# construct a new record and resort the list
 	var record := _make_record(score,player_name,user_id)
+	record.merge(extra)
 	records.append(record)
 	records.sort_custom(_highest_and_oldest)
 	
@@ -92,6 +97,10 @@ func move_record(map_info: MapInfo, diff_rank: int, record: Dictionary, player_n
 	
 	var moved := _make_record(int(record.score),player_name,user_id)
 	moved["epoch_time"] = int(record.epoch_time)
+	# Keep the modifier fields (raw_score, multiplier, modifiers) of a modified record.
+	for k: String in ["raw_score", "multiplier", "modifiers"]:
+		if record.has(k):
+			moved[k] = record[k]
 	records.remove_at(index)
 	records.append(moved)
 	records.sort_custom(_highest_and_oldest)
@@ -153,7 +162,7 @@ func get_player_names_by_recency() -> Array[String]:
 
 # restores highscore table from filesystem
 func load_hs_table() -> void:
-	var file := FileAccess.open(HIGHSCORES_FILEPATH,FileAccess.READ)
+	var file := FileAccess.open(file_path,FileAccess.READ)
 	if file:
 		var text := file.get_as_text()
 		file.close()
@@ -165,7 +174,7 @@ func load_hs_table() -> void:
 
 # saves highscore table to filesystem
 func save_hs_table() -> void:
-	var file := FileAccess.open(HIGHSCORES_FILEPATH,FileAccess.WRITE)
+	var file := FileAccess.open(file_path,FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(_hs_table,"   ",true))
 		file.close()

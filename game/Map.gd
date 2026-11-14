@@ -183,8 +183,10 @@ static func load_beatmap(info: MapInfo, difficulty: DifficultyInfo, map_data: Di
 	MapTimer.load_bpm_events(map_data, info.beats_per_minute, audio_data)
 	bpm_segments = MapTimer.segment_count()
 	# After the tempo map: object distances are worked out in seconds.
+	# The song's own modifiers (chosen on the song panel, SongModifiers) before the motion uses them.
+	SongModifiers.activate(info)
 	NoteMotion.configure(difficulty.note_jump_movement_speed, difficulty.note_jump_start_beat_offset,
-		info.beats_per_minute, difficulty.difficulty_rank, float(Settings.note_speed_percent) / 100.0)
+		info.beats_per_minute, difficulty.difficulty_rank, float(SongModifiers.note_speed_percent) / 100.0)
 	vr.log_info("MAP motion: njs=%.1f m/s spawn=%.2f beats ahead, %.1f m away, fly-in %.2f s from %.1f m" % [
 		NoteMotion.njs(), NoteMotion.spawn_beats(), NoteMotion.spawn_distance(),
 		NoteMotion.fly_in_seconds(), NoteMotion.spawn_distance() + (NoteMotion.MOVE_DISTANCE_M if NoteMotion.fly_in_seconds() > 0.0 else 0.0)])

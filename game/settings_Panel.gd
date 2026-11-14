@@ -215,9 +215,6 @@ func set_controls_from_settings() -> void:
 	spectator_hud_control.button_pressed = Settings.spectator_hud
 	if _hand_tracking_control != null:
 		_hand_tracking_control.set_pressed_no_signal(Settings.hand_tracking_enabled)
-		_strict_cuts_control.set_pressed_no_signal(Settings.strict_cuts)
-		_no_fail_control.set_pressed_no_signal(Settings.no_fail)
-		_note_speed_control.select(maxi(0, NOTE_SPEED_CHOICES.find(Settings.note_speed_percent)))
 	if _hide_room_control != null:
 		_hide_room_control.set_pressed_no_signal(Settings.hide_room_custom_env)
 	_set_up_performance_controls()
@@ -543,7 +540,9 @@ func _on_perf_preset_selected(index: int) -> void:
 # scene file happens to hold them in.
 const TAB_NAMES := ["Gameplay", "Sabers", "Visuals", "Audio", "Performance", "Labs", "Advanced"]
 const TAB_ROWS := {
-	0: ["recenter", "player_height_offset", "NoteSpeedRow", "strict_cuts", "no_fail", "bombs_enabled", "disable_map_color",
+	# Note Speed, Strict cuts and No Fail are per-song modifiers on the song panel since 0.7.38
+	# (SongModifiers); their Settings keys remain the default for a song with no saved choice.
+	0: ["recenter", "player_height_offset", "bombs_enabled", "disable_map_color",
 		"screenshot_trigger"],
 	1: ["SaberTypeRow", "SaberColorsRow", "SaberThicknessRow", "saber_tail", "saber_halo",
 		"left_saber_offset", "right_saber_offset"],
@@ -560,11 +559,7 @@ const ROW_MIN_HEIGHT := 38.0
 var _tab_buttons: Array[Button] = []
 var _tab := 0
 var _hand_tracking_control: CheckButton
-var _strict_cuts_control: CheckButton
-var _no_fail_control: CheckButton
-var _note_speed_control: OptionButton
 var _hide_room_control: CheckButton
-const NOTE_SPEED_CHOICES: Array[int] = [100, 90, 80, 70, 60, 50]
 
 # Labs: features that work but are not finished. They are off by default and say so.
 func _build_labs_rows() -> void:
@@ -585,34 +580,6 @@ func _build_labs_rows() -> void:
 	_hand_tracking_control.button_pressed = Settings.hand_tracking_enabled
 	_hand_tracking_control.toggled.connect(func(pressed: bool) -> void: Settings.hand_tracking_enabled = pressed)
 	vbox.add_child(_hand_tracking_control)
-	_strict_cuts_control = CheckButton.new()
-	_strict_cuts_control.name = "strict_cuts"
-	_strict_cuts_control.text = "Strict Cut Rules"
-	_strict_cuts_control.tooltip_text = "On: a cut against the arrow, or slower than 2 m/s, is a bad cut, as in Beat Saber. Off: any contact with the right saber is a hit."
-	_strict_cuts_control.button_pressed = Settings.strict_cuts
-	_strict_cuts_control.toggled.connect(func(pressed: bool) -> void: Settings.strict_cuts = pressed)
-	vbox.add_child(_strict_cuts_control)
-	_no_fail_control = CheckButton.new()
-	_no_fail_control.name = "no_fail"
-	_no_fail_control.text = "No Fail"
-	_no_fail_control.tooltip_text = "On: songs always play to the end. Off: misses, bad cuts, bombs and walls drain an energy bar, and the song ends if it empties."
-	_no_fail_control.button_pressed = Settings.no_fail
-	_no_fail_control.toggled.connect(func(pressed: bool) -> void: Settings.no_fail = pressed)
-	vbox.add_child(_no_fail_control)
-	var speed_row := HBoxContainer.new()
-	speed_row.name = "NoteSpeedRow"
-	var speed_label := Label.new()
-	speed_label.text = "Note Speed"
-	speed_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_note_speed_control = OptionButton.new()
-	_note_speed_control.tooltip_text = "How fast notes approach. Map speed is what the mapper set. Lower values slow the approach without changing the song, the timing or the score."
-	for percent in NOTE_SPEED_CHOICES:
-		_note_speed_control.add_item("Map speed" if percent == 100 else "%d%% of map speed" % percent)
-	_note_speed_control.select(maxi(0, NOTE_SPEED_CHOICES.find(Settings.note_speed_percent)))
-	_note_speed_control.item_selected.connect(func(index: int) -> void: Settings.note_speed_percent = NOTE_SPEED_CHOICES[index])
-	speed_row.add_child(speed_label)
-	speed_row.add_child(_note_speed_control)
-	vbox.add_child(speed_row)
 
 # Visuals rows built in code (placed by TAB_ROWS). Added after attach_children(), so their sounds
 # are attached here.

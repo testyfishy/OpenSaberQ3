@@ -793,10 +793,12 @@ func _display_points() -> void:
 	# when it actually differs. Same rendered pixels, fewer mesh rebuilds.
 	if bench_hud_disabled:
 		return
-	if Scoreboard.points != _shown_points:
-		_shown_points = Scoreboard.points
+	# The score shown is the modified one (the song's modifiers, SongModifiers), as in Beat Saber.
+	var shown := SongModifiers.modified_score(Scoreboard.points, SongModifiers.current_multiplier())
+	if shown != _shown_points:
+		_shown_points = shown
 		if Cost.enabled: Cost.text_mesh_writes += 1
-		(point_label.mesh as TextMesh).text = "Score: %6d" % Scoreboard.points
+		(point_label.mesh as TextMesh).text = "Score: %6d" % shown
 	if Scoreboard.multiplier != _shown_multiplier or Scoreboard.combo != _shown_combo:
 		_shown_multiplier = Scoreboard.multiplier
 		_shown_combo = Scoreboard.combo
@@ -804,7 +806,7 @@ func _display_points() -> void:
 		(multiplier_label.mesh as TextMesh).text = _multiplier_text()
 	# The energy line only exists when it can end the song; whole percents, so it rewrites the
 	# mesh at most once per cut.
-	var energy_percent := int(round(Scoreboard.energy * 100.0)) if not Settings.no_fail else -1
+	var energy_percent := int(round(Scoreboard.energy * 100.0)) if not SongModifiers.no_fail else -1
 	if energy_percent != _shown_energy:
 		_shown_energy = energy_percent
 		(multiplier_label.mesh as TextMesh).text = _multiplier_text()
@@ -861,12 +863,15 @@ func _recover_audio_after_idle() -> void:
 
 func _multiplier_text() -> String:
 	var text := "x %d\nCombo %d" % [Scoreboard.multiplier, Scoreboard.combo]
-	if not Settings.no_fail:
+	if not SongModifiers.no_fail:
 		text += "\nEnergy %d%%" % int(round(Scoreboard.energy * 100.0))
 	return text
 
 func _on_energy_empty() -> void:
-	if Settings.no_fail or gamestate != gamestate_playing:
+	if SongModifiers.no_fail or gamestate != gamestate_playing:
+		# No Fail: the song goes on; the score multiplier now includes the No Fail penalty.
+		_shown_points = -1
+		_display_points()
 		return
 	_song_failed = true
 	vr.log_info("FAIL: energy empty at %.1f s" % song_player.get_playback_position())
@@ -879,14 +884,18 @@ func _on_song_ended() -> void:
 	right_saber.finish_swings()
 	PlayCount.increment_play_count(Map.current_info,Map.current_difficulty.difficulty_rank)
 	
+	# The modified score (SongModifiers) is what is shown, ranked and stored; accuracy and rank
+	# come from the unmodified points.
+	var emptied := Scoreboard.energy_emptied()
+	var final_score := SongModifiers.modified_score(Scoreboard.points, SongModifiers.current_multiplier())
 	var new_record := false
 	var highscore := Highscores.get_highscore(Map.current_info,Map.current_difficulty.difficulty_rank)
 	if highscore == -1:
 		# no highscores exist yet
-		highscore = Scoreboard.points
-	elif Scoreboard.points > highscore:
+		highscore = final_score
+	elif final_score > highscore:
 		# player's score is the new highscore!
-		highscore = Scoreboard.points
+		highscore = final_score
 		new_record = true
 
 	var current_percent := _hit_rate()
@@ -900,20 +909,21 @@ func _on_song_ended() -> void:
 	# A failed song is not a result: nothing is stored for it.
 	if _song_failed:
 		new_record = false
-	elif Highscores.is_new_highscore(Map.current_info, Map.current_difficulty.difficulty_rank, Scoreboard.points):
+	elif Highscores.is_new_highscore(Map.current_info, Map.current_difficulty.difficulty_rank, final_score):
 		_saved_record = Highscores.add_highscore(
 			Map.current_info,
 			Map.current_difficulty.difficulty_rank,
 			ProfileManager.current_name(),
-			Scoreboard.points,
-			ProfileManager.current_id())
+			final_score,
+			ProfileManager.current_id(),
+			SongModifiers.record_fields(Scoreboard.points, emptied))
 	if _saved_record.is_empty():
 		endscore.hide_saved()
 	else:
 		endscore.show_saved_as(ProfileManager.current_name())
 	
 	endscore.show_score(
-		Scoreboard.points,
+		final_score,
 		highscore,
 		current_percent,
 		("FAILED  -  " if _song_failed else "") + "%s By %s\n%s     Map author: %s" % [
@@ -922,7 +932,8 @@ func _on_song_ended() -> void:
 			Map.current_difficulty.custom_name,
 			Map.current_info.level_author_name],
 		Scoreboard.full_combo,
-		new_record
+		new_record,
+		SongModifiers.results_text(SongModifiers.note_speed_percent, SongModifiers.strict_cuts, SongModifiers.no_fail, emptied)
 	)
 	
 	_transition_game_state(gamestate_mapcomplete)

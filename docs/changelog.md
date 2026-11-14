@@ -4,6 +4,21 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.38 - unreleased (on `audit/fable-5.2`)
+
+- **Modifiers per song.**
+  - Note Speed, Strict cuts and No Fail moved from Settings to the song panel, next to Play,
+    and each song remembers its own choices.
+  - The panel shows the score multiplier they give.
+  - Each 5 % slower costs 0.10 (85 % = x0.70, like Beat Saber's Slower Song). Strict cuts off
+    costs 0.15. No Fail costs 0.50, but only if your energy actually ran out.
+  - The score you see and the high score saved are the multiplied ones, and the results screen
+    names the modifiers. Accuracy and rank are unchanged.
+  - Old high scores count as unmodified.
+- **Slower notes no longer start closer.** At a lower Note Speed notes still appear at the map's
+  distance and you see them for longer (at 50 %, twice as long).
+- Not yet played by a person or run on the headset.
+
 ## v0.7.37 - unreleased (on `audit/fable-5.2`)
 
 - **Notes come from far away, as in Beat Saber.**

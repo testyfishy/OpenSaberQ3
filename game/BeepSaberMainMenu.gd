@@ -370,6 +370,7 @@ func _set_cur_playlist(songs: Array[MapInfo]) -> void:
 		($SongInfo_Label as Label).text = message
 		cover.texture = null
 		diff_menu.clear()
+		_show_modifiers(null)
 		song_preview.stop()
 		return
 	
@@ -476,6 +477,7 @@ func _select_song(id: int) -> void:
 		diff_menu.set_item_tooltip(diff_index, diff.difficulty + " / " + diff.custom_name)
 	
 	_select_difficulty(0)
+	_show_modifiers(map)
 
 # "   Animated: Noodle, Chroma" or "   Mods: Chroma" after the source, "" for a standard map.
 func _mods_note(map: MapInfo) -> String:
@@ -485,6 +487,93 @@ func _mods_note(map: MapInfo) -> String:
 	if LibraryView.is_animated(map):
 		return "   %s: %s" % [LibraryView.ANIMATED_LABEL, names]
 	return "   Mods: %s" % names
+
+# --- per-song modifiers (0.7.38, SongModifiers) ------------------------------------------------
+# A row in the free strip between Play and Exit, styled like the pinned quick settings: Note Speed
+# (cycles 100 % to 50 %), Strict cuts, No Fail, and the score multiplier they give. Each change is
+# saved for the selected song at once. Added after attach_children(), so its sounds are attached
+# here.
+var _mod_row: PanelContainer
+var _speed_button: Button
+var _strict_toggle: CheckButton
+var _no_fail_toggle: CheckButton
+var _mult_label: Label
+var _mods: Dictionary = {}
+
+func _build_modifier_row() -> void:
+	_mod_row = PanelContainer.new()
+	_mod_row.name = "Modifiers"
+	_mod_row.position = Vector2(864, 576)
+	_mod_row.size = Vector2(386, 48)
+	_mod_row.add_theme_stylebox_override("panel", ($QuickSettings as PanelContainer).get_theme_stylebox("panel"))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	_mod_row.add_child(row)
+	_speed_button = Button.new()
+	_speed_button.name = "NoteSpeed"
+	_speed_button.add_theme_font_size_override("font_size", 16)
+	_speed_button.custom_minimum_size = Vector2(108, 0)
+	_speed_button.tooltip_text = "Note Speed for this song. Slower notes keep the map's distance and come at you slower. Each 5 % below the map's speed takes 0.10 off the score multiplier."
+	_speed_button.pressed.connect(_cycle_note_speed)
+	row.add_child(_speed_button)
+	_strict_toggle = CheckButton.new()
+	_strict_toggle.name = "StrictCuts"
+	_strict_toggle.text = "Strict"
+	_strict_toggle.add_theme_font_size_override("font_size", 16)
+	_strict_toggle.tooltip_text = "Strict cuts for this song: against the arrow, or slower than 2 m/s, is a bad cut, as in Beat Saber. Off takes 0.15 off the score multiplier."
+	_strict_toggle.toggled.connect(func(on: bool) -> void: _set_modifier("strict_cuts", on))
+	row.add_child(_strict_toggle)
+	_no_fail_toggle = CheckButton.new()
+	_no_fail_toggle.name = "NoFail"
+	_no_fail_toggle.text = "No Fail"
+	_no_fail_toggle.add_theme_font_size_override("font_size", 16)
+	_no_fail_toggle.tooltip_text = "No Fail for this song: the song always plays to the end. If your energy runs out, 0.50 comes off the score multiplier (as in Beat Saber)."
+	_no_fail_toggle.toggled.connect(func(on: bool) -> void: _set_modifier("no_fail", on))
+	row.add_child(_no_fail_toggle)
+	_mult_label = Label.new()
+	_mult_label.name = "Multiplier"
+	_mult_label.add_theme_font_size_override("font_size", 16)
+	_mult_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_mult_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_mult_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(_mult_label)
+	add_child(_mod_row)
+	for b: BaseButton in [_speed_button, _strict_toggle, _no_fail_toggle]:
+		UI_AudioEngine.attach_button(b)
+	_show_modifiers(_selected_map)
+
+## Shows `map`'s saved modifiers (or the defaults) without saving anything.
+func _show_modifiers(map: MapInfo) -> void:
+	if _mod_row == null:
+		return
+	_mods = SongModifiers.get_for(map)
+	_strict_toggle.set_pressed_no_signal(bool(_mods["strict_cuts"]))
+	_no_fail_toggle.set_pressed_no_signal(bool(_mods["no_fail"]))
+	_refresh_modifier_row()
+	for c: BaseButton in [_speed_button, _strict_toggle, _no_fail_toggle]:
+		c.disabled = map == null
+
+func _refresh_modifier_row() -> void:
+	var speed := int(_mods.get("note_speed_percent", 100))
+	_speed_button.text = "Speed %d%%" % speed
+	var m := SongModifiers.multiplier(speed, bool(_mods.get("strict_cuts", true)), false, false)
+	_mult_label.text = "Score %s" % SongModifiers.multiplier_text(m)
+	_mult_label.tooltip_text = "The score multiplier of these modifiers%s." % (
+		"; %s if your energy runs out with No Fail" % SongModifiers.multiplier_text(
+			SongModifiers.multiplier(speed, bool(_mods.get("strict_cuts", true)), true, true))
+		if bool(_mods.get("no_fail", true)) else "")
+
+func _cycle_note_speed() -> void:
+	var choices := SongModifiers.SPEED_CHOICES
+	var i := choices.find(int(_mods.get("note_speed_percent", 100)))
+	_set_modifier("note_speed_percent", choices[(i + 1) % choices.size()])
+
+func _set_modifier(key: String, value: Variant) -> void:
+	if _selected_map == null:
+		return
+	_mods[key] = value
+	SongModifiers.set_for(_selected_map, _mods)
+	_refresh_modifier_row()
 
 func _on_stop_prev_timeout() -> void:
 	var song_prev_Tween := song_preview.create_tween().set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN_OUT)
@@ -615,6 +704,7 @@ func _ready() -> void:
 		canvas.visibility_changed.connect(_on_canvas_visibility_changed)
 	
 	_build_library_ui()
+	_build_modifier_row()
 	_load_playlists()
 	
 	await keyboard.ready
