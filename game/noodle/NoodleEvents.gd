@@ -307,9 +307,10 @@ static func _stop(track: NoodleTrack, p: int, path: bool) -> void:
 ## Every reader of track values calls this first (NoodleAnim.evaluate, track_xform).
 ##
 ## Why stepping late gives the same values: an animation's value depends only on the time it is
-## stepped at and on how many repeats earlier steps used up. While time only moves forward, one
-## step at the latest time uses up the same repeats, in the same order of float additions, as
-## stepping at every tick on the way. A finished animation leaves its end value whenever it is
+## stepped at and on its start, which each used-up repeat advances by one duration. While time
+## only moves forward, one step at the latest time uses up the same repeats (the test is
+## monotonic in time) and so reaches the same start by the same additions as stepping at every
+## tick on the way, and elapsed time is then taken from that start either way. A finished animation leaves its end value whenever it is
 ## stepped. A new animation of the same property replaces the old one's value entirely, so the
 ## old one's unobserved steps never mattered. Time going backwards (a seek, an audio stall
 ## snap) is the one case where the ticks in between matter; _catch_up() steps everything at the
@@ -351,7 +352,9 @@ static func _step_value(tw: Anim, song_sec: float) -> bool:
 	while elapsed >= tw.duration and tw.repeat > 0:
 		tw.repeat -= 1
 		tw.start += tw.duration
-		elapsed -= tw.duration
+		# From the advanced start, not `elapsed - duration`: a late step and a step every tick
+		# then do the same arithmetic (see sync()).
+		elapsed = song_sec - tw.start
 	var u := clampf(elapsed / tw.duration, 0.0, 1.0)
 	tw.track.set_from_points(tw.prop, tw.points, NoodleEasing.ease(u, tw.easing))
 	return elapsed >= tw.duration

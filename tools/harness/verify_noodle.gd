@@ -1050,11 +1050,14 @@ const LIFE := 0.37
 
 
 func _lazy_matches_eager() -> void:
-	for fx: Array in [["1e6ff", "ExpertPlusLawless.dat"], ["4a2b3", "HardStandard.dat"], ["198f3", "ExpertPlus.dat"], ["23f6b", "ExpertPlusStandard.dat"], ["352d8", _first_dat("352d8")]]:
-		var eager := _record_run(fx[0], fx[1], true)
+	var runs: Array = [["synthetic", "", _lazy_synthetic_map()]]
+	runs.append_array([["1e6ff", "ExpertPlusLawless.dat"], ["4a2b3", "HardStandard.dat"], ["198f3", "ExpertPlus.dat"], ["23f6b", "ExpertPlusStandard.dat"], ["352d8", _first_dat("352d8")]])
+	for fx: Array in runs:
+		var synthetic: Dictionary = fx[2] if fx.size() > 2 else {}
+		var eager := _record_run(fx[0], fx[1], true, synthetic)
 		if eager.is_empty():
 			continue
-		var lazy := _record_run(fx[0], fx[1], false)
+		var lazy := _record_run(fx[0], fx[1], false, synthetic)
 		var diffs := 0
 		var worst := 0.0
 		if lazy.size() == eager.size():
@@ -1070,9 +1073,12 @@ func _lazy_matches_eager() -> void:
 	NoodleTracks.reset()
 
 
-func _record_run(folder: String, file: String, eager: bool) -> PackedFloat64Array:
+func _record_run(folder: String, file: String, eager: bool, synthetic: Dictionary = {}) -> PackedFloat64Array:
 	var out := PackedFloat64Array()
-	if not _load_fixture(folder, file):
+	if not synthetic.is_empty():
+		MapData.reset()
+		_events_setup(synthetic)
+	elif not _load_fixture(folder, file):
 		return out
 	var events: Array[NoodleEvents.Event] = NoodleEvents.stack.duplicate()
 	NoodleEvents.reset()
@@ -1086,7 +1092,12 @@ func _record_run(folder: String, file: String, eager: bool) -> PackedFloat64Arra
 	for stack: Array in [MapData.note_stack, MapData.obstacle_stack]:
 		if not stack.is_empty() and stack[0] != null:
 			last_object = maxf(last_object, stack[0].beat)
-	end_beat = minf(end_beat, last_object) + 64.0
+	if synthetic.is_empty():
+		end_beat = minf(end_beat, last_object)
+	end_beat += 64.0
+	# The synthetic map has few tracks: one read per sample leaves each unread across several
+	# repeats.
+	var reads := 1 if not synthetic.is_empty() else 6
 	var steps := RandomNumberGenerator.new()
 	steps.seed = 7
 	var pick := RandomNumberGenerator.new()
@@ -1106,7 +1117,7 @@ func _record_run(folder: String, file: String, eager: bool) -> PackedFloat64Arra
 		if tick % 3 == 0 and not tracks.is_empty():
 			var root := EagerRef.root_xform if eager else NoodleEvents.root_xform
 			_append_xform(out, root)
-			for k in 6:
+			for k in reads:
 				_record_track(out, tracks[pick.randi_range(0, tracks.size() - 1)], eager)
 		# Every track right after each jump back (what a missed catch-up would get wrong) and
 		# now and then.
@@ -1205,3 +1216,26 @@ func _evaluators_match() -> void:
 	MapData.reset()
 	NoodleTracks.reset()
 	NoodleEvents.reset()
+
+
+# What the fixtures do not cover: repeats wrapping while their track is unread, a value cleared
+# with null, two animations of one property on the same beat, a path blend interrupted by
+# another, events with no duration, and a repeating parent the player rides.
+func _lazy_synthetic_map() -> Dictionary:
+	return {"version": "3.2.0", "customData": {"customEvents": [
+		{"b": 2.0, "t": "AnimateTrack", "d": {"track": "r1", "duration": 1.3, "repeat": 5, "easing": "easeInOutQuad", "dissolve": [[0, 0], [1, 1]]}},
+		{"b": 5.0, "t": "AnimateTrack", "d": {"track": "r2", "duration": 0.7, "repeat": 7, "offsetPosition": [[0, 0, 0, 0], [1, 2, 3, 0.4], [0, 1, 0, 1]]}},
+		{"b": 1.0, "t": "AnimateTrack", "d": {"track": "r3", "duration": 2.1, "repeat": 3, "localRotation": [[0, 0, 0, 0], [90, 45, 10, 1]]}},
+		{"b": 10.0, "t": "AnimateTrack", "d": {"track": "c", "duration": 20.0, "offsetPosition": [[0, 0, 0, 0], [5, 0, 0, 1]]}},
+		{"b": 15.0, "t": "AnimateTrack", "d": {"track": "c", "offsetPosition": null}},
+		{"b": 18.0, "t": "AnimateTrack", "d": {"track": "c", "duration": 0.0, "offsetPosition": [[0, 0, 0, 0], [2, 2, 2, 1]]}},
+		{"b": 30.0, "t": "AnimateTrack", "d": {"track": "ow", "duration": 8.0, "scale": [[1, 1, 1, 0], [3, 3, 3, 1]]}},
+		{"b": 30.0, "t": "AnimateTrack", "d": {"track": "ow", "duration": 4.0, "scale": [[2, 2, 2, 0], [0.5, 1, 2, 1]]}},
+		{"b": 40.0, "t": "AssignPathAnimation", "d": {"track": "pa", "duration": 6.0, "offsetPosition": [[0, 0, 0, 0], [0, 4, 0, 1]]}},
+		{"b": 43.0, "t": "AssignPathAnimation", "d": {"track": "pa", "duration": 4.0, "easing": "easeOutCubic", "offsetPosition": [[1, 0, 0, 0], [0, 0, 2, 1]], "dissolve": [[0, 0], [1, 1]]}},
+		{"b": 60.0, "t": "AssignPathAnimation", "d": {"track": "pa", "offsetPosition": [[0, 0, 0, 0], [3, 3, 3, 1]]}},
+		{"b": 0.0, "t": "AssignTrackParent", "d": {"childrenTracks": ["c", "r2"], "parentTrack": "par"}},
+		{"b": 50.0, "t": "AnimateTrack", "d": {"track": "par", "duration": 3.0, "repeat": 2, "position": [[0, 0, 0, 0], [0, 5, 0, 1]], "rotation": [[0, 0, 0, 0], [0, 90, 0, 1]]}},
+		{"b": 0.0, "t": "AssignPlayerToTrack", "d": {"track": "par"}},
+		{"b": 120.0, "t": "AnimateTrack", "d": {"track": ["r1", "r3"], "duration": 1.0, "repeat": 2, "scale": [[1, 1, 1, 0], [2, 1, 1, 1]]}},
+	]}}
