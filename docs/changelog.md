@@ -4,7 +4,20 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
-## v0.7.35 - unreleased (on `audit/fable-5.2`)
+## v0.7.36 - 2026-11-14 (built from `audit/fable-5.2`, untagged)
+
+- **No more 30 ms hitches when your sabers touch.** Every saber clash built its spark effect from
+  scratch; on the headset each clash cost about 27 ms, a stutter that also hit maps without
+  Noodle. The sparks are now prepared once at startup and reused, and arcs are ready at map load,
+  so nothing is created during a song. Clashes look the same.
+- **Measured on the headset** (bot runs, headset stationary):
+  - ODDS&ENDS ExpertPlus, 60 s: 0 frames over 25 ms (0.7.35: 23, all at saber clashes); mean
+    8.36 ms, p99 10.5 ms.
+  - "Somewhere Out There" ExpertPlusLawless, full song: 4 frames over 25 ms (0.7.34: 133, 0.7.35:
+    137), all when hundreds of walls appear at once; mean 8.80 ms, p99 14.8 ms.
+  - Not yet played by a person.
+
+## v0.7.35 - 2026-11-14 (built from `audit/fable-5.2`, untagged)
 
 - **Smoother heavy Noodle maps.**
   - Animated notes now reuse their position once it has settled and only redo the fade still
@@ -14,15 +27,10 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
   - The song's start no longer applies its 835 track links in its first frame; they are set while
     the map loads.
   - Nothing looks different.
-- **No more 30 ms hitches when your sabers touch.** Every saber clash built its spark effect from
-  scratch; on the headset each clash cost about 27 ms, a stutter that also hit maps without
-  Noodle. The sparks are now prepared once at startup and reused, and arcs are ready at map load,
-  so nothing is created during a song. Clashes look the same.
 - **Benchmark runs measure each frame.** The bench file gains per-frame physics and process
   timings (`step_max_usec`, `step_total_usec`, `step_script_usec`, `proc_span_usec`) and count scenes created during play (`instantiated`,
-  which should be 0). The older
-  `physics_usec` and `process_usec` columns are Godot's once-a-second maximum, not the frame's
-  own cost.
+  which should be 0). The older `physics_usec` and `process_usec` columns are Godot's
+  once-a-second maximum, not the frame's own cost.
 
 ## v0.7.34 - 2026-11-14 (built from `audit/fable-5.2`, untagged)
 

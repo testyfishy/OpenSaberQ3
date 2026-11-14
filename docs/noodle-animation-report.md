@@ -994,8 +994,9 @@ game cost.**
   spawn frames (C) and load-induced preemption.
 
 **B, and A with it: a baseline hitch that predates the Noodle work. Pinned down and fixed after
-this section was first written (`2a52a15`); see "The baseline hitch: saber clash sparks" below.
-The text that follows is what was known before the headset runs.**
+this section was first written (`2a52a15`), and confirmed on the headset with 0.7.36 (ODDS: 23
+frames over 25 ms to 0); see "The baseline hitch: saber clash sparks" below. The text that
+follows is what was known before the headset runs.**
 - **ODDS&ENDS ExpertPlus** (no Noodle) on 0.7.34 on the Quest, 200 s bot run: mean 8.4 ms, p99
   11.3 ms, max 41.4 ms, 51 frames over 25 ms (delta 31-40 ms, 1-2 ticks). 20 of them are
   clustered at 12.8-17.8 s, about 0.6 s apart. In those frames every script probe is tiny
@@ -1032,7 +1033,8 @@ The text that follows is what was known before the headset runs.**
   run with the headset worn (not on the desk under the proximity override), to rule the override
   out.
 
-**C. 292 walls spawning in one frame (309.3 s): cut, not spread.**
+**C. 292 walls spawning in one frame (309.3 s): cut, not spread.** *(0.7.36 headset: still
+open. All four remaining 1e6ff frames over 25 ms are mass wall spawns; see "State at 0.7.36".)*
 - **What was cut:**
   - A wall spawn wrote its transform once instead of six times (0.7.34).
   - Its first pose moved to the frame pass (0.7.34).
@@ -1081,9 +1083,46 @@ The text that follows is what was known before the headset runs.**
 **Final PC bench of 0.7.35** (1e6ff ExpertPlusLawless, full song, bot, headless, with the PC
 loaded by other processes): mean 7.7 ms, p99 16.9 ms, max 52.8 ms.
 
-## State at 0.7.35
+## State at 0.7.36
+
+*(Retitled from "State at 0.7.35"; the 0.7.36 build adds only the clash-spark and arc pooling.)*
 
 A reader can use this section alone. Everything below was checked on a PC unless it says headset.
+
+**Headset verification of 0.7.36** (Quest, bot runs, headset stationary; frames counted after
+song 2 s):
+- **ODDS&ENDS ExpertPlus, 60 s:** 0 frames over 25 ms and 1 over 16 ms in 7,175 (0.7.35: 23 over
+  25 ms, all at the clash-spark times). Mean 8.36 ms, p95 9.8 ms, p99 10.5 ms. The run's reported
+  maximum of 55.5 ms is in the first 2 s.
+- **1e6ff ExpertPlusLawless, full 322 s:** 4 frames over 25 ms in 36,584 (0.7.34: 133; 0.7.35:
+  137), 209 over 16 ms (0.7.34: 325; 0.7.35: 377). Mean 8.80 ms, p95 11.9 ms, p99 14.8 ms. The
+  reported maximum of 54.2 ms is in the first 2 s. The four:
+
+  | Song time | Frame | What happened |
+  |---|---|---|
+  | 309.3 s | 42.9 ms (2 ticks) | 292 walls spawned; spawn 24.3 ms, wall 8.1 ms |
+  | 254.3 s | 27.9 ms | 46 objects spawned |
+  | 206.3 s | 27.4 ms | 43 objects spawned |
+  | 206.2 s | 25.2 ms | 62 objects spawned |
+
+  So every remaining frame over 25 ms is a mass wall spawn (item C).
+- **Earlier headset numbers on 1e6ff**, for the record:
+
+  | Build | Run | Mean | p99 | Max |
+  |---|---|---|---|---|
+  | 0.7.30 | 110 s | 13.4 ms | 33.3 ms | - |
+  | 0.7.31 | 110 s | 8.9 ms | 15.7 ms | - |
+  | 0.7.32 | full song | 8.9 ms | 18.0 ms | 80 ms |
+  | 0.7.33 | full song | 9.0 ms | 17.9 ms | 88 ms |
+  | 0.7.34 | full song | 8.8 ms | 15.8 ms | - |
+  | 0.7.36 | full song | 8.80 ms | 14.8 ms | 54.2 ms, in the first 2 s |
+
+**Still open:**
+- Mass wall spawn frames (item C).
+- The song-start frame (item E): the first 2 s hold the reported maxima.
+- Busy stretches at about 105 fps (9.3-9.5 ms; item D).
+- No human play-test of 0.7.36 has happened yet. All headset numbers are bot runs with the
+  headset stationary.
 
 **What plays.** Noodle Extensions animation on notes, bombs and walls:
 - **Tracks and events:** point definitions, `AnimateTrack`, `AssignPathAnimation`,
@@ -1132,8 +1171,8 @@ Also:
 - **Bursts of spawns:** 309.3 s of 1e6ff spawns and poses 292 walls in one frame (C above).
 - **Busy stretches** of 1e6ff average about 9.3-9.5 ms on the headset (D above).
 - **About 100 hitch frames of about 30 ms** on the headset: fixed in `2a52a15` (saber clash
-  sparks were built on every clash; see "The baseline hitch" below). Not yet confirmed on the
-  headset.
+  sparks were built on every clash; see "The baseline hitch" below). Confirmed on the headset with
+  0.7.36: ODDS 0 frames over 25 ms, 1e6ff 4, all mass wall spawns.
 - **Inside fade:** in a frame of several physics ticks, a wall's fade when the camera is inside it
   can switch one tick early (0.7.34).
 - **Teleported walls:** a hittable wall that an animation moves more than 4 m into the head within
@@ -1203,5 +1242,6 @@ mobile renderer on the PC:
 - A presized pool instantiates nothing, and its growth is counted.
 - Arc peaks are sized from head to tail.
 
-**Not verified:** on the headset. The clash sparks look the same by construction (same settings),
+**Verified on the headset (0.7.36, bot):** ODDS 0 frames over 25 ms in 60 s (23 before). Not
+verified: how the sparks look to a person; they look the same by construction (same settings),
 but a burst reuses an emitter instead of a fresh one.
