@@ -2,12 +2,14 @@ extends RefCounted
 class_name NoodleEvents
 
 # Heck / Noodle Extensions custom events: AnimateTrack, AssignPathAnimation, AssignTrackParent
-# and AssignPlayerToTrack. Parsed once at load into a stack sorted by beat (spawn order, like
-# MapData's stacks), dispatched by GameStatePlaying when the song reaches them, and evaluated
-# lazily: a track's running animations are stepped only when something reads the track (sync(),
-# track_xform()), at most once per tick, so a map with thousands of tracks and long animations
-# pays only for the tracks its live objects, parents and player actually use. The values read
-# are the same as stepping every animation every tick (see sync() for why).
+# and AssignPlayerToTrack. Parsed once at load and sorted by beat. Parent and player events are
+# dispatched by GameStatePlaying when the song reaches them. Everything that sets a track's own
+# values (AnimateTrack, AssignPathAnimation) is lazy: the song reaching an event's beat only
+# records when it did (one write per distinct beat, however many events share it), and the
+# track applies its due events and steps its running animations when something reads it
+# (sync(), track_xform()), at most once per tick. A map with thousands of tracks, events and
+# long animations pays only for the tracks its live objects, parents and player actually use.
+# The values read are the same as dispatching and stepping everything every tick (see sync()).
 #
 # Timing follows Heck's CoroutineEventManager: an event's duration is in beats, converted to
 # seconds with the BPM at the event's own beat; its start is the event's time, not the frame it
@@ -40,6 +42,8 @@ class Event extends RefCounted:
 	var easing := NoodleEasing.LINEAR
 	var repeat := 0
 	var parent := -1
+	# Index of this event's beat in the distinct beats (NoodleEvents._beats).
+	var slot := 0
 
 
 class Anim extends RefCounted:
@@ -50,10 +54,25 @@ class Anim extends RefCounted:
 	var duration := 1.0
 	var easing := NoodleEasing.LINEAR
 	var repeat := 0
+	# The update() count when its event was reached: an animation is stepped at a read only once
+	# an update() has passed since then (until then it holds the value at its dispatch time).
+	var born := 0
 
 
-# Spawn-order stack: the next event is at the back.
+# Every parsed event, in beat order (file order within a beat).
+static var all_events: Array[Event] = []
+# Parent and player events, dispatched as the song reaches them: spawn-order stack, the next
+# event at the back.
 static var stack: Array[Event] = []
+# The distinct beats of all events (ascending), the song time and update() count of the tick
+# that reached each, how many events lie at or before each, and how many have been reached.
+static var _beats := PackedFloat64Array()
+static var _beat_sec := PackedFloat64Array()
+static var _beat_tick := PackedInt64Array()
+static var _beat_events := PackedInt32Array()
+static var _due := 0
+# The tracks with events of their own (NoodleTrack.events), for the catch-up.
+static var _event_tracks: Array[NoodleTrack] = []
 # Running animations live on their track (NoodleTrack.tw / ptw, one per property). Path
 # transitions reuse Anim: `points` is unused, the track's path_blend is driven instead.
 # Every track that ever had one (each once), for the catch-up before time goes backwards.
@@ -80,7 +99,17 @@ const EVENT_KEYS := ["track", "duration", "easing", "repeat"]
 
 
 static func reset() -> void:
+	for t in _event_tracks:
+		t.events.clear()
+		t.next_ev = 0
+	_event_tracks.clear()
+	all_events.clear()
 	stack.clear()
+	_beats.clear()
+	_beat_sec.clear()
+	_beat_tick.clear()
+	_beat_events.clear()
+	_due = 0
 	_busy.clear()
 	_live = 0
 	_tick += 1
@@ -118,10 +147,34 @@ static func load_events(map_data: Dictionary) -> void:
 	# file index breaks ties.
 	events.sort_custom(func(a: Event, b: Event) -> bool:
 		return a.beat < b.beat or (a.beat == b.beat and a.order < b.order))
-	events.reverse()
-	stack = events
-	if not stack.is_empty():
+	all_events = events
+	var globals: Array[Event] = []
+	for i in events.size():
+		var ev := events[i]
+		if _beats.is_empty() or ev.beat != _beats[_beats.size() - 1]:
+			_beats.append(ev.beat)
+			_beat_events.append(0)
+		ev.slot = _beats.size() - 1
+		_beat_events[ev.slot] = i + 1
+		if ev.type == ANIMATE_TRACK or ev.type == ASSIGN_PATH_ANIMATION:
+			for ti in ev.tracks:
+				var t := NoodleTracks.tracks[ti]
+				if t.events.is_empty():
+					_event_tracks.append(t)
+				t.events.append(ev)
+		else:
+			globals.append(ev)
+	_beat_sec.resize(_beats.size())
+	_beat_tick.resize(_beats.size())
+	globals.reverse()
+	stack = globals
+	if not all_events.is_empty():
 		NoodleTracks.active = true
+
+
+## How many events the song has reached so far (all kinds).
+static func events_due() -> int:
+	return _beat_events[_due - 1] if _due > 0 else 0
 
 
 static func _parse(e: Dictionary, v2: bool) -> Event:
@@ -198,71 +251,30 @@ static func _num(v: Variant) -> float:
 	return float(v) if v is float or v is int else 0.0
 
 
-## Starts every event whose beat has been reached. Called once per tick before update().
+## Marks every event whose beat has been reached and dispatches the parent and player events
+## among them. Called once per tick before update(). The track events are applied when their
+## track is read (sync()), at the time recorded here.
 static func dispatch_until(current_beat: float, song_sec: float) -> void:
+	if song_sec < _now:
+		_catch_up(song_sec)
+	while _due < _beats.size() and _beats[_due] <= current_beat:
+		_beat_sec[_due] = song_sec
+		_beat_tick[_due] = _tick
+		_due += 1
 	while not stack.is_empty() and stack[-1].beat <= current_beat:
 		dispatch(stack.pop_back(), song_sec)
 
 
+## Applies one event now, at `song_sec` (parent and player events, and tools).
 static func dispatch(ev: Event, song_sec: float) -> void:
 	if song_sec < _now:
 		_catch_up(song_sec)
-	var start := Map.beat_to_seconds(ev.beat)
-	var duration := 60.0 * ev.duration / maxf(Map.bpm_at_beat(ev.beat), 1.0)
-	var no_duration := duration <= 0.0 or start + duration * float(ev.repeat + 1) < song_sec
 	match ev.type:
-		ANIMATE_TRACK:
+		ANIMATE_TRACK, ASSIGN_PATH_ANIMATION:
 			for ti in ev.tracks:
 				var track := NoodleTracks.tracks[ti]
-				# Bring the track's other animations to the last update first: a read before the
-				# next update sees them there and this one at `song_sec`, as when every animation
-				# was stepped every tick.
-				sync(track)
-				for j in ev.props.size():
-					var p := ev.props[j]
-					var pts := ev.points[j]
-					_stop(track, p, false)
-					if pts == null:
-						track.clear_value(p)
-					elif no_duration or pts.count() <= 1:
-						track.set_from_points(p, pts, 1.0)
-					else:
-						var tw := Anim.new()
-						tw.track = track
-						tw.prop = p
-						tw.points = pts
-						tw.start = start
-						tw.duration = duration
-						tw.easing = ev.easing
-						tw.repeat = ev.repeat
-						_start(track, p, tw, false)
-						_step_value(tw, song_sec)
-				track.synced = _tick
-		ASSIGN_PATH_ANIMATION:
-			for ti in ev.tracks:
-				var track := NoodleTracks.tracks[ti]
-				sync(track)
-				track.has_path = true
-				for j in ev.props.size():
-					var p := ev.props[j]
-					var pts := ev.points[j]
-					_stop(track, p, true)
-					track.path_prev[p] = track.path_cur[p]
-					track.set_path(p, pts)
-					track.path_blend[p] = 0.0
-					if pts == null or no_duration:
-						track.path_prev[p] = null
-						track.path_blend[p] = 1.0
-					else:
-						var tw := Anim.new()
-						tw.track = track
-						tw.prop = p
-						tw.start = start
-						tw.duration = duration
-						tw.easing = ev.easing
-						_start(track, p, tw, true)
-						_step_path(tw, song_sec)
-				track.synced = _tick
+				_apply_pending(track)
+				_apply(ev, track, song_sec, _tick)
 		ASSIGN_TRACK_PARENT:
 			_mark_transform(NoodleTracks.tracks[ev.parent])
 			for ti in ev.tracks:
@@ -270,6 +282,69 @@ static func dispatch(ev: Event, song_sec: float) -> void:
 		ASSIGN_PLAYER_TO_TRACK:
 			player_track = ev.tracks[0]
 			_mark_transform(NoodleTracks.tracks[player_track])
+
+
+# Applies the track's events the song has reached and that are not applied yet, each at the
+# song time of the tick that reached it.
+static func _apply_pending(track: NoodleTrack) -> void:
+	var list := track.events
+	while track.next_ev < list.size():
+		var ev: Event = list[track.next_ev]
+		if ev.slot >= _due:
+			return
+		_apply(ev, track, _beat_sec[ev.slot], int(_beat_tick[ev.slot]))
+		track.next_ev += 1
+
+
+# What dispatching `ev` at `song_sec` does to one of its tracks. `born`: the update() count when
+# the event was reached.
+static func _apply(ev: Event, track: NoodleTrack, song_sec: float, born: int) -> void:
+	var start := Map.beat_to_seconds(ev.beat)
+	var duration := 60.0 * ev.duration / maxf(Map.bpm_at_beat(ev.beat), 1.0)
+	var no_duration := duration <= 0.0 or start + duration * float(ev.repeat + 1) < song_sec
+	if ev.type == ANIMATE_TRACK:
+		for j in ev.props.size():
+			var p := ev.props[j]
+			var pts := ev.points[j]
+			_stop(track, p, false)
+			if pts == null:
+				track.clear_value(p)
+			elif no_duration or pts.count() <= 1:
+				track.set_from_points(p, pts, 1.0)
+			else:
+				var tw := Anim.new()
+				tw.track = track
+				tw.prop = p
+				tw.points = pts
+				tw.start = start
+				tw.duration = duration
+				tw.easing = ev.easing
+				tw.repeat = ev.repeat
+				tw.born = born
+				_start(track, p, tw, false)
+				_step_value(tw, song_sec)
+	else:
+		track.has_path = true
+		for j in ev.props.size():
+			var p := ev.props[j]
+			var pts := ev.points[j]
+			_stop(track, p, true)
+			track.path_prev[p] = track.path_cur[p]
+			track.set_path(p, pts)
+			track.path_blend[p] = 0.0
+			if pts == null or no_duration:
+				track.path_prev[p] = null
+				track.path_blend[p] = 1.0
+			else:
+				var tw := Anim.new()
+				tw.track = track
+				tw.prop = p
+				tw.start = start
+				tw.duration = duration
+				tw.easing = ev.easing
+				tw.born = born
+				_start(track, p, tw, true)
+				_step_path(tw, song_sec)
 
 
 static func _mark_transform(t: NoodleTrack) -> void:
@@ -315,22 +390,30 @@ static func _stop(track: NoodleTrack, p: int, path: bool) -> void:
 ## old one's unobserved steps never mattered. Time going backwards (a seek, an audio stall
 ## snap) is the one case where the ticks in between matter; _catch_up() steps everything at the
 ## old time first, as every tick would have.
+##
+## Events are applied late the same way: an event changes only its own properties of its own
+## track, so applying it at the read, at the song time of the tick that reached it, gives what
+## dispatching it then did. Its animation was stepped by every update() after that tick, so it is
+## stepped at the read unless no update() has passed since (`born`); the others likewise.
 static func sync(track: NoodleTrack) -> void:
-	if track.tw_count == 0 or track.synced == _tick:
+	if track.next_ev < track.events.size() and (track.events[track.next_ev] as Event).slot < _due:
+		_apply_pending(track)
+	if track.synced == _tick:
 		return
 	track.synced = _tick
-	_step_track(track, _now)
+	if track.tw_count > 0:
+		_step_track(track, _now)
 
 
 static func _step_track(track: NoodleTrack, song_sec: float) -> void:
 	for p in NoodleTracks.P_COUNT:
 		var tw: Anim = track.tw[p]
-		if tw != null and _step_value(tw, song_sec):
+		if tw != null and tw.born != _tick and _step_value(tw, song_sec):
 			track.tw[p] = null
 			track.tw_count -= 1
 			_live -= 1
 		tw = track.ptw[p]
-		if tw != null and _step_path(tw, song_sec):
+		if tw != null and tw.born != _tick and _step_path(tw, song_sec):
 			track.ptw[p] = null
 			track.tw_count -= 1
 			_live -= 1
@@ -339,6 +422,8 @@ static func _step_track(track: NoodleTrack, song_sec: float) -> void:
 # Time is about to go back from `_now` to `song_sec`: step every running animation at `_now`
 # first (what the ticks before this one did when every animation was stepped every tick).
 static func _catch_up(song_sec: float) -> void:
+	for t in _event_tracks:
+		_apply_pending(t)
 	for t in _busy:
 		if t.tw_count > 0:
 			_step_track(t, _now)

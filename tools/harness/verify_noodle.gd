@@ -303,11 +303,11 @@ func _events() -> void:
 		{"b": 3, "t": "AnimateTrack", "d": {"track": "s", "scale": [3, 3, 3]}},
 		{"b": 3, "t": "AnimateTrack", "d": {"track": "s", "scale": [4, 4, 4]}},
 	]}})
-	_check("v3: unknown types counted, not queued", E.stack.size() == 6 and int(E.ignored.get("Blit", 0)) == 1)
-	_check("v3: stack is in beat order", E.stack[-1].beat == 0.0 and E.stack[0].beat == 3.0)
+	_check("v3: unknown types counted, not queued", E.all_events.size() == 6 and int(E.ignored.get("Blit", 0)) == 1)
+	_check("v3: events are in beat order", E.all_events[0].beat == 0.0 and E.all_events[-1].beat == 3.0)
 	_check("v3: events create their tracks", T.find("a") >= 0 and T.find("b") >= 0 and T.find("r") >= 0 and T.active)
 	E.dispatch_until(2.0, 1.0)
-	_check("v3: dispatch stops at the current beat", E.stack.size() == 2)
+	_check("v3: dispatch stops at the current beat", E.all_events.size() - E.events_due() == 2)
 	_near3("v3: animation starts at its own time", _tr("a").vec[T.P_OFFSET_POSITION], Vector3.ZERO)
 	_near3("v3: duration 0 sets the last point", _tr("a").vec[T.P_SCALE], Vector3(2, 2, 2))
 	_near3("v3: one event, several tracks", _tr("b").vec[T.P_SCALE], Vector3(2, 2, 2))
@@ -384,7 +384,7 @@ func _events() -> void:
 			{"_time": 0, "_type": "AnimateTrack", "_data": {"_track": "par", "_position": [0, 0, 1], "_rotation": [0, 90, 0]}},
 			{"_time": 0, "_type": "AssignPlayerToTrack", "_data": {"_track": "par"}},
 		]}})
-	_check("v2: events parsed and sorted", E.stack.size() == 6 and E.stack[-1].beat == 0.0)
+	_check("v2: events parsed and sorted", E.all_events.size() == 6 and E.all_events[0].beat == 0.0)
 	E.dispatch_until(2.0, 1.0)
 	E.update(1.5)
 	_near3("v2: named point definition", _tr("n").vec[T.P_OFFSET_POSITION], Vector3(0, 1, 0))
@@ -431,10 +431,10 @@ func _fixture_events() -> void:
 	if _load_fixture("198f3", "ExpertPlus.dat"):
 		NoodleEvents.reset()
 		NoodleEvents.load_events(_fixture_data("198f3", "ExpertPlus.dat"))
-		var n := NoodleEvents.stack.size()
+		var n := NoodleEvents.all_events.size()
 		var finite := true
 		var beat := 0.0
-		while not NoodleEvents.stack.is_empty() and beat < 2000.0:
+		while NoodleEvents.events_due() < n and beat < 2000.0:
 			var sec := Map.beat_to_seconds(beat)
 			NoodleEvents.dispatch_until(beat, sec)
 			NoodleEvents.update(sec)
@@ -444,7 +444,7 @@ func _fixture_events() -> void:
 					if t.has[p] and not (t.vec[p].is_finite() and is_finite(t.flt[p])):
 						finite = false
 			beat += 1.0
-		_check("198f3 (v2): every event dispatched", NoodleEvents.stack.is_empty() and n > 0, "%d events" % n)
+		_check("198f3 (v2): every event dispatched", NoodleEvents.events_due() == n and n > 0, "%d events" % n)
 		_check("198f3 (v2): values stay finite", finite)
 	NoodleEvents.reset()
 	MapData.reset()
@@ -1080,10 +1080,12 @@ func _record_run(folder: String, file: String, eager: bool, synthetic: Dictionar
 		_events_setup(synthetic)
 	elif not _load_fixture(folder, file):
 		return out
-	var events: Array[NoodleEvents.Event] = NoodleEvents.stack.duplicate()
-	NoodleEvents.reset()
+	# Eager: the reference dispatches every event itself, from a spawn-order copy. Lazy: the
+	# loaded NoodleEvents state is driven as the game drives it.
+	var events: Array[NoodleEvents.Event] = NoodleEvents.all_events.duplicate()
+	events.reverse()
+	var pending: Array[NoodleEvents.Event] = events.duplicate()
 	EagerRef.reset()
-	NoodleEvents.stack = events.duplicate()
 	var tracks := NoodleTracks.tracks
 	# To the last event or the last object, whichever is first (some maps park end markers far
 	# past the song), plus 64 beats so the last animations finish.
@@ -1108,8 +1110,8 @@ func _record_run(folder: String, file: String, eager: bool, synthetic: Dictionar
 	while beat < end_beat:
 		var sec := Map.beat_to_seconds(beat)
 		if eager:
-			while not NoodleEvents.stack.is_empty() and NoodleEvents.stack[-1].beat <= beat:
-				EagerRef.dispatch(NoodleEvents.stack.pop_back(), sec)
+			while not pending.is_empty() and pending[-1].beat <= beat:
+				EagerRef.dispatch(pending.pop_back(), sec)
 			EagerRef.update(sec)
 		else:
 			NoodleEvents.dispatch_until(beat, sec)
@@ -1189,7 +1191,7 @@ func _evaluators_match() -> void:
 					for pts: NoodlePoints in info.noodle.anim:
 						if pts != null:
 							all.append(pts)
-		for ev in NoodleEvents.stack:
+		for ev in NoodleEvents.all_events:
 			for pts in ev.points:
 				if pts != null:
 					all.append(pts)

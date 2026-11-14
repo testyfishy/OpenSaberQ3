@@ -50,6 +50,10 @@ var busy := false
 var synced := -1
 var local_tick := -1
 var xform_tick := -1
+# This track's AnimateTrack / AssignPathAnimation events in beat order, and the first one not yet
+# applied (NoodleEvents applies the due ones when the track is read).
+var events: Array = []
+var next_ev := 0
 
 
 func _init(track_name: String = "") -> void:
