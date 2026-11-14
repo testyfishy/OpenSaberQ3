@@ -37,7 +37,7 @@ $deadline = (Get-Date).AddSeconds($Seconds + 120)
 do {
     Start-Sleep -Seconds 5
     $log = & $Adb -s $Device logcat -d -s godot:V | Out-String
-} until ($log -match 'BENCH: exit=' -or (Get-Date) -gt $deadline)
+} until ($log -match 'BENCH: .*exit=' -or (Get-Date) -gt $deadline)
 & $Adb -s $Device shell am broadcast -a com.oculus.vrpowermanager.automation_disable | Out-Null
 
 $lines = $log -split "`n"
@@ -46,4 +46,4 @@ $lines | Where-Object { $_ -match 'MAP motion|BENCH: (map=|no map|samples|frame_
 (& $Adb -s $Device shell cat "$files/bench_meta.txt") | Where-Object { $_ -match 'bot_score' } | ForEach-Object { "  $_" }
 "BOTRUN script errors: $($errors.Count)"
 $errors | Select-Object -First 6 | ForEach-Object { "  $_" }
-if ($errors.Count -eq 0 -and $log -match 'BENCH: exit=duration') { 'BOTRUN PASS' } else { 'BOTRUN FAIL'; exit 1 }
+if ($errors.Count -eq 0 -and $log -match 'BENCH: .*exit=duration') { 'BOTRUN PASS' } else { 'BOTRUN FAIL'; exit 1 }
