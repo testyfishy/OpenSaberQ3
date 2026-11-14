@@ -231,8 +231,14 @@ func _process_map(game: BeepSaber_Game) -> void:
 	if NoodleTracks.active:
 		NoodleAnim.advance(song_position, game.get_physics_process_delta_time())
 		NoodleEvents.dispatch_until(current_beat, NoodleAnim.song_sec)
+		var upd_t0 := Time.get_ticks_usec() if probe else 0
 		NoodleEvents.update(NoodleAnim.song_sec)
 		game.track.transform = NoodleEvents.root_xform
+		if probe:
+			var now := Time.get_ticks_usec()
+			Cost.noodle_update_usec += now - upd_t0
+			Cost.noodle_usec += now - event_t0
+			Cost.noodle_tweens = maxi(Cost.noodle_tweens, NoodleEvents.live_tweens())
 	var coalesced := {}
 	var uncoalesced: Array[EventInfo] = []
 	while not MapData.event_stack.is_empty() and MapData.event_stack[-1].beat <= current_beat:

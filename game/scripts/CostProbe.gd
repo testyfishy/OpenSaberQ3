@@ -40,6 +40,11 @@ static var wall_usec := 0
 static var event_usec := 0
 # Self-time of Arc._process, summed over every live arc.
 static var arc_usec := 0
+# Noodle custom events inside event_usec: the whole Noodle block (advance, dispatch, update), the
+# update step alone, and the most tweens running at the end of a tick (a count, not a time).
+static var noodle_usec := 0
+static var noodle_update_usec := 0
+static var noodle_tweens := 0
 
 # Counts, not times: cheaper than timing, and a count is enough to prove or
 # disprove "this write happens every tick for every note".
@@ -79,6 +84,9 @@ static func reset() -> void:
 	wall_usec = 0
 	event_usec = 0
 	arc_usec = 0
+	noodle_usec = 0
+	noodle_update_usec = 0
+	noodle_tweens = 0
 	shape_reenable = 0
 	physics_ticks = 0
 	cuts = 0
