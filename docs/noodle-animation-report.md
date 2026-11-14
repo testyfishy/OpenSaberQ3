@@ -518,7 +518,8 @@ static turns.
 
 ## Noodle CPU cost on 1e6ff (after 0.7.30)
 
-Commits `e112ae2` (probe columns), `016dacb` (lazy evaluation) and `9915127` (evaluators).
+Commits `e112ae2` (probe columns), `016dacb` (lazy evaluation), `9915127` (evaluators) and
+`968b2e3` (repeat arithmetic).
 Nothing looks different: every value read is the same as before, bit for bit (checked below),
 and every fixture dump is byte-identical before and after.
 
@@ -537,35 +538,52 @@ once per tick. Parent and player transforms are also computed only when read. up
 only moves the clock and refreshes the player's root.
 
 Why the values are identical: an animation's value depends only on the time it is stepped at
-and on how many repeats earlier steps used up. While time moves forward, one late step uses up
-the same repeats, with the same float additions in the same order. A finished animation leaves
+and on its start, which each used-up repeat advances by one duration. While time moves forward,
+one late step uses up the same repeats and reaches the same start by the same additions.
+`968b2e3` makes the elapsed time after a repeat come from that start (`t - start`) rather than
+from `elapsed - duration`, so a late step and a step every tick do the same arithmetic. That can
+differ from 0.7.30 by a float rounding inside a repeating animation, far below anything visible. A finished animation leaves
 its end value whenever it is stepped. A new animation of a property overwrites the old one's
 value completely. When time goes backwards (an audio stall snap or a seek), every running
 animation is first stepped at the old time, as the ticks in between would have done.
 
 **2. Per-object cost** (`9915127`). The direction suggested caching objects whose tracks and
-paths hold constant values. The data shows that would rarely hit on 1e6ff: 2,910 of its 2,913
-notes and all 3,530 walls have their own 2-4-point `_animation` paths, which change with
-lifetime every tick. Measured on the PC, a note's tick was about 40-60 us. evaluate() was most
+paths hold constant values. Measured on 1e6ff, that would almost never hit:
+- 2,910 of its 2,913 notes have their own 2-3-point `_animation` paths, which change with
+  lifetime every tick.
+- 1,033 of its 3,530 walls have only one-point paths, so their pose does not depend on lifetime.
+  But every one of them is on an animated, parented track.
+- A probe counted the wall ticks where the wall's own paths are all one point and no track in
+  its chain had a running animation or a path, an upper bound for such a cache. It was 0-0.7 %
+  of wall ticks in 0-50 s and 0 % from 50 s on.
+
+So no cache was built. Measured on the PC, a note's tick was about 40-60 us. evaluate() was most
 of that; track syncing was about 2 us, and compose and the transform write about 2-4 us each.
 The evaluate() cost was GDScript call overhead: five calls per animated value. The point
 evaluators are now written out inline (same arithmetic, same order), linear easing skips its
 call, and evaluate() skips rotations, dissolves and interactable when nothing sets them. A
 1e6ff-like note with six animated properties went from about 34 to 18 us per evaluate() in a
-PC microbenchmark.
+PC microbenchmark. In the game benches below, the per-note cost (cuttable_usec per note per
+tick, 38-64 us after, 40-63 us with lazy evaluation alone) does not show that gain clearly. The
+PC's background load makes differences of that size unresolvable, so the in-game gain of this
+commit is not confirmed.
 
 **3. Ordinary maps.** Nothing changed for them: all of this is behind `NoodleTracks.active`, as
 before.
 
-**Checks** (verify_noodle, now 296):
-- 5 checks run the 0.7.30 eager stepping (kept as `tools/harness/noodle_eager_ref.gd`) and the
-  lazy one over the same uneven ticks. The fixtures are 1e6ff, 4a2b3, 198f3, 23f6b and 352d8,
-  with two jumps back in time. At every third tick a few random tracks are read, and every
+**Checks** (verify_noodle, now 297):
+- 6 checks run the 0.7.30 eager stepping (kept as `tools/harness/noodle_eager_ref.gd`) and the
+  lazy one over the same uneven ticks, with two jumps back in time. The maps are 1e6ff, 4a2b3,
+  198f3, 23f6b, 352d8, and a synthetic map for what the fixtures lack (1e6ff has no repeat):
+  repeats wrapping while their track is unread, null, two animations of a property on one beat,
+  an interrupted path blend, no-duration events, and a repeating parent the player rides. At every third tick a few random tracks are read, and every
   track is read after each jump and every 500 ticks.
 - Every value, path value, parent, transform and the player's root must be identical. On 1e6ff
   that is 2.9 million values, 0 different.
 - A deliberately broken catch-up made the 1e6ff check fail (3 values different), so the check
-  can catch that kind of bug.
+  can catch that kind of bug. The old repeat arithmetic still passes the synthetic check (the
+  two orders usually round alike), so that fix rests on the argument above, not on a failing
+  test.
 - 4 checks compare the inlined evaluators with the 0.7.30 ones, bit for bit, on every point list
   of four fixtures: 6.1 million values, 0 different.
 
@@ -621,8 +639,10 @@ What this shows:
 - The headset, where the owner's target is about 100 fps. Scaling the headset's 0.7.30 numbers,
   the 0-50 s event cost should drop from 6.4-11.7 ms per frame to under 1 ms. Whether the
   50-110 s part, now dominated by walls, holds 100 fps on the Quest is not known.
-- The wall tick: its cost is evaluate() plus the transform write and the dissolve uniform
-  write. It was sped up only through the shared evaluate(); it was not profiled separately.
+- The wall tick is now the largest Noodle cost at 50-90 s (about 1.5-4 ms per tick on the PC).
+  Its cost is evaluate() plus the transform write and the dissolve uniform write. It was sped up
+  only through the shared evaluate(); it was not profiled separately. That is the next place to
+  look.
 
 **Notes:**
 - `e112ae2` does not build on its own: its Playing.gd calls `NoodleEvents.live_tweens()`, which
