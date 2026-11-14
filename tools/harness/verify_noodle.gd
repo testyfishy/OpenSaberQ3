@@ -50,6 +50,7 @@ func _run() -> void:
 	await _apply_nodes()
 	_frame_pass()
 	_evaluate_cache()
+	_wall_reuse()
 	_jumps()
 	_support()
 	await _zero_scale()
@@ -1506,3 +1507,37 @@ func _evaluate_cache() -> void:
 	NoodleEvents.reset()
 	MapData.reset()
 	NoodleTracks.reset()
+
+
+# A pooled wall writes its uniforms, mesh scale and collision size only when they change: a wall
+# reused after other walls must end in the same state as a fresh one spawned with the same data.
+func _wall_reuse() -> void:
+	MapTimer.load_bpm_events({}, 120.0)
+	Map.current_difficulty = DifficultyInfo.new("ExpertPlus", 9, "x.dat", 16.0, 0.0, {}, "One")
+	var infos: Array[ObstacleInfo] = [
+		ObstacleInfo.new_v3({"b": 4.0, "d": 1.0, "x": 1, "y": 0, "w": 1, "h": 5}),
+		ObstacleInfo.new_v3({"b": 4.0, "d": 2.0, "x": 0, "y": 1, "w": 2, "h": 3, "customData": {"color": [0.2, 0.9, 0.3, 1.0]}}),
+		ObstacleInfo.new_v3({"b": 4.0, "d": 1.0, "x": 1, "y": 0, "w": 1, "h": 5}),
+		ObstacleInfo.new_v3({"b": 4.0, "d": 0.5, "x": 3, "y": 2, "w": 1, "h": 1}),
+	]
+	var reused := (load("res://game/Wall/Wall.tscn") as PackedScene).instantiate() as Wall
+	add_child(reused)
+	reused.set_physics_process(false)
+	var same := true
+	for i in infos.size():
+		var fresh := (load("res://game/Wall/Wall.tscn") as PackedScene).instantiate() as Wall
+		add_child(fresh)
+		fresh.set_physics_process(false)
+		fresh.spawn(infos[i], 1.0)
+		reused.spawn(infos[i], 1.0)
+		var a := fresh._wall_mesh()
+		var b := reused._wall_mesh()
+		for u: StringName in [&"size", &"rim", &"wall_color"]:
+			same = same and a.get_instance_shader_parameter(u) == b.get_instance_shader_parameter(u)
+		same = same and a.scale == b.scale and a.position == b.position
+		same = same and (fresh._wall_shape().shape as BoxShape3D).size == (reused._wall_shape().shape as BoxShape3D).size
+		fresh.queue_free()
+	_check("a reused wall ends in the state of a fresh one", same)
+	reused.queue_free()
+	Map.current_difficulty = null
+	MapTimer.reset()

@@ -28,6 +28,10 @@ var _mesh_cache: MeshInstance3D
 var _base_mat: Material
 # The size the last spawn gave this wall.
 var _size := Vector3.ONE
+# The size, rim and colour instance uniforms last written to the mesh (written only on change).
+var _u_size := Vector3(-1.0, -1.0, -1.0)
+var _u_rim := -1.0
+var _u_tint := Color(-1.0, -1.0, -1.0, -1.0)
 
 
 # 1.0 normally; lowered when the camera is inside this wall so the player can see out of it.
@@ -90,9 +94,15 @@ func _apply_grow() -> void:
 	if mesh == null:
 		return
 	var visible := Vector3(_size.x, _size.y * h, _size.z)
-	mesh.scale = visible
-	mesh.position.y = (h - 1.0) * _size.y * 0.5
-	mesh.set_instance_shader_parameter(&"size", visible)
+	var pos_y := (h - 1.0) * _size.y * 0.5
+	# Each written only when it changes (a pooled wall often respawns with the same values).
+	if mesh.scale != visible:
+		mesh.scale = visible
+	if mesh.position.y != pos_y:
+		mesh.position.y = pos_y
+	if visible != _u_size:
+		_u_size = visible
+		mesh.set_instance_shader_parameter(&"size", visible)
 
 func _physics_process(delta: float) -> void:
 	if Scoreboard.paused: return
@@ -203,7 +213,9 @@ func spawn(wall_info: ObstacleInfo, current_beat: float) -> void:
 	# per-wall mesh did; without it the border and noise maths ran in a 1 m cube and the walls
 	# turned into stretched red smears. `_apply_grow` below writes the visible size each time the
 	# wall's height changes.
-	shape.size = Vector3(x_size, y_size, z_size)
+	var box := Vector3(x_size, y_size, z_size)
+	if shape.size != box:
+		shape.size = box
 	_grow_settled = false
 
 	despawn_z = Constants.MISS_Z + depth
@@ -372,10 +384,17 @@ func _apply_material(size_in: Vector3, shard_color := Color(0.0, 0.0, 0.0, 0.0),
 		# Scale to the cap. darkened() multiplies by (1 - amount), which turns an HDR
 		# obstacle colour black and makes an additive wall invisible.
 		tint = Color(tint.r, tint.g, tint.b) * (cap / tint.v)
-	# One shared material, per-wall values as instance uniforms: no material switch per wall.
-	mesh.set_instance_shader_parameter(&"size", size_in)
-	mesh.set_instance_shader_parameter(&"rim", rim)
-	mesh.set_instance_shader_parameter(&"wall_color", tint)
+	# One shared material, per-wall values as instance uniforms: no material switch per wall. A
+	# pooled wall often respawns with the values it already holds; those are not written again.
+	if size_in != _u_size:
+		_u_size = size_in
+		mesh.set_instance_shader_parameter(&"size", size_in)
+	if rim != _u_rim:
+		_u_rim = rim
+		mesh.set_instance_shader_parameter(&"rim", rim)
+	if tint != _u_tint:
+		_u_tint = tint
+		mesh.set_instance_shader_parameter(&"wall_color", tint)
 
 # A crouch under an overhead wall can put the camera inside the box. With back-face culling no
 # face is drawn then, so the player sees nothing and is surprised by the collision box. Fading the
