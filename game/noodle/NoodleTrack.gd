@@ -72,24 +72,40 @@ func _init(track_name: String = "") -> void:
 		path_blend[i] = 1.0
 
 
+# Change stamp (NoodleAnim's evaluate cache): `changed` is the clock value of this track's last
+# change to a value, a path or its parent. An object's cached evaluation is only reused while none
+# of its tracks changed since it was made.
+static var clock := 0
+var changed := 0
+
+
+func touch() -> void:
+	clock += 1
+	changed = clock
+
+
 func clear_value(p: int) -> void:
+	touch()
 	has[p] = 0
 	vmask &= ~(1 << p)
 
 
 func set_vec(p: int, v: Vector3) -> void:
+	touch()
 	vec[p] = v
 	has[p] = 1
 	vmask |= 1 << p
 
 
 func set_quat(p: int, q: Quaternion) -> void:
+	touch()
 	quat[p] = q
 	has[p] = 1
 	vmask |= 1 << p
 
 
 func set_float(p: int, f: float) -> void:
+	touch()
 	flt[p] = f
 	has[p] = 1
 	vmask |= 1 << p
@@ -97,6 +113,7 @@ func set_float(p: int, f: float) -> void:
 
 ## Assigns (or with null, erases) the path of property `p`.
 func set_path(p: int, points: NoodlePoints) -> void:
+	touch()
 	path_cur[p] = points
 	if points != null:
 		pmask |= 1 << p

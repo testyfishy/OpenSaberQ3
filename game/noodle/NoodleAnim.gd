@@ -24,6 +24,8 @@ const LANE := 0.6
 const MIN_SCALE := 0.0001
 
 static var song_sec := 0.0
+# Off only for verify_noodle's comparison of cached against fresh evaluations.
+static var cache_enabled := true
 
 static var out_offset := Vector3.ZERO
 static var out_world := Quaternion.IDENTITY
@@ -62,6 +64,7 @@ static func evaluate(obj: NoodleObject, life: float) -> void:
 	var vm := 0
 	var pm := 0
 	var parent := -1
+	var latest := 0
 	for ti in obj.tracks:
 		var t := tracks[ti]
 		NoodleEvents.sync(t)
@@ -69,6 +72,23 @@ static func evaluate(obj: NoodleObject, life: float) -> void:
 		pm |= t.pmask
 		if t.parent >= 0:
 			parent = t.parent
+		if t.changed > latest:
+			latest = t.changed
+	# Nothing this object depends on changed since its last evaluation: the same outputs.
+	if obj.c_ok and life >= obj.c_lo and life <= obj.c_hi and latest <= obj.c_at and cache_enabled:
+		out_offset = obj.c_offset
+		out_world = obj.c_world
+		out_local = obj.c_local
+		out_scale = obj.c_scale
+		out_dissolve = obj.c_dissolve
+		out_dissolve_arrow = obj.c_dissolve_arrow
+		out_interactable = obj.c_interactable
+		out_has_definite = obj.c_has_definite
+		out_definite = obj.c_definite
+		out_has_parent = obj.c_parent >= 0
+		if out_has_parent:
+			out_parent = NoodleEvents.track_xform(tracks[obj.c_parent])
+		return
 	var am := obj.anim_mask
 	# Properties nothing animates keep their neutral value without a call (identity, 1).
 	var used := am | pm | vm
@@ -144,6 +164,47 @@ static func evaluate(obj: NoodleObject, life: float) -> void:
 	out_has_parent = parent >= 0
 	if out_has_parent:
 		out_parent = NoodleEvents.track_xform(tracks[parent])
+	_store(obj, life, pm, parent)
+
+
+# Keeps this evaluation on the object when its own animations are constant around `life` (before
+# the first point or after the last of every list) and no track path is involved.
+static func _store(obj: NoodleObject, life: float, pm: int, parent: int) -> void:
+	if not cache_enabled:
+		return
+	obj.c_ok = false
+	if pm != 0:
+		return
+	var lo := -INF
+	var hi := INF
+	if obj.anim_mask != 0:
+		for pts in obj.anim:
+			if pts == null:
+				continue
+			var times := pts.times
+			var n := times.size()
+			if n <= 1:
+				continue
+			if life >= times[n - 1]:
+				lo = maxf(lo, times[n - 1])
+			elif life <= times[0]:
+				hi = minf(hi, times[0])
+			else:
+				return
+	obj.c_ok = true
+	obj.c_lo = lo
+	obj.c_hi = hi
+	obj.c_at = NoodleTrack.clock
+	obj.c_offset = out_offset
+	obj.c_world = out_world
+	obj.c_local = out_local
+	obj.c_scale = out_scale
+	obj.c_dissolve = out_dissolve
+	obj.c_dissolve_arrow = out_dissolve_arrow
+	obj.c_interactable = out_interactable
+	obj.c_has_definite = out_has_definite
+	obj.c_definite = out_definite
+	obj.c_parent = parent
 
 
 static func _quat(obj: NoodleObject, p: int, life: float, am: int, pm: int, vm: int) -> Quaternion:

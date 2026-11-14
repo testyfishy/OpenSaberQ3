@@ -49,6 +49,7 @@ func _run() -> void:
 	_apply()
 	await _apply_nodes()
 	_frame_pass()
+	_evaluate_cache()
 	_jumps()
 	_support()
 	await _zero_scale()
@@ -1445,3 +1446,60 @@ func _frame_pass() -> void:
 	NoodleFrame.reset()
 	MapTimer.reset()
 	T.reset()
+
+
+# NoodleAnim.evaluate reuses an object's last outputs while its own animations are constant and its
+# tracks did not change: the reused outputs must be exactly what a fresh evaluation gives. 1e6ff's
+# notes and walls from four spans, ticked through the song with their own lifetimes, each evaluated
+# with the cache and again without it.
+func _evaluate_cache() -> void:
+	if not _load_fixture("1e6ff", "ExpertPlusLawless.dat"):
+		return
+	var A := NoodleAnim
+	var objs: Array[NoodleObject] = []
+	var spawn_beat := PackedFloat64Array()
+	for stack: Array in [MapData.note_stack, MapData.obstacle_stack]:
+		for info: Variant in stack:
+			if info == null or info.noodle == null:
+				continue
+			for lo: float in [549.0, 613.0, 677.0, 837.0]:
+				if info.beat >= lo and info.beat < lo + 4.0 and objs.size() < 400:
+					objs.append(info.noodle)
+					spawn_beat.append(info.beat)
+	var compared := 0
+	var differ := 0
+	var hits := 0
+	var beat := 540.0
+	while beat < 845.0:
+		var sec := Map.beat_to_seconds(beat)
+		NoodleEvents.dispatch_until(beat, sec)
+		NoodleEvents.update(sec)
+		for i in objs.size():
+			# Lifetime 0 two beats before the object's beat, 1 two beats after.
+			var life := (beat - (spawn_beat[i] - 2.0)) / 4.0
+			if life < -0.2 or life > 1.2:
+				continue
+			var o := objs[i]
+			var was_ok := o.c_ok and life >= o.c_lo and life <= o.c_hi
+			A.cache_enabled = true
+			A.evaluate(o, life)
+			var cached := [A.out_offset, A.out_world, A.out_local, A.out_scale, A.out_dissolve, A.out_dissolve_arrow,
+				A.out_interactable, A.out_has_definite, A.out_definite if A.out_has_definite else Vector3.ZERO, A.out_has_parent,
+				A.out_parent if A.out_has_parent else Transform3D.IDENTITY]
+			A.cache_enabled = false
+			A.evaluate(o, life)
+			var fresh := [A.out_offset, A.out_world, A.out_local, A.out_scale, A.out_dissolve, A.out_dissolve_arrow,
+				A.out_interactable, A.out_has_definite, A.out_definite if A.out_has_definite else Vector3.ZERO, A.out_has_parent,
+				A.out_parent if A.out_has_parent else Transform3D.IDENTITY]
+			A.cache_enabled = true
+			compared += 1
+			if was_ok:
+				hits += 1
+			if cached != fresh:
+				differ += 1
+		beat += 0.05
+	_check("evaluate cache: reused outputs equal a fresh evaluation (1e6ff)", differ == 0 and hits > 0 and compared > 0,
+		"%d evaluations, %d from the cache, %d differ" % [compared, hits, differ])
+	NoodleEvents.reset()
+	MapData.reset()
+	NoodleTracks.reset()

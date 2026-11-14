@@ -28,6 +28,24 @@ var jump_offset := 0.0
 var has_jump_offset := false
 var disable_gravity := false
 var half_sec := 0.0
+# NoodleAnim.evaluate's cache: the outputs of the last full evaluation, the lifetime range over
+# which this object's own animations hold those values (outside every animated span), and the
+# track clock when it was made. Reused while the lifetime stays in range and no track of this
+# object changed since. Never made for an object whose tracks have paths (they follow lifetime).
+var c_ok := false
+var c_lo := 0.0
+var c_hi := 0.0
+var c_at := 0
+var c_offset := Vector3.ZERO
+var c_world := Quaternion.IDENTITY
+var c_local := Quaternion.IDENTITY
+var c_scale := Vector3.ONE
+var c_dissolve := 1.0
+var c_dissolve_arrow := 1.0
+var c_interactable := 1.0
+var c_has_definite := false
+var c_definite := Vector3.ZERO
+var c_parent := -1
 
 
 ## `cd` is the object's customData / _customData dictionary (either spelling is read, as the

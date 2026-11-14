@@ -284,7 +284,9 @@ static func dispatch(ev: Event, song_sec: float) -> void:
 		ASSIGN_TRACK_PARENT:
 			_mark_transform(NoodleTracks.tracks[ev.parent])
 			for ti in ev.tracks:
-				NoodleTracks.tracks[ti].parent = ev.parent
+				var child := NoodleTracks.tracks[ti]
+				child.parent = ev.parent
+				child.touch()
 		ASSIGN_PLAYER_TO_TRACK:
 			player_track = ev.tracks[0]
 			_mark_transform(NoodleTracks.tracks[player_track])
