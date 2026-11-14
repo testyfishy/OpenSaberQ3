@@ -16,10 +16,16 @@ void vertex() {
 }
 
 void fragment() {
-	if (bomb_dissolve < 1.0 && noodle_dissolved(local_pos * 2.0, bomb_dissolve)) {
-		discard;
+	// About three noise cells across the bomb mesh, like a note; a thin rim at the cut.
+	float rim = 0.0;
+	if (bomb_dissolve < 1.0) {
+		rim = noodle_dissolve_edge(local_pos * 1.5, bomb_dissolve);
+		if (rim < 0.0) {
+			discard;
+		}
 	}
 	ALBEDO = albedo.rgb;
+	EMISSION = vec3(0.75) * rim;
 	METALLIC = 0.0;
 	SPECULAR = 0.5;
 	ROUGHNESS = 1.0;

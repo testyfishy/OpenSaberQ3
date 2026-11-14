@@ -18,7 +18,7 @@ void vertex() {
 }
 
 void fragment() {
-	if (bomb_dissolve < 1.0 && noodle_dissolved(local_pos * 2.0, bomb_dissolve)) {
+	if (bomb_dissolve < 1.0 && noodle_dissolved(local_pos * 1.5, bomb_dissolve)) {
 		discard;
 	}
 	ALBEDO = albedo.rgb;

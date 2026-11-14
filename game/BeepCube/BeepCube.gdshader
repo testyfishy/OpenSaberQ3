@@ -85,9 +85,17 @@ void fragment() {
 		discard;
 	}
 	// Noodle dissolve. A per-instance test, so every note at 1 skips the noise. The inside faces
-	// (white, for a cut) are dropped while dissolving, or they would show through the holes.
-	if (note_dissolve < 1.0 && (!FRONT_FACING || noodle_dissolved(local_pos / max(note_half_extent, vec3(1e-4)) * 2.5, note_dissolve))) {
-		discard;
+	// (white, for a cut) are dropped while dissolving, or they would show through the holes. About
+	// three noise cells across the cube; a thin bright rim marks the edge of each hole.
+	float noodle_rim = 0.0;
+	if (note_dissolve < 1.0) {
+		if (!FRONT_FACING) {
+			discard;
+		}
+		noodle_rim = noodle_dissolve_edge(local_pos / max(note_half_extent, vec3(1e-4)) * 1.4, note_dissolve);
+		if (noodle_rim < 0.0) {
+			discard;
+		}
 	}
 
 	ALBEDO = note_color.rgb;
@@ -119,6 +127,7 @@ void fragment() {
 			float m = max(a.x * axis_mask.x, max(a.y * axis_mask.y, a.z * axis_mask.z));
 			EMISSION += note_color.rgb * note_edge_glow * smoothstep(edge_start, 1.0, m);
 		}
+		EMISSION += mix(note_color.rgb, vec3(1.0), 0.6) * (noodle_rim * 1.5);
 	} else {
 		EMISSION = vec3(1.0);
 	}
