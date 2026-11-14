@@ -284,9 +284,7 @@ static func dispatch(ev: Event, song_sec: float) -> void:
 		ASSIGN_TRACK_PARENT:
 			_mark_transform(NoodleTracks.tracks[ev.parent])
 			for ti in ev.tracks:
-				var child := NoodleTracks.tracks[ti]
-				child.parent = ev.parent
-				child.touch()
+				NoodleTracks.tracks[ti].parent = ev.parent
 		ASSIGN_PLAYER_TO_TRACK:
 			player_track = ev.tracks[0]
 			_mark_transform(NoodleTracks.tracks[player_track])
@@ -500,48 +498,30 @@ static func live_tweens() -> int:
 
 ## The transform track `t` applies to its children (parents and the player's track): its own
 ## `local` with its parents' chained on, as of the last update(). Computed when read, once per
-## tick per track, and only recomputed when a track in the chain changed a value or its parent
-## since the last time (the same inputs give the same transform, so the stored one is returned).
+## tick per track.
 static func track_xform(t: NoodleTrack) -> Transform3D:
 	if t.xform_tick == _tick:
 		return t.xform
-	t.xform_tick = _tick
-	# Bring the chain up to date and find its latest change. Depth-limited, as the chaining below,
-	# so a cycle in a broken map cannot hang the game.
+	# Chain parents (a parent track can itself be a child of another), always from the local
+	# transforms. Depth-limited so a cycle in a broken map cannot hang the game.
 	var list := NoodleTracks.tracks
-	sync(t)
-	var latest := t.changed
+	var world := _local_of(t)
 	var up := t.parent
 	var depth := 0
-	while up >= 0 and depth < 8:
-		var u := list[up]
-		sync(u)
-		latest = maxi(latest, u.changed)
-		up = u.parent
-		depth += 1
-	if latest <= t.xform_at:
-		return t.xform
-	# Chain parents (a parent track can itself be a child of another), always from the local
-	# transforms.
-	var world := _local_of(t)
-	up = t.parent
-	depth = 0
 	while up >= 0 and depth < 8:
 		world = _local_of(list[up]) * world
 		up = list[up].parent
 		depth += 1
 	t.xform = world
-	t.xform_at = NoodleTrack.clock
+	t.xform_tick = _tick
 	return world
 
 
 static func _local_of(t: NoodleTrack) -> Transform3D:
 	if t.local_tick != _tick:
-		t.local_tick = _tick
 		sync(t)
-		if t.changed > t.local_at:
-			t.local = _local_xform(t, NoodleTracks.is_v2)
-			t.local_at = NoodleTrack.clock
+		t.local = _local_xform(t, NoodleTracks.is_v2)
+		t.local_tick = _tick
 	return t.local
 
 
