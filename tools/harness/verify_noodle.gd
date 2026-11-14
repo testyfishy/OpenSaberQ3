@@ -43,6 +43,7 @@ func _run() -> void:
 	_events()
 	_fixture_events()
 	_lazy_matches_eager()
+	_evaluators_match()
 	_apply()
 	await _apply_nodes()
 	_jumps()
@@ -1161,3 +1162,46 @@ func _append_xform(out: PackedFloat64Array, x: Transform3D) -> void:
 		var col := x.basis[c]
 		out.append_array([col.x, col.y, col.z])
 	out.append_array([x.origin.x, x.origin.y, x.origin.z])
+
+
+# The inlined point evaluators give the 0.7.30 values bit for bit: every property path and
+# animation block of real fixtures, at many times, including the ends, exact point times and
+# outside 0..1.
+func _evaluators_match() -> void:
+	for fx: Array in [["1e6ff", "ExpertPlusLawless.dat"], ["4a2b3", "HardStandard.dat"], ["198f3", "ExpertPlus.dat"], ["23f6b", "ExpertPlusStandard.dat"]]:
+		if not _load_fixture(fx[0], fx[1]):
+			continue
+		var all: Array[NoodlePoints] = []
+		for stack: Array in [MapData.note_stack, MapData.bomb_stack, MapData.obstacle_stack]:
+			for info: Variant in stack:
+				if info != null and info.noodle != null:
+					for pts: NoodlePoints in info.noodle.anim:
+						if pts != null:
+							all.append(pts)
+		for ev in NoodleEvents.stack:
+			for pts in ev.points:
+				if pts != null:
+					all.append(pts)
+		var values := 0
+		var diffs := 0
+		for pts in all:
+			var times := PackedFloat32Array([-0.5, 0.0, 1.0, 1.5])
+			for k in 41:
+				times.append(float(k) / 40.0)
+			times.append_array(pts.times)
+			for t in times:
+				values += 1
+				match pts.kind:
+					NoodlePoints.KIND_FLOAT:
+						if pts.eval_float(t) != EagerRef.eval_float(pts, t):
+							diffs += 1
+					NoodlePoints.KIND_ROTATION:
+						if pts.eval_quat(t) != EagerRef.eval_quat(pts, t):
+							diffs += 1
+					_:
+						if pts.eval_vec3(t) != EagerRef.eval_vec3(pts, t):
+							diffs += 1
+		_check("%s: inlined evaluators equal 0.7.30" % fx[0], diffs == 0 and values > 0, "%d point lists, %d values, %d differ" % [all.size(), values, diffs])
+	MapData.reset()
+	NoodleTracks.reset()
+	NoodleEvents.reset()

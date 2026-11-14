@@ -182,42 +182,35 @@ static func named_definitions(map_data: Dictionary) -> Dictionary:
 	return named
 
 
-# Finds the segment for time t. Returns -1 for "before or at the first point", -2 for "at or
-# after the last point", otherwise the index r of the right point (l = r - 1).
-func _segment(t: float) -> int:
-	var n := times.size()
-	if times[n - 1] <= t:
-		return -2
-	if times[0] >= t:
-		return -1
-	var l := 0
-	var r := n
-	while l < r - 1:
-		var m := (l + r) >> 1
-		if times[m] < t:
-			l = m
-		else:
-			r = m
-	return r
-
-
-func _local(t: float, r: int) -> float:
-	var t0 := times[r - 1]
-	var d := times[r] - t0
-	var u := (t - t0) / d if d != 0.0 else 0.0
-	return NoodleEasing.ease(u, easings[r])
-
-
+# The evaluators below run per animated property per object per tick, so the segment search
+# (binary, after the ends are checked), the local time and the point reads are written out
+# inline: the same arithmetic in the same order as 0.7.30, without five GDScript calls per
+# value. Linear easing (the identity) skips the easing call.
 func eval_float(t: float) -> float:
 	var n := times.size()
 	if n == 0:
 		return 0.0
-	var r := _segment(t)
-	if r == -2:
+	if times[n - 1] <= t:
 		return values[n - 1]
-	if r == -1:
+	if times[0] >= t:
 		return values[0]
-	return lerpf(values[r - 1], values[r], _local(t, r))
+	var r := 1
+	if n > 2:
+		var l := 0
+		r = n
+		while l < r - 1:
+			var m := (l + r) >> 1
+			if times[m] < t:
+				l = m
+			else:
+				r = m
+	var t0 := times[r - 1]
+	var d := times[r] - t0
+	var u := (t - t0) / d if d != 0.0 else 0.0
+	var e := easings[r]
+	if e != NoodleEasing.LINEAR:
+		u = NoodleEasing.ease(u, e)
+	return lerpf(values[r - 1], values[r], u)
 
 
 func _vec(i: int) -> Vector3:
@@ -228,14 +221,30 @@ func eval_vec3(t: float) -> Vector3:
 	var n := times.size()
 	if n == 0:
 		return Vector3.ZERO
-	var r := _segment(t)
-	if r == -2:
-		return _vec(n - 1)
-	if r == -1:
-		return _vec(0)
-	var u := _local(t, r)
-	var pa := _vec(r - 1)
-	var pb := _vec(r)
+	if times[n - 1] <= t:
+		var z := (n - 1) * 3
+		return Vector3(values[z], values[z + 1], values[z + 2])
+	if times[0] >= t:
+		return Vector3(values[0], values[1], values[2])
+	var r := 1
+	if n > 2:
+		var l := 0
+		r = n
+		while l < r - 1:
+			var m := (l + r) >> 1
+			if times[m] < t:
+				l = m
+			else:
+				r = m
+	var t0 := times[r - 1]
+	var d := times[r] - t0
+	var u := (t - t0) / d if d != 0.0 else 0.0
+	var e := easings[r]
+	if e != NoodleEasing.LINEAR:
+		u = NoodleEasing.ease(u, e)
+	var a := (r - 1) * 3
+	var pa := Vector3(values[a], values[a + 1], values[a + 2])
+	var pb := Vector3(values[a + 3], values[a + 4], values[a + 5])
 	if smooth[r] == 0:
 		return pa + (pb - pa) * u
 	# Catmull-Rom through the neighbours, clamped at the ends (Heck SmoothVectorLerp).
@@ -250,17 +259,31 @@ func eval_vec3(t: float) -> Vector3:
 	return 0.5 * (p0 * q0 + pa * q1 + pb * q2 + p3 * q3)
 
 
-func _quat(i: int) -> Quaternion:
-	return Quaternion(values[i * 4], values[i * 4 + 1], values[i * 4 + 2], values[i * 4 + 3])
-
-
 func eval_quat(t: float) -> Quaternion:
 	var n := times.size()
 	if n == 0:
 		return Quaternion.IDENTITY
-	var r := _segment(t)
-	if r == -2:
-		return _quat(n - 1)
-	if r == -1:
-		return _quat(0)
-	return _quat(r - 1).slerp(_quat(r), _local(t, r))
+	if times[n - 1] <= t:
+		var z := (n - 1) * 4
+		return Quaternion(values[z], values[z + 1], values[z + 2], values[z + 3])
+	if times[0] >= t:
+		return Quaternion(values[0], values[1], values[2], values[3])
+	var r := 1
+	if n > 2:
+		var l := 0
+		r = n
+		while l < r - 1:
+			var m := (l + r) >> 1
+			if times[m] < t:
+				l = m
+			else:
+				r = m
+	var t0 := times[r - 1]
+	var d := times[r] - t0
+	var u := (t - t0) / d if d != 0.0 else 0.0
+	var e := easings[r]
+	if e != NoodleEasing.LINEAR:
+		u = NoodleEasing.ease(u, e)
+	var a := (r - 1) * 4
+	return Quaternion(values[a], values[a + 1], values[a + 2], values[a + 3]).slerp(
+		Quaternion(values[a + 4], values[a + 5], values[a + 6], values[a + 7]), u)

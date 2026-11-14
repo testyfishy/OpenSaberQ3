@@ -70,6 +70,8 @@ static func evaluate(obj: NoodleObject, life: float) -> void:
 		if t.parent >= 0:
 			parent = t.parent
 	var am := obj.anim_mask
+	# Properties nothing animates keep their neutral value without a call (identity, 1).
+	var used := am | pm | vm
 
 	# offsetPosition: sum.
 	var off := Vector3.ZERO
@@ -88,8 +90,12 @@ static func evaluate(obj: NoodleObject, life: float) -> void:
 				off += t.vec[P.P_OFFSET_POSITION]
 	out_offset = off
 
-	out_world = _quat(obj, P.P_OFFSET_WORLD_ROTATION, life, am, pm, vm)
-	out_local = _quat(obj, P.P_LOCAL_ROTATION, life, am, pm, vm)
+	out_world = Quaternion.IDENTITY
+	if used & (1 << P.P_OFFSET_WORLD_ROTATION):
+		out_world = _quat(obj, P.P_OFFSET_WORLD_ROTATION, life, am, pm, vm)
+	out_local = Quaternion.IDENTITY
+	if used & (1 << P.P_LOCAL_ROTATION):
+		out_local = _quat(obj, P.P_LOCAL_ROTATION, life, am, pm, vm)
 
 	# scale: component product.
 	var scl := Vector3.ONE
@@ -108,9 +114,17 @@ static func evaluate(obj: NoodleObject, life: float) -> void:
 				scl *= t.vec[P.P_SCALE]
 	out_scale = scl
 
-	out_dissolve = _float(obj, P.P_DISSOLVE, life, am, pm, vm)
-	out_dissolve_arrow = _float(obj, P.P_DISSOLVE_ARROW, life, am, pm, vm)
-	out_interactable = 0.0 if obj.uninteractable else _float(obj, P.P_INTERACTABLE, life, am, pm, vm)
+	out_dissolve = 1.0
+	if used & (1 << P.P_DISSOLVE):
+		out_dissolve = _float(obj, P.P_DISSOLVE, life, am, pm, vm)
+	out_dissolve_arrow = 1.0
+	if used & (1 << P.P_DISSOLVE_ARROW):
+		out_dissolve_arrow = _float(obj, P.P_DISSOLVE_ARROW, life, am, pm, vm)
+	out_interactable = 1.0
+	if obj.uninteractable:
+		out_interactable = 0.0
+	elif used & (1 << P.P_INTERACTABLE):
+		out_interactable = _float(obj, P.P_INTERACTABLE, life, am, pm, vm)
 
 	# definitePosition: path only, sum.
 	bit = 1 << P.P_DEFINITE_POSITION
