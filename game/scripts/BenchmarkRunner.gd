@@ -83,7 +83,7 @@ const COUNTER_STRIDE := 4
 const SPIKE_USEC := 12000
 const MAX_SPIKE_WINDOWS := 200
 
-const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,cubes_in_use,links_in_use,debris_live,slice_bursts,process_usec,physics_usec,phys_ticks,swing_usec,cuttable_usec,floor_ray_usec,spawn_usec,shape_reenable,notes_live,cuts_this_frame,labels_spawned,objs_spawned,objs_freed,arcs_spawned,text_mesh_writes,track_children,static_mem,pipeline_compiles_total,draw_calls,objects_in_frame,render_cpu_usec,render_gpu_usec,wall_usec,event_usec,arc_usec,noodle_usec,noodle_update_usec,noodle_tweens"
+const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,cubes_in_use,links_in_use,debris_live,slice_bursts,process_usec,physics_usec,phys_ticks,swing_usec,cuttable_usec,floor_ray_usec,spawn_usec,shape_reenable,notes_live,cuts_this_frame,labels_spawned,objs_spawned,objs_freed,arcs_spawned,text_mesh_writes,track_children,static_mem,pipeline_compiles_total,draw_calls,objects_in_frame,render_cpu_usec,render_gpu_usec,wall_usec,event_usec,arc_usec,noodle_usec,noodle_update_usec,noodle_tweens,step_max_usec,step_total_usec,step_script_usec,proc_span_usec"
 
 # Per-path self-time instrumentation (FR-033). A total physics time is not an
 # attribution: `physics_usec` is the whole tick, so the columns below split it
@@ -157,6 +157,46 @@ var _col_arc := PackedInt64Array()
 var _col_noodle := PackedInt64Array()
 var _col_noodle_upd := PackedInt64Array()
 var _col_noodle_tw := PackedInt32Array()
+# Frame split (0.7.35). `physics_usec` and `process_usec` are Godot's TIME_PHYSICS_PROCESS and
+# TIME_PROCESS monitors, which Godot refreshes once a second with the slowest step of the previous
+# second: they say nothing about the frame they are written on. These are measured per frame:
+#   step_max_usec    the longest physics step this frame (its callbacks and the physics server)
+#   step_total_usec  all physics steps this frame
+#   step_script_usec the part of them spent in _physics_process callbacks
+#   proc_span_usec   from the first _process callback to this runner's (the last)
+# delta_usec minus step_total_usec minus proc_span_usec is the time outside both: rendering
+# submit, the XR frame wait, the OS.
+var _col_step_max := PackedInt64Array()
+var _col_step_total := PackedInt64Array()
+var _col_step_script := PackedInt64Array()
+var _col_proc_span := PackedInt64Array()
+var _step_start := 0
+var _f_step_max := 0
+var _f_step_total := 0
+var _f_step_script := 0
+var _proc_start := 0
+const EDGE_PRIORITY := 100000
+
+# Marks the first _process callback of a frame and the last _physics_process callback of a tick.
+class FrameEdge extends Node:
+	var runner: Node
+	func _physics_process(_delta: float) -> void:
+		runner.call(&"_edge_step_end")
+	func _process(_delta: float) -> void:
+		runner.call(&"_edge_frame_start")
+
+func _edge_step_end() -> void:
+	if _step_start > 0:
+		_f_step_script += Time.get_ticks_usec() - _step_start
+
+func _edge_frame_start() -> void:
+	var now := Time.get_ticks_usec()
+	if _step_start > 0:
+		var d := now - _step_start
+		_f_step_total += d
+		_f_step_max = maxi(_f_step_max, d)
+		_step_start = 0
+	_proc_start = now
 
 # Rows whose process time is over SPIKE_USEC, waiting for their following frame so
 # spike-1/spike/spike+1 can all be printed. Empty on a normal run: the per-frame
@@ -229,6 +269,16 @@ static func _android_external_files_dir() -> String:
 	return "/storage/emulated/0/Android/data/" + rest.substr(0, slash) + "/files"
 
 func _ready() -> void:
+	# First physics callback of every tick and last _process of every frame (frame split columns);
+	# a helper node is the last physics callback and the first _process.
+	process_physics_priority = -EDGE_PRIORITY
+	process_priority = EDGE_PRIORITY
+	var edge := FrameEdge.new()
+	edge.name = "FrameEdge"
+	edge.runner = self
+	edge.process_physics_priority = EDGE_PRIORITY
+	edge.process_priority = -EDGE_PRIORITY
+	add_child(edge)
 	# Deferred so the map is started after the main scene has finished _ready().
 	call_deferred("_begin")
 
@@ -951,6 +1001,12 @@ func _start_recording() -> void:
 # `physics_usec` sums over all of them (that is what TIME_PHYSICS_PROCESS does),
 # so without this column a render hitch looks like expensive physics.
 func _physics_process(_delta: float) -> void:
+	var now := Time.get_ticks_usec()
+	if _step_start > 0:
+		var d := now - _step_start
+		_f_step_total += d
+		_f_step_max = maxi(_f_step_max, d)
+	_step_start = now
 	if _recording:
 		Cost.physics_ticks += 1
 
@@ -1027,6 +1083,13 @@ func _process(delta: float) -> void:
 	_col_noodle.append(Cost.noodle_usec)
 	_col_noodle_upd.append(Cost.noodle_update_usec)
 	_col_noodle_tw.append(Cost.noodle_tweens)
+	_col_step_max.append(_f_step_max)
+	_col_step_total.append(_f_step_total)
+	_col_step_script.append(_f_step_script)
+	_col_proc_span.append(Time.get_ticks_usec() - _proc_start if _proc_start > 0 else 0)
+	_f_step_max = 0
+	_f_step_total = 0
+	_f_step_script = 0
 	if GlobalReferences.wall_pool != null:
 		var in_use: int = GlobalReferences.wall_pool.total_count() - GlobalReferences.wall_pool.free_count()
 		_wall_pool_peak = maxi(_wall_pool_peak, in_use)
@@ -1301,7 +1364,7 @@ func _write_csv() -> void:
 	rows.resize(_ticks.size() + 1)
 	rows[0] = CSV_HEADER
 	for i in _ticks.size():
-		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
+		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
 			i, _ticks[i], _deltas[i], _proc_deltas[i],
 			_song_pos[i], _drawn[i], _focus_col[i],
 			_col_cubes[i], _col_links[i], _col_debris[i], _col_bursts[i],
@@ -1311,7 +1374,8 @@ func _write_csv() -> void:
 			_col_cuts[i], _col_labels[i], _col_objs[i], _col_objs_freed[i],
 			_col_arcs[i], _col_tm[i], _col_track[i], _col_mem[i], _col_pipe[i],
 			_col_drawcalls[i], _col_objects[i], _col_rcpu[i], _col_rgpu[i],
-			_col_wall[i], _col_event[i], _col_arc[i], _col_noodle[i], _col_noodle_upd[i], _col_noodle_tw[i]]
+			_col_wall[i], _col_event[i], _col_arc[i], _col_noodle[i], _col_noodle_upd[i], _col_noodle_tw[i],
+			_col_step_max[i], _col_step_total[i], _col_step_script[i], _col_proc_span[i]]
 	f.store_string("\n".join(rows) + "\n")
 	f.close()
 	vr.log_info("BENCH: csv=%s" % path)
