@@ -14,6 +14,7 @@ $checks = @(
     @('tools/harness/verify_io_fixes.tscn',        'IOFIX PASS'),
     @('tools/harness/verify_hand_path.tscn',       'HANDPATH PASS'),
     @('tools/harness/verify_scoring.tscn',         'SCORING PASS'),
+    @('tools/harness/verify_library_mods.tscn',    'MODS PASS'),
     @('tools/harness/rotation_probe.tscn',         'LANEPROBE local transform kept.*PASS'),
     @('tools/tests/test_chain_cut.tscn',           'CHAINGCUT PASS')
 )

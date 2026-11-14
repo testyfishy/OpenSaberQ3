@@ -26,6 +26,10 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
   visible object, parent or the player uses that track, and the per-object animation maths is
   cheaper. On "Somewhere Out There" (1e6ff) the event cost per frame fell from 8-67 ms to under
   1 ms on the PC. Nothing looks different. Not yet measured on the headset.
+- **Animated maps are marked in the song list.** A song whose Info.dat says a difficulty needs
+  Noodle Extensions shows "[Animated]" on its row, and the info panel names the mods it uses
+  (Noodle, Chroma, Mapping Extensions, Vivify). A new button next to the sort switches the list
+  between All maps, Standard only and Animated only, and remembers the choice.
 
 ## v0.7.29 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 

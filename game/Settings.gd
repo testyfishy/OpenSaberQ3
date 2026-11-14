@@ -100,6 +100,12 @@ var note_speed_percent: int:
 		value = clamp_to_schema(&"note_speed_percent", value)
 		note_speed_percent = value
 		set_and_emit(&"note_speed_percent", value)
+# The song list's map filter: "all", "standard" (no map requiring Noodle Extensions) or
+# "animated" (only those). Persisted like the sort.
+var library_mod_filter: String:
+	set(value):
+		library_mod_filter = value
+		set_and_emit(&"library_mod_filter", value)
 var disable_map_color: bool:
 	set(value):
 		disable_map_color = value
@@ -443,6 +449,7 @@ const SCHEMA := {
 	"strict_cuts": {"default": true},
 	"no_fail": {"default": true},
 	"note_speed_percent": {"default": 100, "min": 50, "max": 100, "step": 5},
+	"library_mod_filter": {"default": "all"},
 }
 
 # Derived view for the loader, the panel and the tests. The platform patch in _ready() writes

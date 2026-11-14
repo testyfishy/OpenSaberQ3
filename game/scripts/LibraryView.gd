@@ -28,6 +28,85 @@ const SORT_LABELS := {
 	SORT_PLAYS: "Play count",
 }
 
+# "Animated" maps (Noodle Extensions) and the mods a map names, from each difficulty's
+# requirements and suggestions in Info.dat: v2 `_customData._requirements` / `_suggestions`,
+# v3/v4 `customData.requirements` / `suggestions`. A map is Animated when any difficulty
+# REQUIRES Noodle Extensions; suggestions only add to the names shown.
+const MOD_NOODLE := 1
+const MOD_CHROMA := 2
+const MOD_MAPPING := 4
+const MOD_VIVIFY := 8
+# Requirement name (lower case) -> bit, and the order and short names the detail view shows.
+const MOD_BITS := {
+	"noodle extensions": MOD_NOODLE,
+	"chroma": MOD_CHROMA,
+	"mapping extensions": MOD_MAPPING,
+	"vivify": MOD_VIVIFY,
+}
+const MOD_SHORT := [[MOD_NOODLE, "Noodle"], [MOD_CHROMA, "Chroma"], [MOD_MAPPING, "Mapping Extensions"], [MOD_VIVIFY, "Vivify"]]
+const ANIMATED_LABEL := "Animated"
+
+# The song list's three-way filter (Settings.library_mod_filter).
+const MODS_ALL := "all"
+const MODS_STANDARD := "standard"
+const MODS_ANIMATED := "animated"
+const MOD_FILTERS: Array[String] = [MODS_ALL, MODS_STANDARD, MODS_ANIMATED]
+const MOD_FILTER_LABELS := {
+	MODS_ALL: "All maps",
+	MODS_STANDARD: "Standard only",
+	MODS_ANIMATED: "Animated only",
+}
+
+## Fills map.mod_flags and map.animated from its loaded difficulties, once per map.
+static func classify(map: MapInfo) -> void:
+	if map.mod_flags >= 0:
+		return
+	var flags := 0
+	var animated := false
+	for diff in map.difficulty_beatmaps:
+		var cd := diff.custom_data
+		for key in ["_requirements", "requirements"]:
+			var bits := _mod_bits(cd.get(key, null))
+			flags |= bits
+			if bits & MOD_NOODLE:
+				animated = true
+		for key in ["_suggestions", "suggestions"]:
+			flags |= _mod_bits(cd.get(key, null))
+	map.mod_flags = flags
+	map.animated = animated
+
+static func _mod_bits(list: Variant) -> int:
+	var bits := 0
+	if list is Array:
+		for name: Variant in list as Array:
+			if name is String or name is StringName:
+				bits |= int(MOD_BITS.get(String(name).strip_edges().to_lower(), 0))
+	return bits
+
+static func is_animated(map: MapInfo) -> bool:
+	classify(map)
+	return map.animated
+
+## The mods a map names, short and comma separated ("Noodle, Chroma"), or "".
+static func mod_names(map: MapInfo) -> String:
+	classify(map)
+	var names := PackedStringArray()
+	for entry: Array in MOD_SHORT:
+		if map.mod_flags & int(entry[0]):
+			names.append(str(entry[1]))
+	return ", ".join(names)
+
+## Keeps the maps the song list's mod filter shows.
+static func filter_mods(maps: Array, mode: String) -> Array:
+	if mode != MODS_STANDARD and mode != MODS_ANIMATED:
+		return maps
+	var want := mode == MODS_ANIMATED
+	var out: Array = []
+	for map in maps:
+		if is_animated(map as MapInfo) == want:
+			out.append(map)
+	return out
+
 static func _bytes_of(maps: Array) -> int:
 	var total := 0
 	for map in maps:

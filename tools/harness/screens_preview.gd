@@ -6,7 +6,10 @@ extends Node3D
 #
 #   godot --path . res://tools/harness/screens_preview.tscn -- <output-folder>
 #
-# Writes settings_<tab>.png, results_new_record.png and results_plain.png, then quits.
+# Writes settings_<tab>.png, results_new_record.png, results_plain.png and the song list in each
+# map filter state (songlist_all.png, songlist_standard.png, songlist_animated.png, and
+# songlist_animated_empty.png for a view with no animated map), then quits. The song list shows
+# this PC's own library; the filter is set directly, so the saved setting is not changed.
 
 var _out := "user://screens/"
 
@@ -20,6 +23,7 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(_out)
 	await _settings()
 	await _results()
+	await _song_list()
 	print("SCREENS done ", _out)
 	get_tree().quit()
 
@@ -74,3 +78,52 @@ func _results() -> void:
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(_out + str(shot[0]))
 		print("SCREENS saved ", shot[0])
+
+
+func _song_list() -> void:
+	var canvas := preload("res://OQ_Toolkit/OQ_UI2D/OQ_UI2DCanvas.tscn").instantiate() as OQ_UI2DCanvas
+	var menu := preload("res://game/BeepSaberMainMenu.tscn").instantiate() as MainMenu
+	var player := AudioStreamPlayer.new()
+	add_child(player)
+	menu.main_song_player_ref = player
+	# The menu waits for its keyboard; added after the menu so its ready comes after that wait.
+	var keyboard := preload("res://OQ_Toolkit/OQ_UI2D/OQ_UI2DKeyboard.tscn").instantiate() as OQ_UI2DKeyboard
+	keyboard.visible = false
+	menu.keyboard = keyboard
+	canvas.add_child(menu)
+	add_child(canvas)
+	if menu._backfill != null:
+		menu._backfill.stop()  # no network lookups from a preview
+	add_child(keyboard)
+	keyboard.visible = false
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var viewport := canvas.get_node("SubViewport") as SubViewport
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	var everything := menu._all_songs.duplicate()
+	for shot: Array in [
+		["songlist_all.png", LibraryView.MODS_ALL, false],
+		["songlist_standard.png", LibraryView.MODS_STANDARD, false],
+		["songlist_animated.png", LibraryView.MODS_ANIMATED, false],
+		["songlist_animated_empty.png", LibraryView.MODS_ANIMATED, true],
+	]:
+		menu._all_songs.assign(everything if not shot[2] else LibraryView.filter_mods(everything, LibraryView.MODS_STANDARD))
+		menu._mod_filter = str(shot[1])
+		menu._mod_button.text = menu._mod_filter_label()
+		menu._apply_library_view()
+		# Pick an animated map where there is one, so the detail panel shows its mod line.
+		for i in menu._currently_selected_songlist_ref.size():
+			if LibraryView.is_animated(menu._currently_selected_songlist_ref[i]):
+				menu.songs_menu.select(i)
+				menu._select_song(i)
+				break
+		menu.song_preview.stop()
+		for f in 6:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		viewport.get_texture().get_image().save_png(_out + str(shot[0]))
+		print("SCREENS saved ", shot[0], " maps=", menu._currently_selected_songlist_ref.size())
+	menu._all_songs.assign(everything)
+	canvas.queue_free()
+	keyboard.queue_free()
+	await get_tree().process_frame

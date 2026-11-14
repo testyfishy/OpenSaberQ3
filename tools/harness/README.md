@@ -59,8 +59,15 @@ that a real `LightSaber` measures the swing in and the follow-through in degrees
 
 ## Screens
 
-`screens_preview.tscn` renders every settings tab and the results screen to PNG. It needs a real
-renderer, so run it without `--headless`: `godot --path . res://tools/harness/screens_preview.tscn -- <folder>`.
+`screens_preview.tscn` renders every settings tab, the results screen and the song list in each
+map filter state (from this PC's own library) to PNG. It needs a real renderer, so run it without
+`--headless`: `godot --path . res://tools/harness/screens_preview.tscn -- <folder>`.
+
+## Animated maps
+
+`verify_library_mods.tscn` checks the song list's "Animated" classification from v2 and v4 Info
+samples (Noodle Extensions required by any difficulty; Chroma only and missing customData are
+standard) and the All / Standard / Animated filter. Prints `MODS PASS`.
 
 ## I/O regressions
 

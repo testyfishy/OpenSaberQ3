@@ -68,6 +68,11 @@ var _cards: Array = []
 var _card_key := Settings.library_card
 var _sort_field := Settings.library_sort_field
 var _sort_desc := Settings.library_sort_desc
+# All maps / Standard only / Animated only (LibraryView.MOD_FILTERS), persisted like the sort.
+var _mod_filter := Settings.library_mod_filter
+var _mod_button: Button
+# The empty-state line for the next list build, when the mod filter is what emptied it.
+var _empty_note := ""
 var _view_cards := false
 var _view_button: Button
 var _sort_button: OptionButton
@@ -191,6 +196,19 @@ func _build_library_ui() -> void:
 	_dir_button.pressed.connect(_toggle_direction)
 	add_child(_dir_button)
 
+	# The map filter fills the gap between the sort direction and the end of the song list. A
+	# button that cycles, like the direction toggle: an option button's arrow leaves no room for
+	# "Animated only" in this width. Added after attach_children(), so its sounds are attached
+	# here.
+	_mod_button = Button.new()
+	_mod_button.position = Vector2(728, 12)
+	_mod_button.size = Vector2(118, 48)
+	_mod_button.add_theme_font_size_override("font_size", 16)
+	_mod_button.text = _mod_filter_label()
+	_mod_button.pressed.connect(_cycle_mod_filter)
+	add_child(_mod_button)
+	UI_AudioEngine.attach_button(_mod_button)
+
 	_card_scroll = ScrollContainer.new()
 	_card_scroll.position = Vector2(16, 64)
 	_card_scroll.size = Vector2(832, 496)
@@ -230,7 +248,10 @@ func _apply_library_view() -> void:
 	if not known:
 		_card_key = LibraryView.CARD_ALL
 	_build_card_buttons()
-	var filtered := LibraryView.filter(_all_songs, _card_key)
+	var filtered := LibraryView.filter_mods(LibraryView.filter(_all_songs, _card_key), _mod_filter)
+	_empty_note = ""
+	if filtered.is_empty() and _mod_filter != LibraryView.MODS_ALL and not _all_songs.is_empty():
+		_empty_note = "No animated maps in this view." if _mod_filter == LibraryView.MODS_ANIMATED else "No standard maps in this view."
 	var sorted := LibraryView.sort(filtered, _sort_field, _sort_desc)
 	var typed: Array[MapInfo] = []
 	for map in sorted:
@@ -283,6 +304,17 @@ func _on_sort_selected(index: int) -> void:
 	Settings.save()
 	_apply_library_view()
 
+func _mod_filter_label() -> String:
+	return str(LibraryView.MOD_FILTER_LABELS.get(_mod_filter, LibraryView.MOD_FILTER_LABELS[LibraryView.MODS_ALL]))
+
+func _cycle_mod_filter() -> void:
+	var i := LibraryView.MOD_FILTERS.find(_mod_filter)
+	_mod_filter = LibraryView.MOD_FILTERS[(i + 1) % LibraryView.MOD_FILTERS.size()]
+	_mod_button.text = _mod_filter_label()
+	Settings.library_mod_filter = _mod_filter
+	Settings.save()
+	_apply_library_view()
+
 func _toggle_direction() -> void:
 	_sort_desc = not _sort_desc
 	_dir_button.text = "Z-A" if _sort_desc else "A-Z"
@@ -312,8 +344,9 @@ func _set_cur_playlist(songs: Array[MapInfo]) -> void:
 	var map_index := 0
 	for map in songs:
 		@warning_ignore("return_value_discarded")
+		var badge := "  [%s]" % LibraryView.ANIMATED_LABEL if LibraryView.is_animated(map) else ""
 		songs_menu.add_item(
-			"%s - %s  [%s]" % [map.song_author_name, map.song_name, map.source_label()],
+			"%s - %s  [%s]%s" % [map.song_author_name, map.song_name, map.source_label(), badge],
 			default_song_icon)
 		var filepath := map.filepath + map.cover_image_filename
 		_bg_img_loader.load_texture(filepath, _on_cover_loaded, false, map_index)
@@ -329,6 +362,11 @@ func _set_cur_playlist(songs: Array[MapInfo]) -> void:
 		var message := "No maps match this source."
 		if _all_songs.is_empty():
 			message = "No songs yet. Use Online Map Source to download maps."
+		if not _empty_note.is_empty():
+			# The map filter emptied the view: say so in the list itself, not only in the panel.
+			message = _empty_note
+			@warning_ignore("return_value_discarded")
+			songs_menu.add_item(message, null, false)
 		($SongInfo_Label as Label).text = message
 		cover.texture = null
 		diff_menu.clear()
@@ -413,12 +451,13 @@ func _select_song(id: int) -> void:
 	($SongInfo_Label as Label).text = """Song Author: %s
 	Song Title: %s
 	Beatmap Author: %s
-	Source: %s
+	Source: %s%s
 	Play Count: %d""" % [
 		map.song_author_name,
 		map.song_name,
 		map.level_author_name,
 		map.source_label(),
+		_mods_note(map),
 		PlayCount.get_total_play_count(map)
 	]
 	
@@ -437,6 +476,15 @@ func _select_song(id: int) -> void:
 		diff_menu.set_item_tooltip(diff_index, diff.difficulty + " / " + diff.custom_name)
 	
 	_select_difficulty(0)
+
+# "   Animated: Noodle, Chroma" or "   Mods: Chroma" after the source, "" for a standard map.
+func _mods_note(map: MapInfo) -> String:
+	var names := LibraryView.mod_names(map)
+	if names.is_empty():
+		return ""
+	if LibraryView.is_animated(map):
+		return "   %s: %s" % [LibraryView.ANIMATED_LABEL, names]
+	return "   Mods: %s" % names
 
 func _on_stop_prev_timeout() -> void:
 	var song_prev_Tween := song_preview.create_tween().set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN_OUT)

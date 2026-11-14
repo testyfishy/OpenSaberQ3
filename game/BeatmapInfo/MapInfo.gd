@@ -29,6 +29,11 @@ var level_hash := ""
 var added_unix := 0
 var bytes := 0
 var playlists: Array = []
+# Mods the difficulties name in Info.dat (LibraryView.MOD_* bits) and whether any difficulty
+# requires Noodle Extensions. Worked out once from the loaded difficulties (LibraryView.classify),
+# never from the beatmap files; -1 until then.
+var mod_flags := -1
+var animated := false
 
 @warning_ignore("shadowed_variable")
 func _init(
