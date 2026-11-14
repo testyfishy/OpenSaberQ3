@@ -4,14 +4,65 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
-## Unreleased (on `audit/fable-5.2`, after 0.7.29)
+## v0.7.35 - unreleased (on `audit/fable-5.2`)
+
+- **Smoother heavy Noodle maps.**
+  - Animated notes now reuse their position once it has settled and only redo the fade still
+    running.
+  - Pooled walls skip settings they already hold when they spawn (on "Somewhere Out There", 292
+    walls appear in one frame at 5:09).
+  - The song's start no longer applies its 835 track links in its first frame; they are set while
+    the map loads.
+  - Nothing looks different.
+- **Benchmark runs measure each frame.** The bench file gains per-frame physics and process
+  timings (`step_max_usec`, `step_total_usec`, `step_script_usec`, `proc_span_usec`). The older
+  `physics_usec` and `process_usec` columns are Godot's once-a-second maximum, not the frame's
+  own cost.
+
+## v0.7.34 - 2026-11-14 (built from `audit/fable-5.2`, untagged)
+
+- **Wall and note bursts on heavy Noodle maps.** After a slow frame the game catches up several
+  physics steps at once, and every animated note and wall used to work out its animation on each
+  of them. They now do it once per drawn frame (notes about to be cut and walls near your head
+  still every step). On the headset the 65-88 ms bursts on "Somewhere Out There" became 34-41 ms
+  frames at one or two steps. Walls also spawn cheaper. Nothing looks different.
+- **Dissolving bombs no longer show red patches inside.**
+
+## v0.7.33 - 2026-11-13 (built from `audit/fable-5.2`, untagged)
+
+- **Fewer stutters on heavy Noodle maps.** On "Somewhere Out There", thousands of map events
+  landing on one beat and the first bomb to dissolve each froze a frame, and walls were created
+  mid-song. Events are now applied only to what uses them, the bomb fade is prepared at startup,
+  and every map gets enough walls, notes and bombs ready at load. Nothing looks different.
+- **Partly dissolved notes and bombs look clean.** A note held part-way through a Noodle dissolve
+  was covered in black specks; it now loses smooth patches with a thin bright edge, and above
+  about 80 % it looks almost solid.
+- **Maps with their own environment play without our room.** When a map clears Beat Saber's
+  environment for its own, the game's room (sky, lasers, rings) is hidden during that song and a
+  faint track floor stays to judge distance. The map's own environment is still not drawn. New
+  setting under Visuals: "Hide room on custom-environment maps" (on by default).
+
+## v0.7.32 - 2026-11-13 (built from `audit/fable-5.2`, untagged)
+
+- **Animated maps are marked in the song list.** A song whose Info.dat says a difficulty needs
+  Noodle Extensions shows "[Animated]" on its row, and the info panel names the mods it uses
+  (Noodle, Chroma, Mapping Extensions, Vivify). A new button next to the sort switches the list
+  between All maps, Standard only and Animated only, and remembers the choice.
+
+## v0.7.31 - 2026-11-13 (built from `audit/fable-5.2`, untagged)
+
+- **Heavy Noodle maps cost far less CPU.** A track's animations are now worked out only when a
+  visible object, parent or the player uses that track, and the per-object animation maths is
+  cheaper. On "Somewhere Out There" the event cost per frame fell from 8-67 ms to under 1 ms on
+  the PC. Nothing looks different.
+
+## v0.7.30 - 2026-11-13 (built from `audit/fable-5.2`, untagged)
 
 - **Noodle dissolve is a fade.** Notes and bombs dissolve through a noise pattern and walls fade
   out, instead of popping off at half dissolve. An object at dissolve 0 is still not drawn.
 - **Noodle `dissolveArrow` is played**: it fades a note's arrow or dot, and the pause menu no
   longer lists "arrow dissolve" as missing.
-- Ordinary maps draw exactly as before. Checked on a PC only; the look and the frame time of
-  the fade have not been seen on the headset.
+- Ordinary maps draw exactly as before.
 - **Map loading no longer crashes at random.** About one map load in three crashed or stopped
   part way on the PC (a thread race in the loader's bookkeeping); 0 of 120 after the fix.
 - **Noodle fake objects are drawn.** Decorative notes, bombs and walls that maps use as scenery
@@ -22,32 +73,6 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
   as in Beat Saber. Turns about z look the same as before.
 - **Noodle fixes**: v4 maps keep the tracks, animation and jumps of their bombs and walls, and an
   arc or chain now finds its head note when that note has its own jump offset.
-- **Heavy Noodle maps cost far less CPU.** A track's animations are now worked out only when a
-  visible object, parent or the player uses that track, and the per-object animation maths is
-  cheaper. On "Somewhere Out There" (1e6ff) the event cost per frame fell from 8-67 ms to under
-  1 ms on the PC. Nothing looks different. Not yet measured on the headset.
-- **Animated maps are marked in the song list.** A song whose Info.dat says a difficulty needs
-  Noodle Extensions shows "[Animated]" on its row, and the info panel names the mods it uses
-  (Noodle, Chroma, Mapping Extensions, Vivify). A new button next to the sort switches the list
-  between All maps, Standard only and Animated only, and remembers the choice.
-- **Fewer stutters on heavy Noodle maps.** On "Somewhere Out There", thousands of map events
-  landing on one beat and the first bomb to dissolve each froze a frame, and walls were created
-  mid-song. Events are now applied only to what uses them, the bomb fade is prepared at startup,
-  and every map gets enough walls, notes and bombs ready at load. Nothing looks different. The
-  wall-heavy stretches can still drop frames.
-- **Partly dissolved notes and bombs look clean.** A note held part-way through a Noodle dissolve
-  was covered in black specks; it now loses smooth patches with a thin bright edge, and above
-  about 80 % it looks almost solid.
-- **Maps with their own environment play without our room.** When a map clears Beat Saber's
-  environment for its own, the game's room (sky, lasers, rings) is hidden during that song and a
-  faint track floor stays to judge distance. The map's own environment is still not drawn. New
-  setting under Visuals: "Hide room on custom-environment maps" (on by default).
-- **Wall and note bursts on heavy Noodle maps.** After a slow frame the game catches up several
-  physics steps at once, and every animated note and wall used to work out its animation on each
-  of them. They now do it once per drawn frame (notes about to be cut and walls near your head
-  still every step), so "Somewhere Out There" no longer piles up 8-step frames in its wall
-  sections on the PC. Walls also spawn cheaper. Nothing looks different.
-- **Dissolving bombs no longer show red patches inside.**
 
 ## v0.7.29 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 

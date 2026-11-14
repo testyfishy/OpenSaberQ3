@@ -65,6 +65,8 @@ list), bare single points, all 32 Heck easings, `splineCatmullRom` for vectors; 
 
 ## What does not work, and why
 
+*Superseded in part (0.7.29 state): dissolveArrow and fake objects are played since 0.7.30. The current list is in "State at 0.7.35" at the end.*
+
 - **The `time` property** (AnimateTrack): it re-times an object's whole lifetime, which needs the
   hit window and the miss to follow the animated time; not attempted in this pass. Reported.
 - **dissolveArrow**: the arrow is drawn inside the note shader, with no separate visibility.
@@ -303,6 +305,8 @@ BOTRUN FAIL
 
 ## What to try first in the headset
 
+*Superseded: see "What to look at first in the headset" under "State at 0.7.35".*
+
 1. **Run the bot check with the headset on your head** (or the Guardian boundary set up), since it
    could not complete overnight:
    `pwsh tools/dev/botrun.ps1 -Map "ODDS" -DifficultyIndex 5 -Seconds 45`. It should end
@@ -321,6 +325,8 @@ BOTRUN FAIL
    because Vivify draws them as something else.
 
 ## Dissolve as a fade (after 0.7.29, 2026-11-13)
+
+*Superseded in part: the noise described here (small cells with a per-pixel dither) was replaced in 0.7.33 by smooth patches with a bright edge, see "Stutter bursts and partial dissolve on 1e6ff", item 4.*
 
 Commits `bf6b050`, `49efb23`. Heck's source (`CutoutManager.cs`, `NoteUpdateNoodlifier.cs`):
 dissolve 1 is fully drawn and 0 is gone. Heck passes `1 - dissolve` to Beat Saber's noise
@@ -747,7 +753,7 @@ processes throughout, which sets off the 8-ticks-per-frame spiral at random in t
   so the spiral itself was set off by load on this PC.
 - A final run on the reverted code was too loaded to compare (even the untouched 100-120 s span
   ran 1.8× slower).
-- The wall spirals are not fixed.
+- The wall spirals are not fixed. *(Superseded: fixed in 0.7.34, see "Wall and note bursts on 1e6ff"; on the headset the bursts became 34-41 ms frames at one or two ticks.)*
 
 **4. Partial dissolve look.** Cause, in the owner's crop: the cutout noise had a per-pixel dither
 term. At high dissolve (0.87-0.92) it left scattered single-pixel holes over the faces and
@@ -772,6 +778,9 @@ fixture dump is byte-identical before and after.
 - Everything on the headset: the stutter at those times, the 205.6 s tick (the PC proof is with
   a real renderer), and how the new dissolve reads in VR.
 - The wall-span spirals, which remain on the PC.
+
+*Superseded: the 0.7.33 headset run confirmed the 205.6 s tick and the 218.3 s and 230.3 s
+dispatch ticks gone; the wall spirals were fixed in 0.7.34.*
 
 ## Hiding the room on maps that replace the environment (after 0.7.32)
 
@@ -948,3 +957,204 @@ headset's multi-tick frames. Wall + cuttable in us per physics tick, including t
 - Everything on the headset, where the bursts were measured.
 - The per-tick cost at the headset's one tick per frame, which the frame pass does not reduce.
 - How the bomb outline looks in VR.
+
+## Last round before 0.7.35: items A-E
+
+The 0.7.34 headset run (1e6ff ExpertPlusLawless, bot, full song): mean 8.8 ms, p95 11.9 ms,
+p99 15.8 ms. The wall bursts are gone. 133 frames over 25 ms remain. Commits: `55fb7df`,
+`873386c`, `d16fdb6` and `620786f`.
+
+**A. The "3.0 s periodic physics hitch": a measurement artefact of the column, not proven to be a
+game cost.**
+- **What the column is:** `physics_usec` is Godot's `TIME_PHYSICS_PROCESS` monitor, and
+  `process_usec` is `TIME_PROCESS`. Godot refreshes both once a second, with the slowest step of
+  the previous second.
+- **Evidence:** in every PC bench CSV the column holds one value for about a second of rows, also
+  on rows with no physics tick at all. A row with `physics_usec` 24 ms therefore means "some step
+  in the previous second took 24 ms", not "this frame's tick took 24 ms".
+- **Why the probes looked small:** the probe columns are per frame and the monitor is not, so they
+  could not line up.
+- **The 8-beat period** (3.0 s at 160 BPM) is the map's structure, but nothing in 1e6ff's notes,
+  walls or custom events recurs on it: at quiet times there is as much lighting as at the hitch
+  times.
+- **Nothing in the code runs on a 3 s or 360-tick cadence.** The bench runner, the bot and every
+  timer were checked.
+- **New columns** (`873386c`), measured per frame by the bench runner itself:
+  - `step_max_usec`: the longest physics step, callbacks plus physics server.
+  - `step_total_usec`: all steps of the frame.
+  - `step_script_usec`: the callback part of those steps.
+  - `proc_span_usec`: from the first `_process` callback to the last.
+  - Delta minus `step_total_usec` minus `proc_span_usec` is the time outside both: render submit,
+    the XR frame wait, the OS.
+- **What a headset run with these columns will settle:**
+  - Whether the hitch frames' step is long. If so, whether it is in callbacks (`step_script_usec`)
+    or in the physics server (the remainder).
+  - Or whether the time is outside the step altogether.
+- **On the PC** (loaded by other processes) no 3 s cadence shows. The longest steps are the
+  spawn frames (C) and load-induced preemption.
+
+**B, and A with it: a baseline hitch that predates the Noodle work; documented, not pinned
+down.**
+- **ODDS&ENDS ExpertPlus** (no Noodle) on 0.7.34 on the Quest, 200 s bot run: mean 8.4 ms, p99
+  11.3 ms, max 41.4 ms, 51 frames over 25 ms (delta 31-40 ms, 1-2 ticks). 20 of them are
+  clustered at 12.8-17.8 s, about 0.6 s apart. In those frames every script probe is tiny
+  (cuttable 0-14 us, spawn 37-432 us, event about 25 us, swing 15-48 us); only the
+  once-a-second `physics_usec` maximum is 25-30 ms.
+- So the time is in the physics step or around it, outside every probed script section. It is in
+  ODDS, so it is not Noodle.
+- **Checked from here without finding a cause:**
+  - The unprobed physics callbacks: BenchmarkRunner, BotDriver, the saber and controller scripts,
+    rumble, the floor and the HUD.
+  - Any file or log I/O per tick or per second: none on those paths. `audio_hits.csv` is written
+    once, at the end.
+  - Timers on a 0.6 s or 3 s cadence: none.
+- B's arithmetic ("15-20 ms outside both process and physics") used the same once-a-second
+  maxima, so it does not hold for the frame either.
+- **Discriminating headset runs** with the 0.7.35 build, whose CSV has the four frame-split
+  columns. ODDS, ExpertPlus difficulty index as before, 60 s (covers the 12.8-17.8 s cluster),
+  three runs:
+  1. As before (bot on): `[bench]` `map = "ODDS"`, `difficulty_index = <same>`,
+     `duration = 60`, `max_duration = 100`; `[bot]` `enabled = true`, `miss_percent = 0`,
+     `sway = false`.
+  2. The same with `no_audio = true` under `[bench]` (rules the audio stream and mixer in or out).
+  3. The same with `[bot]` `enabled = false` (rules the bot's controller driving in or out; notes
+     are then missed, which is fine for timing).
+- **How to read each hitch frame** (delta over 25 ms):
+  - If a hitch frame's `delta_usec - step_total_usec - proc_span_usec` is large, the time is
+    outside the scene tree. That is rendering submit, the XR runtime's frame wait, the compositor
+    or the OS, and the game cannot fix it from script.
+  - If `step_total_usec - step_script_usec` is large, it is the physics server (Area3D moves and
+    queries).
+  - If `step_script_usec` is large while the per-path probes are small, it is an unprobed
+    callback.
+- **Also useful:** `pipeline_compiles_total` and `render_cpu_usec` already in the CSV, and a fourth
+  run with the headset worn (not on the desk under the proximity override), to rule the override
+  out.
+
+**C. 292 walls spawning in one frame (309.3 s): cut, not spread.**
+- **What was cut:**
+  - A wall spawn wrote its transform once instead of six times (0.7.34).
+  - Its first pose moved to the frame pass (0.7.34).
+  - It now writes its uniforms, collision size and grow scale only when they change (`d16fdb6`):
+    pooled walls often respawn with the values they hold.
+  - verify_noodle checks a reused wall ends in the state of a fresh one.
+- **The parts** of a spawn on the PC (loaded, so about twice the unloaded cost):
+  - visibility 1 us
+  - collision size 5 us
+  - material uniforms 7 us
+  - transform 2 us
+  - Noodle setup 14 us
+  - grow 5 us
+- **Not done: preparing walls ahead of their spawn tick.** A wall's transform, travel and first
+  pose depend on the tick it spawns in, so only the static setup could move earlier: about a
+  third of a spawn. The 292 walls still have to be posed in the frame they appear.
+- **Remaining:** that frame still spawns and poses 292 walls. In the final PC bench (loaded) it
+  took 38.8 ms: spawn 23.2 ms and the frame pass 9.4 ms.
+
+**D. Busy stretches at about 105 fps: not reached; documented.**
+- **Cut this round** (`55fb7df`): the evaluate cache now keeps a note's pose and its dissolve
+  apart. A note whose position has settled while its dissolve still fades (1e6ff's notes fade until
+  0.55 of their lifetime, into the hit window) reuses its pose.
+  - verify_noodle: 40,922 of 44,800 evaluations reuse a group (was 15,598), 0 differ.
+- **What stays:** outside the hit window a note's own animation (position, rotation, scale until
+  about 0.375 of its lifetime) changes every tick and must be evaluated. That is GDScript call
+  overhead per animated property, about 14 us per note on the PC and about 40 us on the Quest.
+- **Not reached:** the 8.6 ms target for those stretches. Going much lower would mean evaluating
+  Noodle points in native code (a GDExtension) or on the GPU. That is a project of its own, not a
+  tweak.
+- **On the PC** the per-note microbenchmark could not separate old from new in this round: the
+  machine was loaded, and its notes start at lifetime 0, where nothing is cacheable.
+
+**E. The start frame: partly moved.**
+- **Moved** (`620786f`): the 835 AssignTrackParent events at beat 0 are applied at map load.
+  `load_events` applies every parent and player event at beat 0 or before; they set fields only.
+  - Objects spawned in the song's first tick now see their parents from their first frame instead
+    of one frame later. That is the one visible difference.
+- **Not moved:** the first tick's spawns. Spawning before the song starts would need the playing
+  state to run at load.
+- **Not changed:** the 8 catch-up ticks themselves follow the long load frame, which the engine
+  catches up after any long frame.
+- **Final PC bench:** the worst frame in the first 1.5 s took 31.9 ms with no physics tick in
+  it, which is the load frame itself.
+
+**Final PC bench of 0.7.35** (1e6ff ExpertPlusLawless, full song, bot, headless, with the PC
+loaded by other processes): mean 7.7 ms, p99 16.9 ms, max 52.8 ms.
+
+## State at 0.7.35
+
+A reader can use this section alone. Everything below was checked on a PC unless it says headset.
+
+**What plays.** Noodle Extensions animation on notes, bombs and walls:
+- **Tracks and events:** point definitions, `AnimateTrack`, `AssignPathAnimation`,
+  `AssignTrackParent`, `AssignPlayerToTrack` (the root target), and each object's own `animation`.
+- **Properties:** offsetPosition, offsetWorldRotation, localRotation, scale, definitePosition,
+  dissolve, dissolveArrow, interactable and uninteractable.
+- **Static transforms and per-object jumps:** noteJumpMovementSpeed and noteJumpStartBeatOffset.
+- **Fake objects:** drawn, never scored.
+- **Dissolve:** a clean noise cutout with a bright edge on notes and bombs, an alpha fade on walls.
+
+Also:
+- **Song list:** Animated maps are marked and can be filtered.
+- **Room:** this game's own room is hidden on maps that clear Beat Saber's environment (setting,
+  on by default).
+- **Heavy maps:** 1e6ff plays at a mean of 8.8 ms, p99 15.8 ms on the headset (0.7.34).
+
+**How it stays affordable:**
+- Track events are applied when a track is read (0.7.31, 0.7.33).
+- A parent chain is built once per tick (0.7.34).
+- Animated objects travel every tick but pose once per drawn frame; notes in the hit window and
+  hittable walls near the head still pose every tick (0.7.34).
+- An object reuses its evaluation while nothing it depends on changed (0.7.34, 0.7.35).
+- Pools are sized from the map at load (0.7.33).
+- The bomb dissolve shaders are compiled at startup (0.7.33).
+
+**What does not play** (reported in the pause menu where noted):
+- **The `time` property:** it re-times an object's lifetime, which needs the hit window and miss to
+  follow. Reported.
+- **Player head and hand tracks** (`AssignPlayerToTrack` with a target other than Root). Reported.
+- **Point bases and modifiers.** Reported. Also `worldPositionStays`.
+- **Arcs and chains do not follow an animated head note:** they spawn on the head's un-animated
+  path. Reported.
+- **Chroma environment objects, geometry, materials, colour animation, `AnimateComponent` and fog**
+  are not drawn. Reported. On maps that remove 15 or more stock objects this game's own room is
+  hidden instead.
+- **v4 maps' fake arrays** are read as v3 entries, not expanded from v4's shared data. No fixture
+  has them.
+- **A static world rotation** turns the object but not its path around the player.
+- **Animated localRotation** is composed inside the cut-direction turn; Heck applies it outside.
+  Static rotation follows Heck's order since 0.7.30.
+- **A note at dissolve 0 hides its arrow too,** unlike Beat Saber.
+
+**Known defects and limits, with evidence:**
+- **Bomb pop on the material swap:** a bomb below dissolve 1 swaps to shader copies of its
+  materials, and their look at 0.99 against 1.0 has not been compared in the headset. Unverified.
+- **Bursts of spawns:** 309.3 s of 1e6ff spawns and poses 292 walls in one frame (C above).
+- **Busy stretches** of 1e6ff average about 9.3-9.5 ms on the headset (D above).
+- **About 100 hitch frames of about 30 ms** on the headset, cause unknown (B above). ODDS on 0.7.30
+  also had a 41 ms maximum, so part of this may be baseline.
+- **Inside fade:** in a frame of several physics ticks, a wall's fade when the camera is inside it
+  can switch one tick early (0.7.34).
+- **Teleported walls:** a hittable wall that an animation moves more than 4 m into the head within
+  one multi-tick frame gets its collision up to 67 ms late (0.7.34).
+- **Last-bit differences:** parent and player transforms can differ from the old multiplication
+  order in the last bits (accepted; verify_noodle tolerance 1e-4 relative, worst seen 3.8e-7).
+- **PC benches** were taken with the PC loaded by processes this session does not own, so their
+  absolute numbers vary between runs. Comparisons were run back to back.
+
+**Checks:**
+- verify_noodle: 324 checks, including the eager-vs-lazy reference on five fixtures and a
+  synthetic map, the frame pass, both caches and pool sizing.
+- check.ps1: CHECKS PASS.
+- Every fixture dump is byte-identical with 0.7.33.
+
+**What to look at first in the headset:**
+1. **Hitch frames:** 1e6ff and ODDS full-song bot runs with the 0.7.35 bench, reading the four new
+   columns on the hitch frames (A, B).
+2. **The spawn burst:** 1e6ff at 5:09 (309 s, the 292-wall spawn) and the busy stretches at 2:00-2:40
+   and 3:40-4:20, for frame time.
+3. **Dissolve:** a bomb dissolving in 1e6ff around 3:25 (205 s): no red inside, no visible pop when
+   it starts to fade.
+4. **Room:** a map that hides the room (1e6ff, 23f6b, 3bbb0 or 4a2b3): whether the faint track
+   floor is the right amount of reference.
+5. **Static rotation:** maps with static x/y rotations (any of the fixtures listed under "Noodle
+   fixes"), to judge the turns changed in 0.7.30.
