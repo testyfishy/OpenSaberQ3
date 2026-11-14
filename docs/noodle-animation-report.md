@@ -846,3 +846,105 @@ the end of the schema.
 
 **Not verified:** how a hidden room reads in the headset, and whether the faint track floor is
 enough of a reference, or too much, on these maps.
+
+## Wall and note bursts on 1e6ff (after 0.7.33)
+
+On the headset with 0.7.33, every one of the 30 worst frames of 1e6ff was a wall burst at 8
+physics ticks per frame: 206, 230, 254 and 314 s. Commits: `5cc2b2f`, `b0b488f`, `2b07960`,
+`a62e470` and `7695147`.
+
+**1. Parent chain once per track per tick** (`5cc2b2f`). A track's chained transform is now its
+parent's chained transform (cached per tick) times its own local one, so a chain shared by many
+children is built once. This multiplies in a different order than before; the owner accepted
+last-bit differences.
+- verify_noodle compares parent and player transforms with a 1e-4 relative tolerance (absolute
+  near zero). The worst seen is 3.8e-7 on 1e6ff, and a reversed order fails it.
+- Everything else is still compared bit for bit.
+- The gain alone was small: wall evaluate about 5 % lower at 206 and 254 s and about 25 % at
+  314 s, in a microbenchmark on the PC.
+
+**2. Pose once per drawn frame** (`b0b488f`). The spiral's multiplier: a slow frame makes the
+engine run up to 8 physics ticks before the next frame, and every Noodle note and wall worked out
+its pose on each of them. Now an animated object only travels every tick, and adds itself once
+per frame to `NoodleFrame`. `BeepSaber_Game._process` poses each object on that list once, after
+the frame's last tick and before it is drawn. The drawn state is the one posing on every tick gave
+(verify_noodle checks it bit for bit over frames of 1-8 ticks).
+
+What stays per tick, and why:
+- **Travel**, for notes and walls: it decides the hit window, the miss and the despawn, and it is
+  integrated exactly as before.
+- **The full pose of a note in the hit window or with collision on** (travel z > -3 m): the
+  sabers' hit test and the miss check read it. Before -3 m a note's collision is off, so nothing
+  reads its pose until the frame is drawn.
+- **The full pose of a hittable wall within 4 m of the head** (the wall's centre minus its half
+  diagonal, against the head in track space): the head-in-wall check (PlayerHead's Area3D) runs
+  in the physics step and must see the wall where it is that tick.
+  - A wall farther away cannot travel 4 m within one frame: 8 ticks at 120 Hz is 67 ms, 1.7 m at
+    25 m/s.
+  - The only gap is a wall that an animation teleports more than 4 m into the head within one
+    multi-tick frame. Its collision then follows at the next drawn frame, at most 67 ms later.
+  - A non-hittable wall (fake or uninteractable) has no collision at all.
+- **Not exact:** the inside fade of a wall (camera inside a wall) now uses the latest pose rather
+  than the previous tick's, so in a multi-tick frame it can switch one tick earlier. That is the
+  one visual difference.
+- **Ordinary maps** add nothing to the list, and the frame pass returns at once.
+
+**3. Per-object overhead.**
+- **Evaluate cache** (`2b07960`). A note's pose was almost all `NoodleAnim.evaluate` (14 of
+  16 us on the PC). An object's evaluation is reused while its lifetime stays outside every one
+  of its own animated spans and none of its tracks changed a value, path or parent since (a
+  global change clock). It is exact: verify_noodle compares cached and fresh evaluations of
+  1e6ff's notes and walls (15,598 of 44,800 served from the cache, 0 differ; a cache that ignores
+  track changes fails it). In-game it helps less than hoped, because the notes' own track
+  (`noteChild`) animates most of the time.
+- **A batched loop:** the frame pass is one loop over the objects that ticked, not a `_process`
+  per node.
+
+**4. Wall spawn** (`7695147`). A spawn wrote the wall's transform four times (x, y, z,
+rotation), then reset its scale and posed it again. Each write notifies the mesh and collision
+children and moves the Area3D in the physics server. It is now built once and written once. A
+Noodle wall's first pose waits for the frame pass, unless it may be hittable near the head. A wall
+marked uninteractable starts with its collision off. On the 397 `lyrics` walls (none hittable),
+a spawn went from about 38 to 25 us on the PC.
+
+**5. Notes** are covered by 2 and 3: their per-tick pose is now only in the hit window.
+
+**Bomb outline** (`a62e470`), the open item from 0.7.33: through a dissolving bomb's holes, the
+far side of its outline shell (the inside of a grown copy of the body) faced the camera and showed
+as red patches. While dissolving, the shell now drops pixels that face the camera more than 0.55
+and keeps the side-on rim that is the outline. Still: `%TEMP%\opensaber_previews\dissolve_bomb_shell.png`.
+
+**PC bench**, 1e6ff ExpertPlusLawless, full song, bot, headless (CPU only). Old is 0.7.33
+(`7957aaa`), new is `7695147`, run interleaved. The PC carried 26-66 % CPU load from processes
+this session does not own (a torrent client and a Python job), so absolute numbers vary between
+runs. A headless PC draws about 145 frames a second against 120 ticks, so it rarely runs several
+ticks per frame on its own. The pairs below therefore also cap the frame rate, to reproduce the
+headset's multi-tick frames. Wall + cuttable in us per physics tick, including the frame pass:
+
+| Span | Uncapped old | Uncapped new | 40 fps (3 ticks) old | 40 fps new | 15 fps (8 ticks) old | 15 fps new |
+|---|---|---|---|---|---|---|
+| 204-210 s | 1,496 | 1,370 | 923 | 394 | 2,021 | 417 (4.8×) |
+| 228-234 s | 6,452 | 3,413 | 2,103 | 1,035 | 8,210 | 710 (11.6×) |
+| 252-258 s | 5,130 | 3,174 | 2,013 | 1,502 | 7,457 | 852 (8.8×) |
+| 312-318 s | 2,511 | 1,006 | 837 | 402 | 1,672 | 324 (5.2×) |
+
+- **Uncapped, interleaved pair:**
+  - Frames at 8 ticks: 322 before, 1 after.
+  - p99: 57.5 ms before, 16.8 ms after.
+  - Max: 170 ms before, 47 ms after.
+  - Frames over 25 ms: 907 before, 90 after.
+- **3× target:** at 8 ticks per frame (the spiral) wall + cuttable per tick is down 5-12×. At 3
+  ticks per frame it is down 1.3-2.3×. At one tick per frame there is nothing to defer, so the
+  gain is only the spawn, chain and cache work.
+- **No 8-tick frame on an unloaded PC:** not shown. This PC was never unloaded, and its one 8-tick
+  frame in the uncapped run came during that load.
+
+**Checks:**
+- verify_noodle: 323 checks.
+- check.ps1: CHECKS PASS.
+- Every fixture dump is byte-identical with 0.7.33.
+
+**Not verified:**
+- Everything on the headset, where the bursts were measured.
+- The per-tick cost at the headset's one tick per frame, which the frame pass does not reduce.
+- How the bomb outline looks in VR.

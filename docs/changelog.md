@@ -42,6 +42,12 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
   environment for its own, the game's room (sky, lasers, rings) is hidden during that song and a
   faint track floor stays to judge distance. The map's own environment is still not drawn. New
   setting under Visuals: "Hide room on custom-environment maps" (on by default).
+- **Wall and note bursts on heavy Noodle maps.** After a slow frame the game catches up several
+  physics steps at once, and every animated note and wall used to work out its animation on each
+  of them. They now do it once per drawn frame (notes about to be cut and walls near your head
+  still every step), so "Somewhere Out There" no longer piles up 8-step frames in its wall
+  sections on the PC. Walls also spawn cheaper. Nothing looks different.
+- **Dissolving bombs no longer show red patches inside.**
 
 ## v0.7.29 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 
