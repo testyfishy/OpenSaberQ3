@@ -30,6 +30,14 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
   Noodle Extensions shows "[Animated]" on its row, and the info panel names the mods it uses
   (Noodle, Chroma, Mapping Extensions, Vivify). A new button next to the sort switches the list
   between All maps, Standard only and Animated only, and remembers the choice.
+- **Fewer stutters on heavy Noodle maps.** On "Somewhere Out There", thousands of map events
+  landing on one beat and the first bomb to dissolve each froze a frame, and walls were created
+  mid-song. Events are now applied only to what uses them, the bomb fade is prepared at startup,
+  and every map gets enough walls, notes and bombs ready at load. Nothing looks different. The
+  wall-heavy stretches can still drop frames.
+- **Partly dissolved notes and bombs look clean.** A note held part-way through a Noodle dissolve
+  was covered in black specks; it now loses smooth patches with a thin bright edge, and above
+  about 80 % it looks almost solid.
 
 ## v0.7.29 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 

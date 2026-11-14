@@ -651,3 +651,124 @@ What this shows:
   the track is next read, so after the change it reads 520-710.
 - The bench runs again overwrote `bench.csv`, `bench_meta.txt`, `audio_hits.csv`, `config.ini`,
   `highscores.json` and `play_count.json` in the PC user data.
+
+## Stutter bursts and partial dissolve on 1e6ff (after 0.7.32)
+
+The owner saw stutter bursts on 1e6ff "Somewhere Out There" ExpertPlus Lawless at fixed song
+times (205-260 s and 314 s), and notes at partial dissolve that looked broken. Commits:
+`fb8c225` (lazy dispatch), `1879d59` (bomb warm-up), `4997f0d` (dissolve look), `e6cfd17`
+(pools), `97fca88` (backward jumps), and `0eed349` reverted by `5042391` (a transform cache that
+did not pay). Nothing looks different apart from the dissolve change, which was the point.
+
+**1. Event dispatch bursts (218.3 s, 230.3 s).** Proven: on the PC the headless bench showed
+one tick of `event_usec` 48-54 ms at 218.3 s and 27 ms at 230.3 s, the beats where 2,860 and
+2,388 events land.
+- **Fix:** AnimateTrack and AssignPathAnimation events now wait on their track.
+  - Reaching a beat only records that tick's song time and update count, one write per
+    distinct beat.
+  - A track applies its due events at those times when something reads it, then steps its
+    animations.
+  - An animation whose event was reached after the last update() is not stepped yet, as
+    before.
+  - Parent and player events stay eager.
+- **Exactness:** verify_noodle's eager-vs-lazy comparison against the 0.7.30 reference reads
+  identical values on five fixtures and the synthetic map.
+- **Backward jumps:** the first version found a new spike. When the song ended and playback
+  reset to 0, the catch-up applied every pending event of every track at once: 253 ms in one
+  tick. `97fca88` records a backward jump in O(1), and each track replays the jumps it missed
+  when next read. A mid-song audio stall snap would have hit the same spike. Disabling the
+  replay makes the 1e6ff check fail.
+- **Event block alone** (dispatch_until + update per tick over the whole song at 120 Hz,
+  interleaved runs, old tree vs final code):
+
+  | | Mean per tick | Worst tick |
+  |---|---|---|
+  | Before (3 runs) | 26.7-27.8 us | 72-74 ms at 218.3 s |
+  | After (3 runs) | 14.5-16.2 us | 3.8-5.3 ms at 0.0 s (the 835 parent assignments at beat 0) |
+
+**2. The 68 ms single tick at 205.6 s.** Proven: the map's 8 bombs ride the `flyingNotes`
+track, which starts animating `_dissolve` at beat 548 (205.5 s). The first bomb below 1
+built the shared dissolve ShaderMaterials and compiled their shaders inside its physics tick.
+A scratch scene timing that call with a real renderer measured 81-99 ms for the first swap,
+plus 90-250 ms the next frame; later swaps took under 0.1 ms. Headless benches do not compile
+shaders, so they showed only 6 ms there.
+- **Fix:** the startup warm-up bomb (BeepSaber_Game already draws one for two frames) is now
+  drawn dissolved. The materials are built and compiled once at boot, which costs about 100 ms.
+- **After:** the first in-song swap takes 0.09 ms, and the next frame 2-3 ms.
+
+**3. Walls (206, 230, 254, 314 s).** Two separate things.
+- **Pool growth.** The wall pool is presized to 256 and 1e6ff peaks at 399 live walls. Before,
+  206.3 s instantiated 143 walls in one frame (spawn 16-22 ms), and 254.3 s another 101.
+  - **Fix:** `e6cfd17` grows the note, bomb and wall pools at map load. Each grows to the most
+    objects of its kind alive at once (`MapData.peak_live`, from spawn to a beat after the
+    end) plus 8. For 1e6ff: walls 256 → 405.
+  - **After:** those frames no longer instantiate anything. verify_noodle checks peak_live.
+- **Per-tick wall cost.** A per-section probe in Wall._physics_process, PC, us per wall per
+  tick:
+
+  | Span | Walls per tick | Total | evaluate() | of which parent chain | of which track sync | compose + transform write | grow | inside-fade |
+  |---|---|---|---|---|---|---|---|---|
+  | 205-208 s | 63 | 46 | 34 | 18 | 5 | 4 | 2 | 3 |
+  | 229-232 s | 54 | 47 | 35 | 17 | 8 | 4 | 3 | 3 |
+  | 253-257 s | 41 | 48 | 36 | 17 | 8 | 4 | 3 | 4 |
+  | 312-316 s | 106 | 30 | 17 | 1 | 2 | 3 | 2 | 2 |
+
+  - The dissolve uniform write is under 1.5 us, and collision and visibility toggles are
+    negligible.
+  - At 205-257 s each wall is on its own track under a 4-5-level chain of animated tunnel
+    tracks, rebuilt every tick for every wall.
+  - At 314 s there are simply about 100 walls per tick (the `lyrics` track), about 3 ms of a
+    tick.
+  - A cache that keeps a chain's transform until a track in it changes (`0eed349`) did not pay
+    here: those parents change every tick. Wall evaluate went from 21-23 to 24-28 us per wall
+    in a microbenchmark at 206 s, so it was reverted.
+  - What would cut the chain cost is reusing each parent's chained transform:
+    child = parent's chain × own local. That changes the order of the float multiplications, a
+    last-bit difference that no longer matches the eager reference exactly. Not done; it needs
+    the owner's call on that tolerance.
+  - **Not skipped:** at 229-232 s 60 % of live walls are hidden (dissolve 0), but they are
+    interactable walls whose collision must keep moving, so their tick was not skipped.
+
+**PC bench, full song** (325 s, bot, headless, CPU only). Before (`534caa4`) and after were
+run interleaved, twice each. The after runs include the since-reverted transform cache (+1 to
++5 us per wall in the microbenchmark above). The PC carried 77-99 % CPU load from unrelated
+processes throughout, which sets off the 8-ticks-per-frame spiral at random in the wall spans.
+
+| Run | Mean ms | p99 ms | Max ms | Frames > 25 ms | Worst frame in 204-210 / 216-220 / 228-234 / 252-258 / 312-318 s |
+|---|---|---|---|---|---|
+| Before 1 | 6.9 | 13.2 | 62 | 27 | 36 / 62 / 35 / 29 / 53 |
+| Before 2 | 7.0 | 13.3 | 67 | 64 | 27 / 60 / 52 / 67 / 57 |
+| After 1 | 7.2 | 14.6 | 103 | 205 | 62 / 16 / 103 / 103 / 97 |
+| After 2 | 7.0 | 13.2 | 153 | 93 | 55 / 14 / 31 / 88 / 153 |
+
+- The dispatch burst (216-220 s) is gone in both after runs.
+- The wall spans still spiral, and worse in these after runs. Their per-tick wall cost was the
+  same within noise (after 2: 769 / 937 us per tick at 228 / 252 s, against 669-869 before),
+  so the spiral itself was set off by load on this PC.
+- A final run on the reverted code was too loaded to compare (even the untouched 100-120 s span
+  ran 1.8× slower).
+- The wall spirals are not fixed.
+
+**4. Partial dissolve look.** Cause, in the owner's crop: the cutout noise had a per-pixel dither
+term. At high dissolve (0.87-0.92) it left scattered single-pixel holes over the faces and
+arrow. On bombs the noise scale gave less than one cell across the mesh, so only the dither
+varied.
+- **Reference:** Beat Saber's note shader is a cutout against a noise mask.
+- **New look** (`noodle_dissolve.gdshaderinc`):
+  - Two smooth octaves with no per-pixel term, about three cells across a note or bomb.
+  - A pixel is cut where the noise is below 1 - dissolve (Heck's cutout).
+  - A thin bright rim runs along each cut edge (note colour toward white; light grey on bombs).
+  - Smooth noise rarely reaches its extremes, so above about 0.8 an object is nearly solid.
+  - Inside faces are still dropped while dissolving.
+  - Still the opaque pass; objects at 1 run none of it.
+- **Stills** (mobile renderer, dissolve 0.25 / 0.5 / 0.75 / 0.9 / 1.0, notes and bombs):
+  `%TEMP%\opensaber_previews\dissolve_before.png` and `dissolve_after.png`.
+- **Open:** through a bomb's holes the red inside of its outline shell shows.
+
+**Checks:** verify_noodle 302 checks (5 new for peak_live). check.ps1 CHECKS PASS. Every
+fixture dump is byte-identical before and after.
+
+**Not verified:**
+- Everything on the headset: the stutter at those times, the 205.6 s tick (the PC proof is with
+  a real renderer), and how the new dissolve reads in VR.
+- The wall-span spirals, which remain on the PC.
