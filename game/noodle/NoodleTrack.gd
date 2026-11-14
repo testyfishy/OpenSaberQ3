@@ -46,7 +46,6 @@ var xform := Transform3D.IDENTITY
 var tw: Array = []
 var ptw: Array = []
 var tw_count := 0
-var busy := false
 var synced := -1
 var local_tick := -1
 var xform_tick := -1
@@ -54,6 +53,8 @@ var xform_tick := -1
 # applied (NoodleEvents applies the due ones when the track is read).
 var events: Array = []
 var next_ev := 0
+# How many of NoodleEvents' backward time jumps this track has been brought through.
+var jumps_done := 0
 # Change stamps (NoodleEvents.track_xform): `changed` is the clock value of this track's last value
 # or parent change; `local_at` / `xform_at` the clock when `local` / `xform` were last computed.
 # A transform is only recomputed when something it depends on changed since.

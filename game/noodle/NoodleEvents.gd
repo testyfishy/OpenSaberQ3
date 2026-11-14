@@ -71,12 +71,16 @@ static var _beat_sec := PackedFloat64Array()
 static var _beat_tick := PackedInt64Array()
 static var _beat_events := PackedInt32Array()
 static var _due := 0
-# The tracks with events of their own (NoodleTrack.events), for the catch-up.
+# The tracks with events of their own (NoodleTrack.events), cleared on reset.
 static var _event_tracks: Array[NoodleTrack] = []
+# Each time the song time went backwards: the time it went back from, how many distinct beats had
+# been reached, and the update() count then. A track replays the ones it has not seen when it is
+# next read (NoodleTrack.jumps_done), so a jump costs nothing up front.
+static var _jump_sec := PackedFloat64Array()
+static var _jump_due := PackedInt32Array()
+static var _jump_tick := PackedInt64Array()
 # Running animations live on their track (NoodleTrack.tw / ptw, one per property). Path
 # transitions reuse Anim: `points` is unused, the track's path_blend is driven instead.
-# Every track that ever had one (each once), for the catch-up before time goes backwards.
-static var _busy: Array[NoodleTrack] = []
 # How many animations are running (value and path), for the bench probe.
 static var _live := 0
 # The update() count and the song time of the last update(): what a read brings a track to.
@@ -110,7 +114,9 @@ static func reset() -> void:
 	_beat_tick.clear()
 	_beat_events.clear()
 	_due = 0
-	_busy.clear()
+	_jump_sec.clear()
+	_jump_due.clear()
+	_jump_tick.clear()
 	_live = 0
 	_tick += 1
 	_now = -INF
@@ -288,11 +294,13 @@ static func dispatch(ev: Event, song_sec: float) -> void:
 
 # Applies the track's events the song has reached and that are not applied yet, each at the
 # song time of the tick that reached it.
-static func _apply_pending(track: NoodleTrack) -> void:
+static func _apply_pending(track: NoodleTrack, due: int = -1) -> void:
+	if due < 0:
+		due = _due
 	var list := track.events
 	while track.next_ev < list.size():
 		var ev: Event = list[track.next_ev]
-		if ev.slot >= _due:
+		if ev.slot >= due:
 			return
 		_apply(ev, track, _beat_sec[ev.slot], int(_beat_tick[ev.slot]))
 		track.next_ev += 1
@@ -363,9 +371,6 @@ static func _start(track: NoodleTrack, p: int, tw: Anim, path: bool) -> void:
 		track.tw[p] = tw
 	track.tw_count += 1
 	_live += 1
-	if not track.busy:
-		track.busy = true
-		_busy.append(track)
 
 
 # Stops the running animation of property `p` (Heck: a new animation of a property stops the
@@ -398,6 +403,8 @@ static func _stop(track: NoodleTrack, p: int, path: bool) -> void:
 ## dispatching it then did. Its animation was stepped by every update() after that tick, so it is
 ## stepped at the read unless no update() has passed since (`born`); the others likewise.
 static func sync(track: NoodleTrack) -> void:
+	if track.jumps_done < _jump_sec.size():
+		_replay_jumps(track)
 	if track.next_ev < track.events.size() and (track.events[track.next_ev] as Event).slot < _due:
 		_apply_pending(track)
 	if track.synced == _tick:
@@ -407,30 +414,45 @@ static func sync(track: NoodleTrack) -> void:
 		_step_track(track, _now)
 
 
-static func _step_track(track: NoodleTrack, song_sec: float) -> void:
+# Steps the track's animations at `song_sec`, except those whose event was reached at or after
+# update() count `fresh` (they hold their dispatch-time value until an update() passes).
+static func _step_track(track: NoodleTrack, song_sec: float, fresh: int = -1) -> void:
+	if fresh < 0:
+		fresh = _tick
 	for p in NoodleTracks.P_COUNT:
 		var tw: Anim = track.tw[p]
-		if tw != null and tw.born != _tick and _step_value(tw, song_sec):
+		if tw != null and tw.born < fresh and _step_value(tw, song_sec):
 			track.tw[p] = null
 			track.tw_count -= 1
 			_live -= 1
 		tw = track.ptw[p]
-		if tw != null and tw.born != _tick and _step_path(tw, song_sec):
+		if tw != null and tw.born < fresh and _step_path(tw, song_sec):
 			track.ptw[p] = null
 			track.tw_count -= 1
 			_live -= 1
 
 
-# Time is about to go back from `_now` to `song_sec`: step every running animation at `_now`
-# first (what the ticks before this one did when every animation was stepped every tick).
+# Time is about to go back from `_now` to `song_sec`. Every track must first be brought to `_now`
+# (what the ticks before this one did when everything was dispatched and stepped every tick):
+# recorded here, and done per track when it is next read (_replay_jumps), so a jump back (a song
+# restart, an audio stall snap) does not apply every pending event of the map in one tick.
 static func _catch_up(song_sec: float) -> void:
-	for t in _event_tracks:
-		_apply_pending(t)
-	for t in _busy:
-		if t.tw_count > 0:
-			_step_track(t, _now)
-		t.synced = _tick
+	_jump_sec.append(_now)
+	_jump_due.append(_due)
+	_jump_tick.append(_tick)
 	_now = song_sec
+
+
+static func _replay_jumps(track: NoodleTrack) -> void:
+	for j in range(track.jumps_done, _jump_sec.size()):
+		_apply_pending(track, _jump_due[j])
+		if track.tw_count > 0:
+			_step_track(track, _jump_sec[j], int(_jump_tick[j]))
+	track.jumps_done = _jump_sec.size()
+	# A jump in this very tick, before its update(): the track now holds what every tick before
+	# gave it, which is what a read sees until that update().
+	if _jump_tick[_jump_tick.size() - 1] == _tick:
+		track.synced = _tick
 
 
 # Writes the tween's value for `song_sec`; true when it has finished (no repeats left).
