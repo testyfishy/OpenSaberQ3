@@ -35,19 +35,28 @@ void vertex() {
 	tip_dist = length(VERTEX);
 
 	vec3 saber_pos = left_saber;
-	if (saber_magnet == 0){
-		saber_pos = vec3(0.0,0.0,9999.0);
-	}else if (saber_magnet == 2){
+	if (saber_magnet == 2){
 		saber_pos = right_saber;
 	}
+	// No magnet before the head is cut, nor while that saber is retracted (LightSaber parks a
+	// retracted tip at y = -1000, which used to drag the ribbon a kilometre down).
+	bool magnet = saber_magnet != 0 && saber_pos.y > -100.0;
 
-	vec3 wrld_pos = NODE_POSITION_WORLD + VERTEX;
-	dist = abs(wrld_pos.z - saber_pos.z);
-	float force = max(0.0, 1.0 - (dist / distance_effect));
-	VERTEX = mix(wrld_pos, saber_pos,
-		pow(force, distance_power) * clamp(tip_dist / max(magnet_tail_ease, 0.001), 0.0, 1.0)
-		) - NODE_POSITION_WORLD;
-	to_discard = float(wrld_pos.z > saber_pos.z);
+	// The vertex in world space through the full model matrix: NODE_POSITION_WORLD + VERTEX was
+	// only right while nothing above the ribbon was rotated or scaled (360/90 lanes, a Noodle
+	// player track).
+	vec3 wrld_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	if (magnet) {
+		dist = abs(wrld_pos.z - saber_pos.z);
+		float force = max(0.0, 1.0 - (dist / distance_effect));
+		vec3 pulled = mix(wrld_pos, saber_pos,
+			pow(force, distance_power) * clamp(tip_dist / max(magnet_tail_ease, 0.001), 0.0, 1.0));
+		VERTEX = (inverse(MODEL_MATRIX) * vec4(pulled, 1.0)).xyz;
+		to_discard = float(wrld_pos.z > saber_pos.z);
+	} else {
+		dist = 9999.0;
+		to_discard = 0.0;
+	}
 }
 
 void fragment() {

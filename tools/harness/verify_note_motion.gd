@@ -51,6 +51,7 @@ func _run() -> void:
 	_chain_rigid()
 	_pool_peak()
 	_spawn_pop()
+	await _arc_ribbon()
 	_legacy()
 	NoteMotion.reset()
 	Map.current_info = null
@@ -368,6 +369,43 @@ func _spawn_pop() -> void:
 					done, "scale %s rot %s pos %s" % [str(mesh.scale), str(mesh.rotation), str(mesh.position)])
 				obj.queue_free()
 	NoteMotion.fly_in_enabled = true
+
+
+# An arc's ribbon follows its own curve. The game spawns a pooled arc before it is in the tree
+# (Playing._spawn_arc did until 0.7.39, and the pool is prewarmed at map load since 0.7.36), and the
+# ribbon's CSGPolygon3D used to keep the mesh of the scene's default curve - a straight 10 m rod away
+# from the tail - so arcs were drawn in the wrong place and seemed to vanish when their head was cut.
+# Both orders are checked: the ribbon's mesh must span the arc's own head-to-tail distance.
+func _arc_ribbon() -> void:
+	_configure()
+	Arc.apply_spawn_distance()
+	var holder := Node3D.new()
+	add_child(holder)
+	Arc.prewarm(Arc._pool.size() + 2, holder)
+	await get_tree().process_frame
+	# Head on beat 8 at lane (1, 0), tail on beat 10 at lane (1, 2): 2 beats = 1 s = 10 m at NJS 10.
+	var info := ArcInfo.new_v3({"c": 0.0, "b": 8.0, "x": 1.0, "y": 0.0, "d": 1.0, "tb": 10.0, "tx": 1.0, "ty": 2.0})
+	for in_tree_first: bool in [false, true]:
+		var arc := Arc.acquire()
+		if in_tree_first:
+			holder.add_child(arc)
+			arc.spawn(info, 4.0)
+		else:
+			arc.spawn(info, 4.0)
+			holder.add_child(arc)
+		arc.set_process(false)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var meshes := arc.visual.get_meshes()
+		var aabb: AABB = (meshes[1] as Mesh).get_aabb() if meshes.size() > 1 and meshes[1] != null else AABB()
+		# The ribbon runs from the tail (its origin) 10 m toward the player (+z) and bends with the
+		# head's down cut. The scene's default curve is a 0.11 m thick rod from z 0 to -10.
+		var ok := absf(aabb.size.z - 10.0) < 0.3 and aabb.size.y > 1.0 and aabb.position.z > -0.5
+		_check("arc ribbon follows its curve when spawned %s" % ("in the tree" if in_tree_first else "out of the tree, from the pool"),
+			ok, "mesh aabb %s" % str(aabb))
+		arc._release_to_pool()
+	holder.queue_free()
+	await get_tree().process_frame
 
 
 # Unconfigured motion (harness scenes, tools) keeps the legacy numbers and has no fly-in.

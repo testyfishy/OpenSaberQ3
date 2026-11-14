@@ -432,6 +432,60 @@ away at the same speed. The two Note Speed options compare like this:
 - **The option closest to Beat Saber** would be a separate reaction-time or jump-distance setting
   that leaves NJS alone.
 
+## Arc ribbon fix (0.7.39)
+
+Owner, playing 0.7.38: once the head note is hit, "the arc disappears ... Normally it's supposed to
+have the line drawn all the way until the next connecting box comes through."
+
+**Cause.** The ribbon is a CSGPolygon3D that follows the arc's Path3D, and it rebuilds only when
+it hears the curve's `changed` signal. In a real bot replay of ODDS&ENDS ExpertPlus on the PC,
+every arc's CSG mesh was the scene's default curve, a 0.11 m rod from the tail 10 m away from the
+player (`AABB z -10..0`), instead of its own 5.4 m curve toward the head note:
+
+- `Arc.prewarm` (0.7.36) fills the pool at map load with arcs built on that default curve.
+- `Playing._spawn_arc` called `spawn()`, which rewrites the curve, before adding the arc to the
+  tree.
+- The harness shows the mesh is not rebuilt even when the arc is in the tree first.
+
+So the ribbon was drawn in the wrong place. The saber magnet then discarded whatever was nearer
+than the blade, which made the arc seem to vanish when the head was cut. The 0.7.36 pool made it
+happen to every arc; pooled arcs before that could keep the previous arc's mesh.
+
+**Fix.**
+
+- **The rebuild.** `Arc.spawn` now ends with `_rebuild_ribbon()`, which sets the CSG's
+  `path_node` and so marks it dirty in or out of the tree.
+- **Order.** `Playing` adds the arc to the track before spawning it.
+- **Shader** (`Arc.gdshader`):
+  - The magnet now uses the full `MODEL_MATRIX` instead of `NODE_POSITION_WORLD + VERTEX`, which
+    was wrong under rotated 360/90 lanes or a moved Noodle player track.
+  - There is no magnet while that saber is retracted. LightSaber parks a retracted tip at
+    y = -1000, which pulled the ribbon down.
+
+The magnet itself is unchanged:
+
+- Ribbon nearer than the blade's z is hidden.
+- The rest bends toward the tip within a few metres (`distance_effect` 7, power 4).
+- It fades within 0.2-2 m of the tip's z.
+
+**Checks.**
+
+- **`verify_note_motion`: "arc ribbon follows its curve".** Spawned from the prewarmed pool,
+  both out of the tree and in it, the ribbon mesh must span the arc's own 10 m toward the player
+  and its bend. With the rebuild removed, both checks fail and show the 10 m rod.
+- **`tools/harness/arc_magnet_preview.tscn`** (windowed) renders an arc from the pool through a
+  scripted swing for six cases: right cut, left cut, a wrong-saber cut (no magnet), a missed head
+  (no magnet), an arc with no head note (magnet from the start), and the arc counted per frame.
+  Every case stays visible until the tail passes at about +0.6 s.
+- **Real game captures** (windowed bot replay, ODDS E+ beats 158.5 and 160) are in
+  `%TEMP%\opensaber_previews\`:
+  - `arc_game_before_fix.png`: no ribbon between head and tail.
+  - `arc_game_after_fix_*.png`: the ribbon between the notes, and after the cut from the saber
+    to the tail.
+- **`check.ps1`:** CHECKS PASS.
+
+**Not verified:** on the headset, and by a person's swing (the bot holds its tips near z -0.1).
+
 ## Unverified
 
 - The bodies of `CoreMathUtils.CalculateHalfJumpDurationInBeats` and Beat Saber's `NoteJump` /

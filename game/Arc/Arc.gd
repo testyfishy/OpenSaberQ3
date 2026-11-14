@@ -182,6 +182,17 @@ func spawn(info: ArcInfo, current_beat: float, _activator_cube: BeepCube = null)
 
 	curve.add_point(head_pos - tail_pos, Vector3.ZERO, head_dir * head_handle)
 	curve.add_point(Vector3.ZERO, tail_dir * tail_handle, Vector3.ZERO)
+	_rebuild_ribbon()
+
+# 0.7.39: the ribbon (a CSGPolygon3D following the Path3D) did not rebuild when spawn() rewrote the
+# curve of a reused arc (out of the tree, and in the harness not even in it). Since 0.7.36 every
+# arc is reused (Arc.prewarm fills the pool at map load with arcs built on the scene's default
+# curve), so every arc drew that default:
+# a straight 10 m rod running away from its tail, not the curve between its notes. With the
+# saber magnet hiding everything nearer than the blade, the arc then seemed to vanish when its
+# head was cut. Setting the path node marks the CSG dirty in any case, in or out of the tree.
+func _rebuild_ribbon() -> void:
+	visual.path_node = visual.path_node
 
 # Note cut direction (0..7) as a unit vector in the play plane; a dot (8) has no direction.
 func _cut_direction(cut_direction: int) -> Vector3:

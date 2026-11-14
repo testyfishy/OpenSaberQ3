@@ -76,8 +76,10 @@ func _spawn_arc(game: BeepSaber_Game, arc_info: ArcInfo, cube: BeepCube, current
 		_arc_tails.append(arc_info)
 		for spawned in cube_refs:
 			_mark_arc_tail(spawned)
-	arc.spawn(arc_info, current_beat, cube)
+	# In the tree before spawn() writes its curve, so the ribbon's CSGPolygon3D sees the change
+	# (spawn() also forces the rebuild, see Arc._rebuild_ribbon).
 	game.track.add_child(arc)
+	arc.spawn(arc_info, current_beat, cube)
 	TrackLanes.place(arc, arc_info.head_beat)
 
 func _construct_linked_chain(chain_info: ChainInfo, current_beat: float) -> void:

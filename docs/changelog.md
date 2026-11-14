@@ -4,6 +4,18 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.39 - unreleased (on `audit/fable-5.2`)
+
+- **Arcs are drawn between their notes again, and stay after you cut the head.**
+  - Since 0.7.36 every arc ribbon was drawn as a straight line running away from its tail note
+    instead of the curve between its two notes. Cutting the head then hid what was left, so the
+    arc seemed to vanish.
+  - Now the ribbon follows its curve. After a correct cut it stays from just beyond your saber
+    to the tail until the tail arrives.
+  - Also fixed for 360/90 maps: the pull toward the saber now works with rotated lanes. A
+    retracted saber no longer drags the ribbon away.
+- Not yet run on the headset.
+
 ## v0.7.38 - unreleased (on `audit/fable-5.2`)
 
 - **Modifiers per song.**
