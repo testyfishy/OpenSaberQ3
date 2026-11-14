@@ -42,9 +42,16 @@ static func peak_live(stack: Array, spawn_beats: float, tail: float) -> int:
 	for info: Variant in stack:
 		if info == null:
 			continue
-		var beat := float(info.beat)
-		var duration := maxf(float(info.duration), 0.0) if "duration" in info else 0.0
-		starts.append(beat - float(info.spawn_lead) - spawn_beats)
+		# Arcs run from their head to their tail beat and have no jump of their own.
+		var is_arc: bool = "head_beat" in info and "tail_beat" in info and not "beat" in info
+		var beat := float(info.head_beat) if is_arc else float(info.beat)
+		var duration := 0.0
+		if is_arc:
+			duration = maxf(float(info.tail_beat) - beat, 0.0)
+		elif "duration" in info:
+			duration = maxf(float(info.duration), 0.0)
+		var lead := float(info.spawn_lead) if "spawn_lead" in info else 0.0
+		starts.append(beat - lead - spawn_beats)
 		ends.append(beat + duration + tail)
 	starts.sort()
 	ends.sort()

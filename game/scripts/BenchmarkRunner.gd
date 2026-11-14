@@ -83,7 +83,7 @@ const COUNTER_STRIDE := 4
 const SPIKE_USEC := 12000
 const MAX_SPIKE_WINDOWS := 200
 
-const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,cubes_in_use,links_in_use,debris_live,slice_bursts,process_usec,physics_usec,phys_ticks,swing_usec,cuttable_usec,floor_ray_usec,spawn_usec,shape_reenable,notes_live,cuts_this_frame,labels_spawned,objs_spawned,objs_freed,arcs_spawned,text_mesh_writes,track_children,static_mem,pipeline_compiles_total,draw_calls,objects_in_frame,render_cpu_usec,render_gpu_usec,wall_usec,event_usec,arc_usec,noodle_usec,noodle_update_usec,noodle_tweens,step_max_usec,step_total_usec,step_script_usec,proc_span_usec"
+const CSV_HEADER := "frame,ticks_usec,delta_usec,process_delta_usec,song_pos_usec,frames_drawn,focused,cubes_in_use,links_in_use,debris_live,slice_bursts,process_usec,physics_usec,phys_ticks,swing_usec,cuttable_usec,floor_ray_usec,spawn_usec,shape_reenable,notes_live,cuts_this_frame,labels_spawned,objs_spawned,objs_freed,arcs_spawned,text_mesh_writes,track_children,static_mem,pipeline_compiles_total,draw_calls,objects_in_frame,render_cpu_usec,render_gpu_usec,wall_usec,event_usec,arc_usec,noodle_usec,noodle_update_usec,noodle_tweens,step_max_usec,step_total_usec,step_script_usec,proc_span_usec,instantiated"
 
 # Per-path self-time instrumentation (FR-033). A total physics time is not an
 # attribution: `physics_usec` is the whole tick, so the columns below split it
@@ -170,6 +170,8 @@ var _col_step_max := PackedInt64Array()
 var _col_step_total := PackedInt64Array()
 var _col_step_script := PackedInt64Array()
 var _col_proc_span := PackedInt64Array()
+# Scenes instantiated during play this frame (Cost.instantiated); should be 0.
+var _col_instantiated := PackedInt32Array()
 var _step_start := 0
 var _f_step_max := 0
 var _f_step_total := 0
@@ -1087,6 +1089,7 @@ func _process(delta: float) -> void:
 	_col_step_total.append(_f_step_total)
 	_col_step_script.append(_f_step_script)
 	_col_proc_span.append(Time.get_ticks_usec() - _proc_start if _proc_start > 0 else 0)
+	_col_instantiated.append(Cost.instantiated)
 	_f_step_max = 0
 	_f_step_total = 0
 	_f_step_script = 0
@@ -1364,7 +1367,7 @@ func _write_csv() -> void:
 	rows.resize(_ticks.size() + 1)
 	rows[0] = CSV_HEADER
 	for i in _ticks.size():
-		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
+		rows[i + 1] = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
 			i, _ticks[i], _deltas[i], _proc_deltas[i],
 			_song_pos[i], _drawn[i], _focus_col[i],
 			_col_cubes[i], _col_links[i], _col_debris[i], _col_bursts[i],
@@ -1375,7 +1378,7 @@ func _write_csv() -> void:
 			_col_arcs[i], _col_tm[i], _col_track[i], _col_mem[i], _col_pipe[i],
 			_col_drawcalls[i], _col_objects[i], _col_rcpu[i], _col_rgpu[i],
 			_col_wall[i], _col_event[i], _col_arc[i], _col_noodle[i], _col_noodle_upd[i], _col_noodle_tw[i],
-			_col_step_max[i], _col_step_total[i], _col_step_script[i], _col_proc_span[i]]
+			_col_step_max[i], _col_step_total[i], _col_step_script[i], _col_proc_span[i], _col_instantiated[i]]
 	f.store_string("\n".join(rows) + "\n")
 	f.close()
 	vr.log_info("BENCH: csv=%s" % path)

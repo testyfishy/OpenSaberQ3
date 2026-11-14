@@ -51,6 +51,7 @@ func _run() -> void:
 	_frame_pass()
 	_evaluate_cache()
 	_wall_reuse()
+	_no_instancing_in_play()
 	_jumps()
 	_support()
 	await _zero_scale()
@@ -1289,6 +1290,11 @@ func _pool_peak() -> void:
 	early.spawn_lead = 4.0
 	_check("peak_live: an object with its own earlier jump overlaps", MapData.peak_live(notes + [early], 2.0, 1.0) == 2)
 	_check("peak_live: empty", MapData.peak_live([], 2.0, 1.0) == 0)
+	# Arcs run from head to tail: 10-14 lives 8..15, 12-13 lives 10..14, 20-21 lives 18..22.
+	var arcs: Array = []
+	for ht: Array in [[10.0, 14.0], [12.0, 13.0], [20.0, 21.0]]:
+		arcs.append(ArcInfo.new_v3({"c": 0.0, "b": ht[0], "x": 1.0, "y": 0.0, "d": 1.0, "tb": ht[1], "tx": 1.0, "ty": 0.0, "tc": 0.0}))
+	_check("peak_live: arcs head to tail", MapData.peak_live(arcs, 2.0, 1.0) == 2)
 
 
 # Maps that replace Beat Saber's environment (Chroma `environment` entries that remove stock
@@ -1541,3 +1547,39 @@ func _wall_reuse() -> void:
 	reused.queue_free()
 	Map.current_difficulty = null
 	MapTimer.reset()
+
+
+# Nothing is instantiated by a burst of cuts or clashes after warm-up: the clash sparks reuse their
+# pool, and Cost.instantiated (the bench's `instantiated` column) counts real pool growth.
+func _no_instancing_in_play() -> void:
+	var Cost := preload("res://game/scripts/CostProbe.gd")
+	var was := Cost.enabled
+	Cost.enabled = true
+	Cost.instantiated = 0
+	var sparks := ClashSparks.new()
+	add_child(sparks)
+	sparks.build()
+	var children := sparks.get_child_count()
+	for i in 30:
+		sparks.burst(Vector3(0.0, 1.0, -0.5))
+	_check("30 clash bursts after warm-up add no node", sparks.get_child_count() == children and children == ClashSparks.POOL_SIZE and Cost.instantiated == 0)
+	sparks.clear_from_track()
+	_check("clash sparks survive a track clear", is_instance_valid(sparks) and sparks.get_child_count() == children)
+	sparks.queue_free()
+	var pool := (load("res://game/scripts/ScenePool/ScenePool.tscn") as PackedScene).instantiate() as ScenePool
+	pool.scene = load("res://game/Bomb/Bomb.tscn") as PackedScene
+	add_child(pool)
+	var holder := Node3D.new()
+	add_child(holder)
+	pool.new_scene_instanced.connect(func(obj: Node3D, _presizing: bool) -> void: holder.add_child(obj))
+	pool.presize(4)
+	var taken: Array[PooledNode3D] = []
+	for i in 4:
+		taken.append(pool.acquire())
+	var after_presized := Cost.instantiated
+	taken.append(pool.acquire())
+	_check("a presized pool instantiates nothing; growth is counted", after_presized == 0 and Cost.instantiated == 1, "%d then %d" % [after_presized, Cost.instantiated])
+	holder.queue_free()
+	pool.queue_free()
+	Cost.instantiated = 0
+	Cost.enabled = was

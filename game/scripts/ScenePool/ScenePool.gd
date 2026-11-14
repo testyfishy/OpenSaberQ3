@@ -46,8 +46,12 @@ func acquire() -> PooledNode3D:
 	node._is_released = false
 	return node
 
+const Cost := preload("res://game/scripts/CostProbe.gd")
+
 func _instance_new_scene(during_presizing: bool) -> Node3D:
 	_total_objs += 1
+	if not during_presizing and Cost.enabled:
+		Cost.instantiated += 1
 	var new_node := scene.instantiate() as PooledNode3D
 	new_node._parent_pool = self
 	new_scene_instanced.emit(new_node, during_presizing)

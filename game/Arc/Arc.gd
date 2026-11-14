@@ -64,9 +64,19 @@ static func apply_spawn_distance() -> void:
 		material.set_shader_parameter(&"distance_fade_min", far)
 		material.set_shader_parameter(&"distance_fade_max", maxf(far - FADE_IN_M, far * 0.5))
 
+## Fills the pool to `count` arcs at map load, so no arc is instantiated mid-song. Each is added to
+## `parent` once (its _ready runs) and released straight back.
+static func prewarm(count: int, parent: Node) -> void:
+	while _pool.size() < count:
+		var arc := preload("res://game/Arc/Arc.tscn").instantiate() as Arc
+		parent.add_child(arc)
+		arc._release_to_pool()
+
 static func acquire() -> Arc:
 	_configure_fades()
 	if _pool.is_empty():
+		if Cost.enabled:
+			Cost.instantiated += 1
 		return preload("res://game/Arc/Arc.tscn").instantiate() as Arc
 	return _pool.pop_back() as Arc
 

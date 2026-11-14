@@ -185,6 +185,8 @@ func _size_pools_for_map() -> void:
 	GlobalReferences.wall_pool.grow_to(MapData.peak_live(MapData.obstacle_stack, ahead, 1.0) + POOL_MARGIN)
 	GlobalReferences.cube_pool.grow_to(MapData.peak_live(MapData.note_stack, ahead, 1.0) + POOL_MARGIN)
 	GlobalReferences.bomb_pool.grow_to(MapData.peak_live(MapData.bomb_stack, ahead, 1.0) + POOL_MARGIN)
+	if not MapData.arc_stack.is_empty():
+		Arc.prewarm(MapData.peak_live(MapData.arc_stack, ahead, 1.0) + 2, track)
 
 # This function will transitioning the game from it's current state into
 # the provided 'next_state'.
@@ -388,6 +390,9 @@ func _ready() -> void:
 	track.add_child(arc_warm)
 	var bomb_warm := preload("res://game/Bomb/Bomb.tscn").instantiate()
 	track.add_child(bomb_warm)
+	# The saber clash sparks: built here and one burst drawn, so no clash builds or compiles them.
+	_build_clash_sparks()
+	_spawn_clash_sparks(bomb_warm.global_position)
 	# Drawn dissolved: the first bomb to dissolve in a song (Noodle) built the shared dissolve
 	# materials and compiled their shaders on the spot, measured at 80-100 ms on a PC and 68 ms
 	# in one tick on the headset. Built and drawn here instead, once per launch.
@@ -1195,32 +1200,16 @@ func _check_saber_clash() -> void:
 		GlobalReferences.hit_audio.play(CLASH_SAMPLE, contact, CLASH_GAIN_DB, 0.72)
 	_spawn_clash_sparks(contact)
 
+# Saber clash sparks: a pool (game/scripts/ClashSparks.gd) built at startup, never per clash.
+var _clash_sparks: ClashSparks
+
+func _build_clash_sparks() -> void:
+	_clash_sparks = ClashSparks.new()
+	_clash_sparks.name = "ClashSparks"
+	track.add_child(_clash_sparks)
+	_clash_sparks.build()
+
 func _spawn_clash_sparks(at: Vector3) -> void:
-	var sparks := CPUParticles3D.new()
-	sparks.amount = 14
-	sparks.lifetime = 0.34
-	sparks.one_shot = true
-	sparks.explosiveness = 1.0
-	sparks.direction = Vector3.UP
-	sparks.spread = 180.0
-	sparks.gravity = Vector3.ZERO
-	sparks.initial_velocity_min = 1.0
-	sparks.initial_velocity_max = 2.6
-	sparks.scale_amount_min = 0.015
-	sparks.scale_amount_max = 0.035
-	sparks.color = Color(1.0, 0.9, 0.6)
-	var spark_mesh := SphereMesh.new()
-	spark_mesh.radius = 0.018
-	spark_mesh.height = 0.036
-	sparks.mesh = spark_mesh
-	var spark_material := StandardMaterial3D.new()
-	spark_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	spark_material.albedo_color = Color(1.0, 0.92, 0.65)
-	spark_material.emission_enabled = true
-	spark_material.emission = Color(1.0, 0.8, 0.4)
-	spark_material.emission_energy_multiplier = 4.0
-	sparks.material_override = spark_material
-	track.add_child(sparks)
-	sparks.global_position = at
-	sparks.emitting = true
-	get_tree().create_timer(sparks.lifetime + 0.15).timeout.connect(sparks.queue_free)
+	if _clash_sparks == null:
+		_build_clash_sparks()
+	_clash_sparks.burst(at)

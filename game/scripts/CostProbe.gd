@@ -45,6 +45,9 @@ static var arc_usec := 0
 static var noodle_usec := 0
 static var noodle_update_usec := 0
 static var noodle_tweens := 0
+# Scene instances created during play instead of taken from a warmed pool (pool growth, arcs, clash
+# sparks). Should stay 0.
+static var instantiated := 0
 
 # Counts, not times: cheaper than timing, and a count is enough to prove or
 # disprove "this write happens every tick for every note".
@@ -87,6 +90,7 @@ static func reset() -> void:
 	noodle_usec = 0
 	noodle_update_usec = 0
 	noodle_tweens = 0
+	instantiated = 0
 	shape_reenable = 0
 	physics_ticks = 0
 	cuts = 0
