@@ -4,6 +4,23 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.37 - unreleased (on `audit/fable-5.2`)
+
+- **Notes come from far away, as in Beat Saber.**
+  - Every note, bomb, wall and chain is now created half a second before its jump starts, 100 m
+    further down the track. It flies in fast and arrives exactly when its jump would have
+    started; from then on it moves as before.
+  - Nothing can be hit while it flies in; hit windows, misses and scoring are unchanged.
+  - **Notes stop turning and growing long before they reach you.** A note's spawn "pop" (it
+    starts tiny, rolls in and hops) was timed for the old 16 m approach. On ODDS&ENDS Hard it
+    was still turning and growing 0.2 s before the hit, under 3 m away. It now plays during the
+    fly-in, so every note and bomb is full size and pointing its final way from the start of its
+    jump, 8-10 m out. This made the game harder than Beat Saber.
+  - Walls fly in flat and grow as before.
+- See [note-motion-report.md](note-motion-report.md) for the Beat Saber constants, the
+  differences that remain, and the Note Speed question.
+- Not yet played by a person or run on the headset.
+
 ## v0.7.36 - 2026-11-14 (built from `audit/fable-5.2`, untagged)
 
 - **No more 30 ms hitches when your sabers touch.** Every saber clash built its spark effect from

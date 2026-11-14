@@ -58,6 +58,64 @@ var _n_dissolve_arrow := 1.0
 var _n_ticked := false
 var _n_posed := false
 
+# Beat Saber's move phase before the jump (NoteMotion.MOVE_*). The travel is integrated exactly as
+# always, from an earlier spawn; only the drawn z is pushed out, by (200 / speed - 1) metres per
+# metre of travel left before the jump start, so the object comes in at 200 m/s and is drawn at
+# its travel position from the jump start on. While it flies in it cannot be hit or missed.
+var _flying := false
+var _fly_z := 0.0       # travel z at the jump start
+var _fly_travel := 0.0  # travel z of an un-animated object while it flies in
+var _fly_k := 0.0       # 200 / speed - 1
+var _fly_drawn := 0.0   # drawn z minus travel z, last applied
+
+func is_flying() -> bool:
+	return _flying
+
+# The spawn pop of notes and bombs (the scenes' "Spawn" animation: the mesh grows from 10 %, rolls in
+# and hops). It used to play at NJS / 9 speed, written for the old 16 m approach; on a 0.7 s jump
+# it was still growing and turning about 0.2 s before the hit. Beat Saber draws a note full size
+# from its creation and has it at its "middle" rotation (cut direction plus a small random turn) by
+# 1/8 of the jump (NoteJump: Lerp(start, middle, sin(t * 4 pi)) for t < 0.125), so the pop now ends
+# by then: at the jump start when the object flies in, else SPAWN_SETTLE_JUMP_FRACTION into the jump.
+const SPAWN_SETTLE_JUMP_FRACTION := 0.125
+const SPAWN_MIN_FLY_S := 0.1
+var _spawn_anim: AnimationPlayer = null
+var _spawn_anim_len := 0.8
+
+## Plays the spawn pop timed to settle SPAWN_SETTLE_JUMP_FRACTION into a jump of `half_sec` x 2
+## that starts now; fly_in() retimes it to end at the jump start.
+func play_spawn_anim(anim: AnimationPlayer, half_sec: float) -> void:
+	_spawn_anim = anim
+	var a := anim.get_animation(&"Spawn")
+	_spawn_anim_len = a.length if a != null else 0.8
+	anim.speed_scale = _spawn_anim_len / maxf(SPAWN_SETTLE_JUMP_FRACTION * 2.0 * half_sec, 0.01)
+	anim.play(&"Spawn")
+
+## Drawn z minus travel z while flying in (0 otherwise): an arc built on this note uses its travel.
+func fly_offset() -> float:
+	return _fly_drawn if _flying else 0.0
+
+## Called by the spawner right after spawn() for an object whose jump starts `rem_sec` from now:
+## it flies in until then. A rem_sec of 0 or less leaves it as spawned.
+func fly_in(rem_sec: float) -> void:
+	if rem_sec <= 0.0 or speed <= 0.0:
+		_flying = false
+		return
+	_flying = true
+	if _spawn_anim != null and rem_sec >= SPAWN_MIN_FLY_S:
+		_spawn_anim.speed_scale = _spawn_anim_len / rem_sec
+	var left := speed * rem_sec
+	_fly_k = NoteMotion.fly_in_speed() / speed - 1.0
+	if noodle == null:
+		_fly_travel = transform.origin.z
+		_fly_z = _fly_travel + left
+		_fly_drawn = -_fly_k * left
+		transform.origin.z = _fly_travel + _fly_drawn
+	else:
+		_fly_z = _n_base.z + left
+		# spawn() posed it without the fly-in; the frame pass poses it again with it.
+		_n_posed = false
+
 var _collision_enabled := false
 var _enable_once := -1  # -1 = not read yet, 0 = legacy, 1 = enable once
 
@@ -138,6 +196,7 @@ func _unregister_hit() -> void:
 # inherit a registration pointing at the old note's geometry.
 func release() -> void:
 	_unregister_hit()
+	_flying = false
 	super()
 
 # overriden by bombs and cubes.
@@ -167,7 +226,18 @@ func _physics_process(delta: float) -> void:
 	# reads a second, on the exact path that gets slower as the map gets denser.
 	var z: float
 	if noodle == null:
-		transform.origin.z += speed * delta
+		if _flying:
+			_fly_travel += speed * delta
+			var left := _fly_z - _fly_travel
+			if left > 0.0:
+				_fly_drawn = -_fly_k * left
+				transform.origin.z = _fly_travel + _fly_drawn
+				return
+			# The jump starts this tick: from here on exactly the un-animated travel.
+			_flying = false
+			transform.origin.z = _fly_travel
+		else:
+			transform.origin.z += speed * delta
 		z = transform.origin.z
 	else:
 		# The animated pose is only drawn once per frame (NoodleFrame), but from the hit window on
@@ -200,6 +270,7 @@ static func _noodle_half_sec(obj: NoodleObject) -> float:
 ## Called at the end of a spawn. `info_noodle` is the object's Noodle data (or null); the
 ## transform the spawn wrote is the un-animated pose the animation starts from.
 func noodle_spawn(info_noodle: NoodleObject, half_sec: float) -> void:
+	_flying = false
 	_n_can_hit = not fake
 	_n_shown = true
 	if _n_dissolve != 1.0 or _n_dissolve_arrow != 1.0:
@@ -249,9 +320,24 @@ func _noodle_frame() -> void:
 func _noodle_pose() -> void:
 	_n_posed = true
 	var life := 0.5 + (_n_base.z / speed) / (2.0 * _n_half_sec)
+	var left := 0.0
+	if _flying:
+		left = _fly_z - _n_base.z
+		if left > 0.0:
+			# Heck evaluates a note in its move phase at a negative lifetime, which point
+			# definitions read as their first point: the pose of the jump start.
+			life = maxf(life, 0.0)
+		else:
+			_flying = false
 	NoodleAnim.evaluate(noodle, life)
-	transform = NoodleAnim.compose(_n_base, _n_rot, _n_scale)
-	_n_can_hit = not fake and NoodleAnim.out_interactable >= 1.0
+	if _flying:
+		# A definite position does not follow the travel, so it is pushed by the whole 200 m/s
+		# lead; an offset rides on the travel, which already covers speed x the time left.
+		_fly_drawn = -left * (_fly_k + (1.0 if NoodleAnim.out_has_definite else 0.0))
+		transform = NoodleAnim.compose(_n_base, _n_rot, _n_scale, _fly_drawn)
+	else:
+		transform = NoodleAnim.compose(_n_base, _n_rot, _n_scale)
+	_n_can_hit = not fake and not _flying and NoodleAnim.out_interactable >= 1.0
 	if not _n_can_hit and _collision_enabled:
 		set_collision_enabled(false)
 	# Dissolve is a fade in the object's shader; at 0 the object is not drawn at all.

@@ -288,10 +288,14 @@ static func _float(obj: NoodleObject, p: int, life: float, am: int, pm: int, vm:
 
 ## The object's transform in its lane, from its un-animated position (`base`: x/y on the grid,
 ## z from its travel), static rotation and static scale, and the last evaluate().
-static func compose(base: Vector3, static_rot: Quaternion, static_scale: Vector3) -> Transform3D:
+## `fly_z` pushes the object further down its own travel axis (inside the world rotation and the
+## parent, as Heck adds the move phase to the note's local position): the move phase before the
+## jump (Cuttable / Wall fly-in), 0 otherwise.
+static func compose(base: Vector3, static_rot: Quaternion, static_scale: Vector3, fly_z := 0.0) -> Transform3D:
 	var pos := base + out_offset * LANE
 	if out_has_definite:
 		pos = Vector3(base.x, base.y, 0.0) + (out_offset + out_definite) * LANE
+	pos.z += fly_z
 	# Scale 0 is a common way to hide an object. Kept just off zero: a singular basis breaks
 	# every affine_inverse() downstream (hit tests, the wall fade) and the cut-plane maths.
 	var s := static_scale * out_scale

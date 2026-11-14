@@ -22,10 +22,25 @@ class_name NoteMotion
 # Distances are worked out in seconds, not beats, so a tempo change in the middle of a map does
 # not bend them: an object's z is always (time until its beat) x NJS.
 
+#
+# Since 0.7.37 an object also has Beat Saber's move phase before its jump (docs/note-motion-report.md):
+# it is created MOVE_DURATION_S before its jump starts, MOVE_DISTANCE_M further down the track
+# than the jump start, and comes in at a constant 200 m/s, arriving exactly when the jump starts
+# (Beat Saber 1.46 VariableMovementDataProvider.kMoveDuration 0.5, kMoveDistance 100; Heck
+# NoodleMovementDataProvider / SpawnDataManager: moveStartPos = centre + forward * (kMoveDistance
+# + halfJumpDistance), moveEndPos = centre + forward * halfJumpDistance). From the jump start on
+# nothing changes. An object flying in cannot be hit (Cuttable, Wall: is_flying). Unconfigured
+# (harness scenes) there is no fly-in.
+
 const LEGACY_METRES_PER_BEAT := 4.0
 const LEGACY_SPAWN_BEATS := 4.0
 const MAX_HALF_JUMP_DISTANCE_M := 17.999
 const MIN_HALF_JUMP_BEATS := 0.25
+const MOVE_DURATION_S := 0.5
+const MOVE_DISTANCE_M := 100.0
+
+# A/B switch (benches, harness): false spawns at the jump start as before 0.7.37.
+static var fly_in_enabled := true
 
 static var configured := false
 static var _njs := 0.0
@@ -117,7 +132,19 @@ static func half_jump_seconds() -> float:
 	return spawn_beats() * 60.0 / maxf(_base_bpm, 1.0)
 
 
-## How far away an object is when it is spawned, in metres.
+## How long before its jump an object is created (the move phase), in seconds; 0 when no map has
+## configured the motion or the fly-in is switched off.
+static func fly_in_seconds() -> float:
+	return MOVE_DURATION_S if configured and fly_in_enabled else 0.0
+
+
+## The move phase's speed, metres per second (200).
+static func fly_in_speed() -> float:
+	return MOVE_DISTANCE_M / MOVE_DURATION_S
+
+
+## How far away an object is when its jump starts, in metres (it is created MOVE_DISTANCE_M
+## further out when the fly-in is on).
 static func spawn_distance() -> float:
 	if not configured:
 		return LEGACY_SPAWN_BEATS * LEGACY_METRES_PER_BEAT

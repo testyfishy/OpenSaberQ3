@@ -180,13 +180,16 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 const POOL_MARGIN := 8
 func _size_pools_for_map() -> void:
 	var ahead := NoteMotion.spawn_beats()
+	# Objects are live from the fly-in before their jump (NoteMotion.MOVE_DURATION_S); arcs spawn
+	# with their head note, so they are live from then too.
+	var fly := NoteMotion.fly_in_seconds()
 	# A wall leaves once its back is 2.5 m past the player and a note once it is 2.5 m past: well
 	# under a beat at any playable speed, so one beat of tail.
-	GlobalReferences.wall_pool.grow_to(MapData.peak_live(MapData.obstacle_stack, ahead, 1.0) + POOL_MARGIN)
-	GlobalReferences.cube_pool.grow_to(MapData.peak_live(MapData.note_stack, ahead, 1.0) + POOL_MARGIN)
-	GlobalReferences.bomb_pool.grow_to(MapData.peak_live(MapData.bomb_stack, ahead, 1.0) + POOL_MARGIN)
+	GlobalReferences.wall_pool.grow_to(MapData.peak_live(MapData.obstacle_stack, ahead, 1.0, fly) + POOL_MARGIN)
+	GlobalReferences.cube_pool.grow_to(MapData.peak_live(MapData.note_stack, ahead, 1.0, fly) + POOL_MARGIN)
+	GlobalReferences.bomb_pool.grow_to(MapData.peak_live(MapData.bomb_stack, ahead, 1.0, fly) + POOL_MARGIN)
 	if not MapData.arc_stack.is_empty():
-		Arc.prewarm(MapData.peak_live(MapData.arc_stack, ahead, 1.0) + 2, track)
+		Arc.prewarm(MapData.peak_live(MapData.arc_stack, ahead, 1.0, fly) + 2, track)
 
 # This function will transitioning the game from it's current state into
 # the provided 'next_state'.

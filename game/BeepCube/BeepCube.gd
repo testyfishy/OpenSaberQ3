@@ -153,10 +153,7 @@ func spawn(note_info: ColorNoteInfo, current_beat: float) -> void:
 	small_coll_area.set_collision_layer_value(CollisionLayerConstants.RightNote_bit, is_left_note)
 	
 	# play the spawn animation when this cube enters the scene
-	var anim := $AnimationPlayer as AnimationPlayer
-	var anim_speed := Map.current_difficulty.note_jump_movement_speed / 9.0
-	anim.speed_scale = maxf(min_speed,anim_speed)
-	anim.play(&"Spawn")
+	play_spawn_anim($AnimationPlayer as AnimationPlayer, _noodle_half_sec(note_info.noodle))
 	
 	mi.visible = true
 	_set_mirror_pass(Settings.mirror_reflections)

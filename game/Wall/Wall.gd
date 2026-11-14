@@ -60,6 +60,48 @@ var _n_dissolve := 1.0
 var _n_ticked := false
 var _n_posed := false
 
+# Beat Saber's move phase before the jump (NoteMotion.MOVE_*), as for notes (Cuttable.fly_in): the
+# travel is integrated as always from an earlier spawn and only the drawn z is pushed out, so the
+# wall comes in at 200 m/s and is drawn at its travel position from the jump start on. Its front
+# is then never closer than its jump start, so it cannot reach the player while it flies in.
+var _flying := false
+var _fly_z := 0.0       # travel z of the front at the jump start
+var _fly_travel := 0.0  # travel z (centre) of an un-animated wall while it flies in
+var _fly_k := 0.0       # 200 / speed - 1
+
+func is_flying() -> bool:
+	return _flying
+
+# The collision shape is off while the wall cannot be hit or is still flying in: a flying wall is
+# far from the player, and an enabled shape on a moving Area3D is broadphase work every physics
+# tick (on 1e6ff about 180 more walls are live with the fly-in). `_shape_off` mirrors the shape's
+# `disabled` so it is written only on a change.
+var _shape_off := false
+
+func _sync_shape() -> void:
+	var off := not _n_can_hit or _flying
+	if off != _shape_off:
+		_shape_off = off
+		# Deferred: the shape may be read by the physics step this tick runs in.
+		_wall_shape().set_deferred(&"disabled", off)
+
+## Called by the spawner right after spawn() for a wall whose jump starts `rem_sec` from now.
+func fly_in(rem_sec: float) -> void:
+	if rem_sec <= 0.0 or speed <= 0.0:
+		_flying = false
+		return
+	_flying = true
+	_sync_shape()
+	var left := speed * rem_sec
+	_fly_k = NoteMotion.fly_in_speed() / speed - 1.0
+	if noodle == null:
+		_fly_travel = transform.origin.z
+		_fly_z = _fly_travel + _half_depth + left
+		transform.origin.z = _fly_travel - _fly_k * left
+	else:
+		_fly_z = _n_front + left
+		_n_posed = false
+
 # specs/029/027: depth-based grow. Height is a function of the wall's own z, so every wall at the
 # same depth has the same height and a wall surface stays continuous; the 0.6.5 age-based version
 # staggered the columns and made wall art look torn.
@@ -109,6 +151,17 @@ func _physics_process(delta: float) -> void:
 	var t0 := Time.get_ticks_usec() if Cost.enabled else 0
 	var z: float
 	if noodle == null:
+		if _flying:
+			# Flying in: far beyond the grow's start and the player, so neither the grow nor the
+			# inside fade has anything to do until the jump starts.
+			_fly_travel += speed * delta
+			var left := _fly_z - (_fly_travel + _half_depth)
+			if left > 0.0:
+				transform.origin.z = _fly_travel - _fly_k * left
+				return
+			_flying = false
+			_sync_shape()
+			transform.origin.z = _fly_travel - speed * delta
 		_update_inside_fade()
 		transform.origin.z += speed * delta
 		z = transform.origin.z
@@ -157,7 +210,7 @@ static var _head_tick := -1
 static var _head_local := Vector3.ZERO
 
 func _needs_tick_pose() -> bool:
-	if not _n_can_hit:
+	if not _n_can_hit or _flying:
 		return false
 	var tick := Engine.get_physics_frames()
 	if tick != _head_tick:
@@ -271,13 +324,13 @@ func _noodle_spawn(wall_info: ObstacleInfo, half_sec: float) -> void:
 	# call this directly).
 	if scale != Vector3.ONE:
 		scale = Vector3.ONE
+	_flying = false
 	_fake = wall_info.fake
 	# Hittable unless fake or marked uninteractable; an animated `interactable` is applied by the
 	# first pose.
 	var can_hit := not _fake and (wall_info.noodle == null or not wall_info.noodle.uninteractable)
-	if can_hit != _n_can_hit:
-		_wall_shape().set_deferred(&"disabled", not can_hit)
 	_n_can_hit = can_hit
+	_sync_shape()
 	_n_shown = true
 	if _n_dissolve != 1.0:
 		_set_dissolve(1.0)
@@ -322,13 +375,22 @@ func _noodle_pose() -> void:
 	_n_posed = true
 	var life := clampf(((_n_front / speed) + _n_half_sec) / _n_span_sec, 0.0, 1.0)
 	NoodleAnim.evaluate(noodle, life)
-	var pivot := NoodleAnim.compose(_n_base, _n_rot, Vector3.ONE)
+	var fly := 0.0
+	if _flying:
+		var left := _fly_z - _n_front
+		if left > 0.0:
+			# Heck ObstacleUpdateNoodlifier: a definite position is pushed by the whole move, an
+			# offset rides on the travel (see Cuttable._noodle_pose).
+			fly = -left * (_fly_k + (1.0 if NoodleAnim.out_has_definite else 0.0))
+		else:
+			_flying = false
+			_sync_shape()
+	var pivot := NoodleAnim.compose(_n_base, _n_rot, Vector3.ONE, fly)
 	transform = pivot * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, -_half_depth))
 	var can_hit := not _fake and NoodleAnim.out_interactable >= 1.0
 	if can_hit != _n_can_hit:
 		_n_can_hit = can_hit
-		# Deferred: the shape may be read by the physics step this tick runs in.
-		_wall_shape().set_deferred(&"disabled", not can_hit)
+		_sync_shape()
 	var d := clampf(NoodleAnim.out_dissolve, 0.0, 1.0)
 	if d != _n_dissolve:
 		_set_dissolve(d)

@@ -58,10 +58,7 @@ func spawn(info: BombInfo, current_beat: float) -> void:
 	transform.origin.y = Constants.LANE_DISTANCE * float(info.line_layer) + Constants.LAYER_ZERO_Y
 	transform.origin.z = -NoteMotion.distance_between(current_beat, info.beat, own_njs)
 
-	var anim := $AnimationPlayer as AnimationPlayer
-	var anim_speed := Map.current_difficulty.note_jump_movement_speed / 9.0
-	anim.speed_scale = maxf(min_speed, anim_speed)
-	anim.play(&"Spawn")
+	play_spawn_anim($AnimationPlayer as AnimationPlayer, _noodle_half_sec(info.noodle))
 	fake = info.fake
 	noodle_spawn(info.noodle, _noodle_half_sec(info.noodle))
 

@@ -126,6 +126,9 @@ func spawn(info: ArcInfo, current_beat: float, _activator_cube: BeepCube = null)
 		if lane == null or not String(lane.name).begins_with("Lane"):
 			lane = null
 		var cube_pos := activator_cube.position
+		# A head note still flying in (its own jump starts later than the arc's) is drawn further
+		# out than its travel; the ribbon is built on the travel.
+		cube_pos.z -= activator_cube.fly_offset()
 		if lane != null and cube_pos.distance_to(head_pos) > 0.01:
 			if _arc_probe_logged < 10:
 				_arc_probe_logged += 1

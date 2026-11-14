@@ -29,7 +29,9 @@ func _ready() -> void:
 	piece_left.set_chain_head(false)
 	piece_right.set_chain_head(false)
 
-static func construct_chain(chain_info: ChainInfo, current_beat: float, note_info_refs: Array[ColorNoteInfo], cube_refs: Array[BeepCube]) -> void:
+## `fly_rem` is the time (s) until the chain's jump starts: its links fly in with the head note
+## until then (Cuttable.fly_in), so the chain stays in one piece.
+static func construct_chain(chain_info: ChainInfo, current_beat: float, note_info_refs: Array[ColorNoteInfo], cube_refs: Array[BeepCube], fly_rem := 0.0) -> void:
 	# instead of just making a new note head for a new chain, beat saber
 	# modifies an already-existing note to be the head, which is why we have to
 	# do all this garbage with keeping references to other notes that were
@@ -66,6 +68,8 @@ static func construct_chain(chain_info: ChainInfo, current_beat: float, note_inf
 	while i < chain_info.slice_count:
 		var chain_link := GlobalReferences.link_pool.acquire() as ChainLink
 		chain_link.spawn(chain_info, current_beat, head_pos, tail_pos, mid_pos, i)
+		if fly_rem > 0.0:
+			chain_link.fly_in(fly_rem)
 		TrackLanes.place(chain_link, chain_info.head_beat)
 		i += 1
 
@@ -96,6 +100,7 @@ func spawn(chain_info: ChainInfo, current_beat: float, head_pos: Vector2, tail_p
 	# re-enable our process_mode first otherwise it seems like Godot-internals
 	# can behave weirdly (ex. AnimationPlayer won't always play correctly)
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_flying = false
 	
 	var color := MapPalette.color_left if chain_info.color == 0 else MapPalette.color_right
 	speed = NoteMotion.speed_at(chain_info.head_beat)

@@ -642,6 +642,12 @@ func _apply_overrides(cfg: ConfigFile) -> void:
 		_game.call("_apply_glow")
 		applied.append("glow_off=1")
 	_meta["glow_off"] = "true" if glow_off else "false"
+	# A/B for the move phase before the jump (NoteMotion, 0.7.37): false spawns every object at its
+	# jump start, as before.
+	NoteMotion.fly_in_enabled = bool(cfg.get_value("bench", "fly_in", true))
+	_meta["fly_in"] = "true" if NoteMotion.fly_in_enabled else "false"
+	if not NoteMotion.fly_in_enabled:
+		applied.append("fly_in=0")
 	var bombs_off := bool(cfg.get_value("bench", "bombs_off", false))
 	GameStatePlaying.debug_skip_bombs = bombs_off
 	_meta["bombs_off"] = "true" if bombs_off else "false"

@@ -36,7 +36,9 @@ static var _v2_fake_count := 0
 ## The most objects of `stack` alive at once, for sizing the object pools at load: each lives from
 ## its spawn (`beat - spawn_lead - spawn_beats`, as Playing spawns it) to `tail` beats after its end
 ## (`beat + duration` for a wall). Pure; runs once per map load.
-static func peak_live(stack: Array, spawn_beats: float, tail: float) -> int:
+## `fly_sec` is the fly-in before the jump (NoteMotion.fly_in_seconds): each object is live from
+## that long before its jump start, converted with the tempo there.
+static func peak_live(stack: Array, spawn_beats: float, tail: float, fly_sec := 0.0) -> int:
 	var starts := PackedFloat64Array()
 	var ends := PackedFloat64Array()
 	for info: Variant in stack:
@@ -51,7 +53,10 @@ static func peak_live(stack: Array, spawn_beats: float, tail: float) -> int:
 		elif "duration" in info:
 			duration = maxf(float(info.duration), 0.0)
 		var lead := float(info.spawn_lead) if "spawn_lead" in info else 0.0
-		starts.append(beat - lead - spawn_beats)
+		var start := beat - lead - spawn_beats
+		if fly_sec > 0.0:
+			start = Map.seconds_to_beat(Map.beat_to_seconds(start) - fly_sec)
+		starts.append(start)
 		ends.append(beat + duration + tail)
 	starts.sort()
 	ends.sort()

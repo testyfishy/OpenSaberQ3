@@ -83,11 +83,26 @@ func _spawn_arc(game: BeepSaber_Game, arc_info: ArcInfo, cube: BeepCube, current
 func _construct_linked_chain(chain_info: ChainInfo, current_beat: float) -> void:
 	var cube := linked_head(chain_info.head_info)
 	if cube == null:
-		ChainLink.construct_chain(chain_info, current_beat, _no_infos, _no_cubes)
+		ChainLink.construct_chain(chain_info, current_beat, _no_infos, _no_cubes, _chain_fly_rem(chain_info))
 		return
 	_one_info[0] = chain_info.head_info
 	_one_cube[0] = cube
-	ChainLink.construct_chain(chain_info, current_beat, _one_info, _one_cube)
+	ChainLink.construct_chain(chain_info, current_beat, _one_info, _one_cube, _chain_fly_rem(chain_info))
+
+# Beat Saber's move phase (NoteMotion.MOVE_*): every object is spawned MOVE_DURATION_S before its
+# jump starts and flies in until then. `_fly_sec` is 0 when the fly-in is off (unconfigured motion).
+var _fly_sec := 0.0
+var _song_sec := 0.0
+
+## Seconds from now until the jump starting at `jump_beat` (0 when the fly-in is off).
+func _fly_rem(jump_beat: float) -> float:
+	if _fly_sec <= 0.0:
+		return 0.0
+	return Map.beat_to_seconds(jump_beat) - _song_sec
+
+## A chain's jump starts with its head beat's (chains have no jump of their own).
+func _chain_fly_rem(chain_info: ChainInfo) -> float:
+	return _fly_rem(chain_info.head_beat - NoteMotion.spawn_beats())
 
 # Arcs and chains waiting for a head note that spawns later: they spawn with it, or without a
 # head once their beat has passed.
@@ -116,7 +131,15 @@ func _process_map(game: BeepSaber_Game) -> void:
 	Harness.tick()
 	var song_position := Harness.song_time() if Harness.replay else game.song_player.get_playback_position()
 	var current_beat := Map.seconds_to_beat(song_position)
-	var look_ahead := current_beat + NoteMotion.spawn_beats()
+	# An object is spawned when its jump starts (beat - own lead - the map's half jump), or with
+	# the fly-in MOVE_DURATION_S before that. Arcs and chains use the same look-ahead, so they still
+	# find their head note among the notes spawned in the same pass.
+	_song_sec = song_position
+	_fly_sec = NoteMotion.fly_in_seconds()
+	var spawn_beats := NoteMotion.spawn_beats()
+	var look_ahead := current_beat + spawn_beats
+	if _fly_sec > 0.0:
+		look_ahead = Map.seconds_to_beat(song_position + _fly_sec) + spawn_beats
 	
 	# chains connect to a regular colornote and modify it, so we have to keep
 	# track of what notes were spawned this frame, in case any become the head
@@ -135,12 +158,16 @@ func _process_map(game: BeepSaber_Game) -> void:
 			# Decorative: drawn and animated, but never an arc or chain end, never logged as a
 			# note to cut, and not the map's first note.
 			note.spawn(note_info, current_beat)
+			if _fly_sec > 0.0:
+				note.fly_in(_fly_rem(note_info.beat - note_info.spawn_lead - spawn_beats))
 			TrackLanes.place(note, note_info.beat)
 			continue
 		if Map.first_note_ms < 0.0:
 			Map.first_note_ms = (Time.get_ticks_usec() - Map.load_finished_usec) / 1000.0
 			Map.first_note_beat = note_info.beat
 		note.spawn(note_info, current_beat)
+		if _fly_sec > 0.0:
+			note.fly_in(_fly_rem(note_info.beat - note_info.spawn_lead - spawn_beats))
 		if NoodleTracks.heads_linked:
 			note_info.spawned = note
 			if note_info.arc_tail_link:
@@ -162,6 +189,8 @@ func _process_map(game: BeepSaber_Game) -> void:
 		var bomb := GlobalReferences.bomb_pool.acquire() as Bomb
 		var bomb_info := MapData.bomb_stack.pop_back() as BombInfo
 		bomb.spawn(bomb_info, current_beat)
+		if _fly_sec > 0.0:
+			bomb.fly_in(_fly_rem(bomb_info.beat - bomb_info.spawn_lead - spawn_beats))
 		TrackLanes.place(bomb, bomb_info.beat)
 	
 	# spawn obstacles (walls)
@@ -174,6 +203,8 @@ func _process_map(game: BeepSaber_Game) -> void:
 		var wall := GlobalReferences.wall_pool.acquire() as Wall
 		var wall_info := MapData.obstacle_stack.pop_back() as ObstacleInfo
 		wall.spawn(wall_info, current_beat)
+		if _fly_sec > 0.0:
+			wall.fly_in(_fly_rem(wall_info.beat - wall_info.spawn_lead - spawn_beats))
 		TrackLanes.place(wall, wall_info.beat)
 	
 	while not MapData.arc_stack.is_empty() and MapData.arc_stack[-1].head_beat <= look_ahead:
@@ -218,7 +249,7 @@ func _process_map(game: BeepSaber_Game) -> void:
 		var chain_info := MapData.chain_stack.pop_back() as ChainInfo
 		if chain_info.slice_count > 1: # skip if the chain doesn't have any links
 			if chain_info.head_info == null:
-				ChainLink.construct_chain(chain_info, current_beat, note_info_refs, cube_refs)
+				ChainLink.construct_chain(chain_info, current_beat, note_info_refs, cube_refs, _chain_fly_rem(chain_info))
 			elif chain_info.head_info.spawned == null:
 				_chains_waiting.append(chain_info)
 			else:
