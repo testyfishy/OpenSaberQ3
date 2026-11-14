@@ -87,7 +87,12 @@ func _noodle_set_dissolve(dissolve: float, _dissolve_arrow: float) -> void:
 		_body_mesh.material_override = _dissolve_body_mat if swap else _body_mat
 		_rim_mesh.material_override = _dissolve_rim_mat if swap else _rim_mat
 
-# Built once, the first time any bomb dissolves; the colour comes from the scene's material so
+## Startup warm-up (BeepSaber_Game): builds the shared dissolve materials and shows this bomb
+## dissolved, so their shaders are compiled before any song needs them.
+func prewarm_dissolve() -> void:
+	_noodle_set_dissolve(0.5, 1.0)
+
+# Built once, the first time any bomb dissolves (normally at the startup warm-up); the colour comes from the scene's material so
 # the two cannot drift apart.
 static func _dissolve_material(shader: Shader, original: Material) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()

@@ -356,6 +356,10 @@ func _ready() -> void:
 	track.add_child(arc_warm)
 	var bomb_warm := preload("res://game/Bomb/Bomb.tscn").instantiate()
 	track.add_child(bomb_warm)
+	# Drawn dissolved: the first bomb to dissolve in a song (Noodle) built the shared dissolve
+	# materials and compiled their shaders on the spot, measured at 80-100 ms on a PC and 68 ms
+	# in one tick on the headset. Built and drawn here instead, once per launch.
+	(bomb_warm as Bomb).prewarm_dissolve()
 	var wall_warm := preload("res://game/Wall/Wall.tscn").instantiate()
 	track.add_child(wall_warm)
 	await get_tree().process_frame
