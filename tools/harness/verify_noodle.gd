@@ -45,6 +45,7 @@ func _run() -> void:
 	_lazy_matches_eager()
 	_evaluators_match()
 	_pool_peak()
+	_environment_replacement()
 	_apply()
 	await _apply_nodes()
 	_jumps()
@@ -1261,3 +1262,67 @@ func _pool_peak() -> void:
 	early.spawn_lead = 4.0
 	_check("peak_live: an object with its own earlier jump overlaps", MapData.peak_live(notes + [early], 2.0, 1.0) == 2)
 	_check("peak_live: empty", MapData.peak_live([], 2.0, 1.0) == 0)
+
+
+# Maps that replace Beat Saber's environment (Chroma `environment` entries that remove stock
+# objects) and hiding the game's own room for them.
+func _environment_replacement() -> void:
+	var M := MapSupport
+	var samples: Array = [
+		{"id": "a", "lookupMethod": "Contains", "active": false},
+		{"_id": "b", "_lookupMethod": "Regex", "_active": false},
+		{"id": "c", "scale": [1, 0, 1]},
+		{"id": "d", "position": [0, -1000, 0]},
+		{"_id": "e", "_localPosition": [600, 0, 0]},
+		{"id": "f", "position": [0, 2, 10]},
+		{"id": "g", "active": true, "scale": [2, 2, 2]},
+		{"geometry": {"type": "Cube"}, "scale": [0, 0, 0]},
+		"junk",
+	]
+	_check("environment removals: off, zero scale and far moves count; tweaks and geometry do not", M.environment_removals_in(samples) == 5, str(M.environment_removals_in(samples)))
+	var off := []
+	for i in M.ENVIRONMENT_REPLACE_MIN - 1:
+		off.append({"id": "x%d" % i, "active": false})
+	M.reset()
+	M.detect_unsupported({"version": "3.2.0", "customData": {"environment": off}}, null)
+	_check("one short of the threshold does not replace", not M.replaces_environment and M.unsupported_features.has("Chroma environment"))
+	off.append({"id": "last", "active": false})
+	M.reset()
+	M.detect_unsupported({"_version": "2.2.0", "_customData": {"_environment": off}}, null)
+	_check("at the threshold the map replaces the environment (v2 keys)", M.replaces_environment and M.environment_removals == M.ENVIRONMENT_REPLACE_MIN)
+	_check("hide only with the setting on, in a song, on such a map", M.hide_room(true, true) and not M.hide_room(false, true) and not M.hide_room(true, false))
+	M.reset()
+	_check("no environment: nothing to hide", not M.replaces_environment and not M.hide_room(true, true))
+	# Every fixture difficulty, through the real detection path.
+	var root := OS.get_environment("TEMP").replace("\\", "/") + "/toolchain/allsongs/"
+	var replacing := PackedStringArray()
+	var dirs := DirAccess.get_directories_at(root)
+	for folder in dirs:
+		for file in DirAccess.get_files_at(root + folder):
+			var lower := file.to_lower()
+			if not lower.ends_with(".dat") or lower in ["info.dat", "audiodata.dat", "bpminfo.dat"] or lower.contains("lightshow"):
+				continue
+			var data: Variant = vr.load_json_file(root + folder + "/" + file)
+			if not (data is Dictionary):
+				continue
+			M.reset()
+			M.detect_unsupported(data as Dictionary, null)
+			if M.unsupported_features.has("Chroma environment"):
+				print("NOODLE env %s/%s removals=%d replaces=%s" % [folder, file, M.environment_removals, M.replaces_environment])
+				if M.replaces_environment and not replacing.has(folder):
+					replacing.append(folder)
+	M.reset()
+	if dirs.size() > 0:
+		replacing.sort()
+		_check("fixtures that replace the environment", replacing == PackedStringArray(["1e6ff", "23f6b", "3bbb0", "4a2b3"]), ", ".join(replacing))
+	# Hide and restore on the real room.
+	var driver := (load("res://game/event_driver.tscn") as PackedScene).instantiate() as EventDriver
+	add_child(driver)
+	var level := driver.get_node("Level") as Node3D
+	driver.set_room_hidden(true)
+	var ref := driver.get_node_or_null("FloorReference") as Node3D
+	_check("room hidden: not drawn, not processed", driver.is_room_hidden() and not level.visible and not level.can_process())
+	_check("the track floor stays as a reference", ref != null and ref.visible and ref.is_visible_in_tree() and ref.get_child_count() == (driver.get_node("Level/floor") as Node).get_child_count())
+	driver.set_room_hidden(false)
+	_check("room restored, reference gone", not driver.is_room_hidden() and level.visible and level.can_process() and not ref.visible)
+	driver.queue_free()

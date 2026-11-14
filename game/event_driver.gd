@@ -62,6 +62,30 @@ func _ready() -> void:
 
 	_build_light_tables()
 
+## Hides (or shows again) the room: the sky sphere, lasers, rings, track lights and end path
+## under Level. Hidden means not drawn and not processed, so the ring and laser animations stop
+## too. The track floor stays as a distance reference: Level is hidden whole (light events toggle
+## its groups' visibility, which would undo hiding them one by one), and a copy of Level/floor with
+## its lane lines, sharing its material, is shown in its place. Light events still run (their
+## colour also tints the floor streak and the blades).
+var _floor_reference: Node3D
+
+func set_room_hidden(hidden: bool) -> void:
+	var level := $Level as Node3D
+	level.visible = not hidden
+	level.process_mode = Node.PROCESS_MODE_DISABLED if hidden else Node.PROCESS_MODE_INHERIT
+	if hidden and _floor_reference == null:
+		var track_floor := $Level/floor as Node3D
+		_floor_reference = track_floor.duplicate() as Node3D
+		_floor_reference.name = "FloorReference"
+		add_child(_floor_reference)
+		_floor_reference.transform = level.transform * track_floor.transform
+	if _floor_reference != null:
+		_floor_reference.visible = hidden
+
+func is_room_hidden() -> bool:
+	return not ($Level as Node3D).visible
+
 func _process(delta: float) -> void:
 	if not Scoreboard.paused:
 		_step_fades(delta)

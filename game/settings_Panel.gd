@@ -82,6 +82,7 @@ func _ready() -> void:
 	set_controls_from_settings()
 	_play_ui_sound_demo = true
 	_build_labs_rows()
+	_build_visual_rows()
 	_fit_scroll_area()
 	_polish_rows()
 	_add_scroll_slider()
@@ -217,6 +218,8 @@ func set_controls_from_settings() -> void:
 		_strict_cuts_control.set_pressed_no_signal(Settings.strict_cuts)
 		_no_fail_control.set_pressed_no_signal(Settings.no_fail)
 		_note_speed_control.select(maxi(0, NOTE_SPEED_CHOICES.find(Settings.note_speed_percent)))
+	if _hide_room_control != null:
+		_hide_room_control.set_pressed_no_signal(Settings.hide_room_custom_env)
 	_set_up_performance_controls()
 
 # Builds the performance rows from what the current XR session actually offers, so a headset
@@ -544,7 +547,7 @@ const TAB_ROWS := {
 		"screenshot_trigger"],
 	1: ["SaberTypeRow", "SaberColorsRow", "SaberThicknessRow", "saber_tail", "saber_halo",
 		"left_saber_offset", "right_saber_offset"],
-	2: ["environment_mode", "sky_style", "glow_mode", "d_background", "event_tint", "floor_light",
+	2: ["environment_mode", "hide_room_custom_env", "sky_style", "glow_mode", "d_background", "event_tint", "floor_light",
 		"floor_grid", "mirror_reflections", "hit_flash", "cut_blocks", "debris_shards", "debris_cap"],
 	3: ["audio", "UI_VolumeRow", "hit_sound", "audio_ducking"],
 	4: ["PerfPresetRow", "PerfHeader", "RefreshRateRow", "RenderScaleRow", "MSAARow", "FoveationRow",
@@ -560,6 +563,7 @@ var _hand_tracking_control: CheckButton
 var _strict_cuts_control: CheckButton
 var _no_fail_control: CheckButton
 var _note_speed_control: OptionButton
+var _hide_room_control: CheckButton
 const NOTE_SPEED_CHOICES: Array[int] = [100, 90, 80, 70, 60, 50]
 
 # Labs: features that work but are not finished. They are off by default and say so.
@@ -609,6 +613,21 @@ func _build_labs_rows() -> void:
 	speed_row.add_child(speed_label)
 	speed_row.add_child(_note_speed_control)
 	vbox.add_child(speed_row)
+
+# Visuals rows built in code (placed by TAB_ROWS). Added after attach_children(), so their sounds
+# are attached here.
+func _build_visual_rows() -> void:
+	var vbox := %ScrollContainer/VBox
+	if vbox.has_node("hide_room_custom_env"):
+		return
+	_hide_room_control = CheckButton.new()
+	_hide_room_control.name = "hide_room_custom_env"
+	_hide_room_control.text = "Hide room on custom-environment maps"
+	_hide_room_control.tooltip_text = "On: maps that clear Beat Saber's own environment are played without this game's room (sky, lasers, rings, track floor), as their mapper intended. The map's own environment is not drawn either."
+	_hide_room_control.button_pressed = Settings.hide_room_custom_env
+	_hide_room_control.toggled.connect(func(pressed: bool) -> void: Settings.hide_room_custom_env = pressed)
+	vbox.add_child(_hide_room_control)
+	UI_AudioEngine.attach_button(_hide_room_control)
 
 # One look for every row: the panel's own font instead of a per-row theme, labels without the
 # trailing colon, the performance star moved to the end, and rows tall enough to point at.

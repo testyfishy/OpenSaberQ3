@@ -106,6 +106,12 @@ var library_mod_filter: String:
 	set(value):
 		library_mod_filter = value
 		set_and_emit(&"library_mod_filter", value)
+# Hide the game's own room (sky, lasers, rings, track floor) while playing a map whose Chroma
+# environment clears Beat Saber's, so the map is seen as its designer built it.
+var hide_room_custom_env: bool:
+	set(value):
+		hide_room_custom_env = value
+		set_and_emit(&"hide_room_custom_env", value)
 var disable_map_color: bool:
 	set(value):
 		disable_map_color = value
@@ -450,6 +456,7 @@ const SCHEMA := {
 	"no_fail": {"default": true},
 	"note_speed_percent": {"default": 100, "min": 50, "max": 100, "step": 5},
 	"library_mod_filter": {"default": "all"},
+	"hide_room_custom_env": {"default": true},
 }
 
 # Derived view for the loader, the panel and the tests. The platform patch in _ready() writes

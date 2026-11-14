@@ -191,6 +191,19 @@ func _size_pools_for_map() -> void:
 func _transition_game_state(next_state: GameState) -> void:
 	gamestate = next_state
 	gamestate._ready(self)
+	_update_room_visibility()
+
+# The stock room (event_driver's Level: sky sphere, lasers, rings, track lights, end path, track
+# floor) and the sky style are hidden only while a song of a map that replaces the environment is
+# being played (or paused), and the setting is on. The player's platform (StandingGround), notes,
+# walls, sabers, HUD and menus stay. Every state change passes here, so the menu, the
+# results screen, a fail and the settings all bring it back, and a restart re-enters playing.
+func _update_room_visibility() -> void:
+	var in_song := gamestate == gamestate_playing or gamestate == gamestate_paused
+	var hide := MapSupport.hide_room(Settings.hide_room_custom_env, in_song)
+	if hide != event_driver.is_room_hidden():
+		event_driver.set_room_hidden(hide)
+		_apply_sky()
 
 func show_MapSourceDialogs(showing: bool = true) -> void:
 	map_source_dialogs.visible = showing
@@ -508,6 +521,8 @@ func on_settings_changed(key: StringName) -> void:
 			update_arc_colors()
 		&"events":
 			disable_events(not Settings.events)
+		&"hide_room_custom_env":
+			_update_room_visibility()
 		&"show_debug_info":
 			debug_info_label.visible = Settings.show_debug_info
 		&"player_height_offset":
@@ -661,7 +676,12 @@ func _apply_sky() -> void:
 		sky_mat.shader = SKY_GRADIENT_SHADER
 		_gradient_sky.sky_material = sky_mat
 
-	match Settings.sky_style:
+	# A map that replaces the environment plays against the black void, whatever the sky style
+	# (the room is hidden too, see _update_room_visibility).
+	var style := Settings.sky_style
+	if event_driver != null and event_driver.is_room_hidden():
+		style = 0
+	match style:
 		1:
 			env.background_mode = Environment.BG_SKY
 			env.sky = _gradient_sky

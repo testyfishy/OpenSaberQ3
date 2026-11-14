@@ -12,10 +12,57 @@ class_name MapSupport
 
 static var unsupported_features := PackedStringArray()
 static var fake_objects := 0
+# The loaded difficulty's Chroma environment: how many entries remove a stock environment object,
+# and whether that is enough to say the map replaces the environment (see environment_removals).
+static var environment_removals := 0
+static var replaces_environment := false
+# 15 removals or more. The fixture library has a clear gap here: maps that only tweak a few
+# objects remove at most 7, maps that clear the stock room remove 19 or more.
+const ENVIRONMENT_REPLACE_MIN := 15
 
 static func reset() -> void:
 	unsupported_features = PackedStringArray()
 	fake_objects = 0
+	environment_removals = 0
+	replaces_environment = false
+
+## How many entries of a Chroma `environment` / `_environment` list remove a stock environment
+## object: turned off (`active` false), scaled to zero on any axis, or moved 500 units or more
+## away. Entries that build new geometry are not removals. Pure.
+static func environment_removals_in(entries: Array) -> int:
+	var n := 0
+	for e: Variant in entries:
+		if not (e is Dictionary):
+			continue
+		var d := e as Dictionary
+		if d.has("geometry") or d.has("_geometry"):
+			continue
+		var active: Variant = d.get("active", d.get("_active", null))
+		if active is bool and not active:
+			n += 1
+			continue
+		var removed := false
+		var scale: Variant = d.get("scale", d.get("_scale", null))
+		if scale is Array:
+			for i in mini((scale as Array).size(), 3):
+				var v: Variant = (scale as Array)[i]
+				if (v is float or v is int) and absf(float(v)) < 0.001:
+					removed = true
+		for key: String in ["position", "_position", "localPosition", "_localPosition"]:
+			var pos: Variant = d.get(key, null)
+			if pos is Array:
+				for i in mini((pos as Array).size(), 3):
+					var v: Variant = (pos as Array)[i]
+					if (v is float or v is int) and absf(float(v)) >= 500.0:
+						removed = true
+		if removed:
+			n += 1
+	return n
+
+## True while the stock room should be hidden: the player's setting is on, a song is being played
+## (playing or paused), and the loaded map replaces the environment.
+static func hide_room(setting_on: bool, in_song: bool) -> bool:
+	return setting_on and in_song and replaces_environment
 
 static func is_fake_v3(entry: Dictionary) -> bool:
 	var cd := Utils.get_dict(entry, "customData", {})
@@ -34,6 +81,10 @@ static func detect_unsupported(map_data: Dictionary, info: MapInfo) -> void:
 	# reported by note_noodle() once the events are parsed. The environment is still not built.
 	if cd.has("environment") or cd.has("_environment"):
 		found.append("Chroma environment")
+		environment_removals = environment_removals_in(Utils.get_array(cd, "environment", Utils.get_array(cd, "_environment", [])))
+		replaces_environment = environment_removals >= ENVIRONMENT_REPLACE_MIN
+		if replaces_environment:
+			vr.log_info("MAP replaces the environment: %d stock objects removed" % environment_removals)
 	if cd.has("materials") or cd.has("_materials"):
 		found.append("Chroma geometry materials")
 	# Noodle v3 keeps decorative objects in their own arrays (drawn, never scored; MapData).
