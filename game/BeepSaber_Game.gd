@@ -146,6 +146,7 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 		return
 	if not Map.load_beatmap(info, map_difficulty, map_data, lightshow_data, audio_data):
 		return
+	_size_pools_for_map()
 	
 	_apply_map_colours()
 	Arc.apply_spawn_distance()
@@ -171,6 +172,19 @@ func start_map(info: MapInfo, map_difficulty: DifficultyInfo) -> void:
 	# A Noodle player track moves the track root (GameStatePlaying); every map starts square.
 	track.transform = Transform3D.IDENTITY
 	_transition_game_state(gamestate_playing)
+
+# Grows the note, bomb and wall pools to this map's own peak of live objects (plus a margin), so
+# no node is instantiated mid-song. 1e6ff peaks at about 400 walls against the startup 256, and
+# each wall instantiated mid-song cost a hitch on the headset. Growing only: a pool keeps what an
+# earlier map needed.
+const POOL_MARGIN := 8
+func _size_pools_for_map() -> void:
+	var ahead := NoteMotion.spawn_beats()
+	# A wall leaves once its back is 2.5 m past the player and a note once it is 2.5 m past: well
+	# under a beat at any playable speed, so one beat of tail.
+	GlobalReferences.wall_pool.grow_to(MapData.peak_live(MapData.obstacle_stack, ahead, 1.0) + POOL_MARGIN)
+	GlobalReferences.cube_pool.grow_to(MapData.peak_live(MapData.note_stack, ahead, 1.0) + POOL_MARGIN)
+	GlobalReferences.bomb_pool.grow_to(MapData.peak_live(MapData.bomb_stack, ahead, 1.0) + POOL_MARGIN)
 
 # This function will transitioning the game from it's current state into
 # the provided 'next_state'.

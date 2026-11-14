@@ -44,6 +44,7 @@ func _run() -> void:
 	_fixture_events()
 	_lazy_matches_eager()
 	_evaluators_match()
+	_pool_peak()
 	_apply()
 	await _apply_nodes()
 	_jumps()
@@ -1241,3 +1242,22 @@ func _lazy_synthetic_map() -> Dictionary:
 		{"b": 0.0, "t": "AssignPlayerToTrack", "d": {"track": "par"}},
 		{"b": 120.0, "t": "AnimateTrack", "d": {"track": ["r1", "r3"], "duration": 1.0, "repeat": 2, "scale": [[1, 1, 1, 0], [2, 1, 1, 1]]}},
 	]}}
+
+
+# MapData.peak_live sizes the object pools at load: the most objects alive at once, each from
+# its spawn (beat - spawn_lead - spawn_beats) to `tail` beats after its end (walls: beat + duration).
+func _pool_peak() -> void:
+	var walls: Array = []
+	for b: float in [10.0, 10.5, 11.0, 30.0]:
+		walls.append(ObstacleInfo.new_v3({"b": b, "d": 1.0, "x": 0.0, "y": 0.0, "w": 1.0, "h": 5.0}))
+	# Spawn 2 beats ahead, 1 beat of tail: 10 lives 8..12, 10.5 8.5..12.5, 11 9..13, 30 28..32.
+	_check("peak_live: three overlapping walls", MapData.peak_live(walls, 2.0, 1.0) == 3)
+	_check("peak_live: a long wall overlaps more", MapData.peak_live(walls + [ObstacleInfo.new_v3({"b": 0.0, "d": 40.0, "x": 0.0, "y": 0.0, "w": 1.0, "h": 5.0})], 2.0, 1.0) == 4)
+	var notes: Array = [null]
+	for b: float in [1.0, 5.0, 9.0]:
+		notes.append(ColorNoteInfo.new_v3({"b": b, "x": 1.0, "y": 0.0, "c": 0.0, "d": 1.0}))
+	_check("peak_live: notes apart, nulls skipped", MapData.peak_live(notes, 2.0, 1.0) == 1)
+	var early := ColorNoteInfo.new_v3({"b": 9.0, "x": 1.0, "y": 0.0, "c": 0.0, "d": 1.0})
+	early.spawn_lead = 4.0
+	_check("peak_live: an object with its own earlier jump overlaps", MapData.peak_live(notes + [early], 2.0, 1.0) == 2)
+	_check("peak_live: empty", MapData.peak_live([], 2.0, 1.0) == 0)

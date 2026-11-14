@@ -29,6 +29,16 @@ func presize(new_size: int):
 		_free_list.push_back(_instance_new_scene(true))
 	vr.log_info("%s - size = %d" % [name, _free_list.size()])
 
+# Adds nodes until the pool holds at least `count` (a map's own peak, at load), so nothing is
+# instantiated mid-song. Never shrinks.
+func grow_to(count: int) -> void:
+	var added := 0
+	while _total_objs < count:
+		_free_list.push_back(_instance_new_scene(true))
+		added += 1
+	if added > 0:
+		vr.log_info("%s - grown by %d to %d" % [name, added, _total_objs])
+
 func acquire() -> PooledNode3D:
 	var node = _free_list.pop_back() as PooledNode3D
 	if not node:

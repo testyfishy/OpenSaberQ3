@@ -33,6 +33,33 @@ static var _event_thread_1 := Thread.new()
 # before load_v2 joins it).
 static var _v2_fake_count := 0
 
+## The most objects of `stack` alive at once, for sizing the object pools at load: each lives from
+## its spawn (`beat - spawn_lead - spawn_beats`, as Playing spawns it) to `tail` beats after its end
+## (`beat + duration` for a wall). Pure; runs once per map load.
+static func peak_live(stack: Array, spawn_beats: float, tail: float) -> int:
+	var starts := PackedFloat64Array()
+	var ends := PackedFloat64Array()
+	for info: Variant in stack:
+		if info == null:
+			continue
+		var beat := float(info.beat)
+		var duration := maxf(float(info.duration), 0.0) if "duration" in info else 0.0
+		starts.append(beat - float(info.spawn_lead) - spawn_beats)
+		ends.append(beat + duration + tail)
+	starts.sort()
+	ends.sort()
+	var live := 0
+	var peak := 0
+	var j := 0
+	for s in starts:
+		while j < ends.size() and ends[j] < s:
+			live -= 1
+			j += 1
+		live += 1
+		peak = maxi(peak, live)
+	return peak
+
+
 static func reset() -> void:
 	# Join first: a thread that somehow outlived a load must finish before its stack is cleared.
 	# (load_v2/load_v3 are synchronous, so in practice this is a safety net.)
