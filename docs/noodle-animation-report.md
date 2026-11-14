@@ -772,3 +772,77 @@ fixture dump is byte-identical before and after.
 - Everything on the headset: the stutter at those times, the 205.6 s tick (the PC proof is with
   a real renderer), and how the new dissolve reads in VR.
 - The wall-span spirals, which remain on the PC.
+
+## Hiding the room on maps that replace the environment (after 0.7.32)
+
+Commit `2324b26`. The owner's decision: maps that clear Beat Saber's environment for their own
+should be played without this game's room, closer to what the mapper built. This build still
+does not draw the map's Chroma environment; it only stops drawing its own room on top of the
+map's empty space.
+
+**Rule** (`MapSupport.environment_removals_in`, `ENVIRONMENT_REPLACE_MIN = 15`): count the
+difficulty's Chroma `environment` / `_environment` entries that remove a stock object.
+- An entry counts when it turns the object off (`active` / `_active` false), scales it to zero
+  on any axis, or moves it 500 units or more away (`position` / `localPosition`, either
+  spelling).
+- Entries that build new geometry do not count.
+- The difficulty replaces the environment at 15 removals or more.
+- The library has a clear gap there: maps that tweak a few objects remove 1-7, maps that clear
+  the room remove 19 or more.
+
+**The fixtures** (every difficulty with an environment; the other 30 folders have none):
+
+| Fixture | Difficulties | Entries | Removals | Replaces |
+|---|---|---|---|---|
+| 1e6ff | ExpertPlusLawless, ExpertStandard | 2,269 | 2,266 | yes |
+| 23f6b | ExpertPlusStandard | 2,083 | 2,009 | yes |
+| 4a2b3 | 5 difficulties | 30 | 29 | yes |
+| 3bbb0 | ExpertPlusStandard | 2,897 (2,867 of them geometry) | 19 | yes |
+| 198f3 | ExpertPlus | 7 | 7 | no |
+| 43a25 | Easy, Normal | 16 (8 geometry) | 6 | no |
+| 352d8 | Hard, Expert, ExpertPlus | 9 | 5 | no |
+| 1dcf4 | 5 difficulties | 10 | 4 | no |
+| 210e3 | ExpertPlusStandard | 190 | 3 | no |
+| 43a24 | Hard | 3 | 2 | no |
+| 43a1f | Hard, Normal | 1 | 1 | no |
+| 4968d | ExpertPlusLawless, ExpertStandard | 1 | 1 | no |
+
+**What is hidden**, while such a song is played or paused and the setting is on:
+- `event_driver/Level`: the sky sphere, diagonal, square and waving lasers, the rings, the track
+  lights and the end path. Hidden and process-disabled, so the ring and laser animations stop and
+  nothing of it is drawn.
+- The sky style: it falls back to the black void while hidden, as with the default sky setting.
+
+**What stays:**
+- The track floor with its lane lines, as a distance reference. Without it the notes float in
+  pure black with nothing to judge distance by. `Level` is hidden whole, because light events
+  toggle its groups' visibility. A copy of `Level/floor` sharing its material is shown in its
+  place.
+- The player's platform (`StandingGround`), notes, walls, arcs, bombs, sabers, HUD, debris and
+  every menu.
+- Light events still run, because their colour also tints the floor streak and the blades. They
+  only change materials, which costs next to nothing.
+
+**When:** `BeepSaber_Game._update_room_visibility()` runs on every game state change and when
+the setting changes. Only the playing and paused states hide the room. The menu, the results
+screen, a fail and the settings all bring it back, and a restart re-enters playing for the same
+map. MapSupport still lists "Chroma environment" as not drawn.
+
+**Setting:** "Hide room on custom-environment maps", on the Visuals tab under the environment
+choice (a code-built row, like the Labs rows), default on. Settings key `hide_room_custom_env` at
+the end of the schema.
+
+**Checks** (verify_noodle, 312):
+- The removal count on v2 and v3 samples, including geometry and plain tweaks.
+- One short of the threshold, and at it.
+- The hide rule.
+- Every fixture's classification through the real detection path; the replacing set must be
+  exactly 1e6ff, 23f6b, 3bbb0 and 4a2b3.
+- Hide and restore on a real `event_driver` scene, including the floor reference.
+
+**Previews** (mobile renderer, the room's lights on, four notes): `room_shown.png` and
+`room_hidden.png` in `%TEMP%\opensaber_previews\`. The Visuals tab with the new row is
+`settings_2_visuals.png` there.
+
+**Not verified:** how a hidden room reads in the headset, and whether the faint track floor is
+enough of a reference, or too much, on these maps.

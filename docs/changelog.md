@@ -38,6 +38,10 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
 - **Partly dissolved notes and bombs look clean.** A note held part-way through a Noodle dissolve
   was covered in black specks; it now loses smooth patches with a thin bright edge, and above
   about 80 % it looks almost solid.
+- **Maps with their own environment play without our room.** When a map clears Beat Saber's
+  environment for its own, the game's room (sky, lasers, rings) is hidden during that song and a
+  faint track floor stays to judge distance. The map's own environment is still not drawn. New
+  setting under Visuals: "Hide room on custom-environment maps" (on by default).
 
 ## v0.7.29 - 2026-11-12 (built from `audit/fable-5.2`, untagged)
 
