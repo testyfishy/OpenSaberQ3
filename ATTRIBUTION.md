@@ -11,9 +11,11 @@ code, and this file is the record of them.
 | BeepSaber | Holger Dammertz (NeoSpark314) | MIT | standalone Godot game, `OQ_Toolkit/` in this tree |
 | BeepSaber `godot-4-port` ("Open Saber", 0.5.0) | Leandro Dreamer (leandrodreamer) | MIT | **direct upstream of this fork** |
 | Godot Engine | Godot contributors | MIT | engine, export templates |
+| OpenSaberQ3 (this fork) | testyfishy | GPL-3.0 (MIT up to v0.7.5) | Quest 3 work on top of the above |
 
-The MIT permission notice in `LICENSE` is retained unmodified. Forking, renaming, and
-redistribution are permitted by that licence provided the notice is kept — which it is.
+The upstream MIT permission notice is retained unmodified in `LICENSE-MIT`. Forking, renaming,
+relicensing and redistribution are permitted by that licence provided the notice is kept, which it
+is. This fork's own work is GPL-3.0 (`LICENSE`) from 2026-11-09; releases up to v0.7.5 were MIT.
 
 ## Creative assets
 

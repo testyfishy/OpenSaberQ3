@@ -13,7 +13,7 @@ still be merged.
 | Pinned commit | `64200ad3572b634ae57159e234e87b5e3e5d96eb` |
 | Commit date | 2025-03-05 |
 | Commit subject | Merge pull request #23 from shocktail39/web-upload-style |
-| License | MIT (inherited; see `LICENSE`) |
+| License | Upstream: MIT (notice kept in `LICENSE-MIT`). This fork: GPL-3.0 since 2026-11-09 (`LICENSE`); v0.7.5 and earlier MIT |
 | Fork | https://github.com/testyfishy/OpenSaberQ3 (public, true fork) |
 
 `upstream` remote is configured and must stay configured:

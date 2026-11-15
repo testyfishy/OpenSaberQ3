@@ -4,6 +4,21 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.77.0 - 2026-11-15
+
+The owner-approved release of the work on `audit/fable-5.2` (builds 0.7.10 to 0.7.40 below; the
+code is 0.7.40). First GitHub release since v0.7.5.
+
+- Animated maps: Noodle Extensions tracks, point definitions, path animation, parent tracks,
+  dissolve and fake objects; Animated badge and filter in the song list.
+- Note motion from the map: note jump speed, spawn distance, fly-in, early note rotation.
+- Per-song modifiers (Note Speed, Strict cuts, No Fail) with a score multiplier.
+- Arcs follow their curve, stay after the head cut, draw over walls and fade into the distance
+  until their tail note arrives.
+- The default room is hidden on maps that replace the environment.
+- Frame-time work for dense and animated maps; loader crash fixed.
+- Licence: GPL-3.0 (see the licence entry below).
+
 ## v0.7.40 - unreleased (on `audit/fable-5.2`)
 
 - **Arcs are drawn on top of walls.** A wall in front of an arc used to paint over it; now the
@@ -13,7 +28,7 @@ because upstream already uses tags such as `v0.4` and `v0.5`.
   softly into the distance where its next box does not exist yet. When that box flies in, the
   ribbon reaches out to it and stays connected. An arc also arrives with its first box instead of
   waiting at the spawn line.
-- Not yet run on the headset.
+- Played on the headset by the owner on 2026-11-15.
 
 ## v0.7.39 - unreleased (on `audit/fable-5.2`)
 
@@ -416,6 +431,11 @@ previous 90 default back to 120 without blocking a later choice.
 
 [Release](https://github.com/testyfishy/OpenSaberQ3/releases/tag/v0.7.6-q3) -
 [Spec](../specs/027-v07-map-compat/spec.md)
+## Licence change - 2026-11-09
+
+**Licence: GPL-3.0.** From 2026-11-09 this fork is licensed under the GNU GPL v3 (`LICENSE`). Releases
+up to and including v0.7.5 were published under MIT and stay MIT. The upstream BeepSaber MIT notice is
+kept unmodified in `LICENSE-MIT`. The banner and itch.io cover now read "Free · GPLv3".
 
 ## v0.7.5 - 2026-11-07
 

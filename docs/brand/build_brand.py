@@ -200,7 +200,7 @@ def banner_svg() -> str:
 
     x_name, name_size = 460.0, 96.0
     tagline = "Open-source rhythm game for Meta Quest 3"
-    chips = ["BeatSaver maps v2\u00b7v3\u00b7v4", "120 Hz", "Free \u00b7 MIT"]
+    chips = ["BeatSaver maps v2\u00b7v3\u00b7v4", "120 Hz", "Free \u00b7 GPLv3"]
     chip_size = 26.0
     chip_y, chip_h, chip_pad, chip_gap = 386.0, 44.0, 18.0, 12.0
     widths = [text_width(c, chip_size) + chip_pad * 2 for c in chips]
@@ -288,7 +288,7 @@ def itch_cover_svg() -> str:
     tagline = "Rhythm game for Quest 3"
     tag_size = 28.0
     tag_x = (630 - text_width(tagline, tag_size)) / 2
-    small = "Free \u00b7 MIT \u00b7 Open source"
+    small = "Free \u00b7 GPLv3 \u00b7 Open source"
     small_size = 25.0
     small_x = (630 - text_width(small, small_size)) / 2
     name_path = text_path("OpenSaber", name_size, name_x, 356, WHITE)
