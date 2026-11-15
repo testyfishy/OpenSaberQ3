@@ -81,7 +81,7 @@
 | Old copies | both deleted; no `.moved-*` remains under `Documents` |
 | Junctions | `…\Default Project\duolinux` → `F:\Dev\duolinux`; `…\Documents\duo-backups` → `F:\Dev\duo-backups` |
 | Git after switch | `git status` exit 0, `remote -v` still `https://github.com/testyfishy/duolinux.git` |
-| HF cache | model dir (17.22 GB) and `xet` deleted; `.agent_harnesses.json` and `unsloth_xet_health.HTPCAran.json` kept |
+| HF cache | model dir (17.22 GB) and `xet` deleted; `.agent_harnesses.json` and `unsloth_xet_health.<host>.json` kept |
 
 SC-001 (+32.27 ≥ 30) met. SC-002 met. SC-003–SC-005 met.
 Move script: `specs/012-duolinux-hf-move/Move-TreeToF.ps1`; logs in `%TEMP%\duolinux-move\`.

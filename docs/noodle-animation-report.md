@@ -285,7 +285,7 @@ lines under it, rerun it once before investigating.
 complete output (the scores are stale, from `bench_meta.txt` of 23:00; see Device testing):
 
 ```
-C:\Users\HTPC-A~1\AppData\Local\Temp\bench.flag: 1 file pushed, 0 skipped. 0.2 MB/s (127 bytes in 0.001s)
+%TEMP%\bench.flag: 1 file pushed, 0 skipped. 0.2 MB/s (127 bytes in 0.001s)
 BOTRUN started 'ODDS' difficulty 5 for 45 s ...
   bot_score_points=0
   bot_score_right_notes=0.00
