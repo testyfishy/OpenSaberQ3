@@ -22,6 +22,8 @@ var mid_anchor_mode: int
 var head_info: ColorNoteInfo = null
 # True when the tail note was linked at load (it is then marked when it spawns).
 var tail_linked := false
+# The Arc drawing this arc, once spawned (0.7.40: Playing links the tail note to it).
+var spawned_arc: Node3D = null
 
 @warning_ignore("shadowed_variable")
 func _init(

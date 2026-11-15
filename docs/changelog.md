@@ -4,6 +4,17 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.7.40 - unreleased (on `audit/fable-5.2`)
+
+- **Arcs are drawn on top of walls.** A wall in front of an arc used to paint over it; now the
+  arc runs through the wall and on, as a layer over it. Notes and sabers still hide it.
+- **Long arcs go off into the void and connect when their next box appears.** The ribbon used
+  to stop abruptly about 10 m out, so a long arc seemed to die off in the middle. Now it fades
+  softly into the distance where its next box does not exist yet. When that box flies in, the
+  ribbon reaches out to it and stays connected. An arc also arrives with its first box instead of
+  waiting at the spawn line.
+- Not yet run on the headset.
+
 ## v0.7.39 - unreleased (on `audit/fable-5.2`)
 
 - **Arcs are drawn between their notes again, and stay after you cut the head.**

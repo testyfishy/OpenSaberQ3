@@ -22,16 +22,30 @@ uniform float distance_fade_tip_max : hint_range(0.0, 4096.0, 0.01);
 // saber - which is why an arc could arrive at the wrong side of its tail note.
 uniform float magnet_tail_ease = 2.0;
 
+// 0.7.40, per arc (Arc._update_tail). The ribbon's own space has its tail at z 0 and its head at
+// +head_z. Before the tail box exists the ribbon is invisible beyond void_z (it trails into the
+// void over void_fade_m, never past its head); while the tail box flies in, the last
+// tail_stretch_m of ribbon is stretched tail_fly metres further so its end stays on the box.
+instance uniform float void_z = -10000.0;
+instance uniform float tail_fly = 0.0;
+instance uniform float head_z = 0.0;
+uniform float void_fade_m = 8.0;
+uniform float tail_stretch_m = 4.0;
+
 uniform float distance_effect : hint_range(0.01, 4096.0, 0.01);
 uniform float distance_power : hint_range(0.01, 4096.0, 0.01);
 
 varying float to_discard;
 varying float dist;
 varying float tip_dist;
+varying float ribbon_z;
 global uniform vec3 left_saber;
 global uniform vec3 right_saber;
 
 void vertex() {
+	float stretch = max(0.0, 1.0 - VERTEX.z / max(min(tail_stretch_m, head_z), 0.001));
+	VERTEX.z -= tail_fly * stretch;
+	ribbon_z = VERTEX.z;
 	tip_dist = length(VERTEX);
 
 	vec3 saber_pos = left_saber;
@@ -64,7 +78,9 @@ void fragment() {
 	float fade = clamp(smoothstep(distance_fade_min, distance_fade_max, length(VERTEX)), 0.0, 1.0);
 	float magnet_fade = clamp(smoothstep(distance_fade_magnet_max, distance_fade_magnet_min, distance_fade_magnet_max+distance_fade_magnet_min - dist), 0.0, 1.0);
 	float tip_fade = clamp(smoothstep(distance_fade_tip_min, distance_fade_tip_max, tip_dist), 0.0, 1.0);
-	ALPHA = color.a * min(min(fade, magnet_fade), tip_fade);
+	float void_len = clamp(head_z - void_z, 0.01, void_fade_m);
+	float void_fade = smoothstep(void_z, void_z + void_len, ribbon_z);
+	ALPHA = color.a * min(min(fade, magnet_fade), min(tip_fade, void_fade));
 	ALPHA *= clamp(pow(texture(noise, UV*noise_scale+vec2(TIME*noise_speed,0.0)).r, noise_pow) * noise_mult, 0.0, 1.0);
 	ALBEDO = color.rgb;
 	EMISSION = color.rgb * emission;

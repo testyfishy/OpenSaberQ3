@@ -486,6 +486,132 @@ The magnet itself is unchanged:
 
 **Not verified:** on the headset, and by a person's swing (the bot holds its tips near z -0.1).
 
+## Arcs over walls and long arcs (0.7.40)
+
+Owner, playing 0.7.39: an arc is hidden where a wall is in front of it ("The arc should be a layer
+on top of the wall ... The arc shouldn't stop because of a wall"), and a long arc "just dies off
+in the middle" while short ones connect fine.
+
+**Wall.** The default wall material (`wall_shared.tres`) is `blend_mix, depth_draw_never`, so
+this was transparent draw order, not depth: walls and arcs both had render priority 0, the wall
+sorted after the arc and painted over it at 55-100 % alpha. The four arc materials now have
+`render_priority` 1 (`Arc.RENDER_PRIORITY`), so the ribbon is drawn after the walls. Depth test
+stays on, so opaque notes and sabers still hide it. The bench-only wall variants are unchanged and
+still hide an arc behind them: `Wall.depth_prepass` (`wall_depth.tres`, depth prepass) and
+`Wall.opaque_walls` (`wall_opaque.tres`) put the wall in the depth buffer.
+
+**Long arc.** Since 0.7.10 the ribbon faded out over the last 3 m before the spawn distance, which
+`apply_spawn_distance` set to the jump start (about 9.5-10.6 m): nothing of an arc beyond the jump
+start was drawn. That was owner feedback on 0.7.10, when notes popped in at the spawn line. Since
+0.7.37 notes fly in from about 110 m, so the cut-off read as the arc ending in mid-air: an arc
+whose tail is more than about 10 m past its head never showed its far part until it came within
+10 m.
+
+Other suspects checked:
+
+- The CSG samples the path every 0.45 m whatever its length.
+- The tip fade is off.
+- The magnet acts only near the blade.
+- `despawn_z` is at the tail.
+
+One more thing was found and not changed. The bow handles scale with the head-to-tail distance
+(`ARC_HANDLE_FRACTION` 0.35, capped at 0.6 of it), so a long arc bows far. The preview's 29 m arc,
+from a down-cut head to an up-cut tail, dips to y = -6.4 m. The game's floors do not hide it: the
+event floor is alpha-blended at render priority -5 and writes no depth. It does look wrong. A cap
+on the handle in metres, for long arcs only, would change the arc's look, so that is the owner's
+call (follow-ups).
+
+The first fix (a far fade at 50-75 m) showed the tail end before its box. The owner corrected
+it: "Balance it such that the arc goes off into the void and then connects when the next box
+spawns." So the ribbon's far limit is now per arc and follows its tail box (`Arc._update_tail`,
+instance uniforms `void_z`, `tail_fly`, `head_z` in `Arc.gdshader`):
+
+- **Before the tail box exists.** The ribbon is invisible beyond the point where that box will
+  appear: the jump start plus the fly-in's travel, NJS x 0.5 s further. That is 19.1 m on
+  ODDS&ENDS ExpertPlus and 15 m at NJS 10 and 120 BPM. Nearer than that it trails into the void
+  over `VOID_FADE_M` = 8 m, but never past its head, so the head end is always at full strength.
+  The bare tail end is never drawn.
+- **While the tail box flies in** (0.5 s, from about 110 m at 200 m/s), the last
+  `TAIL_STRETCH_M` = 4 m of ribbon is stretched out to the box, so its end stays on the box.
+  - **Linked note.** When the spawner links the tail note (`Playing._mark_arc_tail`,
+    `Arc.set_tail_cube`), the stretch is read from the note's drawn z.
+  - **No link.** Otherwise it comes from the arc's own travel, the same rule that places the box.
+    This covers Noodle tails linked at load, 360/90 lanes and arcs that end on nothing.
+- **Once the tail's jump starts,** the arc is drawn as built, and `_process` pays one compare.
+- **Short arcs** whose tail is already in its jump are never cut or stretched. They are drawn as
+  0.7.39 drew them, except near the spawn line: 0.7.39's 3 m ramp there would leave a gap between
+  ribbon and box now that both arrive together.
+- **The distance fade** of the material is pushed out to 4000 m (off). The tip fade stays off.
+
+**The head end.** So the arc never shows before its head box either, `Arc.fly_in` moves it with
+its head's fly-in. The arc is spawned in the same pass as the head (same look-ahead), drawn as far
+out as the head, comes in at 200 m/s and switches to the jump speed when the head's jump starts.
+While the head is beyond the void boundary the whole ribbon is hidden, so the arc grows out of the
+void with its head.
+
+- **Timing.** With a head note the time is the head's own (`Cuttable.fly_seconds_left`). With
+  none, the arc moves as a head at `head_beat` with the map's half jump would.
+- **Follow.** The note moves on physics ticks and the arc on rendered frames, which at 200 m/s left
+  them up to 1.7 m apart in a replay. A flying arc whose head is a plain note in its own lane
+  therefore sets its z from the note's drawn z each frame.
+
+**Cost.**
+
+- While the tail box does not exist or flies in: one add and one instance uniform write per arc
+  per frame.
+- Otherwise: one compare.
+- The fly-in: one compare.
+- The shader: a few ALU per vertex and fragment.
+- The ribbon's far part was rasterised before too, at alpha 0.
+
+**Checks.**
+
+- **`verify_note_motion`** (93 checks):
+  - Arcs are drawn after the walls.
+  - **Head fly-in.** An arc with and without a head note is drawn 110 m out when spawned. It is
+    at the jump start (10 m) after 0.5 s and at 5 m after 1 s. With a head it stays on the head
+    box throughout (0.0000 m), also with two frames per physics tick.
+  - **Tail, linked and unlinked** (NJS 10, a tail 30 m beyond the head):
+    - The bare tail end is never drawn before its box appears, and the head end is at full
+      strength meanwhile.
+    - The void is 15 m out, with an 8 m fade.
+    - While the tail box flies in, the ribbon's end is on it (0.0000 m) and nothing is cut.
+    - After the tail's jump start, the ribbon is as built and its end is on the box.
+  - A short arc is neither cut nor stretched.
+  - On 0.7.39's `Arc.gd` the wall and fly-in checks fail, and the tail checks do not compile (no
+    tail state).
+- **Real game** (headless bot replays of ODDS&ENDS ExpertPlus with temporary traces, arcs on
+  beats 158.5 and 160):
+  - **Head.** The arcs spawn flying, in the same lane as their head notes, at -107.3 m. Over 140
+    traced fly-in frames their head is 0.000 m from the box.
+  - **Tail.** The tail note is linked, and over 143 flying frames the ribbon's end is 0.000 m from
+    the tail box.
+  - **Early by a frame.** In these short arcs the tail's computed fly-in starts 1-2 frames before
+    the spawner creates the note. For those frames the ribbon stretches to where the box appears
+    the next frame, about 100 m out.
+- **`arc_magnet_preview`** (`ARC_CASES=wall,long`, `ARC_OLD=1` for 0.7.39's drawing), in
+  `%TEMP%\opensaber_previews\`:
+  - **`arc_wall_*`:** a right arc running behind and up through a wall. At the head's beat: 2 of
+    the arc's blue pixels before, 427 after.
+  - **The five 0.7.39 cases** were rendered again and are unchanged.
+  - **`arc_long_*` and `arc_long_strip.png`:** a time strip, seen from the side. Tail 29 m beyond
+    the head; white and yellow markers stand in for the head and tail boxes.
+    - -0.8 s: the head box flies in, no ribbon.
+    - -0.6 / -0.3 s: the ribbon trails off behind the head into the void.
+    - +0.15 / +0.45 s: after the head cut, the rest trails off the same way.
+    - +0.65 / +0.8 / +0.95 s: the tail box flies in and the ribbon's end rides it (box and ribbon
+      end at -97.7, -67.7, -37.7 m).
+    - +1.2 / +1.5 s: the box is in its jump, connected.
+- **`check.ps1`:** CHECKS PASS.
+
+**Not verified:**
+
+- On the headset, or with a person's swing.
+- **Kink.** The stretched ribbon bends where the stretch starts, 4 m from the tail. This is
+  visible in the strip; whether it reads well in the headset is not checked.
+- **Noodle notes.** A Noodle head note (its own NJS, or a definite position) is not followed, and
+  a tail note with its own spawn lead does not match the computed tail fly-in.
+
 ## Unverified
 
 - The bodies of `CoreMathUtils.CalculateHalfJumpDurationInBeats` and Beat Saber's `NoteJump` /
@@ -501,6 +627,9 @@ The magnet itself is unchanged:
 
 ## Follow-ups
 
+- **Long arcs bow far below the floor** (0.7.40). The bow handles scale with the arc's length, so
+  a 29 m arc between a down-cut head and an up-cut tail dips to y = -6.4 m. A cap in metres for
+  long arcs only would fix it. It changes the arc's look, so the owner decides.
 - **The one-tick spawn ambiguity above.** Anchoring an object's travel to the song clock on its
   first tick would make every note's z independent of pool order. That changes some notes by one
   tick against 0.7.36, so it is a separate decision.

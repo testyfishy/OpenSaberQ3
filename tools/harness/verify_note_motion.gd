@@ -52,6 +52,8 @@ func _run() -> void:
 	_pool_peak()
 	_spawn_pop()
 	await _arc_ribbon()
+	_arc_draw()
+	_arc_tail()
 	_legacy()
 	NoteMotion.reset()
 	Map.current_info = null
@@ -406,6 +408,161 @@ func _arc_ribbon() -> void:
 		arc._release_to_pool()
 	holder.queue_free()
 	await get_tree().process_frame
+
+
+# 0.7.40, the owner's 0.7.39 play-test: an arc was hidden by a wall in front of it, and a long arc
+# "died off in the middle" (it faded out at the spawn line, 10 m out, since 0.7.10).
+func _arc_draw() -> void:
+	_configure()
+	Arc.apply_spawn_distance()
+	var wall_priority := (Wall.WALL_MATERIAL as Material).render_priority
+	var ok := true
+	for m: ShaderMaterial in [Arc.left_material, Arc.right_material, Arc.left_material_magnet, Arc.right_material_magnet]:
+		ok = ok and m.render_priority > wall_priority
+	_check("arcs are drawn after the translucent walls (render priority above the wall's %d)" % wall_priority,
+		ok, "arc %d" % Arc.left_material.render_priority)
+	# The arc flies in with its head note. Head on beat 8: jump start beat 6 (3.0 s), fly-in from
+	# 2.5 s = beat 5, when the head's travel is 15 m out and it is drawn at 15 + 95 = 110 m.
+	var holder := Node3D.new()
+	add_child(holder)
+	var info := ArcInfo.new_v3({"c": 1.0, "b": 8.0, "x": 2.0, "y": 0.0, "d": 1.0, "tb": 14.0, "tx": 2.0, "ty": 2.0})
+	var cube := (load("res://game/BeepCube/BeepCube.tscn") as PackedScene).instantiate() as BeepCube
+	holder.add_child(cube)
+	cube.set_physics_process(false)
+	cube.spawn(ColorNoteInfo.new_v3({"b": 8.0, "x": 2.0, "y": 0.0, "c": 1.0, "d": 1.0}), 5.0)
+	cube.fly_in(0.5)
+	for with_head: bool in [true, false]:
+		var arc := Arc.acquire()
+		holder.add_child(arc)
+		arc.set_process(false)
+		arc.spawn(info, 5.0, cube if with_head else null)
+		if not arc.has_method(&"fly_in"):
+			_check("arc flies in (%s)" % ("with its head" if with_head else "no head note"), false, "no Arc.fly_in")
+			arc._release_to_pool()
+			continue
+		arc.call(&"fly_in", cube.fly_seconds_left() if with_head else 0.5)
+		var path := arc.get_node("Path3D") as Path3D
+		var head_z := func() -> float: return arc.position.z + path.position.z + path.curve.get_point_position(0).z
+		var label := "with its head" if with_head else "no head note"
+		_near("arc %s: its head is drawn 110 m out when spawned" % label, head_z.call(), -110.0)
+		var worst := 0.0
+		var t := 0.0
+		for i in 120:
+			t += DT
+			if with_head:
+				cube._physics_process(DT)
+			arc._process(DT)
+			if with_head:
+				worst = maxf(worst, absf(head_z.call() - cube.position.z))
+			if i == 59:
+				_near("arc %s: its head is at the jump start (10 m) after 0.5 s" % label, head_z.call(), -10.0, 0.01)
+		if with_head:
+			_check("arc with its head: the ribbon stays on the head box through the fly-in and after",
+				worst < 0.01, "worst %.4f m" % worst)
+		_near("arc %s: 1 s after spawn it has moved on at the jump speed (5 m out)" % label, head_z.call(), -5.0, 0.01)
+		arc._release_to_pool()
+	# In the game the note moves on physics ticks and the arc on rendered frames. Two frames per
+	# tick: at 200 m/s half a tick apart would be 0.83 m.
+	cube.release()
+	cube.spawn(ColorNoteInfo.new_v3({"b": 8.0, "x": 2.0, "y": 0.0, "c": 1.0, "d": 1.0}), 5.0)
+	cube.fly_in(0.5)
+	var arc2 := Arc.acquire()
+	holder.add_child(arc2)
+	arc2.set_process(false)
+	arc2.spawn(info, 5.0, cube)
+	if arc2.has_method(&"fly_in"):
+		arc2.call(&"fly_in", cube.fly_seconds_left())
+		var path2 := arc2.get_node("Path3D") as Path3D
+		var worst2 := 0.0
+		for i in 59:
+			cube._physics_process(DT)
+			for half in 2:
+				arc2._process(DT * 0.5)
+				worst2 = maxf(worst2, absf(arc2.position.z + path2.position.z + path2.curve.get_point_position(0).z - cube.position.z))
+		_check("arc with its head, two frames per physics tick: on the head box through the fly-in",
+			worst2 < 0.01, "worst %.4f m" % worst2)
+	arc2._release_to_pool()
+	cube.release()
+	holder.queue_free()
+
+
+# The shader's void fade (Arc.gdshader) at a point `rz` of the ribbon's own space.
+func _void_alpha(arc: Arc, rz: float) -> float:
+	var head_z := arc._head_local_z - arc._tail_path_z
+	var vlen := clampf(head_z - arc.void_z, 0.01, Arc.VOID_FADE_M)
+	return smoothstep(arc.void_z, arc.void_z + vlen, rz)
+
+
+# 0.7.40 owner correction: a long arc trails into the void and connects when its tail box appears.
+# NJS 10, 120 BPM: a note appears (fly-in start) at 15 m travel, its jump starts at 10 m. Head on
+# beat 8 (spawned at 2.5 s = beat 5), tail on beat 14, 30 m beyond the head: the tail appears at
+# 5.5 s (3 s after the arc) and its jump starts at 6.0 s.
+func _arc_tail() -> void:
+	_configure()
+	Arc.apply_spawn_distance()
+	var holder := Node3D.new()
+	add_child(holder)
+	var info := ArcInfo.new_v3({"c": 1.0, "b": 8.0, "x": 2.0, "y": 0.0, "d": 1.0, "tb": 14.0, "tx": 2.0, "ty": 2.0})
+	var tail_note := ColorNoteInfo.new_v3({"b": 14.0, "x": 2.0, "y": 2.0, "c": 1.0, "d": 1.0})
+	for linked: bool in [true, false]:
+		var label := "tail note linked" if linked else "tail by its beat"
+		var arc := Arc.acquire()
+		holder.add_child(arc)
+		arc.set_process(false)
+		arc.spawn(info, 5.0)
+		arc.fly_in(0.5)
+		var tail_end_seen := 0.0
+		var head_dim := 0.0
+		for i in 360:
+			arc._process(DT)
+			tail_end_seen = maxf(tail_end_seen, _void_alpha(arc, 0.0))
+			# The head is drawn nearer than where a note appears from 0.5 s (its jump start) on.
+			if i >= 60:
+				head_dim = maxf(head_dim, 1.0 - _void_alpha(arc, arc._head_local_z - arc._tail_path_z))
+		_check("%s: the bare tail end is never drawn before its box appears" % label, tail_end_seen < 0.001,
+			"alpha up to %.3f" % tail_end_seen)
+		_check("%s: the head end is drawn at full strength meanwhile" % label, head_dim < 0.001, "dimmed by %.3f" % head_dim)
+		_near("%s: 2.5 s in, the void is 15 m out" % label,
+			arc.void_z + arc.position.z + arc._tail_path_z, -15.0)
+		_near("%s: the ribbon trails into the void over 8 m" % label,
+			clampf(arc._head_local_z - arc._tail_path_z - arc.void_z, 0.01, Arc.VOID_FADE_M), 8.0)
+		# The tail box appears now; the next tick it flies in.
+		var cube := (load("res://game/BeepCube/BeepCube.tscn") as PackedScene).instantiate() as BeepCube
+		holder.add_child(cube)
+		cube.set_physics_process(false)
+		cube.spawn(tail_note, 11.0)
+		cube.fly_in(0.5)
+		if linked:
+			arc.set_tail_cube(cube)
+		var gap := 0.0
+		var void_on := false
+		for i in 59:
+			cube._physics_process(DT)
+			arc._process(DT)
+			gap = maxf(gap, absf(arc.position.z + arc._tail_path_z - arc.tail_fly - cube.position.z))
+			void_on = void_on or arc.void_z > -9999.0
+		_check("%s: while the tail box flies in, the ribbon's end is on it" % label, gap < 0.01, "worst %.4f m" % gap)
+		_check("%s: and nothing of the ribbon is cut" % label, not void_on)
+		for i in 3:
+			cube._physics_process(DT)
+			arc._process(DT)
+		_check("%s: once the tail's jump starts, the ribbon is as built" % label,
+			arc.tail_fly == 0.0 and arc.void_z < -9999.0 and arc._tail_state == Arc.TAIL_HERE,
+			"tail_fly %.3f void %.1f" % [arc.tail_fly, arc.void_z])
+		_near("%s: and its end is on the box" % label, arc.position.z + arc._tail_path_z, cube.position.z, 0.01)
+		cube.release()
+		cube.queue_free()
+		arc._release_to_pool()
+	# A short arc whose tail is already in its jump: drawn as before, nothing cut or stretched.
+	var short_info := ArcInfo.new_v3({"c": 1.0, "b": 8.0, "x": 2.0, "y": 0.0, "d": 1.0, "tb": 8.5, "tx": 2.0, "ty": 2.0})
+	var arc2 := Arc.acquire()
+	holder.add_child(arc2)
+	arc2.set_process(false)
+	arc2.spawn(short_info, 6.5)
+	_check("short arc inside the jump: nothing cut or stretched",
+		arc2.tail_fly == 0.0 and arc2.void_z < -9999.0 and arc2._tail_state == Arc.TAIL_HERE)
+	arc2._release_to_pool()
+	holder.queue_free()
 
 
 # Unconfigured motion (harness scenes, tools) keeps the legacy numbers and has no fly-in.

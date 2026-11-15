@@ -46,6 +46,9 @@ func _mark_arc_tail(note: BeepCube) -> void:
 				and is_equal_approx(arc_info.tail_line_index, note.line_index)
 				and is_equal_approx(arc_info.tail_line_layer, note.line_layer)):
 			note.arc_tail = true
+			# 0.7.40: the arc's ribbon follows its tail box while it flies in.
+			if arc_info.spawned_arc != null and is_instance_valid(arc_info.spawned_arc):
+				(arc_info.spawned_arc as Arc).set_tail_cube(note)
 			_arc_tails.remove_at(i)
 
 # Maps where notes have their own jumps link arcs and chains to their head notes at load
@@ -69,18 +72,24 @@ func _spawn_arc(game: BeepSaber_Game, arc_info: ArcInfo, cube: BeepCube, current
 	var arc := Arc.acquire() as Arc
 	if cube != null:
 		cube.arc_head = true
-	# The tail note is later in the map: usually not spawned yet, sometimes in this same
-	# pass. Remember the arc so the note can be marked when it appears, and check the
-	# notes of this pass now. A tail linked at load is marked by the note itself.
-	if not arc_info.tail_linked:
-		_arc_tails.append(arc_info)
-		for spawned in cube_refs:
-			_mark_arc_tail(spawned)
 	# In the tree before spawn() writes its curve, so the ribbon's CSGPolygon3D sees the change
 	# (spawn() also forces the rebuild, see Arc._rebuild_ribbon).
 	game.track.add_child(arc)
 	arc.spawn(arc_info, current_beat, cube)
 	TrackLanes.place(arc, arc_info.head_beat)
+	# 0.7.40: the arc flies in with its head note (with none, as a head at head_beat would), so
+	# it is never drawn before its head box. Spawned in the same pass as that note (same look-ahead).
+	if _fly_sec > 0.0:
+		arc.fly_in(cube.fly_seconds_left() if cube != null else _fly_rem(arc_info.head_beat - NoteMotion.spawn_beats()))
+	# The tail note is later in the map: usually not spawned yet, sometimes in this same
+	# pass. Remember the arc so the note can be marked when it appears, and check the
+	# notes of this pass now. A tail linked at load is marked by the note itself.
+	# After spawn() and place(), so a tail note of this same pass is linked to the arc (it follows it).
+	arc_info.spawned_arc = arc
+	if not arc_info.tail_linked:
+		_arc_tails.append(arc_info)
+		for spawned in cube_refs:
+			_mark_arc_tail(spawned)
 
 func _construct_linked_chain(chain_info: ChainInfo, current_beat: float) -> void:
 	var cube := linked_head(chain_info.head_info)

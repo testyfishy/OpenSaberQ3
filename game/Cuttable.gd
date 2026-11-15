@@ -95,6 +95,14 @@ func play_spawn_anim(anim: AnimationPlayer, half_sec: float) -> void:
 func fly_offset() -> float:
 	return _fly_drawn if _flying else 0.0
 
+## Seconds until this object's jump starts while it flies in, else 0 (an arc flies in with its
+## head note, Arc.fly_in).
+func fly_seconds_left() -> float:
+	if not _flying or speed <= 0.0:
+		return 0.0
+	var travel := _n_base.z if noodle != null else _fly_travel
+	return maxf(_fly_z - travel, 0.0) / speed
+
 ## Called by the spawner right after spawn() for an object whose jump starts `rem_sec` from now:
 ## it flies in until then. A rem_sec of 0 or less leaves it as spawned.
 func fly_in(rem_sec: float) -> void:
