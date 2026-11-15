@@ -16,6 +16,17 @@ scores. A fork of
 [install](#download-and-install). Built on BeepSaber and its lineage
 ([credits](ATTRIBUTION.md), [pinned upstream](UPSTREAM.md)).
 
+> [!IMPORTANT]
+> **This project is vibe coded.** I built it as a hobby, for fun, by directing multiple AI coding
+> agents to rework the original BeepSaber fork in the Godot engine. The agents wrote the code,
+> tests and documentation; the commit history shows which ones.
+>
+> I have not read every line of code, and I am not promising that every detail has had human
+> review. What I did was play it on my own Quest 3, say what felt wrong, and have it fixed until
+> I liked the result. I am sharing it because I think the end product is good. Treat it as a
+> hobby project: it comes with no warranty, and you should judge the code for yourself before
+> relying on it.
+
 ## Since the fork
 
 | | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.77.0 |
