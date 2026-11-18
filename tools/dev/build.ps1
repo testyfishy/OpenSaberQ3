@@ -42,6 +42,15 @@ $log = Join-Path $env:TEMP "opensaber_export_$version.log"
 # A stale exported scene cache has shipped an old scene before: always start clean.
 if (Test-Path '.godot\exported') { Remove-Item '.godot\exported' -Recurse -Force }
 if (Test-Path $apk) { Remove-Item $apk -Force }
+# Release signing: the password lives outside the repository (tools\dev\signing-setup.ps1).
+$signing = Join-Path $env:USERPROFILE '.opensaber-signing\release-password.txt'
+if (Test-Path $signing) {
+    $env:GODOT_ANDROID_KEYSTORE_RELEASE_PATH = (Resolve-Path 'bin\release.keystore').Path
+    $env:GODOT_ANDROID_KEYSTORE_RELEASE_USER = 'androiddebugkey'
+    $env:GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD = [IO.File]::ReadAllText($signing).Trim()
+} else {
+    'BUILD warning: no private signing password found; using the values in export_presets.cfg'
+}
 "BUILD exporting $version (this takes several minutes) ..."
 & $Godot --headless --path . --export-release 'Oculus Quest (RELEASE)' $apk *> $log
 if (-not (Test-Path $apk)) {
