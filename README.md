@@ -12,7 +12,7 @@ scores. A fork of
 
 ![OpenSaberQ3](docs/images/banner.png)
 
-**v0.77.0** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
+**v0.77.1** — [download the APK](https://github.com/testyfishy/OpenSaberQ3/releases/latest) ·
 [install](#download-and-install). Built on BeepSaber and its lineage
 ([credits](ATTRIBUTION.md), [pinned upstream](UPSTREAM.md)).
 
@@ -114,7 +114,7 @@ The latest signed APK is on the [releases page](https://github.com/testyfishy/Op
 Enable **Developer mode** on the headset, then sideload with SideQuest or run:
 
 ```sh
-adb install -r OpenSaber-v0.77.0.apk
+adb install -r OpenSaber-v0.77.1.apk
 ```
 
 Launch **Open Saber Q3** from *Unknown Sources*. Installs alongside upstream BeepSaber; songs and
@@ -135,7 +135,7 @@ for about a second while the renderer compiles; Pause → Screenshot is the reli
 |---|---|
 | [v0.6.0 release report](docs/v0.6-report.md) | Library sources, BeatLeader, device evidence, upgrade test |
 | [Performance](docs/performance.md) | Frame-time trace, stutter fix, per-map walls, dense notes |
-| [Changelog](docs/changelog.md) | Every build from v0.1.0 to v0.77.0 |
+| [Changelog](docs/changelog.md) | Every build from v0.1.0 to v0.77.1 |
 | [Animated maps](docs/noodle-animation-report.md) | What Noodle Extensions animation is supported, how it is evaluated, measurements |
 | [Note motion](docs/note-motion-report.md) | Jump speed, spawn distance, fly-in, modifiers, arcs, comparison with Beat Saber |
 | [Map compatibility](docs/map-compatibility.md) | Badges, policy and what is not supported |

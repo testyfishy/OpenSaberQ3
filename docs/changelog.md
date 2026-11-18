@@ -4,6 +4,13 @@ Every Quest 3 build of this fork. The upstream BeepSaber lineage is pinned in
 [UPSTREAM.md](../UPSTREAM.md). GitHub releases carry the signed APKs; the `-q3` suffix exists
 because upstream already uses tags such as `v0.4` and `v0.5`.
 
+## v0.77.1 - 2026-11-17
+
+- Store build. Same game as 0.77.0.
+- The release signing password is no longer stored in the repository; the key is unchanged, so
+  the build installs over earlier versions.
+- Store page text for itch.io and SideQuest; Feedback link in the README.
+
 ## v0.77.0 - 2026-11-15
 
 The owner-approved release of the work on `audit/fable-5.2` (builds 0.7.10 to 0.7.40 below; the
