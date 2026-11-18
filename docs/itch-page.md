@@ -1,9 +1,10 @@
 # itch.io page copy
 
-**Target build:** 0.6.3. Arcs connect and match the note colours; BeatLeader sits on the left
-of the menu and BeastSaber (curated) on the right. The 0.6.0 APK still uses the previous icon and
-contains the demo, so do not upload it. Publish gate and
-upload steps: [itch-push.md](itch-push.md).
+**Target build:** 0.77.1. It is 0.77.0 with a signing-password change only; the gameplay is the
+same. Features and limits come from the README (What's new v0.77.0, Map compatibility, Known
+limitations, Performance) and [changelog.md](changelog.md). Publish gate and upload steps:
+[itch-push.md](itch-push.md). The SideQuest version of this copy is in
+[sidequest-page.md](sidequest-page.md).
 
 ## Project fields
 
@@ -18,83 +19,108 @@ upload steps: [itch-push.md](itch-push.md).
 | Platforms | Android |
 | Genre | Rhythm |
 | Tags | `vr`, `meta-quest`, `rhythm`, `open-source`, `sidequest`, `beatsaver` |
-| AI disclosure | Yes — Graphics |
-| Links | GitHub source, GPLv3 licence |
+| AI disclosure | Yes — Graphics, Code (use the category names itch shows on the form) |
+| Links | GitHub source, GPL-3.0 licence, GitHub Issues for feedback |
 
 ## Tagline
 
-> Open-source rhythm game for Meta Quest 3. BeatSaver maps at 120 Hz, with an in-VR browser and
-> BeatLeader scores.
+> Free, open-source rhythm game for Meta Quest 3. Play BeatSaver custom maps at 120 Hz, including
+> animated maps.
 
 ## Short description
 
-> Free, GPLv3-licensed and sideloadable. Plays BeatSaver custom maps in v2, v3 and v4 at 120 Hz,
-> filters the library by source, and shows BeatLeader scores in the menu.
+> Sideloadable and GPL-3.0. Plays BeatSaver maps in v2, v3 and v4 at 120 Hz, with an in-VR map
+> browser, BeatLeader scores and per-song modifiers.
 
 ## Full description
 
-> **OpenSaberQ3** is an open-source rhythm game for Meta Quest 3, built in Godot 4.6 and based on
-> [BeepSaber](https://github.com/leandrodreamer/BeepSaber) (MIT).
+> **OpenSaberQ3** is a free, open-source rhythm game for Meta Quest 3. You cut blocks to the beat
+> of custom maps from BeatSaver.
 >
-> - **120 Hz** with physics matched to the display, and Performance / Balanced / Quality presets.
+> This project is vibe coded. It was built as a hobby with multiple AI coding agents, from the
+> original BeepSaber fork, in the Godot engine. Not every line has been reviewed by a human.
+>
+> **What it does**
+>
+> - **120 Hz**, with physics matched to the display. Performance, Balanced and Quality presets.
 > - **BeatSaver maps in v2, v3 and v4**, including the hybrid format BeatSaver serves.
-> - **An in-VR map browser**: search, sort, filter and download without a PC.
-> - **Source tags and a source filter** for the library, with automatic backfill for old maps.
-> - **BeatLeader top 10** for the selected map and difficulty, read-only, no account.
-> - Layered hit audio, per-event haptics and an optional in-game analyser.
-> - **In-game screenshots**: triggers in menus, Pause → Screenshot during a song; 1920×1080 for
->   `adb pull`.
+> - **Animated maps.** Noodle Extensions tracks, path animation, parent tracks, dissolve and fake
+>   objects play. Animated maps have a badge and a filter in the song list.
+> - **Notes move the way the map says.** Each difficulty's own note jump speed and spawn distance
+>   are used. Notes fly in from the distance, then jump.
+> - **Per-song modifiers.** Note Speed, Strict cuts and No Fail are set on each song. Making a
+>   song easier lowers the score multiplier, shown before you start.
+> - **Arcs** follow their curve between two notes and are drawn over walls.
+> - **An in-VR map browser.** Search, sort, filter and download maps without a PC.
+> - **BeatLeader top 10** for the selected map and difficulty. Read-only, no account.
+> - **A compatibility badge on every map**: Supported, Partial or Visuals limited.
 >
-> Benchmark harness and raw captures: <https://github.com/testyfishy/OpenSaberQ3/blob/godot-4-port/PERF.md>.
-> The shipped default holds **120 fps with 0.01% dropped frames** over three minutes (2 frames in
-> 21,348), and a 2,913-note map holds **120 fps at 0.14% dropped** on Quest 3 at the Performance
-> preset.
+> **Performance**
 >
-> **Credits.** The game, engine port and content pipeline are the work of the BeepSaber authors
-> and the projects it descends from — NeoSpark314's BeepSaber and the Godot Oculus Quest Toolkit.
-> This fork tunes and fixes. The full chain is in the repository's `UPSTREAM.md` and
-> `ATTRIBUTION.md`.
+> On Quest 3 at 120 Hz with the Performance preset, played by the bot:
 >
-> **AI-generated content: Graphics.** The logo, app icon and cover are AI-generated vector artwork,
-> created with AI assistants from a design brief; the sources and provenance are in `docs/brand/`.
-> The code is human-directed with AI assistance.
+> - a 2,913-note map (Somewhere Out There ExpertPlus) runs at a 120 fps median with 0.14%
+>   dropped frames;
+> - ODDS&ENDS ExpertPlus drops 2 frames in 21,348 (0.01%).
+>
+> Full results: <https://github.com/testyfishy/OpenSaberQ3/blob/godot-4-port/docs/performance.md>
 >
 > **Install**
 >
-> 1. Enable **Developer Mode** for the headset in the Meta Horizon app.
-> 2. Download the APK below.
-> 3. `adb install -r OpenSaberQ3-0.6.3.apk`, or use SideQuest.
+> 1. Turn on **Developer Mode** for the headset in the Meta Horizon app.
+> 2. Download `OpenSaber-v0.77.1.apk` below.
+> 3. Install it with SideQuest, or run `adb install -r OpenSaber-v0.77.1.apk`.
 > 4. Launch **Open Saber Q3** from *Unknown Sources*.
 >
-> itch is a download host: it does not install Android apps for you. Sideloading is required.
-> To take a screenshot in a menu, hold both triggers for half a second. During a song, press
-> **Screenshot** in the pause menu. The PNGs are in the app's files folder for `adb pull`.
+> itch only hosts the file. It does not install Android apps for you, so sideloading is required.
+> Quest 3 is the tested headset. Others may work but are untested.
 >
 > **Known issues**
 >
-> - White highlights at chain joints are cosmetic.
-> - After a long idle the headset's audio session can freeze; reboot the headset.
-> - No HRTF: left/right is stereo panning, above/below is not reproduced.
-> - 360°/90° lane rotation is parsed but not applied; v4 event-box groups and VFX boxes are
->   ignored.
+> - Above/below sound uses a simple elevation cue, not full HRTF.
+> - Animated maps: player (head and hand) tracks, the `time` property and Chroma environment
+>   objects are not played. Arcs and chains do not follow an animated head note. Vivify maps play
+>   their notes without the bundled visuals.
+> - Hundreds of walls in one beat can still drop a few frames. The busiest animated stretches run
+>   near 105 fps rather than 120.
+> - v4 per-object rotation and VFX event boxes are not read.
+> - The white highlights at chain joints are cosmetic.
 >
-> Quest 3 is the tested target. Other headsets may work but are untested.
+> **Feedback**
+>
+> Bugs, map problems and ideas go to GitHub Issues:
+> <https://github.com/testyfishy/OpenSaberQ3/issues>
+>
+> **Credits and licence**
+>
+> OpenSaberQ3 is GPL-3.0. It is a fork of [BeepSaber](https://github.com/leandrodreamer/BeepSaber)
+> (MIT), which descends from NeoSpark314's BeepSaber and the Godot Oculus Quest Toolkit. The
+> original MIT notice is kept and still covers the upstream code. The full chain is in the
+> repository's `UPSTREAM.md` and `ATTRIBUTION.md`.
+>
+> The logo, app icon and cover are AI-generated vector artwork, reviewed by the owner. Sources and
+> provenance are in `docs/brand.md`.
 >
 > No Beat Saber assets are included. Not affiliated with or endorsed by Beat Games, Meta,
 > BeatSaver or BeatLeader.
 >
-> Source, issues and the full measurement log: <https://github.com/testyfishy/OpenSaberQ3>
+> Source code: <https://github.com/testyfishy/OpenSaberQ3>
 
 ## Screenshot captions
 
-Use these under the real captures, in this order:
+The current stills come from an older build (0.7.3x, an animated map). Use these captions under
+them, and swap in the menu captions once 0.77 captures exist:
 
-1. **Mid-song on a dense map** — sabers, notes and HUD.
-2. **BeatSaver browser** — search results with covers.
-3. **Library by source** — the source filter and tags.
-4. **BeatLeader** — the top 10 for the selected map.
-5. **Settings** — the Performance preset and visual toggles.
-6. **End-of-map card** — the score summary.
+1. `still-40.jpg`: **An animated map**. Notes fly in through the map's own scene.
+2. `still-80.jpg`: **The map's scene changes colour** mid-song.
+3. `still-160.jpg`: **A burst of notes**, with combo and accuracy on the HUD.
+4. `still-88.jpg`, `still-280.jpg`: spares.
+
+For later 0.77 captures:
+
+- **BeatSaver browser**: search results with covers.
+- **Song panel**: Note Speed, Strict cuts, No Fail and the score multiplier.
+- **BeatLeader**: the top 10 for the selected map.
 
 ## Assets
 
@@ -103,10 +129,10 @@ Use these under the real captures, in this order:
 | Cover | 630×500 | `docs/images/itch-cover.png` — ready |
 | Banner | 1280×640 | `docs/images/banner.png` — ready |
 | Icon | 512×512 | `docs/images/logo.png` — ready |
-| Screenshots | 3–5, 16:9, 1280×720 or larger | local `itch-media/gameplay-1.png` .. `gameplay-4.png` — ready |
-| Gameplay clip | 15–30 s, optional but recommended | local `itch-media/gameplay-0.6.3.mp4` — 24 s 1080p60 with audio |
-| Upload | Android APK, 0.6.3 | built with the new icon |
+| Screenshots | 3–5, 16:9, 1280×720 or larger | local `store-media/still-40.jpg`, `still-80.jpg`, `still-88.jpg`, `still-160.jpg`, `still-280.jpg` (1920×1080) — provisional; replace with 0.77 footage when available |
+| Gameplay clip | 15–30 s, optional but recommended | local `store-media/gameplay-clip.mp4` (27 s, 1080p60, game audio) — provisional; replace with 0.77 footage when available |
+| Upload | Android APK, 0.77.1 | `OpenSaber-v0.77.1.apk` |
 
-The gameplay clip and stills are cut from the owner's headset recording (1920x1080, 60 fps, game
-audio) and kept outside the repository. The menu and leaderboard renders in `docs/images/` are desktop captures with the simulator overlay;
-they are not store screenshots. The gameplay clip and stills are real headset captures.
+The clip and stills are cut from the owner's headset recording of an older build (0.7.3x, an
+animated map). They are kept in `store-media/`, which is excluded from git. The renders in
+`docs/images/` other than the cover, banner and icon are desktop captures, not store screenshots.

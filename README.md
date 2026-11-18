@@ -20,6 +20,9 @@ scores. A fork of
 > **This project is vibe coded.** It was built as a hobby with multiple AI coding agents, from the
 > original BeepSaber fork, in the Godot engine. Not every line has been reviewed by a human.
 
+**Feedback:** bugs, map problems and ideas go to
+[GitHub Issues](https://github.com/testyfishy/OpenSaberQ3/issues).
+
 ## Since the fork
 
 | | BeepSaber upstream (2025-03) | OpenSaberQ3 v0.77.0 |
