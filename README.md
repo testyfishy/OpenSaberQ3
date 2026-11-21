@@ -110,24 +110,39 @@ frame that missed a vsync slot (>= 1.5x period); on time = within 1.05x.
 
 ## Download and install
 
-The latest signed APK is on the [releases page](https://github.com/testyfishy/OpenSaberQ3/releases).
-Enable **Developer mode** on the headset, then sideload with SideQuest or run:
+**Easiest:** install it from [SideQuest](https://sidequestvr.com/app/64313/opensaberq3). It is also on
+[itch.io](https://testyfishy.itch.io/open-saber-q3), and the APK is on the
+[releases page](https://github.com/testyfishy/OpenSaberQ3/releases).
 
-```sh
-adb install -r OpenSaber-v0.77.1.apk
-```
+**Installing the APK yourself:**
 
-Launch **Open Saber Q3** from *Unknown Sources*. Installs alongside upstream BeepSaber; songs and
-scores stay separate. Upgrading over 0.5.x keeps maps, scores and settings. Builds are test-signed,
-not store builds. Screenshots are in
-`/sdcard/Android/data/io.github.testyfishy.opensaberq3/files/screenshots/`:
+1. Turn on **Developer Mode**: Meta Horizon phone app → Devices → your headset → Headset settings →
+   Developer mode (needs a free Meta developer account). Restart the headset.
+2. Connect the headset to your PC by USB-C, put it on and allow USB debugging.
+3. Install with SideQuest (drag the APK onto it) or adb:
+
+   ```sh
+   adb install -r OpenSaber-v0.77.1.apk
+   ```
+
+4. On the headset: App Library → **Unknown Sources** → **Open Saber Q3**. Allow storage access if asked.
+
+**Getting maps:** use the BeatSaver browser in the menu (no PC needed); or open the "Manually Upload
+Custom Songs" address the main menu shows in a browser on a PC on the same Wi-Fi; or unzip a map into
+its own folder under `/sdcard/Android/data/io.github.testyfishy.opensaberq3/files/OpenSaber/Songs/`
+and press **Refresh Songs/Playlists**.
+
+Quest 3 is the tested headset. It installs alongside BeepSaber and keeps its own songs and scores;
+upgrading over an earlier OpenSaberQ3 keeps maps, scores and settings. Builds are test-signed, not
+Meta Store builds.
+
+**Screenshots:** triggers in menus, Pause → Screenshot in a song. They are saved under
+`/sdcard/Android/data/io.github.testyfishy.opensaberq3/files/screenshots/`; the Quest Files app
+cannot open `Android/data`, so use adb:
 
 ```sh
 adb pull /sdcard/Android/data/io.github.testyfishy.opensaberq3/files/screenshots
 ```
-
-The Quest Files app cannot open `Android/data`; use adb. The first capture in a session can stall
-for about a second while the renderer compiles; Pause → Screenshot is the reliable still.
 
 ## Documentation
 
